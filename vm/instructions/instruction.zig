@@ -1,10 +1,14 @@
 const std = @import("std");
-const vm = @import("shared.zig");
 
 const Opcode = @import("opcode.zig").Opcode;
 
 const activate_thread = @import("activate_thread.zig");
 const control_threads = @import("control_threads.zig");
+
+pub const Error = error {
+    /// Bytecode contained an unrecognized opcode.
+    UnsupportedOpcode,
+};
 
 /// A union type encapsulating all possible bytecode instructions.
 pub const Instruction = union(enum) {
@@ -21,16 +25,18 @@ pub const Instruction = union(enum) {
         return switch (opcode) {
             .ActivateThread => Instruction { .ActivateThread = try activate_thread.Instruction.parse(ReaderType, rawOpcode, reader) },
             .ControlThreads => Instruction { .ControlThreads = try control_threads.Instruction.parse(ReaderType, rawOpcode, reader) },
-            else => vm.Error.UnsupportedOpcode,
+            else => Error.UnsupportedOpcode,
         };
     }
 };
 
 // -- Test helpers --
 
+const BytecodeStream = @import("test_helpers.zig").BytecodeStream;
+
 /// Try to parse a literal sequence of bytecode into an Instruction union value.
 fn debugParseInstruction(bytecode: []const u8) !Instruction {
-    const reader = vm.BytecodeStream(bytecode).reader();
+    const reader = BytecodeStream(bytecode).reader();
     return try Instruction.parse(@TypeOf(reader), reader);
 }
 
@@ -58,5 +64,5 @@ test "parse returns ControlThreads instruction when given valid bytecode" {
 
 test "parse returns UnsupportedOpcode error when it encounters an unknown opcode" {
     const bytecode = [_]u8{ 0xFF }; // unknown opcode
-    testing.expectError(vm.Error.UnsupportedOpcode, debugParseInstruction(&bytecode));
+    testing.expectError(Error.UnsupportedOpcode, debugParseInstruction(&bytecode));
 }

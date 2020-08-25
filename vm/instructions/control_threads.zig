@@ -1,5 +1,5 @@
-const vm = @import("shared.zig");
 const opcode = @import("opcode.zig");
+const thread_id = @import("thread_id.zig");
 
 pub const Error = error {
     /// The start or end thread ID was out of range.
@@ -33,11 +33,11 @@ pub const Operation = enum {
 pub const Instruction = struct {
     /// The ID of the minimum thread to activate.
     /// Each thread between start_thread_id and end_thread_id inclusive will be affected.
-    start_thread_id: vm.ThreadID,
+    start_thread_id: thread_id.ThreadID,
 
     /// The ID of the maximum thread to activate.
     /// Each thread between start_thread_id and start_thread_id inclusive will be affected.
-    end_thread_id: vm.ThreadID,
+    end_thread_id: thread_id.ThreadID,
 
     /// The program address that the thread should jump to upon activation.
     operation: Operation,
@@ -47,8 +47,8 @@ pub const Instruction = struct {
     /// Returns an error if the bytecode could not be read or contained an invalid instruction.
     pub fn parse(comptime ReaderType: type, raw_opcode: opcode.RawOpcode, reader: ReaderType) !Instruction {
         const instruction = Instruction {
-            .start_thread_id = try vm.parseThreadID(try reader.readByte()),
-            .end_thread_id = try vm.parseThreadID(try reader.readByte()),
+            .start_thread_id = try thread_id.parseThreadID(try reader.readByte()),
+            .end_thread_id = try thread_id.parseThreadID(try reader.readByte()),
             .operation = try Operation.parse(try reader.readByte()),
         };
 
@@ -88,9 +88,10 @@ pub const BytecodeExamples = struct {
 // -- Tests --
 
 const testing = @import("std").testing;
+const debugParseInstruction = @import("test_helpers.zig").debugParseInstruction;
 
 test "Instruction.parse parses valid bytecode" {
-    const instruction = try vm.debugParseInstruction(Instruction, &BytecodeExamples.valid);
+    const instruction = try debugParseInstruction(Instruction, &BytecodeExamples.valid);
     
     testing.expectEqual(instruction.start_thread_id, 0x3F);
     testing.expectEqual(instruction.end_thread_id, 0x3F);
@@ -100,21 +101,21 @@ test "Instruction.parse parses valid bytecode" {
 test "Instruction.parse returns Error.InvalidThreadID when start thread ID is invalid" {
     testing.expectError(
         Error.InvalidThreadID,
-        vm.debugParseInstruction(Instruction, &BytecodeExamples.invalid_start_thread_id),
+        debugParseInstruction(Instruction, &BytecodeExamples.invalid_start_thread_id),
     );
 }
 
 test "Instruction.parse returns Error.InvalidThreadID when end thread ID is invalid" {
     testing.expectError(
         Error.InvalidThreadID,
-        vm.debugParseInstruction(Instruction, &BytecodeExamples.invalid_end_thread_id),
+        debugParseInstruction(Instruction, &BytecodeExamples.invalid_end_thread_id),
     );
 }
 
 test "Instruction.parse returns Error.InvalidThreadRange when thread range is transposed" {
     testing.expectError(
         Error.InvalidThreadRange,
-        vm.debugParseInstruction(Instruction, &BytecodeExamples.transposed_thread_ids),
+        debugParseInstruction(Instruction, &BytecodeExamples.transposed_thread_ids),
     );
 }
 
