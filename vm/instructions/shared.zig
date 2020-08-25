@@ -28,7 +28,7 @@ pub fn parseThreadID(byte: u8) Error!ThreadID {
 /// on success, check that all bytes were fully consumed.
 pub fn debugParseInstruction(comptime T: type, bytecode: []const u8) !T {
     const raw_opcode = bytecode[0];
-    var reader = BytecodeStream(bytecode[1..]).reader();
+    const reader = BytecodeStream(bytecode[1..]).reader();
     const instruction = try T.parse(@TypeOf(reader), raw_opcode, reader);
 
     // TODO: use a seekable stream so that we can measure how many bytes were read,
@@ -48,12 +48,18 @@ pub const TestError = error {
 
 pub const BytecodeStream = std.io.fixedBufferStream;
 
+/// A test instruction that consumes 5 bytes plus an opcode byte.
 const Fake5ByteInstruction = struct {     
     fn parse(comptime Reader: type, raw_opcode: opcode.RawOpcode, reader: Reader) !Fake5ByteInstruction {
         _ = try reader.readBytesNoEof(5);
         return Fake5ByteInstruction { };
     }
 };
+
+/// Create a fake bytecode sequence of n bytes plus an opcode byte.
+fn fakeBytecode(comptime size: usize) [size + 1]u8 {
+    return [_]u8 { 0 } ** (size + 1);
+}
 
 // -- Tests --
 
@@ -68,20 +74,20 @@ test "parseThreadID returns InvalidThreadID with out-of-bounds integer" {
 }
 
 test "debugParseInstruction returns parsed instruction if all bytes were parsed" {
-    const bytecode = [_]u8{0} ** (5 + 1);
+    const bytecode = fakeBytecode(5);
     
     const instruction = try debugParseInstruction(Fake5ByteInstruction, &bytecode);
     testing.expectEqual(@TypeOf(instruction), Fake5ByteInstruction);
 }
 
 test "debugParseInstruction returns IncompleteRead error if not all bytes were parsed" {
-    const bytecode = [_]u8{0} ** (10 + 1);
+    const bytecode = fakeBytecode(10);
 
     testing.expectError(TestError.IncompleteRead, debugParseInstruction(Fake5ByteInstruction, &bytecode));
 }
 
 test "debugParseInstruction returns EndOfStream error if too many bytes were parsed" {
-    const bytecode = [_]u8{0} ** (3 + 1);
+    const bytecode = fakeBytecode(3);
 
     testing.expectError(error.EndOfStream, debugParseInstruction(Fake5ByteInstruction, &bytecode));
 }

@@ -28,10 +28,10 @@ pub const Instruction = struct {
 // -- Bytecode examples --
 
 pub const BytecodeExamples = struct {
-    /// An example of bytecode that produces a valid instruction.
+    /// Example bytecode that should produce a valid instruction.
     pub const valid = [_]u8 { @enumToInt(opcode.Opcode.ActivateThread), 0x01, 0xDE, 0xAD };
 
-    /// An example of bytecode with an invalid thread ID.
+    /// Example bytecode with an invalid thread ID that should produce an error.
     pub const invalid_thread_id = [_]u8 { @enumToInt(opcode.Opcode.ActivateThread), 0xFF, 0xDE, 0xAD };
 };
 

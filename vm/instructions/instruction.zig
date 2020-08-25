@@ -3,21 +3,21 @@ const vm = @import("shared.zig");
 
 const Opcode = @import("opcode.zig").Opcode;
 
-const ActivateThreadImpl = @import("activate_thread.zig");
+const activate_thread = @import("activate_thread.zig");
 
 /// A union type encapsulating all possible bytecode instructions.
 pub const Instruction = union(enum) {
     // TODO: see if we can codegen all this because it's going to get tiresome for 26-odd opcodes.
-    ActivateThread: ActivateThreadImpl.Instruction,
+    ActivateThread: activate_thread.Instruction,
 
     /// Parse an instruction from a sequence of Another World bytecode.
     /// Returns a valid instruction, or an error if the bytecode is truncated or could not be interpreted.
     pub fn parse(comptime ReaderType: type, reader: ReaderType) !Instruction {
-        const rawOpcode = try bytecode.readByte();
+        const rawOpcode = try reader.readByte();
         const opcode = @intToEnum(Opcode, rawOpcode);
 
         return switch (opcode) {
-            .ActivateThread => Instruction { .ActivateThread = try ActivateThreadImpl.Instruction.parse(ReaderType, rawOpcode, reader) },
+            .ActivateThread => Instruction { .ActivateThread = try activate_thread.Instruction.parse(ReaderType, rawOpcode, reader) },
             else => vm.Error.UnsupportedOpcode,
         };
     }
@@ -27,7 +27,7 @@ pub const Instruction = union(enum) {
 
 /// Try to parse a literal sequence of bytecode into an Instruction union value.
 fn debugParseInstruction(bytecode: []const u8) !Instruction {
-    var reader = vm.BytecodeStream(bytecode).reader();
+    const reader = vm.BytecodeStream(bytecode).reader();
     return try Instruction.parse(@TypeOf(reader), reader);
 }
 
@@ -44,7 +44,7 @@ fn expectInstructionType(instruction: Instruction, expected_enum: @TagType(Instr
 const testing = @import("std").testing;
 
 test "parse returns ActivateThread instruction when given valid bytecode" {
-    const instruction = try debugParseInstruction(&ActivateThreadImpl.BytecodeExamples.valid);
+    const instruction = try debugParseInstruction(&activate_thread.BytecodeExamples.valid);
     expectInstructionType(instruction, .ActivateThread);
 }
 
