@@ -18,7 +18,7 @@ pub const Error = error {
 /// Given a raw byte value, return a valid thread ID.
 /// Returns an error if the value is out of range.
 pub fn parseThreadID(byte: u8) Error!ThreadID {
-    if (byte > 63) return Error.InvalidThreadID;
+    if (byte >= 0x40) return Error.InvalidThreadID;
     return @intCast(ThreadID, byte);
 }
 
@@ -70,7 +70,7 @@ test "parseThreadID succeeds with in-bounds integer" {
 }
 
 test "parseThreadID returns InvalidThreadID with out-of-bounds integer" {
-    testing.expectError(Error.InvalidThreadID, parseThreadID(64));
+    testing.expectError(Error.InvalidThreadID, parseThreadID(0x40));
 }
 
 test "debugParseInstruction returns parsed instruction if all bytes were parsed" {

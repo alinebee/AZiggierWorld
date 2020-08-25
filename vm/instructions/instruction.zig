@@ -4,11 +4,13 @@ const vm = @import("shared.zig");
 const Opcode = @import("opcode.zig").Opcode;
 
 const activate_thread = @import("activate_thread.zig");
+const control_threads = @import("control_threads.zig");
 
 /// A union type encapsulating all possible bytecode instructions.
 pub const Instruction = union(enum) {
     // TODO: see if we can codegen all this because it's going to get tiresome for 26-odd opcodes.
     ActivateThread: activate_thread.Instruction,
+    ControlThreads: control_threads.Instruction,
 
     /// Parse an instruction from a sequence of Another World bytecode.
     /// Returns a valid instruction, or an error if the bytecode is truncated or could not be interpreted.
@@ -18,6 +20,7 @@ pub const Instruction = union(enum) {
 
         return switch (opcode) {
             .ActivateThread => Instruction { .ActivateThread = try activate_thread.Instruction.parse(ReaderType, rawOpcode, reader) },
+            .ControlThreads => Instruction { .ControlThreads = try control_threads.Instruction.parse(ReaderType, rawOpcode, reader) },
             else => vm.Error.UnsupportedOpcode,
         };
     }
@@ -46,6 +49,11 @@ const testing = @import("std").testing;
 test "parse returns ActivateThread instruction when given valid bytecode" {
     const instruction = try debugParseInstruction(&activate_thread.BytecodeExamples.valid);
     expectInstructionType(instruction, .ActivateThread);
+}
+
+test "parse returns ControlThreads instruction when given valid bytecode" {
+    const instruction = try debugParseInstruction(&control_threads.BytecodeExamples.valid);
+    expectInstructionType(instruction, .ControlThreads);
 }
 
 test "parse returns UnsupportedOpcode error when it encounters an unknown opcode" {

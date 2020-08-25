@@ -20,7 +20,7 @@ pub const Opcode = enum (RawOpcode) {
     JumpIfNotZero,
     ConditionalJump,
     SetPalette,
-    ResetThreads,
+    ControlThreads,
     SelectVideoBuffer,
     FillVideoBuffer,
     CopyVideoBuffer,

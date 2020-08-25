@@ -5,7 +5,7 @@ const opcode = @import("opcode.zig");
 /// Takes effect on the next iteration of the run loop.
 pub const Instruction = struct {
     /// The thread to activate.
-    threadID: vm.ThreadID,
+    thread_id: vm.ThreadID,
 
     /// The program address that the thread should jump to upon activation.
     address: vm.Address,
@@ -15,7 +15,7 @@ pub const Instruction = struct {
     /// Returns an error if the bytecode could not be read or contained an invalid instruction.
     pub fn parse(comptime ReaderType: type, raw_opcode: opcode.RawOpcode, reader: ReaderType) !Instruction {
         return Instruction {
-            .threadID = try vm.parseThreadID(try reader.readByte()),
+            .thread_id = try vm.parseThreadID(try reader.readByte()),
             .address = try reader.readInt(vm.Address, .Big),
         };
     }
@@ -28,11 +28,13 @@ pub const Instruction = struct {
 // -- Bytecode examples --
 
 pub const BytecodeExamples = struct {
+    const opcodeByte = @enumToInt(opcode.Opcode.ActivateThread);
+
     /// Example bytecode that should produce a valid instruction.
-    pub const valid = [_]u8 { @enumToInt(opcode.Opcode.ActivateThread), 0x01, 0xDE, 0xAD };
+    pub const valid = [_]u8 { opcodeByte, 0x01, 0xDE, 0xAD };
 
     /// Example bytecode with an invalid thread ID that should produce an error.
-    pub const invalid_thread_id = [_]u8 { @enumToInt(opcode.Opcode.ActivateThread), 0xFF, 0xDE, 0xAD };
+    const invalid_thread_id = [_]u8 { opcodeByte, 0xFF, 0xDE, 0xAD };
 };
 
 // -- Tests --
@@ -42,7 +44,7 @@ const testing = @import("std").testing;
 test "parse parses instruction from valid bytecode" {
     const instruction = try vm.debugParseInstruction(Instruction, &BytecodeExamples.valid);
     
-    testing.expectEqual(instruction.threadID, 0x01);
+    testing.expectEqual(instruction.thread_id, 0x01);
     testing.expectEqual(instruction.address, 0xDE_AD);
 }
 
