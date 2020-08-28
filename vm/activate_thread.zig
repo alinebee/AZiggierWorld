@@ -2,6 +2,9 @@
 const opcode = @import("types/opcode.zig");
 const thread_id = @import("types/thread_id.zig");
 const program = @import("types/program.zig");
+const thread = @import("types/thread.zig");
+
+const VirtualMachine = @import("virtual_machine.zig").VirtualMachine;
 
 pub const Error = program.Error || thread_id.Error;
 
@@ -24,8 +27,8 @@ pub const Instruction = struct {
         };
     }
 
-    pub fn execute(self: Instruction) !void {
-        // TODO: operate on the state of a VM object
+    pub fn execute(self: Instruction, vm: *VirtualMachine) void {
+        vm.threads[self.thread_id].scheduleJump(self.address);
     }
 };
 
@@ -64,5 +67,20 @@ test "parse fails to parse incomplete bytecode and consumes all remaining bytes"
     testing.expectError(
         error.EndOfProgram,
         debugParseInstruction(Instruction, BytecodeExamples.valid[0..3], 2),
+    );
+}
+
+test "execute schedules specified thread to jump to specified address" {
+    const instruction = Instruction {
+        .thread_id = thread_id.max,
+        .address = 0xDEAD,
+    };
+
+    var vm = VirtualMachine.init();
+    instruction.execute(&vm);
+
+    testing.expectEqual(
+        vm.threads[thread_id.max].scheduled_execution_state,
+        thread.ExecutionState { .active = 0xDEAD },
     );
 }
