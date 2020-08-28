@@ -1,6 +1,6 @@
-const opcode = @import("opcode.zig");
-const thread_id = @import("thread_id.zig");
-const program = @import("program.zig");
+const opcode = @import("types/opcode.zig");
+const thread_id = @import("types/thread_id.zig");
+const program = @import("types/program.zig");
 
 pub const Error = program.Error || thread_id.Error || OperationError || error {
     /// The end thread came before the start thread.
@@ -90,7 +90,7 @@ pub const BytecodeExamples = struct {
 // -- Tests --
 
 const testing = @import("std").testing;
-const debugParseInstruction = @import("test_helpers.zig").debugParseInstruction;
+const debugParseInstruction = @import("instruction_test_helpers.zig").debugParseInstruction;
 
 test "Instruction.parse parses valid bytecode and consumes 3 bytes" {
     const instruction = try debugParseInstruction(Instruction, &BytecodeExamples.valid, 3);

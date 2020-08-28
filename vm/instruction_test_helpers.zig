@@ -1,8 +1,8 @@
 //! Functions and types used when testing virtual machine instructions.
 
 const std = @import("std");
-const opcode = @import("opcode.zig");
-const program = @import("program.zig");
+const opcode = @import("types/opcode.zig");
+const program = @import("types/program.zig");
 
 // -- Test helpers --
 

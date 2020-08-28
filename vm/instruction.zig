@@ -1,7 +1,7 @@
 const std = @import("std");
-const program = @import("program.zig");
 
-const Opcode = @import("opcode.zig").Opcode;
+const program = @import("types/program.zig");
+const Opcode = @import("types/opcode.zig").Opcode;
 
 const activate_thread = @import("activate_thread.zig");
 const control_threads = @import("control_threads.zig");
