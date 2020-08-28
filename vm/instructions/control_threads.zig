@@ -9,21 +9,19 @@ pub const Error = program.Error || thread_id.Error || OperationError || error {
 
 /// Resumes, suspends or deactivates one or more threads.
 pub const Instruction = struct {
-    /// The ID of the minimum thread to activate.
-    /// Each thread between start_thread_id and end_thread_id inclusive
-    /// will be affected by the operation.
+    /// The ID of the minimum thread to operate upon.
+    /// The operation will affect each thread from start_thread_id up to and including end_thread_id.
     start_thread_id: thread_id.ThreadID,
 
-    /// The ID of the maximum thread to activate.
-    /// Each thread between start_thread_id and start_thread_id inclusive
-    /// will be affected by the operation.
+    /// The ID of the maximum thread to operate upon.
+    /// The operation will affect each thread from start_thread_id up to and including end_thread_id.
     end_thread_id: thread_id.ThreadID,
 
     /// The operation to perform on the threads in the range.
     operation: Operation,
 
-    /// Parse the instruction from a bytecode reader.
-    /// Consumes 3 bytes from the reader on success.
+    /// Parse the next instruction from a bytecode program.
+    /// Consumes 3 bytes from the bytecode on success.
     /// Returns an error if the bytecode could not be read or contained an invalid instruction.
     pub fn parse(raw_opcode: opcode.RawOpcode, prog: *program.Program) Error!Instruction {
         const instruction = Instruction {

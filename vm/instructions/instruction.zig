@@ -21,8 +21,8 @@ pub const Instruction = union(enum) {
     ActivateThread: activate_thread.Instruction,
     ControlThreads: control_threads.Instruction,
 
-    /// Parse an instruction from a sequence of Another World bytecode.
-    /// Returns a valid instruction, or an error if the bytecode is truncated or could not be interpreted.
+    /// Parse the next instruction from a bytecode program.
+    /// Returns a valid instruction, or an error if the bytecode is truncated or could not be interpreted as an instruction.
     pub fn parse(prog: *program.Program) Error!Instruction {
         const raw_opcode = try prog.readByte();
         const opcode = @intToEnum(Opcode, raw_opcode);

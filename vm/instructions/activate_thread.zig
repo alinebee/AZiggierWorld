@@ -11,11 +11,11 @@ pub const Instruction = struct {
     /// The thread to activate.
     thread_id: thread_id.ThreadID,
 
-    /// The program address that the thread should jump to upon activation.
+    /// The program address that the thread should jump to when activated.
     address: program.Address,
 
-    /// Parse the instruction from a bytecode reader.
-    /// Consumes 3 bytes from the reader on success.
+    /// Parse the next instruction from a bytecode program.
+    /// Consumes 3 bytes from the bytecode on success.
     /// Returns an error if the bytecode could not be read or contained an invalid instruction.
     pub fn parse(raw_opcode: opcode.RawOpcode, prog: *program.Program) Error!Instruction {
         return Instruction {
