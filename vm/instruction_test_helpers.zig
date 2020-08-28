@@ -7,16 +7,16 @@ const program = @import("types/program.zig");
 // -- Test helpers --
 
 /// Try to parse a literal sequence of bytecode into a specific instruction;
-/// on success, check that the expected number of bytes were consumed.
+/// on success or failure, check that the expected number of bytes were consumed.
 pub fn debugParseInstruction(comptime Instruction: type, bytecode: []const u8, expected_bytes_consumed: usize) !Instruction {
-    const raw_opcode = bytecode[0];
-    // Skip the first byte, as normally it will already have been read by the instruction's caller.
     var prog = program.Program.init(bytecode);
-    try prog.skip(1);
+    const raw_opcode = try prog.readBytes(1);
 
     const instruction = Instruction.parse(raw_opcode, &prog);
 
     // Regardless of success or failure, check how many bytes were actually consumed.
+    // (Don't count the initial opcode byte, as it's not really "part of" the instruction
+    // and will have been read separately by the instruction's caller.)
     const bytes_consumed = prog.counter - 1;
     if (bytes_consumed > expected_bytes_consumed) {
         return error.OverRead;
