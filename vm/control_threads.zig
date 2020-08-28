@@ -2,6 +2,8 @@ const opcode = @import("types/opcode.zig");
 const thread_id = @import("types/thread_id.zig");
 const program = @import("types/program.zig");
 
+const VirtualMachine = @import("virtual_machine.zig").VirtualMachine;
+
 pub const Error = program.Error || thread_id.Error || OperationError || error {
     /// The end thread came before the start thread.
     InvalidThreadRange,
@@ -37,8 +39,19 @@ pub const Instruction = struct {
         return instruction;
     }
 
-    pub fn execute(self: Instruction) !void {
-        // TODO: operate on the state of a VM object
+    pub fn execute(self: Instruction, vm: *VirtualMachine) void {
+        var id = self.start_thread_id;
+        while (id <= self.end_thread_id) {
+            var thread = &vm.threads[id];
+
+            switch (self.operation) {
+                .Resume => thread.scheduleResume(),
+                .Suspend => thread.scheduleSuspend(),
+                .Deactivate => thread.scheduleDeactivate(),
+            }
+
+            id += 1;
+        }
     }
 };
 
@@ -136,4 +149,64 @@ test "Operation.parse parses raw operation bytes correctly" {
         error.InvalidThreadOperation,
         Operation.parse(3),
     );
+}
+
+test "execute with resume operation schedules specified threads to resume" {
+    const instruction = Instruction {
+        .start_thread_id = 1,
+        .end_thread_id = 3,
+        .operation = .Resume,
+    };
+
+    var vm = VirtualMachine.init();
+
+    testing.expectEqual(vm.threads[1].scheduled_suspend_state, null);
+    testing.expectEqual(vm.threads[2].scheduled_suspend_state, null);
+    testing.expectEqual(vm.threads[3].scheduled_suspend_state, null);
+
+    instruction.execute(&vm);
+
+    testing.expectEqual(vm.threads[1].scheduled_suspend_state, .running);
+    testing.expectEqual(vm.threads[2].scheduled_suspend_state, .running);
+    testing.expectEqual(vm.threads[3].scheduled_suspend_state, .running);
+}
+
+test "execute with suspend operation schedules specified threads to suspend" {
+    const instruction = Instruction {
+        .start_thread_id = 1,
+        .end_thread_id = 3,
+        .operation = .Suspend,
+    };
+
+    var vm = VirtualMachine.init();
+
+    testing.expectEqual(vm.threads[1].scheduled_suspend_state, null);
+    testing.expectEqual(vm.threads[2].scheduled_suspend_state, null);
+    testing.expectEqual(vm.threads[3].scheduled_suspend_state, null);
+
+    instruction.execute(&vm);
+
+    testing.expectEqual(vm.threads[1].scheduled_suspend_state, .suspended);
+    testing.expectEqual(vm.threads[2].scheduled_suspend_state, .suspended);
+    testing.expectEqual(vm.threads[3].scheduled_suspend_state, .suspended);
+}
+
+test "execute with deactivate operation schedules specified threads to deactivate" {
+    const instruction = Instruction {
+        .start_thread_id = 1,
+        .end_thread_id = 3,
+        .operation = .Deactivate,
+    };
+
+    var vm = VirtualMachine.init();
+
+    testing.expectEqual(vm.threads[1].scheduled_execution_state, null);
+    testing.expectEqual(vm.threads[2].scheduled_execution_state, null);
+    testing.expectEqual(vm.threads[3].scheduled_execution_state, null);
+
+    instruction.execute(&vm);
+
+    testing.expectEqual(vm.threads[1].scheduled_execution_state, .inactive);
+    testing.expectEqual(vm.threads[2].scheduled_execution_state, .inactive);
+    testing.expectEqual(vm.threads[3].scheduled_execution_state, .inactive);
 }

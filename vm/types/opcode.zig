@@ -1,6 +1,7 @@
 //! Types and operations dealing with built-in opcodes in Another World bytecode.
 //! See instruction.zig for how these are mapped to implementations of those opcodes.
 
+/// A raw opcode as represented in Another World's bytecode.
 pub const RawOpcode = u8;
 
 /// The known opcodes used in Another World's bytecode.
