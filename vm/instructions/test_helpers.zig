@@ -18,7 +18,7 @@ pub fn debugParseInstruction(comptime Instruction: type, bytecode: []const u8) !
     // TODO: use a seekable stream so that we can measure how many bytes were read,
     // rather than checking for end-of-stream.
     if (reader.readByte()) {
-        return Error.IncompleteRead;
+        return error.IncompleteRead;
     } else |err| {
         if (err != error.EndOfStream) return err;
     }
@@ -26,7 +26,7 @@ pub fn debugParseInstruction(comptime Instruction: type, bytecode: []const u8) !
     return instruction;
 }
 
-pub const Error = error {
+const Error = error {
     IncompleteRead,
 };
 
@@ -57,7 +57,7 @@ test "debugParseInstruction returns parsed instruction if all bytes were parsed"
 test "debugParseInstruction returns IncompleteRead error if not all bytes were parsed" {
     const bytecode = fakeBytecode(10);
 
-    testing.expectError(Error.IncompleteRead, debugParseInstruction(Fake5ByteInstruction, &bytecode));
+    testing.expectError(error.IncompleteRead, debugParseInstruction(Fake5ByteInstruction, &bytecode));
 }
 
 test "debugParseInstruction returns EndOfStream error if too many bytes were parsed" {
