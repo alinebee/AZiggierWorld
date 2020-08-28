@@ -1,6 +1,6 @@
 const Address = @import("program.zig").Address;
 
-const ExecutionState = union(enum) {
+pub const ExecutionState = union(enum) {
     /// The thread is active and will continue execution from the specified address when it is next run.
     active: Address,
 
@@ -8,7 +8,7 @@ const ExecutionState = union(enum) {
     inactive: void,
 };
 
-const SuspendState = enum {
+pub const SuspendState = enum {
     /// The thread is not suspended: it will run if it is also active (see `ExecutionState`).
     running,
 

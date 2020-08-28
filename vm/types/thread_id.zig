@@ -1,8 +1,11 @@
 /// The ID of a thread, stored in bytecode as an 8-bit unsigned integer from 0-63.
 pub const ThreadID = u6;
 
-/// The maximum value for a thread ID.
-pub const max = 0b111111; // 63, 0x3F
+/// The total number of available threads.
+pub const count = 64;
+
+/// The maximum value for a raw thread ID.
+pub const max = count - 1;
 
 pub const Error = error {
     InvalidThreadID,
