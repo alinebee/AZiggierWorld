@@ -1,8 +1,8 @@
 const opcode = @import("opcode.zig");
 const thread_id = @import("thread_id.zig");
+const program = @import("program.zig");
 
-
-pub const Error = thread_id.Error || OperationError || error {
+pub const Error = program.Error || thread_id.Error || OperationError || error {
     /// The end thread came before the start thread.
     InvalidThreadRange,
 };
@@ -25,15 +25,15 @@ pub const Instruction = struct {
     /// Parse the instruction from a bytecode reader.
     /// Consumes 3 bytes from the reader on success.
     /// Returns an error if the bytecode could not be read or contained an invalid instruction.
-    pub fn parse(comptime ReaderType: type, raw_opcode: opcode.RawOpcode, reader: ReaderType) !Instruction {
+    pub fn parse(raw_opcode: opcode.RawOpcode, prog: *program.Program) Error!Instruction {
         const instruction = Instruction {
-            .start_thread_id = try thread_id.parse(try reader.readByte()),
-            .end_thread_id = try thread_id.parse(try reader.readByte()),
-            .operation = try Operation.parse(try reader.readByte()),
+            .start_thread_id = try thread_id.parse(try prog.readByte()),
+            .end_thread_id = try thread_id.parse(try prog.readByte()),
+            .operation = try Operation.parse(try prog.readByte()),
         };
 
         if (instruction.start_thread_id > instruction.end_thread_id) {
-            return Error.InvalidThreadRange;
+            return error.InvalidThreadRange;
         }
 
         return instruction;
@@ -94,32 +94,39 @@ pub const BytecodeExamples = struct {
 const testing = @import("std").testing;
 const debugParseInstruction = @import("test_helpers.zig").debugParseInstruction;
 
-test "Instruction.parse parses valid bytecode" {
-    const instruction = try debugParseInstruction(Instruction, &BytecodeExamples.valid);
+test "Instruction.parse parses valid bytecode and consumes 3 bytes" {
+    const instruction = try debugParseInstruction(Instruction, &BytecodeExamples.valid, 3);
     
     testing.expectEqual(instruction.start_thread_id, thread_id.max - 1);
     testing.expectEqual(instruction.end_thread_id, thread_id.max);
     testing.expectEqual(instruction.operation, .Deactivate);
 }
 
-test "Instruction.parse returns Error.InvalidThreadID when start thread ID is invalid" {
+test "Instruction.parse returns Error.InvalidThreadID and consumes 1 byte when start thread ID is invalid" {
     testing.expectError(
         Error.InvalidThreadID,
-        debugParseInstruction(Instruction, &BytecodeExamples.invalid_start_thread_id),
+        debugParseInstruction(Instruction, &BytecodeExamples.invalid_start_thread_id, 1),
     );
 }
 
-test "Instruction.parse returns Error.InvalidThreadID when end thread ID is invalid" {
+test "Instruction.parse returns Error.InvalidThreadID and consumes 2 bytes when end thread ID is invalid" {
     testing.expectError(
         error.InvalidThreadID,
-        debugParseInstruction(Instruction, &BytecodeExamples.invalid_end_thread_id),
+        debugParseInstruction(Instruction, &BytecodeExamples.invalid_end_thread_id, 2),
     );
 }
 
-test "Instruction.parse returns Error.InvalidThreadRange when thread range is transposed" {
+test "Instruction.parse returns Error.InvalidThreadRange and consumes 3 bytes when thread range is transposed" {
     testing.expectError(
         error.InvalidThreadRange,
-        debugParseInstruction(Instruction, &BytecodeExamples.transposed_thread_ids),
+        debugParseInstruction(Instruction, &BytecodeExamples.transposed_thread_ids, 3),
+    );
+}
+
+test "Insutrction.parse fails to parse incomplete bytecode and consumes all available bytes" {
+    testing.expectError(
+        error.EndOfProgram,
+        debugParseInstruction(Instruction, BytecodeExamples.valid[0..3], 2),
     );
 }
 
@@ -130,12 +137,5 @@ test "Operation.parse parses raw operation bytes correctly" {
     testing.expectError(
         error.InvalidThreadOperation,
         Operation.parse(3),
-    );
-}
-
-test "parse fails to parse incomplete bytecode" {
-    testing.expectError(
-        error.EndOfStream,
-        debugParseInstruction(Instruction, BytecodeExamples.valid[0..3]),
     );
 }

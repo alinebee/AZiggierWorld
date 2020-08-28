@@ -2,38 +2,42 @@
 
 const std = @import("std");
 const opcode = @import("opcode.zig");
+const program = @import("program.zig");
 
 // -- Test helpers --
 
-/// A stream that reads from an array of bytes.
-pub const BytecodeStream = std.io.fixedBufferStream;
-
 /// Try to parse a literal sequence of bytecode into a specific instruction;
-/// on success, check that all bytes were fully consumed.
-pub fn debugParseInstruction(comptime Instruction: type, bytecode: []const u8) !Instruction {
+/// on success, check that the expected number of bytes were consumed.
+pub fn debugParseInstruction(comptime Instruction: type, bytecode: []const u8, expected_bytes_consumed: usize) !Instruction {
     const raw_opcode = bytecode[0];
-    const reader = BytecodeStream(bytecode[1..]).reader();
-    const instruction = try Instruction.parse(@TypeOf(reader), raw_opcode, reader);
+    // Skip the first byte, as normally it will already have been read by the instruction's caller.
+    var prog = program.Program.init(bytecode);
+    try prog.skip(1);
 
-    // TODO: use a seekable stream so that we can measure how many bytes were read,
-    // rather than checking for end-of-stream.
-    if (reader.readByte()) {
-        return error.IncompleteRead;
-    } else |err| {
-        if (err != error.EndOfStream) return err;
+    const instruction = Instruction.parse(raw_opcode, &prog);
+
+    // Regardless of success or failure, check how many bytes were actually consumed.
+    const bytes_consumed = prog.counter - 1;
+    if (bytes_consumed > expected_bytes_consumed) {
+        return error.OverRead;
+    } else if (bytes_consumed < expected_bytes_consumed) {
+        return error.UnderRead;
     }
 
     return instruction;
 }
 
 const Error = error {
-    IncompleteRead,
+    /// The instruction consumed too few bytes from the program.
+    UnderRead,
+    /// The instruction consumed too many bytes from the program.
+    OverRead,
 };
 
-/// A test instruction that consumes 5 bytes plus an opcode byte.
+/// A test instruction that consumes 5 bytes (not including the opcode byte).
 const Fake5ByteInstruction = struct {     
-    fn parse(comptime Reader: type, raw_opcode: opcode.RawOpcode, reader: Reader) !Fake5ByteInstruction {
-        _ = try reader.readBytesNoEof(5);
+    fn parse(raw_opcode: opcode.RawOpcode, prog: *program.Program) !Fake5ByteInstruction {
+        try prog.skip(5);
         return Fake5ByteInstruction { };
     }
 };
@@ -50,18 +54,18 @@ const testing = std.testing;
 test "debugParseInstruction returns parsed instruction if all bytes were parsed" {
     const bytecode = fakeBytecode(5);
     
-    const instruction = try debugParseInstruction(Fake5ByteInstruction, &bytecode);
-    testing.expectEqual(@TypeOf(instruction), Fake5ByteInstruction);
+    const instruction = try debugParseInstruction(Fake5ByteInstruction, &bytecode, 5);
+    testing.expectEqual(instruction, Fake5ByteInstruction { });
 }
 
-test "debugParseInstruction returns IncompleteRead error if not all bytes were parsed" {
+test "debugParseInstruction returns error.UnderRead if too few bytes were parsed" {
     const bytecode = fakeBytecode(10);
 
-    testing.expectError(error.IncompleteRead, debugParseInstruction(Fake5ByteInstruction, &bytecode));
+    testing.expectError(error.UnderRead, debugParseInstruction(Fake5ByteInstruction, &bytecode, 6));
 }
 
-test "debugParseInstruction returns EndOfStream error if too many bytes were parsed" {
-    const bytecode = fakeBytecode(3);
+test "debugParseInstruction returns error.OverRead if too many bytes were parsed" {
+    const bytecode = fakeBytecode(10);
 
-    testing.expectError(error.EndOfStream, debugParseInstruction(Fake5ByteInstruction, &bytecode));
+    testing.expectError(error.OverRead, debugParseInstruction(Fake5ByteInstruction, &bytecode, 3));
 }

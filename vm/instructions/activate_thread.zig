@@ -1,12 +1,9 @@
 
 const opcode = @import("opcode.zig");
 const thread_id = @import("thread_id.zig");
+const program = @import("program.zig");
 
-/// The address to a location in the current program,
-/// stored in bytecode as a 16-bit big-endian unsigned integer.
-const Address = u16;
-
-pub const Error = thread_id.Error;
+pub const Error = program.Error || thread_id.Error;
 
 /// Activate a specific thread and move its program counter to the specified address.
 /// Takes effect on the next iteration of the run loop.
@@ -15,15 +12,15 @@ pub const Instruction = struct {
     thread_id: thread_id.ThreadID,
 
     /// The program address that the thread should jump to upon activation.
-    address: Address,
+    address: program.Address,
 
     /// Parse the instruction from a bytecode reader.
     /// Consumes 3 bytes from the reader on success.
     /// Returns an error if the bytecode could not be read or contained an invalid instruction.
-    pub fn parse(comptime ReaderType: type, raw_opcode: opcode.RawOpcode, reader: ReaderType) !Instruction {
+    pub fn parse(raw_opcode: opcode.RawOpcode, prog: *program.Program) Error!Instruction {
         return Instruction {
-            .thread_id = try thread_id.parse(try reader.readByte()),
-            .address = try reader.readInt(Address, .Big),
+            .thread_id = try thread_id.parse(try prog.readByte()),
+            .address = try prog.readU16(),
         };
     }
 
@@ -49,23 +46,23 @@ pub const BytecodeExamples = struct {
 const testing = @import("std").testing;
 const debugParseInstruction = @import("test_helpers.zig").debugParseInstruction;
 
-test "parse parses instruction from valid bytecode" {
-    const instruction = try debugParseInstruction(Instruction, &BytecodeExamples.valid);
+test "parse parses instruction from valid bytecode and consumes 3 bytes" {
+    const instruction = try debugParseInstruction(Instruction, &BytecodeExamples.valid, 3);
     
     testing.expectEqual(instruction.thread_id, thread_id.max);
     testing.expectEqual(instruction.address, 0xDE_AD);
 }
 
-test "parse fails to parse invalid bytecode" {
+test "parse returns error.InvalidThreadID and consumes 1 byte when thread ID is invalid" {
     testing.expectError(
-        thread_id.Error.InvalidThreadID, 
-        debugParseInstruction(Instruction, &BytecodeExamples.invalid_thread_id),
+        error.InvalidThreadID,
+        debugParseInstruction(Instruction, &BytecodeExamples.invalid_thread_id, 1),
     );
 }
 
-test "parse fails to parse incomplete bytecode" {
+test "parse fails to parse incomplete bytecode and consumes all remaining bytes" {
     testing.expectError(
-        error.EndOfStream,
-        debugParseInstruction(Instruction, BytecodeExamples.valid[0..3]),
+        error.EndOfProgram,
+        debugParseInstruction(Instruction, BytecodeExamples.valid[0..3], 2),
     );
 }
