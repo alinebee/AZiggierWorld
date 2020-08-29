@@ -6,35 +6,45 @@ const opcode = @import("../types/opcode.zig");
 const activate_thread = @import("activate_thread.zig");
 const control_threads = @import("control_threads.zig");
 const set_register = @import("set_register.zig");
+const copy_register = @import("copy_register.zig");
 
 pub const Error = 
     program.Error || 
     activate_thread.Error || 
     control_threads.Error || 
     set_register.Error ||
+    copy_register.Error ||
     error {
     /// Bytecode contained an unrecognized opcode.
     UnsupportedOpcode,
 };
 
-/// A union type encapsulating all possible bytecode instructions.
+/// A union type that wraps all possible bytecode instructions.
 pub const Instruction = union(enum) {
     // TODO: see if we can codegen all this because it's going to get tiresome for 26-odd opcodes.
     ActivateThread: activate_thread.Instruction,
     ControlThreads: control_threads.Instruction,
     SetRegister: set_register.Instruction,
+    CopyRegister: copy_register.Instruction,
 
-    /// Parse the next instruction from a bytecode program.
-    /// Returns a valid instruction, or an error if the bytecode is truncated or could not be interpreted as an instruction.
+    /// Parse the next instruction from a bytecode program and wrap it in an Instruction union tye.
+    /// Returns the wrapped Instruction or an error if the bytecode could not be interpreted as an instruction.
     pub fn parse(prog: *program.Program) Error!Instruction {
         const raw_opcode = try prog.read(opcode.RawOpcode);
 
         return switch (opcode.parse(raw_opcode)) {
-            .ActivateThread => .{ .ActivateThread = try activate_thread.Instruction.parse(raw_opcode, prog) },
-            .ControlThreads => .{ .ControlThreads = try control_threads.Instruction.parse(raw_opcode, prog) },
-            .SetRegister    => .{ .SetRegister = try set_register.Instruction.parse(raw_opcode, prog) },
+            .ActivateThread => wrap("ActivateThread", activate_thread, raw_opcode, prog),
+            .ControlThreads => wrap("ControlThreads", control_threads, raw_opcode, prog),
+            .SetRegister    => wrap("SetRegister", set_register, raw_opcode, prog),
+            .CopyRegister   => wrap("CopyRegister", copy_register, raw_opcode, prog),
             else => error.UnsupportedOpcode,
         };
+    }
+
+    /// Parse an instruction of the specified type from the program,
+    /// and wrap it in an Instruction union type initialized to the appropriate field.
+    fn wrap(comptime field_name: []const u8, comptime T: type, raw_opcode: opcode.RawOpcode, prog: *program.Program) Error!Instruction {
+        return @unionInit(Instruction, field_name, try T.Instruction.parse(raw_opcode, prog));
     }
 };
 
@@ -69,6 +79,11 @@ test "parse returns ControlThreads instruction when given valid bytecode" {
 test "parse returns SetRegister instruction when given valid bytecode" {
     const instruction = try debugParseInstruction(&set_register.BytecodeExamples.valid);
     expectInstructionType(.SetRegister, instruction);
+}
+
+test "parse returns CopyRegister instruction when given valid bytecode" {
+    const instruction = try debugParseInstruction(&copy_register.BytecodeExamples.valid);
+    expectInstructionType(.CopyRegister, instruction);
 }
 
 test "parse returns UnsupportedOpcode error when it encounters an unknown opcode" {
