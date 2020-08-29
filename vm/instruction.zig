@@ -1,7 +1,7 @@
 const std = @import("std");
 
 const program = @import("types/program.zig");
-const Opcode = @import("types/opcode.zig").Opcode;
+const opcode = @import("types/opcode.zig");
 
 const activate_thread = @import("activate_thread.zig");
 const control_threads = @import("control_threads.zig");
@@ -24,10 +24,9 @@ pub const Instruction = union(enum) {
     /// Parse the next instruction from a bytecode program.
     /// Returns a valid instruction, or an error if the bytecode is truncated or could not be interpreted as an instruction.
     pub fn parse(prog: *program.Program) Error!Instruction {
-        const raw_opcode = try prog.readByte();
-        const opcode = @intToEnum(Opcode, raw_opcode);
+        const raw_opcode = try prog.read(opcode.RawOpcode);
 
-        return switch (opcode) {
+        return switch (opcode.parse(raw_opcode)) {
             .ActivateThread => Instruction { .ActivateThread = try activate_thread.Instruction.parse(raw_opcode, prog) },
             .ControlThreads => Instruction { .ControlThreads = try control_threads.Instruction.parse(raw_opcode, prog) },
             else => error.UnsupportedOpcode,

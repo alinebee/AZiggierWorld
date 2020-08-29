@@ -1,6 +1,5 @@
 //! Functions and types used when testing virtual machine instructions.
 
-const std = @import("std");
 const opcode = @import("types/opcode.zig");
 const program = @import("types/program.zig");
 
@@ -10,7 +9,7 @@ const program = @import("types/program.zig");
 /// on success or failure, check that the expected number of bytes were consumed.
 pub fn debugParseInstruction(comptime Instruction: type, bytecode: []const u8, expected_bytes_consumed: usize) !Instruction {
     var prog = program.Program.init(bytecode);
-    const raw_opcode = try prog.readByte();
+    const raw_opcode = try prog.read(u8);
 
     const instruction = Instruction.parse(raw_opcode, &prog);
 

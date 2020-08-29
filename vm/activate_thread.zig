@@ -22,8 +22,8 @@ pub const Instruction = struct {
     /// Returns an error if the bytecode could not be read or contained an invalid instruction.
     pub fn parse(raw_opcode: opcode.RawOpcode, prog: *program.Program) Error!Instruction {
         return Instruction {
-            .thread_id = try thread_id.parse(try prog.readByte()),
-            .address = try prog.readU16(),
+            .thread_id = try thread_id.parse(try prog.read(thread_id.RawThreadID)),
+            .address = try prog.read(program.Address),
         };
     }
 

@@ -41,3 +41,7 @@ pub const Opcode = enum (RawOpcode) {
     // which reuse the lower bits of the opcode to store additional parameters to the instruction.
     _,
 };
+
+pub fn parse(raw_opcode: RawOpcode) Opcode {
+    return @intToEnum(Opcode, raw_opcode);
+}

@@ -1,5 +1,8 @@
-/// The ID of a thread, stored in bytecode as an 8-bit unsigned integer from 0-63.
+/// The ID of a thread, as a value from 0-63.
 pub const ThreadID = u6;
+
+/// The raw ID of a thread as stored in bytecode as an 8-bit unsigned integer.
+pub const RawThreadID = u8;
 
 /// The total number of available threads.
 pub const count = 64;

@@ -27,9 +27,9 @@ pub const Instruction = struct {
     /// Returns an error if the bytecode could not be read or contained an invalid instruction.
     pub fn parse(raw_opcode: opcode.RawOpcode, prog: *program.Program) Error!Instruction {
         const instruction = Instruction {
-            .start_thread_id = try thread_id.parse(try prog.readByte()),
-            .end_thread_id = try thread_id.parse(try prog.readByte()),
-            .operation = try Operation.parse(try prog.readByte()),
+            .start_thread_id = try thread_id.parse(try prog.read(thread_id.RawThreadID)),
+            .end_thread_id = try thread_id.parse(try prog.read(thread_id.RawThreadID)),
+            .operation = try Operation.parse(try prog.read(RawOperation)),
         };
 
         if (instruction.start_thread_id > instruction.end_thread_id) {
@@ -55,6 +55,8 @@ pub const Instruction = struct {
     }
 };
 
+const RawOperation = u8;
+
 const Operation = enum {
     /// Resume a previously paused thread.
     Resume,
@@ -63,7 +65,7 @@ const Operation = enum {
     /// Mark the threads as deactivated.
     Deactivate,
 
-    fn parse(rawOperation: u8) OperationError!Operation {
+    fn parse(rawOperation: RawOperation) OperationError!Operation {
         // It would be nicer to use @intToEnum, but that has undefined behaviour when the value is out of range.
         return switch (rawOperation) {
             0 => .Resume,
