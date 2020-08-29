@@ -1,7 +1,7 @@
 const std = @import("std");
 
-const program = @import("types/program.zig");
-const opcode = @import("types/opcode.zig");
+const program = @import("../types/program.zig");
+const opcode = @import("../types/opcode.zig");
 
 const activate_thread = @import("activate_thread.zig");
 const control_threads = @import("control_threads.zig");
@@ -50,7 +50,7 @@ fn expectInstructionType(expected: @TagType(Instruction), actual: @TagType(Instr
 
 // -- Tests --
 
-const testing = @import("../utils/testing.zig");
+const testing = @import("../../utils/testing.zig");
 
 test "parse returns ActivateThread instruction when given valid bytecode" {
     const instruction = try debugParseInstruction(&activate_thread.BytecodeExamples.valid);

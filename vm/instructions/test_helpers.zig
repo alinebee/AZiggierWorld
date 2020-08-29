@@ -1,7 +1,7 @@
 //! Functions and types used when testing virtual machine instructions.
 
-const opcode = @import("types/opcode.zig");
-const program = @import("types/program.zig");
+const opcode = @import("../types/opcode.zig");
+const program = @import("../types/program.zig");
 
 // -- Test helpers --
 
@@ -48,7 +48,7 @@ fn fakeBytecode(comptime size: usize) [size + 1]u8 {
 
 // -- Tests --
 
-const testing = @import("../utils/testing.zig");
+const testing = @import("../../utils/testing.zig");
 
 test "debugParseInstruction returns parsed instruction if all bytes were parsed" {
     const bytecode = fakeBytecode(5);
