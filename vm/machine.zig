@@ -17,12 +17,12 @@ pub const Instance = struct {
 };
 
 pub fn init() Instance {
-    var vm = Instance { };
+    var machine = Instance { };
 
     // Initialize the main thread to begin execution at the start of the current program
-    vm.threads[thread_id.main].execution_state = .{ .active = 0 };
+    machine.threads[thread_id.main].execution_state = .{ .active = 0 };
 
-    return vm;
+    return machine;
 }
 
 // -- Tests --
@@ -30,9 +30,9 @@ pub fn init() Instance {
 const testing = @import("../utils/testing.zig");
 
 test "init creates new virtual machine with expected state" {
-    const vm = init();
+    const machine = init();
 
-    for (vm.threads) |thread, id| {
+    for (machine.threads) |thread, id| {
         if (id == thread_id.main) {
             testing.expectEqual(.{ .active = 0 }, thread.execution_state);
         } else {
@@ -41,7 +41,7 @@ test "init creates new virtual machine with expected state" {
         testing.expectEqual(.running, thread.suspend_state);
     }
 
-    for (vm.registers) |register| {
+    for (machine.registers) |register| {
         testing.expectEqual(0, register);
     }
 }

@@ -2,7 +2,7 @@
 const opcode = @import("../types/opcode.zig");
 const thread_id = @import("../types/thread_id.zig");
 const Program = @import("../types/program.zig");
-const VirtualMachine = @import("../virtual_machine.zig");
+const Machine = @import("../machine.zig");
 
 pub const Error = Program.Error || thread_id.Error;
 
@@ -25,8 +25,8 @@ pub const Instruction = struct {
         };
     }
 
-    pub fn execute(self: Instruction, vm: *VirtualMachine.Instance) void {
-        vm.threads[self.thread_id].scheduleJump(self.address);
+    pub fn execute(self: Instruction, machine: *Machine.Instance) void {
+        machine.threads[self.thread_id].scheduleJump(self.address);
     }
 };
 
@@ -74,11 +74,11 @@ test "execute schedules specified thread to jump to specified address" {
         .address = 0xDEAD,
     };
 
-    var vm = VirtualMachine.init();
-    instruction.execute(&vm);
+    var machine = Machine.init();
+    instruction.execute(&machine);
 
     testing.expectEqual(
         .{ .active = 0xDEAD },
-        vm.threads[thread_id.max].scheduled_execution_state
+        machine.threads[thread_id.max].scheduled_execution_state
     );
 }

@@ -1,7 +1,7 @@
 const opcode = @import("../types/opcode.zig");
 const thread_id = @import("../types/thread_id.zig");
 const Program = @import("../types/program.zig");
-const VirtualMachine = @import("../virtual_machine.zig");
+const Machine = @import("../machine.zig");
 
 pub const Error = Program.Error || thread_id.Error || OperationError || error {
     /// The end thread came before the start thread.
@@ -38,10 +38,10 @@ pub const Instruction = struct {
         return instruction;
     }
 
-    pub fn execute(self: Instruction, vm: *VirtualMachine.Instance) void {
+    pub fn execute(self: Instruction, machine: *Machine.Instance) void {
         var id = self.start_thread_id;
         while (id <= self.end_thread_id) {
-            var thread = &vm.threads[id];
+            var thread = &machine.threads[id];
 
             switch (self.operation) {
                 .Resume => thread.scheduleResume(),
@@ -159,17 +159,17 @@ test "execute with resume operation schedules specified threads to resume" {
         .operation = .Resume,
     };
 
-    var vm = VirtualMachine.init();
+    var machine = Machine.init();
 
-    testing.expectEqual(null, vm.threads[1].scheduled_suspend_state);
-    testing.expectEqual(null, vm.threads[2].scheduled_suspend_state);
-    testing.expectEqual(null, vm.threads[3].scheduled_suspend_state);
+    testing.expectEqual(null, machine.threads[1].scheduled_suspend_state);
+    testing.expectEqual(null, machine.threads[2].scheduled_suspend_state);
+    testing.expectEqual(null, machine.threads[3].scheduled_suspend_state);
 
-    instruction.execute(&vm);
+    instruction.execute(&machine);
 
-    testing.expectEqual(.running, vm.threads[1].scheduled_suspend_state);
-    testing.expectEqual(.running, vm.threads[2].scheduled_suspend_state);
-    testing.expectEqual(.running, vm.threads[3].scheduled_suspend_state);
+    testing.expectEqual(.running, machine.threads[1].scheduled_suspend_state);
+    testing.expectEqual(.running, machine.threads[2].scheduled_suspend_state);
+    testing.expectEqual(.running, machine.threads[3].scheduled_suspend_state);
 }
 
 test "execute with suspend operation schedules specified threads to suspend" {
@@ -179,17 +179,17 @@ test "execute with suspend operation schedules specified threads to suspend" {
         .operation = .Suspend,
     };
 
-    var vm = VirtualMachine.init();
+    var machine = Machine.init();
 
-    testing.expectEqual(null, vm.threads[1].scheduled_suspend_state);
-    testing.expectEqual(null, vm.threads[2].scheduled_suspend_state);
-    testing.expectEqual(null, vm.threads[3].scheduled_suspend_state);
+    testing.expectEqual(null, machine.threads[1].scheduled_suspend_state);
+    testing.expectEqual(null, machine.threads[2].scheduled_suspend_state);
+    testing.expectEqual(null, machine.threads[3].scheduled_suspend_state);
 
-    instruction.execute(&vm);
+    instruction.execute(&machine);
 
-    testing.expectEqual(.suspended, vm.threads[1].scheduled_suspend_state);
-    testing.expectEqual(.suspended, vm.threads[2].scheduled_suspend_state);
-    testing.expectEqual(.suspended, vm.threads[3].scheduled_suspend_state);
+    testing.expectEqual(.suspended, machine.threads[1].scheduled_suspend_state);
+    testing.expectEqual(.suspended, machine.threads[2].scheduled_suspend_state);
+    testing.expectEqual(.suspended, machine.threads[3].scheduled_suspend_state);
 }
 
 test "execute with deactivate operation schedules specified threads to deactivate" {
@@ -199,15 +199,15 @@ test "execute with deactivate operation schedules specified threads to deactivat
         .operation = .Deactivate,
     };
 
-    var vm = VirtualMachine.init();
+    var machine = Machine.init();
 
-    testing.expectEqual(null, vm.threads[1].scheduled_execution_state);
-    testing.expectEqual(null, vm.threads[2].scheduled_execution_state);
-    testing.expectEqual(null, vm.threads[3].scheduled_execution_state);
+    testing.expectEqual(null, machine.threads[1].scheduled_execution_state);
+    testing.expectEqual(null, machine.threads[2].scheduled_execution_state);
+    testing.expectEqual(null, machine.threads[3].scheduled_execution_state);
 
-    instruction.execute(&vm);
+    instruction.execute(&machine);
 
-    testing.expectEqual(.inactive, vm.threads[1].scheduled_execution_state);
-    testing.expectEqual(.inactive, vm.threads[2].scheduled_execution_state);
-    testing.expectEqual(.inactive, vm.threads[3].scheduled_execution_state);
+    testing.expectEqual(.inactive, machine.threads[1].scheduled_execution_state);
+    testing.expectEqual(.inactive, machine.threads[2].scheduled_execution_state);
+    testing.expectEqual(.inactive, machine.threads[3].scheduled_execution_state);
 }
