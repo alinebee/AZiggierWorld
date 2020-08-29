@@ -1,10 +1,9 @@
 const opcode = @import("../types/opcode.zig");
 const thread_id = @import("../types/thread_id.zig");
-const program = @import("../types/program.zig");
+const Program = @import("../types/program.zig");
+const VirtualMachine = @import("../virtual_machine.zig");
 
-const VirtualMachine = @import("../virtual_machine.zig").VirtualMachine;
-
-pub const Error = program.Error || thread_id.Error || OperationError || error {
+pub const Error = Program.Error || thread_id.Error || OperationError || error {
     /// The end thread came before the start thread.
     InvalidThreadRange,
 };
@@ -25,11 +24,11 @@ pub const Instruction = struct {
     /// Parse the next instruction from a bytecode program.
     /// Consumes 3 bytes from the bytecode on success.
     /// Returns an error if the bytecode could not be read or contained an invalid instruction.
-    pub fn parse(raw_opcode: opcode.RawOpcode, prog: *program.Program) Error!Instruction {
+    pub fn parse(raw_opcode: opcode.RawOpcode, program: *Program.Instance) Error!Instruction {
         const instruction = Instruction {
-            .start_thread_id = try thread_id.parse(try prog.read(thread_id.RawThreadID)),
-            .end_thread_id = try thread_id.parse(try prog.read(thread_id.RawThreadID)),
-            .operation = try Operation.parse(try prog.read(RawOperation)),
+            .start_thread_id = try thread_id.parse(try program.read(thread_id.RawThreadID)),
+            .end_thread_id = try thread_id.parse(try program.read(thread_id.RawThreadID)),
+            .operation = try Operation.parse(try program.read(RawOperation)),
         };
 
         if (instruction.start_thread_id > instruction.end_thread_id) {
@@ -39,7 +38,7 @@ pub const Instruction = struct {
         return instruction;
     }
 
-    pub fn execute(self: Instruction, vm: *VirtualMachine) void {
+    pub fn execute(self: Instruction, vm: *VirtualMachine.Instance) void {
         var id = self.start_thread_id;
         while (id <= self.end_thread_id) {
             var thread = &vm.threads[id];

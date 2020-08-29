@@ -1,11 +1,10 @@
 
 const opcode = @import("../types/opcode.zig");
 const thread_id = @import("../types/thread_id.zig");
-const program = @import("../types/program.zig");
+const Program = @import("../types/program.zig");
+const VirtualMachine = @import("../virtual_machine.zig");
 
-const VirtualMachine = @import("../virtual_machine.zig").VirtualMachine;
-
-pub const Error = program.Error || thread_id.Error;
+pub const Error = Program.Error || thread_id.Error;
 
 /// Activate a specific thread and move its program counter to the specified address.
 /// Takes effect on the next iteration of the run loop.
@@ -14,19 +13,19 @@ pub const Instruction = struct {
     thread_id: thread_id.ThreadID,
 
     /// The program address that the thread should jump to when activated.
-    address: program.Address,
+    address: Program.Address,
 
     /// Parse the next instruction from a bytecode program.
     /// Consumes 3 bytes from the bytecode on success.
     /// Returns an error if the bytecode could not be read or contained an invalid instruction.
-    pub fn parse(raw_opcode: opcode.RawOpcode, prog: *program.Program) Error!Instruction {
+    pub fn parse(raw_opcode: opcode.RawOpcode, program: *Program.Instance) Error!Instruction {
         return Instruction {
-            .thread_id = try thread_id.parse(try prog.read(thread_id.RawThreadID)),
-            .address = try prog.read(program.Address),
+            .thread_id = try thread_id.parse(try program.read(thread_id.RawThreadID)),
+            .address = try program.read(Program.Address),
         };
     }
 
-    pub fn execute(self: Instruction, vm: *VirtualMachine) void {
+    pub fn execute(self: Instruction, vm: *VirtualMachine.Instance) void {
         vm.threads[self.thread_id].scheduleJump(self.address);
     }
 };

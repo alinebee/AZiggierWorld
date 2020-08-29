@@ -1,22 +1,22 @@
 //! Functions and types used when testing virtual machine instructions.
 
 const opcode = @import("../types/opcode.zig");
-const program = @import("../types/program.zig");
+const Program = @import("../types/program.zig");
 
 // -- Test helpers --
 
 /// Try to parse a literal sequence of bytecode into a specific instruction;
 /// on success or failure, check that the expected number of bytes were consumed.
 pub fn debugParseInstruction(comptime Instruction: type, bytecode: []const u8, expected_bytes_consumed: usize) !Instruction {
-    var prog = program.Program.init(bytecode);
-    const raw_opcode = try prog.read(u8);
+    var program = Program.init(bytecode);
+    const raw_opcode = try program.read(u8);
 
-    const instruction = Instruction.parse(raw_opcode, &prog);
+    const instruction = Instruction.parse(raw_opcode, &program);
 
     // Regardless of success or failure, check how many bytes were actually consumed.
     // (Don't count the initial opcode byte, as it's not really "part of" the instruction
     // and will have been read separately by the instruction's caller.)
-    const bytes_consumed = prog.counter - 1;
+    const bytes_consumed = program.counter - 1;
     if (bytes_consumed > expected_bytes_consumed) {
         return error.OverRead;
     } else if (bytes_consumed < expected_bytes_consumed) {
@@ -35,8 +35,8 @@ const Error = error {
 
 /// A test instruction that consumes 5 bytes (not including the opcode byte).
 const Fake5ByteInstruction = struct {     
-    fn parse(raw_opcode: opcode.RawOpcode, prog: *program.Program) !Fake5ByteInstruction {
-        try prog.skip(5);
+    fn parse(raw_opcode: opcode.RawOpcode, program: *Program.Instance) !Fake5ByteInstruction {
+        try program.skip(5);
         return Fake5ByteInstruction { };
     }
 };

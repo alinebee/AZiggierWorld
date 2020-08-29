@@ -1,28 +1,28 @@
 const opcode = @import("../types/opcode.zig");
-const program = @import("../types/program.zig");
-const virtual_machine = @import("../virtual_machine.zig");
+const Program = @import("../types/program.zig");
+const VirtualMachine = @import("../virtual_machine.zig");
 
-pub const Error = program.Error;
+pub const Error = Program.Error;
 
 /// Set a specific register to a constant value.
 pub const Instruction = struct {
     /// The ID of the register to set.
-    destination: virtual_machine.RegisterID,
+    destination: VirtualMachine.RegisterID,
     
     /// The constant value to set the register to.
-    value: virtual_machine.Register,
+    value: VirtualMachine.Register,
 
     /// Parse the next instruction from a bytecode program.
     /// Consumes 3 bytes from the bytecode on success.
     /// Returns an error if the bytecode could not be read or contained an invalid instruction.
-    pub fn parse(raw_opcode: opcode.RawOpcode, prog: *program.Program) Error!Instruction {
+    pub fn parse(raw_opcode: opcode.RawOpcode, program: *Program.Instance) Error!Instruction {
         return Instruction {
-            .destination = try prog.read(virtual_machine.RegisterID),
-            .value = try prog.read(virtual_machine.Register),
+            .destination = try program.read(VirtualMachine.RegisterID),
+            .value = try program.read(VirtualMachine.Register),
         };
     }
 
-    pub fn execute(self: Instruction, vm: *virtual_machine.VirtualMachine) void {
+    pub fn execute(self: Instruction, vm: *VirtualMachine.Instance) void {
         vm.registers[self.destination] = self.value;
     }
 };
@@ -60,7 +60,7 @@ test "execute updates specified register with value" {
         .value = -1234,
     };
 
-    var vm = virtual_machine.VirtualMachine.init();
+    var vm = VirtualMachine.init();
     instruction.execute(&vm);
 
     testing.expectEqual(-1234, vm.registers[16]);

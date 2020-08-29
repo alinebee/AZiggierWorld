@@ -8,29 +8,29 @@ pub const max_registers = 256;
 pub const Register = i16;
 pub const RegisterID = u8;
 
-pub const VirtualMachine = struct {
+pub const Instance = struct {
     /// The current state of the VM's 64 threads.
     threads: [max_threads]Thread = [_]Thread { .{} } ** max_threads,
 
     /// The current state of the VM's 256 registers.
     registers: [max_registers]Register = [_]Register { 0 } ** max_registers,
-
-    pub fn init() VirtualMachine {
-        var vm = VirtualMachine { };
-
-        // Initialize the main thread to begin execution at the start of the current program
-        vm.threads[thread_id.main].execution_state = .{ .active = 0 };
-
-        return vm;
-    }
 };
+
+pub fn init() Instance {
+    var vm = Instance { };
+
+    // Initialize the main thread to begin execution at the start of the current program
+    vm.threads[thread_id.main].execution_state = .{ .active = 0 };
+
+    return vm;
+}
 
 // -- Tests --
 
 const testing = @import("../utils/testing.zig");
 
 test "init creates new virtual machine with expected state" {
-    const vm = VirtualMachine.init();
+    const vm = init();
 
     for (vm.threads) |thread, id| {
         if (id == thread_id.main) {
