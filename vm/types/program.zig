@@ -70,37 +70,37 @@ pub const Program = struct {
 
 /// -- Tests --
 
-const testing = @import("std").testing;
+const testing = @import("../../utils/testing.zig");
 
 test "read(u8) returns byte at current program counter and advances program counter" {
     const bytecode = [_]u8 { 0xDE, 0xAD, };
     var program = Program.init(&bytecode);
 
-    testing.expectEqual(@intCast(usize, 0), program.counter);
+    testing.expectEqual(0, program.counter);
     
-    testing.expectEqual(@intCast(u8, 0xDE), try program.read(u8));
-    testing.expectEqual(@intCast(usize, 1), program.counter);
+    testing.expectEqual(0xDE, program.read(u8));
+    testing.expectEqual(1, program.counter);
 
-    testing.expectEqual(@intCast(u8, 0xAD), try program.read(u8));
-    testing.expectEqual(@intCast(usize, 2), program.counter);
+    testing.expectEqual(0xAD, program.read(u8));
+    testing.expectEqual(2, program.counter);
 }
 
 test "read(u16) returns big-endian u16 at current program counter and advances program counter by 2" {
     const bytecode = [_]u8 { 0xDE, 0xAD, 0xBE, 0xEF, };
     var program = Program.init(&bytecode);
 
-    testing.expectEqual(@intCast(usize, 0), program.counter);
-    testing.expectEqual(@intCast(u16, 0xDEAD), try program.read(u16));
-    testing.expectEqual(@intCast(usize, 2), program.counter);
-    testing.expectEqual(@intCast(u16, 0xBEEF), try program.read(u16));
-    testing.expectEqual(@intCast(usize, 4), program.counter);
+    testing.expectEqual(0, program.counter);
+    testing.expectEqual(0xDEAD, program.read(u16));
+    testing.expectEqual(2, program.counter);
+    testing.expectEqual(0xBEEF, program.read(u16));
+    testing.expectEqual(4, program.counter);
 }
 
 test "read(u16) returns error.EndOfProgram and leaves program counter at end of program when it tries to read beyond end of program" {
     const bytecode = [_]u8 { 0xDE, };
     var program = Program.init(&bytecode);
 
-    testing.expectEqual(@intCast(usize, 0), program.counter);
+    testing.expectEqual(0, program.counter);
     testing.expectError(error.EndOfProgram, program.read(u16));
     testing.expectEqual(bytecode.len, program.counter);
 }
@@ -114,18 +114,18 @@ test "read(i16) returns big-endian i16 at current program counter and advances p
     };
     var program = Program.init(&bytecode);
 
-    testing.expectEqual(@intCast(usize, 0), program.counter);
-    testing.expectEqual(int1, try program.read(i16));
-    testing.expectEqual(@intCast(usize, 2), program.counter);
-    testing.expectEqual(int2, try program.read(i16));
-    testing.expectEqual(@intCast(usize, 4), program.counter);
+    testing.expectEqual(0, program.counter);
+    testing.expectEqual(int1, program.read(i16));
+    testing.expectEqual(2, program.counter);
+    testing.expectEqual(int2, program.read(i16));
+    testing.expectEqual(4, program.counter);
 }
 
 test "read() returns error.EndOfProgram and leaves program counter at end of program when it tries to read beyond end of program" {
     const bytecode = [_]u8 { 0xDE, };
     var program = Program.init(&bytecode);
 
-    testing.expectEqual(@intCast(usize, 0), program.counter);
+    testing.expectEqual(0, program.counter);
     testing.expectError(error.EndOfProgram, program.read(u16));
     testing.expectEqual(bytecode.len, program.counter);
 }
@@ -134,18 +134,18 @@ test "skip() advances program counter" {
     const bytecode = [_]u8 { 0xDE, 0xAD, };
     var program = Program.init(&bytecode);
 
-    testing.expectEqual(@intCast(usize, 0), program.counter);
+    testing.expectEqual(0, program.counter);
     try program.skip(2);
-    testing.expectEqual(@intCast(usize, 2), program.counter);
+    testing.expectEqual(2, program.counter);
 }
 
 test "skip() returns error.EndOfProgram and leaves program counter at end of program when it tries to read beyond end of program" {
     const bytecode = [_]u8 { 0xDE, 0xAD, };
     var program = Program.init(&bytecode);
 
-    testing.expectEqual(@intCast(usize, 0), program.counter);
+    testing.expectEqual(0, program.counter);
     testing.expectError(error.EndOfProgram, program.skip(5));
-    testing.expectEqual(@intCast(usize, 2), program.counter);
+    testing.expectEqual(2, program.counter);
 }
 
 test "jump() moves program counter to specified address" {
@@ -153,14 +153,14 @@ test "jump() moves program counter to specified address" {
     var program = Program.init(&bytecode);
 
     try program.jump(3);
-    testing.expectEqual(@intCast(usize, 3), program.counter);
+    testing.expectEqual(3, program.counter);
     try program.jump(1);
-    testing.expectEqual(@intCast(usize, 1), program.counter);
+    testing.expectEqual(1, program.counter);
 }
 
 test "jump() returns error.InvalidAddress program counter when given address beyond the end of program" {
     const bytecode = [_]u8 { 0xDE, 0xAD, 0xBE, 0xEF };
     var program = Program.init(&bytecode);
 
-    testing.expectError(error.InvalidAddress, program.jump(5));
+    testing.expectError(error.InvalidAddress, program.jump(6));
 }

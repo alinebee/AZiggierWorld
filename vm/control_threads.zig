@@ -90,10 +90,10 @@ pub const BytecodeExamples = struct {
     pub const valid = [_]u8 { raw_opcode, thread_id.max - 1, thread_id.max, 0x02 };
 
     /// Example bytecode with an invalid starting thread ID that should produce an error.
-    const invalid_start_thread_id = [_]u8 { raw_opcode, thread_id.max + 1, thread_id.max + 1, 0x02 };
+    const invalid_start_thread_id = [_]u8 { raw_opcode, 64, 64, 0x02 };
 
     /// Example bytecode with an invalid ending thread ID that should produce an error.
-    const invalid_end_thread_id = [_]u8 { raw_opcode, thread_id.max, thread_id.max + 1, 0x02 };
+    const invalid_end_thread_id = [_]u8 { raw_opcode, thread_id.max, 64, 0x02 };
 
     /// Example bytecode with a start thread ID higher than its end thread ID, which should produce an error.
     const transposed_thread_ids = [_]u8 { raw_opcode, thread_id.max, thread_id.max - 1, 0x02 };
@@ -104,15 +104,15 @@ pub const BytecodeExamples = struct {
 
 // -- Tests --
 
-const testing = @import("std").testing;
+const testing = @import("../utils/testing.zig");
 const debugParseInstruction = @import("instruction_test_helpers.zig").debugParseInstruction;
 
 test "Instruction.parse parses valid bytecode and consumes 3 bytes" {
     const instruction = try debugParseInstruction(Instruction, &BytecodeExamples.valid, 3);
     
-    testing.expectEqual(instruction.start_thread_id, thread_id.max - 1);
-    testing.expectEqual(instruction.end_thread_id, thread_id.max);
-    testing.expectEqual(instruction.operation, .Deactivate);
+    testing.expectEqual(thread_id.max - 1, instruction.start_thread_id);
+    testing.expectEqual(thread_id.max, instruction.end_thread_id);
+    testing.expectEqual(.Deactivate, instruction.operation);
 }
 
 test "Instruction.parse returns Error.InvalidThreadID and consumes 1 byte when start thread ID is invalid" {
@@ -144,9 +144,9 @@ test "Insutrction.parse fails to parse incomplete bytecode and consumes all avai
 }
 
 test "Operation.parse parses raw operation bytes correctly" {
-    testing.expectEqual(try Operation.parse(0), .Resume);
-    testing.expectEqual(try Operation.parse(1), .Suspend);
-    testing.expectEqual(try Operation.parse(2), .Deactivate);
+    testing.expectEqual(.Resume, Operation.parse(0));
+    testing.expectEqual(.Suspend, Operation.parse(1));
+    testing.expectEqual(.Deactivate, Operation.parse(2));
     testing.expectError(
         error.InvalidThreadOperation,
         Operation.parse(3),
@@ -162,15 +162,15 @@ test "execute with resume operation schedules specified threads to resume" {
 
     var vm = VirtualMachine.init();
 
-    testing.expectEqual(vm.threads[1].scheduled_suspend_state, null);
-    testing.expectEqual(vm.threads[2].scheduled_suspend_state, null);
-    testing.expectEqual(vm.threads[3].scheduled_suspend_state, null);
+    testing.expectEqual(null, vm.threads[1].scheduled_suspend_state);
+    testing.expectEqual(null, vm.threads[2].scheduled_suspend_state);
+    testing.expectEqual(null, vm.threads[3].scheduled_suspend_state);
 
     instruction.execute(&vm);
 
-    testing.expectEqual(vm.threads[1].scheduled_suspend_state, .running);
-    testing.expectEqual(vm.threads[2].scheduled_suspend_state, .running);
-    testing.expectEqual(vm.threads[3].scheduled_suspend_state, .running);
+    testing.expectEqual(.running, vm.threads[1].scheduled_suspend_state);
+    testing.expectEqual(.running, vm.threads[2].scheduled_suspend_state);
+    testing.expectEqual(.running, vm.threads[3].scheduled_suspend_state);
 }
 
 test "execute with suspend operation schedules specified threads to suspend" {
@@ -182,15 +182,15 @@ test "execute with suspend operation schedules specified threads to suspend" {
 
     var vm = VirtualMachine.init();
 
-    testing.expectEqual(vm.threads[1].scheduled_suspend_state, null);
-    testing.expectEqual(vm.threads[2].scheduled_suspend_state, null);
-    testing.expectEqual(vm.threads[3].scheduled_suspend_state, null);
+    testing.expectEqual(null, vm.threads[1].scheduled_suspend_state);
+    testing.expectEqual(null, vm.threads[2].scheduled_suspend_state);
+    testing.expectEqual(null, vm.threads[3].scheduled_suspend_state);
 
     instruction.execute(&vm);
 
-    testing.expectEqual(vm.threads[1].scheduled_suspend_state, .suspended);
-    testing.expectEqual(vm.threads[2].scheduled_suspend_state, .suspended);
-    testing.expectEqual(vm.threads[3].scheduled_suspend_state, .suspended);
+    testing.expectEqual(.suspended, vm.threads[1].scheduled_suspend_state);
+    testing.expectEqual(.suspended, vm.threads[2].scheduled_suspend_state);
+    testing.expectEqual(.suspended, vm.threads[3].scheduled_suspend_state);
 }
 
 test "execute with deactivate operation schedules specified threads to deactivate" {
@@ -202,13 +202,13 @@ test "execute with deactivate operation schedules specified threads to deactivat
 
     var vm = VirtualMachine.init();
 
-    testing.expectEqual(vm.threads[1].scheduled_execution_state, null);
-    testing.expectEqual(vm.threads[2].scheduled_execution_state, null);
-    testing.expectEqual(vm.threads[3].scheduled_execution_state, null);
+    testing.expectEqual(null, vm.threads[1].scheduled_execution_state);
+    testing.expectEqual(null, vm.threads[2].scheduled_execution_state);
+    testing.expectEqual(null, vm.threads[3].scheduled_execution_state);
 
     instruction.execute(&vm);
 
-    testing.expectEqual(vm.threads[1].scheduled_execution_state, .inactive);
-    testing.expectEqual(vm.threads[2].scheduled_execution_state, .inactive);
-    testing.expectEqual(vm.threads[3].scheduled_execution_state, .inactive);
+    testing.expectEqual(.inactive, vm.threads[1].scheduled_execution_state);
+    testing.expectEqual(.inactive, vm.threads[2].scheduled_execution_state);
+    testing.expectEqual(.inactive, vm.threads[3].scheduled_execution_state);
 }

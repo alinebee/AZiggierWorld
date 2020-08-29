@@ -48,13 +48,13 @@ fn fakeBytecode(comptime size: usize) [size + 1]u8 {
 
 // -- Tests --
 
-const testing = std.testing;
+const testing = @import("../utils/testing.zig");
 
 test "debugParseInstruction returns parsed instruction if all bytes were parsed" {
     const bytecode = fakeBytecode(5);
     
     const instruction = try debugParseInstruction(Fake5ByteInstruction, &bytecode, 5);
-    testing.expectEqual(instruction, Fake5ByteInstruction { });
+    testing.expectEqual(Fake5ByteInstruction { }, instruction);
 }
 
 test "debugParseInstruction returns error.UnderRead if too few bytes were parsed" {

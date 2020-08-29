@@ -8,7 +8,7 @@ pub const RawThreadID = u8;
 pub const count = 64;
 
 /// The maximum value for a raw thread ID.
-pub const max = count - 1;
+pub const max: ThreadID = count - 1;
 
 pub const Error = error {
     InvalidThreadID,
@@ -23,12 +23,12 @@ pub fn parse(raw_id: u8) Error!ThreadID {
 
 // -- Tests --
 
-const testing = @import("std").testing;
+const testing = @import("../../utils/testing.zig");
 
 test "parse succeeds with in-bounds integer" {
-    testing.expectEqual(try parse(0x3F), 0x3F);
+    testing.expectEqual(0x3F, parse(0x3F));
 }
 
 test "parse returns InvalidThreadID with out-of-bounds integer" {
-    testing.expectError(error.InvalidThreadID, parse(max + 1));
+    testing.expectError(error.InvalidThreadID, parse(0x40));
 }

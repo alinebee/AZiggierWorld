@@ -41,19 +41,19 @@ pub const BytecodeExamples = struct {
     pub const valid = [_]u8 { raw_opcode, thread_id.max, 0xDE, 0xAD };
 
     /// Example bytecode with an invalid thread ID that should produce an error.
-    const invalid_thread_id = [_]u8 { raw_opcode, thread_id.max + 1, 0xDE, 0xAD };
+    const invalid_thread_id = [_]u8 { raw_opcode, @as(thread_id.RawThreadID, thread_id.max) + 1, 0xDE, 0xAD };
 };
 
 // -- Tests --
 
-const testing = @import("std").testing;
+const testing = @import("../utils/testing.zig");
 const debugParseInstruction = @import("instruction_test_helpers.zig").debugParseInstruction;
 
 test "parse parses instruction from valid bytecode and consumes 3 bytes" {
     const instruction = try debugParseInstruction(Instruction, &BytecodeExamples.valid, 3);
     
-    testing.expectEqual(instruction.thread_id, thread_id.max);
-    testing.expectEqual(instruction.address, 0xDE_AD);
+    testing.expectEqual(thread_id.max, instruction.thread_id);
+    testing.expectEqual(0xDEAD, instruction.address);
 }
 
 test "parse returns error.InvalidThreadID and consumes 1 byte when thread ID is invalid" {
@@ -80,7 +80,7 @@ test "execute schedules specified thread to jump to specified address" {
     instruction.execute(&vm);
 
     testing.expectEqual(
-        vm.threads[thread_id.max].scheduled_execution_state,
         thread.ExecutionState { .active = 0xDEAD },
+        vm.threads[thread_id.max].scheduled_execution_state,
     );
 }
