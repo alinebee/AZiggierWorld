@@ -136,7 +136,7 @@ test "Instruction.parse returns Error.InvalidThreadRange and consumes 3 bytes wh
     );
 }
 
-test "Insutrction.parse fails to parse incomplete bytecode and consumes all available bytes" {
+test "Instruction.parse fails to parse incomplete bytecode and consumes all available bytes" {
     testing.expectError(
         error.EndOfProgram,
         debugParseInstruction(Instruction, BytecodeExamples.valid[0..3], 2),

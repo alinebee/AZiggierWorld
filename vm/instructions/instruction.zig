@@ -5,11 +5,13 @@ const opcode = @import("../types/opcode.zig");
 
 const activate_thread = @import("activate_thread.zig");
 const control_threads = @import("control_threads.zig");
+const set_register = @import("set_register.zig");
 
 pub const Error = 
     program.Error || 
     activate_thread.Error || 
     control_threads.Error || 
+    set_register.Error ||
     error {
     /// Bytecode contained an unrecognized opcode.
     UnsupportedOpcode,
@@ -20,6 +22,7 @@ pub const Instruction = union(enum) {
     // TODO: see if we can codegen all this because it's going to get tiresome for 26-odd opcodes.
     ActivateThread: activate_thread.Instruction,
     ControlThreads: control_threads.Instruction,
+    SetRegister: set_register.Instruction,
 
     /// Parse the next instruction from a bytecode program.
     /// Returns a valid instruction, or an error if the bytecode is truncated or could not be interpreted as an instruction.
@@ -27,8 +30,9 @@ pub const Instruction = union(enum) {
         const raw_opcode = try prog.read(opcode.RawOpcode);
 
         return switch (opcode.parse(raw_opcode)) {
-            .ActivateThread => Instruction { .ActivateThread = try activate_thread.Instruction.parse(raw_opcode, prog) },
-            .ControlThreads => Instruction { .ControlThreads = try control_threads.Instruction.parse(raw_opcode, prog) },
+            .ActivateThread => .{ .ActivateThread = try activate_thread.Instruction.parse(raw_opcode, prog) },
+            .ControlThreads => .{ .ControlThreads = try control_threads.Instruction.parse(raw_opcode, prog) },
+            .SetRegister    => .{ .SetRegister = try set_register.Instruction.parse(raw_opcode, prog) },
             else => error.UnsupportedOpcode,
         };
     }
@@ -60,6 +64,11 @@ test "parse returns ActivateThread instruction when given valid bytecode" {
 test "parse returns ControlThreads instruction when given valid bytecode" {
     const instruction = try debugParseInstruction(&control_threads.BytecodeExamples.valid);
     expectInstructionType(.ControlThreads, instruction);
+}
+
+test "parse returns SetRegister instruction when given valid bytecode" {
+    const instruction = try debugParseInstruction(&set_register.BytecodeExamples.valid);
+    expectInstructionType(.SetRegister, instruction);
 }
 
 test "parse returns UnsupportedOpcode error when it encounters an unknown opcode" {
