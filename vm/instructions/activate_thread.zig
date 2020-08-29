@@ -2,7 +2,6 @@
 const opcode = @import("../types/opcode.zig");
 const thread_id = @import("../types/thread_id.zig");
 const program = @import("../types/program.zig");
-const thread = @import("../types/thread.zig");
 
 const VirtualMachine = @import("../virtual_machine.zig").VirtualMachine;
 
@@ -80,7 +79,7 @@ test "execute schedules specified thread to jump to specified address" {
     instruction.execute(&vm);
 
     testing.expectEqual(
-        thread.ExecutionState { .active = 0xDEAD },
-        vm.threads[thread_id.max].scheduled_execution_state,
+        .{ .active = 0xDEAD },
+        vm.threads[thread_id.max].scheduled_execution_state
     );
 }

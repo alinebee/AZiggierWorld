@@ -4,9 +4,7 @@ pub const ThreadID = u6;
 /// The raw ID of a thread as stored in bytecode as an 8-bit unsigned integer.
 pub const RawThreadID = u8;
 
-/// The total number of available threads.
-pub const count = 64;
-
+const count = @import("../virtual_machine.zig").max_threads;
 /// The maximum value for a raw thread ID.
 pub const max: ThreadID = count - 1;
 

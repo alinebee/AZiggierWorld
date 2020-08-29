@@ -55,7 +55,7 @@ pub const Thread = struct {
     /// On the next game tic, activate this thread and jump to the specified address.
     /// If the thread is currently inactive, then it will remain so for the rest of the current tic.
     pub fn scheduleJump(self: *Thread, address: Address) void {
-        self.scheduled_execution_state = ExecutionState { .active = address };
+        self.scheduled_execution_state = .{ .active = address };
     }
 
     /// On the next game tic, deactivate this thread.
@@ -100,15 +100,15 @@ test "scheduleJump schedules activation with specified program counter for next 
     thread.scheduleJump(0xDEAD);
 
     testing.expectEqual(.inactive, thread.execution_state);
-    testing.expectEqual(ExecutionState { .active = 0xDEAD, }, thread.scheduled_execution_state);
+    testing.expectEqual(.{ .active = 0xDEAD, }, thread.scheduled_execution_state);
 }
 
 test "scheduleDeactivate schedules deactivation for next tic" {
-    var thread = Thread { .execution_state = ExecutionState { .active = 0xDEAD } };
+    var thread = Thread { .execution_state = .{ .active = 0xDEAD } };
 
     thread.scheduleDeactivate();
 
-    testing.expectEqual(ExecutionState { .active = 0xDEAD }, thread.execution_state);
+    testing.expectEqual(.{ .active = 0xDEAD }, thread.execution_state);
     testing.expectEqual(.inactive, thread.scheduled_execution_state);
 }
 
@@ -135,14 +135,14 @@ test "update applies scheduled execution state" {
 
     thread.scheduleJump(0xDEAD);
     testing.expectEqual(.inactive, thread.execution_state);
-    testing.expectEqual(ExecutionState { .active = 0xDEAD }, thread.scheduled_execution_state);
+    testing.expectEqual(.{ .active = 0xDEAD }, thread.scheduled_execution_state);
 
     thread.update();
-    testing.expectEqual(ExecutionState { .active = 0xDEAD }, thread.execution_state);
+    testing.expectEqual(.{ .active = 0xDEAD }, thread.execution_state);
     testing.expectEqual(null, thread.scheduled_execution_state);
 
     thread.scheduleDeactivate();
-    testing.expectEqual(ExecutionState { .active = 0xDEAD }, thread.execution_state);
+    testing.expectEqual(.{ .active = 0xDEAD }, thread.execution_state);
     testing.expectEqual(.inactive, thread.scheduled_execution_state);
 
     thread.update();
