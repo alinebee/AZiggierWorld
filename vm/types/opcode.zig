@@ -2,13 +2,13 @@
 //! See instruction.zig for how these are mapped to implementations of those opcodes.
 
 /// A raw opcode as represented in Another World's bytecode.
-pub const RawOpcode = u8;
+pub const Raw = u8;
 
 /// The known opcodes used in Another World's bytecode.
 /// These map to individual instruction types, each defined in their own zig file with the same name.
 /// See https://github.com/fabiensanglard/Another-World-Bytecode-Interpreter for a list of opccodes
 /// (whose names do not match the ones I have chosen here).
-pub const Opcode = enum (RawOpcode) {
+pub const Enum = enum (Raw) {
     SetRegister,
     CopyRegister,
     AddToRegister,
@@ -42,6 +42,6 @@ pub const Opcode = enum (RawOpcode) {
     _,
 };
 
-pub fn parse(raw_opcode: RawOpcode) Opcode {
-    return @intToEnum(Opcode, raw_opcode);
+pub fn parse(raw_opcode: Raw) Enum {
+    return @intToEnum(Enum, raw_opcode);
 }

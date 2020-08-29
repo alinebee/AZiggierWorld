@@ -1,5 +1,5 @@
 
-const opcode = @import("../types/opcode.zig");
+const Opcode = @import("../types/opcode.zig");
 const thread_id = @import("../types/thread_id.zig");
 const Program = @import("../types/program.zig");
 const Machine = @import("../machine.zig");
@@ -18,7 +18,7 @@ pub const Instruction = struct {
     /// Parse the next instruction from a bytecode program.
     /// Consumes 3 bytes from the bytecode on success.
     /// Returns an error if the bytecode could not be read or contained an invalid instruction.
-    pub fn parse(raw_opcode: opcode.RawOpcode, program: *Program.Instance) Error!Instruction {
+    pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instruction {
         return Instruction {
             .thread_id = try thread_id.parse(try program.read(thread_id.RawThreadID)),
             .address = try program.read(Program.Address),
@@ -33,7 +33,7 @@ pub const Instruction = struct {
 // -- Bytecode examples --
 
 pub const BytecodeExamples = struct {
-    const raw_opcode = @enumToInt(opcode.Opcode.ActivateThread);
+    const raw_opcode = @enumToInt(Opcode.Enum.ActivateThread);
 
     /// Example bytecode that should produce a valid instruction.
     pub const valid = [_]u8 { raw_opcode, thread_id.max, 0xDE, 0xAD };

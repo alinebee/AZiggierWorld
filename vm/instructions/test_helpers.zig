@@ -1,6 +1,6 @@
 //! Functions and types used when testing virtual machine instructions.
 
-const opcode = @import("../types/opcode.zig");
+const Opcode = @import("../types/opcode.zig");
 const Program = @import("../types/program.zig");
 
 // -- Test helpers --
@@ -9,7 +9,7 @@ const Program = @import("../types/program.zig");
 /// on success or failure, check that the expected number of bytes were consumed.
 pub fn debugParseInstruction(comptime Instruction: type, bytecode: []const u8, expected_bytes_consumed: usize) !Instruction {
     var program = Program.init(bytecode);
-    const raw_opcode = try program.read(u8);
+    const raw_opcode = try program.read(Opcode.Raw);
 
     const instruction = Instruction.parse(raw_opcode, &program);
 
@@ -35,7 +35,7 @@ const Error = error {
 
 /// A test instruction that consumes 5 bytes (not including the opcode byte).
 const Fake5ByteInstruction = struct {     
-    fn parse(raw_opcode: opcode.RawOpcode, program: *Program.Instance) !Fake5ByteInstruction {
+    fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) !Fake5ByteInstruction {
         try program.skip(5);
         return Fake5ByteInstruction { };
     }

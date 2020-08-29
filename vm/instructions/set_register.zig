@@ -1,4 +1,4 @@
-const opcode = @import("../types/opcode.zig");
+const Opcode = @import("../types/opcode.zig");
 const Program = @import("../types/program.zig");
 const Machine = @import("../machine.zig");
 
@@ -15,7 +15,7 @@ pub const Instruction = struct {
     /// Parse the next instruction from a bytecode program.
     /// Consumes 3 bytes from the bytecode on success.
     /// Returns an error if the bytecode could not be read or contained an invalid instruction.
-    pub fn parse(raw_opcode: opcode.RawOpcode, program: *Program.Instance) Error!Instruction {
+    pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instruction {
         return Instruction {
             .destination = try program.read(Machine.RegisterID),
             .value = try program.read(Machine.Register),
@@ -30,7 +30,7 @@ pub const Instruction = struct {
 // -- Bytecode examples --
 
 pub const BytecodeExamples = struct {
-    const raw_opcode = @enumToInt(opcode.Opcode.SetRegister);
+    const raw_opcode = @enumToInt(Opcode.Enum.SetRegister);
 
     pub const valid = [_]u8 { raw_opcode, 16, 0b1011_0110, 0b0010_1011 }; // -18901 in two's complement
 };

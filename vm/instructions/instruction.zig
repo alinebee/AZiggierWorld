@@ -1,7 +1,7 @@
 const std = @import("std");
 
 const Program = @import("../types/program.zig");
-const opcode = @import("../types/opcode.zig");
+const Opcode = @import("../types/opcode.zig");
 
 const activate_thread = @import("activate_thread.zig");
 const control_threads = @import("control_threads.zig");
@@ -30,9 +30,10 @@ pub const Instruction = union(enum) {
     /// Parse the next instruction from a bytecode program and wrap it in an Instruction union tye.
     /// Returns the wrapped Instruction or an error if the bytecode could not be interpreted as an instruction.
     pub fn parse(program: *Program.Instance) Error!Instruction {
-        const raw_opcode = try program.read(opcode.RawOpcode);
+        const raw_opcode = try program.read(Opcode.Raw);
+        const opcode = Opcode.parse(raw_opcode);
 
-        return switch (opcode.parse(raw_opcode)) {
+        return switch (opcode) {
             .ActivateThread => wrap("ActivateThread", activate_thread, raw_opcode, program),
             .ControlThreads => wrap("ControlThreads", control_threads, raw_opcode, program),
             .SetRegister    => wrap("SetRegister", set_register, raw_opcode, program),
@@ -43,7 +44,7 @@ pub const Instruction = union(enum) {
 
     /// Parse an instruction of the specified type from the program,
     /// and wrap it in an Instruction union type initialized to the appropriate field.
-    fn wrap(comptime field_name: []const u8, comptime T: type, raw_opcode: opcode.RawOpcode, program: *Program.Instance) Error!Instruction {
+    fn wrap(comptime field_name: []const u8, comptime T: type, raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instruction {
         return @unionInit(Instruction, field_name, try T.Instruction.parse(raw_opcode, program));
     }
 };
