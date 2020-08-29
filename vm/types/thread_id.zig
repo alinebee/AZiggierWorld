@@ -8,6 +8,9 @@ const count = @import("../virtual_machine.zig").max_threads;
 /// The maximum value for a raw thread ID.
 pub const max: ThreadID = count - 1;
 
+/// 0 is treated as the main thread: program execution will begin on that thread.
+pub const main: ThreadID = 0;
+
 pub const Error = error {
     InvalidThreadID,
 };
