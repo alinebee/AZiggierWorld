@@ -2,8 +2,9 @@ const Opcode = @import("../types/opcode.zig");
 const ThreadID = @import("../types/thread_id.zig");
 const Program = @import("../types/program.zig");
 const Machine = @import("../machine.zig");
+const Operation = @import("thread_operation.zig");
 
-pub const Error = Program.Error || ThreadID.Error || OperationError || error {
+pub const Error = Program.Error || ThreadID.Error || Operation.Error || error {
     /// The end thread came before the start thread.
     InvalidThreadRange,
 };
@@ -19,7 +20,7 @@ pub const Instance = struct {
     end_thread_id: ThreadID.Trusted,
 
     /// The operation to perform on the threads in the range.
-    operation: Operation,
+    operation: Operation.Enum,
 
     pub fn execute(self: Instance, machine: *Machine.Instance) void {
         var id = self.start_thread_id;
@@ -44,7 +45,7 @@ pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instance 
     const instruction = Instance {
         .start_thread_id = try ThreadID.parse(try program.read(ThreadID.Raw)),
         .end_thread_id = try ThreadID.parse(try program.read(ThreadID.Raw)),
-        .operation = try Operation.parse(try program.read(RawOperation)),
+        .operation = try Operation.parse(try program.read(Operation.Raw)),
     };
 
     if (instruction.start_thread_id > instruction.end_thread_id) {
@@ -53,32 +54,6 @@ pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instance 
 
     return instruction;
 }
-
-const RawOperation = u8;
-
-const Operation = enum {
-    /// Resume a previously paused thread.
-    Resume,
-    /// Mark the threads as paused, but maintain their current state.
-    Suspend,
-    /// Mark the threads as deactivated.
-    Deactivate,
-
-    fn parse(rawOperation: RawOperation) OperationError!Operation {
-        // It would be nicer to use @intToEnum, but that has undefined behaviour when the value is out of range.
-        return switch (rawOperation) {
-            0 => .Resume,
-            1 => .Suspend,
-            2 => .Deactivate,
-            else => error.InvalidThreadOperation,
-        };
-    }
-};
-
-const OperationError = error {
-    /// The bytecode specified an unknown thread operation.
-    InvalidThreadOperation,
-};
 
 // -- Bytecode examples --
 
@@ -106,7 +81,7 @@ pub const BytecodeExamples = struct {
 const testing = @import("../../utils/testing.zig");
 const debugParseInstruction = @import("test_helpers.zig").debugParseInstruction;
 
-test "Instruction.parse parses valid bytecode and consumes 3 bytes" {
+test "parse parses valid bytecode and consumes 3 bytes" {
     const instruction = try debugParseInstruction(parse, &BytecodeExamples.valid, 3);
     
     testing.expectEqual(62, instruction.start_thread_id);
@@ -114,41 +89,31 @@ test "Instruction.parse parses valid bytecode and consumes 3 bytes" {
     testing.expectEqual(.Deactivate, instruction.operation);
 }
 
-test "Instruction.parse returns Error.InvalidThreadID and consumes 1 byte when start thread ID is invalid" {
+test "parse returns Error.InvalidThreadID and consumes 1 byte when start thread ID is invalid" {
     testing.expectError(
         Error.InvalidThreadID,
         debugParseInstruction(parse, &BytecodeExamples.invalid_start_thread_id, 1),
     );
 }
 
-test "Instruction.parse returns Error.InvalidThreadID and consumes 2 bytes when end thread ID is invalid" {
+test "parse returns Error.InvalidThreadID and consumes 2 bytes when end thread ID is invalid" {
     testing.expectError(
         error.InvalidThreadID,
         debugParseInstruction(parse, &BytecodeExamples.invalid_end_thread_id, 2),
     );
 }
 
-test "Instruction.parse returns Error.InvalidThreadRange and consumes 3 bytes when thread range is transposed" {
+test "parse returns Error.InvalidThreadRange and consumes 3 bytes when thread range is transposed" {
     testing.expectError(
         error.InvalidThreadRange,
         debugParseInstruction(parse, &BytecodeExamples.transposed_thread_ids, 3),
     );
 }
 
-test "Instruction.parse fails to parse incomplete bytecode and consumes all available bytes" {
+test "parse fails to parse incomplete bytecode and consumes all available bytes" {
     testing.expectError(
         error.EndOfProgram,
         debugParseInstruction(parse, BytecodeExamples.valid[0..3], 2),
-    );
-}
-
-test "Operation.parse parses raw operation bytes correctly" {
-    testing.expectEqual(.Resume, Operation.parse(0));
-    testing.expectEqual(.Suspend, Operation.parse(1));
-    testing.expectEqual(.Deactivate, Operation.parse(2));
-    testing.expectError(
-        error.InvalidThreadOperation,
-        Operation.parse(3),
     );
 }
 
