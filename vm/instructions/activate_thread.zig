@@ -1,16 +1,16 @@
 
 const Opcode = @import("../types/opcode.zig");
-const thread_id = @import("../types/thread_id.zig");
+const ThreadID = @import("../types/thread_id.zig");
 const Program = @import("../types/program.zig");
 const Machine = @import("../machine.zig");
 
-pub const Error = Program.Error || thread_id.Error;
+pub const Error = Program.Error || ThreadID.Error;
 
 /// Activate a specific thread and move its program counter to the specified address.
 /// Takes effect on the next iteration of the run loop.
 pub const Instruction = struct {
     /// The thread to activate.
-    thread_id: thread_id.ThreadID,
+    thread_id: ThreadID.Trusted,
 
     /// The program address that the thread should jump to when activated.
     address: Program.Address,
@@ -20,7 +20,7 @@ pub const Instruction = struct {
     /// Returns an error if the bytecode could not be read or contained an invalid instruction.
     pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instruction {
         return Instruction {
-            .thread_id = try thread_id.parse(try program.read(thread_id.RawThreadID)),
+            .thread_id = try ThreadID.parse(try program.read(ThreadID.Raw)),
             .address = try program.read(Program.Address),
         };
     }
@@ -36,10 +36,10 @@ pub const BytecodeExamples = struct {
     const raw_opcode = @enumToInt(Opcode.Enum.ActivateThread);
 
     /// Example bytecode that should produce a valid instruction.
-    pub const valid = [_]u8 { raw_opcode, thread_id.max, 0xDE, 0xAD };
+    pub const valid = [_]u8 { raw_opcode, 63, 0xDE, 0xAD };
 
     /// Example bytecode with an invalid thread ID that should produce an error.
-    const invalid_thread_id = [_]u8 { raw_opcode, @as(thread_id.RawThreadID, thread_id.max) + 1, 0xDE, 0xAD };
+    const invalid_thread_id = [_]u8 { raw_opcode, 255, 0xDE, 0xAD };
 };
 
 // -- Tests --
@@ -50,7 +50,7 @@ const debugParseInstruction = @import("test_helpers.zig").debugParseInstruction;
 test "parse parses instruction from valid bytecode and consumes 3 bytes" {
     const instruction = try debugParseInstruction(Instruction, &BytecodeExamples.valid, 3);
     
-    testing.expectEqual(thread_id.max, instruction.thread_id);
+    testing.expectEqual(63, instruction.thread_id);
     testing.expectEqual(0xDEAD, instruction.address);
 }
 
@@ -70,7 +70,7 @@ test "parse fails to parse incomplete bytecode and consumes all remaining bytes"
 
 test "execute schedules specified thread to jump to specified address" {
     const instruction = Instruction {
-        .thread_id = thread_id.max,
+        .thread_id = 63,
         .address = 0xDEAD,
     };
 
@@ -79,6 +79,6 @@ test "execute schedules specified thread to jump to specified address" {
 
     testing.expectEqual(
         .{ .active = 0xDEAD },
-        machine.threads[thread_id.max].scheduled_execution_state
+        machine.threads[63].scheduled_execution_state
     );
 }

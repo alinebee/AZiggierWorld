@@ -1,9 +1,9 @@
 const Opcode = @import("../types/opcode.zig");
-const thread_id = @import("../types/thread_id.zig");
+const ThreadID = @import("../types/thread_id.zig");
 const Program = @import("../types/program.zig");
 const Machine = @import("../machine.zig");
 
-pub const Error = Program.Error || thread_id.Error || OperationError || error {
+pub const Error = Program.Error || ThreadID.Error || OperationError || error {
     /// The end thread came before the start thread.
     InvalidThreadRange,
 };
@@ -12,11 +12,11 @@ pub const Error = Program.Error || thread_id.Error || OperationError || error {
 pub const Instruction = struct {
     /// The ID of the minimum thread to operate upon.
     /// The operation will affect each thread from start_thread_id up to and including end_thread_id.
-    start_thread_id: thread_id.ThreadID,
+    start_thread_id: ThreadID.Trusted,
 
     /// The ID of the maximum thread to operate upon.
     /// The operation will affect each thread from start_thread_id up to and including end_thread_id.
-    end_thread_id: thread_id.ThreadID,
+    end_thread_id: ThreadID.Trusted,
 
     /// The operation to perform on the threads in the range.
     operation: Operation,
@@ -26,8 +26,8 @@ pub const Instruction = struct {
     /// Returns an error if the bytecode could not be read or contained an invalid instruction.
     pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instruction {
         const instruction = Instruction {
-            .start_thread_id = try thread_id.parse(try program.read(thread_id.RawThreadID)),
-            .end_thread_id = try thread_id.parse(try program.read(thread_id.RawThreadID)),
+            .start_thread_id = try ThreadID.parse(try program.read(ThreadID.Raw)),
+            .end_thread_id = try ThreadID.parse(try program.read(ThreadID.Raw)),
             .operation = try Operation.parse(try program.read(RawOperation)),
         };
 
@@ -86,19 +86,19 @@ pub const BytecodeExamples = struct {
     const raw_opcode = @enumToInt(Opcode.Enum.ControlThreads);
 
     /// Example bytecode that should produce a valid instruction.
-    pub const valid = [_]u8 { raw_opcode, thread_id.max - 1, thread_id.max, 0x02 };
+    pub const valid = [_]u8 { raw_opcode, 62, 63, 0x02 };
 
     /// Example bytecode with an invalid starting thread ID that should produce an error.
     const invalid_start_thread_id = [_]u8 { raw_opcode, 64, 64, 0x02 };
 
     /// Example bytecode with an invalid ending thread ID that should produce an error.
-    const invalid_end_thread_id = [_]u8 { raw_opcode, thread_id.max, 64, 0x02 };
+    const invalid_end_thread_id = [_]u8 { raw_opcode, 63, 64, 0x02 };
 
     /// Example bytecode with a start thread ID higher than its end thread ID, which should produce an error.
-    const transposed_thread_ids = [_]u8 { raw_opcode, thread_id.max, thread_id.max - 1, 0x02 };
+    const transposed_thread_ids = [_]u8 { raw_opcode, 63, 62, 0x02 };
 
     /// Example bytecode with an invalid operation that should produce an error.
-    const invalid_operation = [_]u8 { raw_opcode, thread_id.max - 1, thread_id.max, 0x02 };
+    const invalid_operation = [_]u8 { raw_opcode, 62, 63, 0x02 };
 };
 
 // -- Tests --
@@ -109,8 +109,8 @@ const debugParseInstruction = @import("test_helpers.zig").debugParseInstruction;
 test "Instruction.parse parses valid bytecode and consumes 3 bytes" {
     const instruction = try debugParseInstruction(Instruction, &BytecodeExamples.valid, 3);
     
-    testing.expectEqual(thread_id.max - 1, instruction.start_thread_id);
-    testing.expectEqual(thread_id.max, instruction.end_thread_id);
+    testing.expectEqual(62, instruction.start_thread_id);
+    testing.expectEqual(63, instruction.end_thread_id);
     testing.expectEqual(.Deactivate, instruction.operation);
 }
 

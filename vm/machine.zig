@@ -1,5 +1,5 @@
 const Thread = @import("types/thread.zig").Thread;
-const thread_id = @import("types/thread_id.zig");
+const ThreadID = @import("types/thread_id.zig");
 
 pub const max_threads = 64;
 pub const max_registers = 256;
@@ -20,7 +20,7 @@ pub fn init() Instance {
     var machine = Instance { };
 
     // Initialize the main thread to begin execution at the start of the current program
-    machine.threads[thread_id.main].execution_state = .{ .active = 0 };
+    machine.threads[ThreadID.main].execution_state = .{ .active = 0 };
 
     return machine;
 }
@@ -33,7 +33,7 @@ test "init creates new virtual machine with expected state" {
     const machine = init();
 
     for (machine.threads) |thread, id| {
-        if (id == thread_id.main) {
+        if (id == ThreadID.main) {
             testing.expectEqual(.{ .active = 0 }, thread.execution_state);
         } else {
             testing.expectEqual(.inactive, thread.execution_state);
