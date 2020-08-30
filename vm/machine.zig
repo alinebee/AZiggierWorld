@@ -1,4 +1,4 @@
-const Thread = @import("types/thread.zig").Thread;
+const Thread = @import("types/thread.zig");
 const ThreadID = @import("types/thread_id.zig");
 
 pub const max_threads = 64;
@@ -10,7 +10,7 @@ pub const RegisterID = u8;
 
 pub const Instance = struct {
     /// The current state of the VM's 64 threads.
-    threads: [max_threads]Thread = [_]Thread { .{} } ** max_threads,
+    threads: [max_threads]Thread.Instance = [_]Thread.Instance { .{} } ** max_threads,
 
     /// The current state of the VM's 256 registers.
     registers: [max_registers]Register = [_]Register { 0 } ** max_registers,

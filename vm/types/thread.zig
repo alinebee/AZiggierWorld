@@ -16,17 +16,17 @@ pub const SuspendState = enum {
     suspended,
 };
 
-/// One of the 64 threads within the Another World virtual machine.
+/// The maximum number of program instructions that can be executed on a single thread in a single tic
+/// before it will abort with an error.
+/// Exceeding this number of instructions likely indicates an infinite loop.
+const max_executions_per_tic = 10_000;
+
+/// One of the program execution threads within the Another World virtual machine.
 /// A thread maintains its own paused/running state and its current program counter.
 /// Each tic, the virtual machine runs each active thread: the thread resumes executing the current program
 /// starting from the thread's last program counter, and will run until the thread yields to the next thread
 /// or deactivates itself.
-pub const Thread = struct {
-    /// The maximum number of program instructions that can be executed on a single thread in a single tic
-    /// before it will abort with an error.
-    /// Exceeding this number of instructions likely indicates an infinite loop.
-    const max_executions_per_tic = 10_000;
-
+pub const Instance = struct {
     // Theoretically, a thread can only be in three functional states:
     // 1. Running at program counter X
     // 2. Suspended at program counter X
@@ -54,30 +54,30 @@ pub const Thread = struct {
 
     /// On the next game tic, activate this thread and jump to the specified address.
     /// If the thread is currently inactive, then it will remain so for the rest of the current tic.
-    pub fn scheduleJump(self: *Thread, address: Address) void {
+    pub fn scheduleJump(self: *Instance, address: Address) void {
         self.scheduled_execution_state = .{ .active = address };
     }
 
     /// On the next game tic, deactivate this thread.
     /// If the thread is currently active, then it will remain so for the rest of the current tic.
-    pub fn scheduleDeactivate(self: *Thread) void {
+    pub fn scheduleDeactivate(self: *Instance) void {
         self.scheduled_execution_state = .inactive;
     }
 
     /// On the next game tic, resume running this thread.
     /// If the thread is currently suspended, then it will remain so for the rest of the current tic.
-    pub fn scheduleResume(self: *Thread) void {
+    pub fn scheduleResume(self: *Instance) void {
         self.scheduled_suspend_state = .running;
     }
 
     /// On the next game tic, suspend this thread.
     /// If the thread is currently active and running, then it will still run for the current tic if it hasn't already.
-    pub fn scheduleSuspend(self: *Thread) void {
+    pub fn scheduleSuspend(self: *Instance) void {
         self.scheduled_suspend_state = .suspended;
     }
 
     /// Apply any excheduled changes to the thread's execution and suspend states.
-    pub fn update(self: *Thread) void {
+    pub fn update(self: *Instance) void {
         if (self.scheduled_execution_state) |new_state| {
             self.execution_state = new_state;
             self.scheduled_execution_state = null;
@@ -95,7 +95,7 @@ pub const Thread = struct {
 const testing = @import("../../utils/testing.zig");
 
 test "scheduleJump schedules activation with specified program counter for next tic" {
-    var thread = Thread { };
+    var thread = Instance { };
 
     thread.scheduleJump(0xDEAD);
 
@@ -104,7 +104,7 @@ test "scheduleJump schedules activation with specified program counter for next 
 }
 
 test "scheduleDeactivate schedules deactivation for next tic" {
-    var thread = Thread { .execution_state = .{ .active = 0xDEAD } };
+    var thread = Instance { .execution_state = .{ .active = 0xDEAD } };
 
     thread.scheduleDeactivate();
 
@@ -113,7 +113,7 @@ test "scheduleDeactivate schedules deactivation for next tic" {
 }
 
 test "scheduleResume schedules resuming for next tic" {
-    var thread = Thread { .suspend_state = .suspended };
+    var thread = Instance { .suspend_state = .suspended };
 
     thread.scheduleResume();
 
@@ -122,7 +122,7 @@ test "scheduleResume schedules resuming for next tic" {
 }
 
 test "scheduleSuspend schedules suspending for next tic" {
-    var thread = Thread { };
+    var thread = Instance { };
 
     thread.scheduleSuspend();
 
@@ -131,7 +131,7 @@ test "scheduleSuspend schedules suspending for next tic" {
 }
 
 test "update applies scheduled execution state" {
-    var thread = Thread { };
+    var thread = Instance { };
 
     thread.scheduleJump(0xDEAD);
     testing.expectEqual(.inactive, thread.execution_state);
@@ -151,7 +151,7 @@ test "update applies scheduled execution state" {
 }
 
 test "update applies scheduled suspend state" {
-    var thread = Thread { };
+    var thread = Instance { };
 
     testing.expectEqual(.running, thread.suspend_state);
     testing.expectEqual(null, thread.scheduled_suspend_state);
