@@ -159,7 +159,7 @@ test "execute with resume operation schedules specified threads to resume" {
         .operation = .Resume,
     };
 
-    var machine = Machine.init();
+    var machine = Machine.new();
 
     testing.expectEqual(null, machine.threads[1].scheduled_suspend_state);
     testing.expectEqual(null, machine.threads[2].scheduled_suspend_state);
@@ -179,7 +179,7 @@ test "execute with suspend operation schedules specified threads to suspend" {
         .operation = .Suspend,
     };
 
-    var machine = Machine.init();
+    var machine = Machine.new();
 
     testing.expectEqual(null, machine.threads[1].scheduled_suspend_state);
     testing.expectEqual(null, machine.threads[2].scheduled_suspend_state);
@@ -199,7 +199,7 @@ test "execute with deactivate operation schedules specified threads to deactivat
         .operation = .Deactivate,
     };
 
-    var machine = Machine.init();
+    var machine = Machine.new();
 
     testing.expectEqual(null, machine.threads[1].scheduled_execution_state);
     testing.expectEqual(null, machine.threads[2].scheduled_execution_state);

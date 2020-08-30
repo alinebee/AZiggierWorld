@@ -16,7 +16,7 @@ pub const Instance = struct {
     registers: [max_registers]Register = [_]Register { 0 } ** max_registers,
 };
 
-pub fn init() Instance {
+pub fn new() Instance {
     var machine = Instance { };
 
     // Initialize the main thread to begin execution at the start of the current program
@@ -30,7 +30,7 @@ pub fn init() Instance {
 const testing = @import("../utils/testing.zig");
 
 test "init creates new virtual machine with expected state" {
-    const machine = init();
+    const machine = new();
 
     for (machine.threads) |thread, id| {
         if (id == ThreadID.main) {

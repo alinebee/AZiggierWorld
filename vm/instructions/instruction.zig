@@ -53,7 +53,7 @@ pub const Instruction = union(enum) {
 
 /// Try to parse a literal sequence of bytecode into an Instruction union value.
 fn debugParseInstruction(bytecode: []const u8) !Instruction {
-    var program = Program.init(bytecode);
+    var program = Program.new(bytecode);
     return try Instruction.parse(&program);
 }
 

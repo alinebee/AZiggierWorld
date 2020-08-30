@@ -60,7 +60,7 @@ test "execute updates specified register with value" {
         .source = 17,
     };
 
-    var machine = Machine.init();
+    var machine = Machine.new();
     machine.registers[17] = -900;
 
     instruction.execute(&machine);
