@@ -3,17 +3,17 @@ const std = @import("std");
 const Program = @import("../types/program.zig");
 const Opcode = @import("../types/opcode.zig");
 
-const activate_thread = @import("activate_thread.zig");
-const control_threads = @import("control_threads.zig");
-const set_register = @import("set_register.zig");
-const copy_register = @import("copy_register.zig");
+const ActivateThread = @import("activate_thread.zig");
+const ControlThreads = @import("control_threads.zig");
+const SetRegister = @import("set_register.zig");
+const CopyRegister = @import("copy_register.zig");
 
 pub const Error = 
     Program.Error || 
-    activate_thread.Error || 
-    control_threads.Error || 
-    set_register.Error || 
-    copy_register.Error || 
+    ActivateThread.Error || 
+    ControlThreads.Error || 
+    SetRegister.Error || 
+    CopyRegister.Error || 
     error {
     /// Bytecode contained an unrecognized opcode.
     UnsupportedOpcode,
@@ -22,30 +22,30 @@ pub const Error =
 /// A union type that wraps all possible bytecode instructions.
 pub const Instruction = union(enum) {
     // TODO: see if we can codegen all this because it's going to get tiresome for 26-odd opcodes.
-    ActivateThread: activate_thread.Instruction,
-    ControlThreads: control_threads.Instruction,
-    SetRegister: set_register.Instruction,
-    CopyRegister: copy_register.Instruction,
+    ActivateThread: ActivateThread.Instance,
+    ControlThreads: ControlThreads.Instance,
+    SetRegister: SetRegister.Instance,
+    CopyRegister: CopyRegister.Instance,
 
-    /// Parse the next instruction from a bytecode program and wrap it in an Instruction union tye.
+    /// Parse the next instruction from a bytecode program and wrap it in an Instruction union type.
     /// Returns the wrapped Instruction or an error if the bytecode could not be interpreted as an instruction.
     pub fn parse(program: *Program.Instance) Error!Instruction {
         const raw_opcode = try program.read(Opcode.Raw);
         const opcode = Opcode.parse(raw_opcode);
 
         return switch (opcode) {
-            .ActivateThread => wrap("ActivateThread", activate_thread, raw_opcode, program),
-            .ControlThreads => wrap("ControlThreads", control_threads, raw_opcode, program),
-            .SetRegister    => wrap("SetRegister", set_register, raw_opcode, program),
-            .CopyRegister   => wrap("CopyRegister", copy_register, raw_opcode, program),
+            .ActivateThread => wrap("ActivateThread", ActivateThread.parse, raw_opcode, program),
+            .ControlThreads => wrap("ControlThreads", ControlThreads.parse, raw_opcode, program),
+            .SetRegister    => wrap("SetRegister", SetRegister.parse, raw_opcode, program),
+            .CopyRegister   => wrap("CopyRegister", CopyRegister.parse, raw_opcode, program),
             else => error.UnsupportedOpcode,
         };
     }
 
     /// Parse an instruction of the specified type from the program,
     /// and wrap it in an Instruction union type initialized to the appropriate field.
-    fn wrap(comptime field_name: []const u8, comptime T: type, raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instruction {
-        return @unionInit(Instruction, field_name, try T.Instruction.parse(raw_opcode, program));
+    fn wrap(comptime field_name: []const u8, comptime parseFn: anytype, raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instruction {
+        return @unionInit(Instruction, field_name, try parseFn(raw_opcode, program));
     }
 };
 
@@ -68,22 +68,22 @@ fn expectInstructionType(expected: @TagType(Instruction), actual: @TagType(Instr
 const testing = @import("../../utils/testing.zig");
 
 test "parse returns ActivateThread instruction when given valid bytecode" {
-    const instruction = try debugParseInstruction(&activate_thread.BytecodeExamples.valid);
+    const instruction = try debugParseInstruction(&ActivateThread.BytecodeExamples.valid);
     expectInstructionType(.ActivateThread, instruction);
 }
 
 test "parse returns ControlThreads instruction when given valid bytecode" {
-    const instruction = try debugParseInstruction(&control_threads.BytecodeExamples.valid);
+    const instruction = try debugParseInstruction(&ControlThreads.BytecodeExamples.valid);
     expectInstructionType(.ControlThreads, instruction);
 }
 
 test "parse returns SetRegister instruction when given valid bytecode" {
-    const instruction = try debugParseInstruction(&set_register.BytecodeExamples.valid);
+    const instruction = try debugParseInstruction(&SetRegister.BytecodeExamples.valid);
     expectInstructionType(.SetRegister, instruction);
 }
 
 test "parse returns CopyRegister instruction when given valid bytecode" {
-    const instruction = try debugParseInstruction(&copy_register.BytecodeExamples.valid);
+    const instruction = try debugParseInstruction(&CopyRegister.BytecodeExamples.valid);
     expectInstructionType(.CopyRegister, instruction);
 }
 

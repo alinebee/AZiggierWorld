@@ -9,7 +9,7 @@ pub const Error = Program.Error || ThreadID.Error || OperationError || error {
 };
 
 /// Resumes, suspends or deactivates one or more threads.
-pub const Instruction = struct {
+pub const Instance = struct {
     /// The ID of the minimum thread to operate upon.
     /// The operation will affect each thread from start_thread_id up to and including end_thread_id.
     start_thread_id: ThreadID.Trusted,
@@ -21,24 +21,7 @@ pub const Instruction = struct {
     /// The operation to perform on the threads in the range.
     operation: Operation,
 
-    /// Parse the next instruction from a bytecode program.
-    /// Consumes 3 bytes from the bytecode on success.
-    /// Returns an error if the bytecode could not be read or contained an invalid instruction.
-    pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instruction {
-        const instruction = Instruction {
-            .start_thread_id = try ThreadID.parse(try program.read(ThreadID.Raw)),
-            .end_thread_id = try ThreadID.parse(try program.read(ThreadID.Raw)),
-            .operation = try Operation.parse(try program.read(RawOperation)),
-        };
-
-        if (instruction.start_thread_id > instruction.end_thread_id) {
-            return error.InvalidThreadRange;
-        }
-
-        return instruction;
-    }
-
-    pub fn execute(self: Instruction, machine: *Machine.Instance) void {
+    pub fn execute(self: Instance, machine: *Machine.Instance) void {
         var id = self.start_thread_id;
         while (id <= self.end_thread_id) {
             var thread = &machine.threads[id];
@@ -53,6 +36,23 @@ pub const Instruction = struct {
         }
     }
 };
+
+/// Parse the next instruction from a bytecode program.
+/// Consumes 3 bytes from the bytecode on success.
+/// Returns an error if the bytecode could not be read or contained an invalid instruction.
+pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instance {
+    const instruction = Instance {
+        .start_thread_id = try ThreadID.parse(try program.read(ThreadID.Raw)),
+        .end_thread_id = try ThreadID.parse(try program.read(ThreadID.Raw)),
+        .operation = try Operation.parse(try program.read(RawOperation)),
+    };
+
+    if (instruction.start_thread_id > instruction.end_thread_id) {
+        return error.InvalidThreadRange;
+    }
+
+    return instruction;
+}
 
 const RawOperation = u8;
 
@@ -107,7 +107,7 @@ const testing = @import("../../utils/testing.zig");
 const debugParseInstruction = @import("test_helpers.zig").debugParseInstruction;
 
 test "Instruction.parse parses valid bytecode and consumes 3 bytes" {
-    const instruction = try debugParseInstruction(Instruction, &BytecodeExamples.valid, 3);
+    const instruction = try debugParseInstruction(parse, &BytecodeExamples.valid, 3);
     
     testing.expectEqual(62, instruction.start_thread_id);
     testing.expectEqual(63, instruction.end_thread_id);
@@ -117,28 +117,28 @@ test "Instruction.parse parses valid bytecode and consumes 3 bytes" {
 test "Instruction.parse returns Error.InvalidThreadID and consumes 1 byte when start thread ID is invalid" {
     testing.expectError(
         Error.InvalidThreadID,
-        debugParseInstruction(Instruction, &BytecodeExamples.invalid_start_thread_id, 1),
+        debugParseInstruction(parse, &BytecodeExamples.invalid_start_thread_id, 1),
     );
 }
 
 test "Instruction.parse returns Error.InvalidThreadID and consumes 2 bytes when end thread ID is invalid" {
     testing.expectError(
         error.InvalidThreadID,
-        debugParseInstruction(Instruction, &BytecodeExamples.invalid_end_thread_id, 2),
+        debugParseInstruction(parse, &BytecodeExamples.invalid_end_thread_id, 2),
     );
 }
 
 test "Instruction.parse returns Error.InvalidThreadRange and consumes 3 bytes when thread range is transposed" {
     testing.expectError(
         error.InvalidThreadRange,
-        debugParseInstruction(Instruction, &BytecodeExamples.transposed_thread_ids, 3),
+        debugParseInstruction(parse, &BytecodeExamples.transposed_thread_ids, 3),
     );
 }
 
 test "Instruction.parse fails to parse incomplete bytecode and consumes all available bytes" {
     testing.expectError(
         error.EndOfProgram,
-        debugParseInstruction(Instruction, BytecodeExamples.valid[0..3], 2),
+        debugParseInstruction(parse, BytecodeExamples.valid[0..3], 2),
     );
 }
 
@@ -153,7 +153,7 @@ test "Operation.parse parses raw operation bytes correctly" {
 }
 
 test "execute with resume operation schedules specified threads to resume" {
-    const instruction = Instruction {
+    const instruction = Instance {
         .start_thread_id = 1,
         .end_thread_id = 3,
         .operation = .Resume,
@@ -173,7 +173,7 @@ test "execute with resume operation schedules specified threads to resume" {
 }
 
 test "execute with suspend operation schedules specified threads to suspend" {
-    const instruction = Instruction {
+    const instruction = Instance {
         .start_thread_id = 1,
         .end_thread_id = 3,
         .operation = .Suspend,
@@ -193,7 +193,7 @@ test "execute with suspend operation schedules specified threads to suspend" {
 }
 
 test "execute with deactivate operation schedules specified threads to deactivate" {
-    const instruction = Instruction {
+    const instruction = Instance {
         .start_thread_id = 1,
         .end_thread_id = 3,
         .operation = .Deactivate,

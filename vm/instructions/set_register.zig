@@ -5,27 +5,27 @@ const Machine = @import("../machine.zig");
 pub const Error = Program.Error;
 
 /// Set a specific register to a constant value.
-pub const Instruction = struct {
+pub const Instance = struct {
     /// The ID of the register to set.
     destination: Machine.RegisterID,
     
     /// The constant value to set the register to.
     value: Machine.Register,
 
-    /// Parse the next instruction from a bytecode program.
-    /// Consumes 3 bytes from the bytecode on success.
-    /// Returns an error if the bytecode could not be read or contained an invalid instruction.
-    pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instruction {
-        return Instruction {
-            .destination = try program.read(Machine.RegisterID),
-            .value = try program.read(Machine.Register),
-        };
-    }
-
-    pub fn execute(self: Instruction, machine: *Machine.Instance) void {
+    pub fn execute(self: Instance, machine: *Machine.Instance) void {
         machine.registers[self.destination] = self.value;
     }
 };
+
+/// Parse the next instruction from a bytecode program.
+/// Consumes 3 bytes from the bytecode on success.
+/// Returns an error if the bytecode could not be read or contained an invalid instruction.
+pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instance {
+    return Instance {
+        .destination = try program.read(Machine.RegisterID),
+        .value = try program.read(Machine.Register),
+    };
+}
 
 // -- Bytecode examples --
 
@@ -41,7 +41,7 @@ const testing = @import("../../utils/testing.zig");
 const debugParseInstruction = @import("test_helpers.zig").debugParseInstruction;
 
 test "parse parses valid bytecode and consumes 3 bytes" {
-    const instruction = try debugParseInstruction(Instruction, &BytecodeExamples.valid, 3);
+    const instruction = try debugParseInstruction(parse, &BytecodeExamples.valid, 3);
 
     testing.expectEqual(16, instruction.destination);
     testing.expectEqual(-18901, instruction.value);
@@ -50,12 +50,12 @@ test "parse parses valid bytecode and consumes 3 bytes" {
 test "parse fails to parse incomplete bytecode and consumes all available bytes" {
     testing.expectError(
         error.EndOfProgram,
-        debugParseInstruction(Instruction, BytecodeExamples.valid[0..3], 2),
+        debugParseInstruction(parse, BytecodeExamples.valid[0..3], 2),
     );
 }
 
 test "execute updates specified register with value" {
-    const instruction = Instruction {
+    const instruction = Instance {
         .destination = 16,
         .value = -1234,
     };
