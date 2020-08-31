@@ -5,7 +5,7 @@ pub const ExecutionState = union(enum) {
     active: Address,
 
     /// The thread is inactive and cannot run, regardless of whether it is running or suspended.
-    inactive: void,
+    inactive,
 };
 
 pub const SuspendState = enum {
