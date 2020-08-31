@@ -24,7 +24,7 @@ pub const Instance = struct {
 
     pub fn execute(self: Instance, machine: *Machine.Instance) void {
         var id = self.start_thread_id;
-        while (id <= self.end_thread_id) {
+        while (id <= self.end_thread_id) : (id += 1) {
             var thread = &machine.threads[id];
 
             switch (self.operation) {
@@ -32,8 +32,6 @@ pub const Instance = struct {
                 .Suspend => thread.scheduleSuspend(),
                 .Deactivate => thread.scheduleDeactivate(),
             }
-
-            id += 1;
         }
     }
 };
