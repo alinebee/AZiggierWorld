@@ -10,6 +10,8 @@ pub fn expectEqual(expected: anytype, actual: anytype) void {
 
 pub const expectError = testing.expectError;
 
+pub const expectEqualStrings = testing.expectEqualStrings;
+
 // -- Tests --
 
 test "expectEqual correctly coerces types that std.testing.expectEqual does not" {
