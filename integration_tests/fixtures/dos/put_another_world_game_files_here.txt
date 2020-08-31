@@ -1,0 +1,22 @@
+
+The tests in fixture_tests require game files from the original DOS release of Another World.
+These are copyrighted and so are not legal to distribute as part of this project,
+but they are fairly easy to find on the internet.
+
+Once you've found a version of the game, copy the following files into this folder:
+BANK01
+BANK02
+BANK03
+BANK04
+BANK05
+BANK06
+BANK07
+BANK08
+BANK09
+BANK0A
+BANK0B
+BANK0C
+BANK0D
+MEMLIST.BIN
+
+On case-sensitive filesystems, you will need to ensure that all filenames are uppercase.

@@ -1,1 +1,3 @@
 zig-cache/
+# Integration tests rely on copyrighted game files - prevent them from being committed by mistake
+integration_tests/fixtures/
