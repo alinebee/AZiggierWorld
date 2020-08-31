@@ -6,13 +6,13 @@ const ResourceDescriptor = @import("../resources/resource_descriptor.zig");
 const testing = @import("../utils/testing.zig");
 const fixedBufferStream = @import("std").io.fixedBufferStream;
 
-test "ResourceDescriptor.parse parses MEMLIST.BIN correctly" {
+test "ResourceDescriptor.parse parses MEMLIST.BIN without errors" {
     const memlist = @embedFile("fixtures/dos/MEMLIST.BIN");
     const expected_count = 146;
 
     var reader = fixedBufferStream(memlist).reader();
 
-    var buffer: [expected_count + 10]ResourceDescriptor.Instance = undefined;
+    var buffer: [expected_count]ResourceDescriptor.Instance = undefined;
 
     const descriptors = try ResourceDescriptor.parse(reader, &buffer);
     testing.expectEqual(expected_count, descriptors.len);

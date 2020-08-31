@@ -8,8 +8,9 @@ pub fn expectEqual(expected: anytype, actual: anytype) void {
     testing.expectEqual(@as(@TypeOf(actual), expected), actual);
 }
 
+pub const expect = testing.expect;
 pub const expectError = testing.expectError;
-
+pub const expectEqualSlices = testing.expectEqualSlices;
 pub const expectEqualStrings = testing.expectEqualStrings;
 
 // -- Tests --
