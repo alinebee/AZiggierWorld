@@ -27,11 +27,19 @@ pub const Instance = struct {
     }
 };
 
+pub const Error = ResourceType.Error || error {
+    /// The provided buffer was too small to fully parse the resource list.
+    NoSpaceLeft,
+};
+
 /// Read resource descriptors from an I/O reader into the specified destination buffer,
 /// until it reaches an end-of-file marker or the buffer is full.
 /// On success, returns the slice of `destination` that was filled with valid data,
 /// which may be less than `destination.len`. The caller owns the returned slice.
-/// If this function returns an error, `destination` may be incompletely populated with descriptor data.
+/// Returns error.NoSpaceLeft if the destination buffer was too small to fully read the list;
+/// In this case, `destination` will be valid and contains all of the descriptors that would fit.
+/// Returns other kinds of errors if the data contained invalid descriptors or if reading failed;
+/// in this case, `destination` may contain invalid or uninitialized data and should not be read.
 pub fn parse(reader: anytype, destination: []Instance) ![]Instance {
     const max_descriptors = destination.len;
     var count: usize = 0;
@@ -40,9 +48,8 @@ pub fn parse(reader: anytype, destination: []Instance) ![]Instance {
         const result = try parseNext(reader);
         switch (result) {
             .descriptor => |descriptor| {
-                // Stop reading once we've filled the buffer.
                 if (count >= max_descriptors) {
-                    break;
+                    return error.NoSpaceLeft;
                 }
 
                 destination[count] = descriptor;
@@ -52,11 +59,9 @@ pub fn parse(reader: anytype, destination: []Instance) ![]Instance {
             // Another World's MEMLIST.BIN is expected to contain such a marker;
             // if we hit the actual end of the file without encountering it,
             // parseNext will return an EndOfStream error indicating a truncated file.
-            .end_of_file => break,
+            .end_of_file => return destination[0..count],
         }
     }
-
-    return destination[0..count];
 }
 
 /// Parse an Another World resource descriptor from a stream of bytes.
@@ -219,16 +224,14 @@ test "parse parses all expected descriptors from file data" {
     testing.expectEqual(DescriptorExamples.valid_descriptor, descriptors[2]);
 }
 
-test "parse returns partial set when it fills up the destination buffer before encountering an end-of-file marker" {
+test "parse returns error.NoSpaceLeft when it fills up the destination buffer before encountering an end-of-file marker" {
     var reader = fixedBufferStream(&FileExamples.valid).reader();
 
     var buffer: [2]Instance = undefined;
-    const descriptors = try parse(reader, &buffer);
 
-    testing.expectEqual(2, descriptors.len);
-    testing.expectEqual(buffer[0..2], descriptors);
-    testing.expectEqual(DescriptorExamples.valid_descriptor, descriptors[0]);
-    testing.expectEqual(DescriptorExamples.valid_descriptor, descriptors[1]);
+    testing.expectError(error.NoSpaceLeft, parse(reader, &buffer));
+    testing.expectEqual(DescriptorExamples.valid_descriptor, buffer[0]);
+    testing.expectEqual(DescriptorExamples.valid_descriptor, buffer[1]);
 }
 
 test "parse returns error.EndOfStream when it runs out of data before encountering an end-of-file marker" {
