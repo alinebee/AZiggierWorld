@@ -1,7 +1,7 @@
 const fmt = @import("std").fmt;
 
 /// Describes all legal filenames for Another World resource files.
-pub const GameFile = union(enum) {
+pub const Filename = union(enum) {
     /// A manifest of where each resource is located within the bank files.
     /// Named `MEMLIST.BIN` in the MS-DOS version.
     resource_list,
@@ -18,7 +18,7 @@ pub const GameFile = union(enum) {
     /// `destination.len` is expected to be at least `max_dos_name_length`.
     /// Returns an error if `destination` is too small to fit the actual filename:
     /// in this case, `destination` will contain as much of the filename as would fit.
-    pub fn printDOSName(self: GameFile, destination: []u8) fmt.BufPrintError![]const u8 {
+    pub fn printDOSName(self: Filename, destination: []u8) fmt.BufPrintError![]const u8 {
         return switch (self) {
             .resource_list => fmt.bufPrint(destination, "MEMLIST.BIN", .{}),
             .bank => |id| fmt.bufPrint(destination, "BANK{X:0>2}", .{ id }),
@@ -37,36 +37,36 @@ const testing = @import("../utils/testing.zig");
 
 test "printDOSName formats resource_list filename correctly" {
     var buffer: [max_dos_name_length]u8 = undefined;
-    const game_file: GameFile = .resource_list;
+    const filename: Filename = .resource_list;
 
-    testing.expectEqualStrings("MEMLIST.BIN", try game_file.printDOSName(&buffer));
+    testing.expectEqualStrings("MEMLIST.BIN", try filename.printDOSName(&buffer));
 }
 
 test "printDOSName formats single-digit bank filename with correct padding" {
     var buffer: [max_dos_name_length]u8 = undefined;
-    const game_file: GameFile = .{ .bank = 3 };
+    const filename: Filename = .{ .bank = 3 };
 
-    testing.expectEqualStrings("BANK03", try game_file.printDOSName(&buffer));
+    testing.expectEqualStrings("BANK03", try filename.printDOSName(&buffer));
 }
 
 test "printDOSName formats two-decimal-digit bank filename as hex" {
     var buffer: [max_dos_name_length]u8 = undefined;
-    const game_file: GameFile = .{ .bank = 10 };
+    const filename: Filename = .{ .bank = 10 };
 
-    testing.expectEqualStrings("BANK0A", try game_file.printDOSName(&buffer));
+    testing.expectEqualStrings("BANK0A", try filename.printDOSName(&buffer));
 }
 
 test "printDOSName formats two-hex-digit bank filename as two-digit hex" {
     var buffer: [max_dos_name_length]u8 = undefined;
-    const game_file: GameFile = .{ .bank = 0xFE };
+    const filename: Filename = .{ .bank = 0xFE };
 
-    testing.expectEqualStrings("BANKFE", try game_file.printDOSName(&buffer));
+    testing.expectEqualStrings("BANKFE", try filename.printDOSName(&buffer));
 }
 
 test "printDOSName returns error when destination buffer was too small" {
     var buffer: [6]u8 = undefined;
-    const game_file: GameFile = .resource_list;
+    const filename: Filename = .resource_list;
 
-    testing.expectError(error.NoSpaceLeft, game_file.printDOSName(&buffer));
+    testing.expectError(error.NoSpaceLeft, filename.printDOSName(&buffer));
     testing.expectEqualStrings("MEMLIS", &buffer);
 }
