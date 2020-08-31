@@ -24,7 +24,9 @@ pub const Instance = struct {
     /// Returns error.EndOfProgram and leaves the counter at the end of the program
     /// if there are not enough bytes left in the program.
     pub fn read(self: *Instance, comptime Integer: type) Error!Integer {
-        comptime const byte_width = @sizeOf(Integer);
+        // std.mem.readIntSliceBig uses this construction internally.
+        // @sizeOf would be nicer, but may include padding bytes.
+        comptime const byte_width = @divExact(Integer.bit_count, 8);
 
         const upper_bound = self.counter + byte_width;
         if (upper_bound > self.bytecode.len) {
