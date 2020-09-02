@@ -19,14 +19,15 @@ pub const Instance = struct {
     bank_id: usize,
     /// The byte offset (within the packed data of the bank file) at which the resource is located.
     bank_offset: usize,
-    /// The packed size of the resource in bytes.
-    packed_size: usize,
-    /// The unpacked size of the resource in bytes.
-    /// If this is different from packed_size, it indicates a compressed resource.
-    unpacked_size: usize,
+    /// The compressed size of the resource in bytes.
+    compressed_size: usize,
+    /// The uncompressed size of the resource in bytes.
+    /// If this differs from compressed_size, it indicates the resource has been compressed
+    /// with run-length encoding (RLE).
+    uncompressed_size: usize,
 
     pub fn isCompressed(self: Instance) bool {
-        return self.unpacked_size != self.packed_size;
+        return self.uncompressed_size != self.compressed_size;
     }
 };
 
@@ -114,16 +115,16 @@ fn parseNext(reader: anytype) !ParsingResult {
     const bank_id = try reader.readByte();
     const bank_offset = try reader.readInt(u32, .Big);
     _ = try reader.readInt(u16, .Big);
-    const packed_size = try reader.readInt(u16, .Big);
+    const compressed_size = try reader.readInt(u16, .Big);
     _ = try reader.readInt(u16, .Big);
-    const unpacked_size = try reader.readInt(u16, .Big);
+    const uncompressed_size = try reader.readInt(u16, .Big);
 
     return ParsingResult { .descriptor = Instance {
         .type = try ResourceType.parse(raw_type),
         .bank_id = bank_id,
         .bank_offset = bank_offset,
-        .packed_size = packed_size,
-        .unpacked_size = unpacked_size,
+        .compressed_size = compressed_size,
+        .uncompressed_size = uncompressed_size,
     } };
 }
 
@@ -170,8 +171,8 @@ const DescriptorExamples = struct {
         .type = .bytecode,
         .bank_id = 5,
         .bank_offset = 0xDEADBEEF,
-        .packed_size = 0x0BAD,
-        .unpacked_size = 0xF00D,
+        .compressed_size = 0x0BAD,
+        .uncompressed_size = 0xF00D,
     };
 };
 
