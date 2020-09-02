@@ -1,4 +1,5 @@
 const ResourceType = @import("resource_type.zig");
+const Filename = @import("filename.zig");
 const std = @import("std");
 const mem = std.mem;
 const ArrayList = std.ArrayList;
@@ -15,8 +16,8 @@ const ArrayList = std.ArrayList;
 pub const Instance = struct {
     /// The type of content stored in this resource.
     type: ResourceType.Enum,
-    /// The bank file to look for the resource in: in the original release these are numbered from 01 to 0D.
-    bank_id: usize,
+    /// The bank file to look for the resource in: in the MS-DOS version these are numbered from 01 to 0D.
+    bank_id: Filename.BankID,
     /// The byte offset (within the packed data of the bank file) at which the resource is located.
     bank_offset: usize,
     /// The compressed size of the resource in bytes.
