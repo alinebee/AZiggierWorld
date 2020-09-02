@@ -13,6 +13,9 @@ pub const expectError = testing.expectError;
 pub const expectEqualSlices = testing.expectEqualSlices;
 pub const expectEqualStrings = testing.expectEqualStrings;
 
+pub const allocator = testing.allocator;
+pub const failing_allocator = testing.failing_allocator;
+
 // -- Tests --
 
 test "expectEqual correctly coerces types that std.testing.expectEqual does not" {

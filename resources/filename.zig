@@ -1,4 +1,6 @@
-const fmt = @import("std").fmt;
+const std = @import("std");
+const fmt = std.fmt;
+const mem = std.mem;
 
 /// Describes all legal filenames for Another World resource files.
 pub const Filename = union(enum) {
@@ -10,63 +12,62 @@ pub const Filename = union(enum) {
     /// Named `BANK01`–`BANK0D` in the MS-DOS version.
     bank: u8,
 
-    /// Takes a destination buffer and fills it with the filename for this file,
-    /// as used by the MS-DOS version of Another World.
-    /// On success, returns the slice of `destination` that was filled with valid data,
-    /// which may be less than `destination.len`. The caller owns the returned slice.
-    ///
-    /// `destination.len` is expected to be at least `max_dos_name_length`.
-    /// Returns an error if `destination` is too small to fit the actual filename:
-    /// in this case, `destination` will contain as much of the filename as would fit.
-    pub fn printDOSName(self: Filename, destination: []u8) fmt.BufPrintError![]const u8 {
+    /// Allocates and returns a string containing the DOS filename for this file,
+    /// as used by the MS-DOS version of Another World. The caller owns the returned slice.
+    /// Returns an error if not enough memory could be allocated for the filename.
+    pub fn dosName(self: Filename, allocator: *mem.Allocator) fmt.AllocPrintError![]const u8 {
         return switch (self) {
-            .resource_list => fmt.bufPrint(destination, "MEMLIST.BIN", .{}),
-            .bank => |id| fmt.bufPrint(destination, "BANK{X:0>2}", .{ id }),
+            .resource_list => fmt.allocPrint(allocator, "MEMLIST.BIN", .{}),
+            .bank => |id| fmt.allocPrint(allocator, "BANK{X:0>2}", .{ id }),
         };
     }
 };
-
-/// The maximum length of a filename for the DOS version of the game.
-/// DOS filenames comprise an 8-character name, a 3-character extention and a dot separator:
-/// i.e. 12345678.EXT
-pub const max_dos_name_length = 12;
 
 // -- Tests --
 
 const testing = @import("../utils/testing.zig");
 
-test "printDOSName formats resource_list filename correctly" {
-    var buffer: [max_dos_name_length]u8 = undefined;
+test "dosName formats resource_list filename correctly" {
     const filename: Filename = .resource_list;
 
-    testing.expectEqualStrings("MEMLIST.BIN", try filename.printDOSName(&buffer));
+    const dos_name = try filename.dosName(testing.allocator);
+    defer testing.allocator.free(dos_name);
+
+    testing.expectEqualStrings("MEMLIST.BIN", dos_name);
 }
 
-test "printDOSName formats single-digit bank filename with correct padding" {
-    var buffer: [max_dos_name_length]u8 = undefined;
+test "dosName formats single-digit bank filename with correct padding" {
     const filename: Filename = .{ .bank = 3 };
 
-    testing.expectEqualStrings("BANK03", try filename.printDOSName(&buffer));
+    const dos_name = try filename.dosName(testing.allocator);
+    defer testing.allocator.free(dos_name);
+
+    testing.expectEqualStrings("BANK03", dos_name);
 }
 
-test "printDOSName formats two-decimal-digit bank filename as hex" {
-    var buffer: [max_dos_name_length]u8 = undefined;
+test "dosName formats two-decimal-digit bank filename as hex with correct padding" {
     const filename: Filename = .{ .bank = 10 };
 
-    testing.expectEqualStrings("BANK0A", try filename.printDOSName(&buffer));
+    const dos_name = try filename.dosName(testing.allocator);
+    defer testing.allocator.free(dos_name);
+
+    testing.expectEqualStrings("BANK0A", dos_name);
 }
 
-test "printDOSName formats two-hex-digit bank filename as two-digit hex" {
-    var buffer: [max_dos_name_length]u8 = undefined;
+test "dosName formats two-hex-digit bank filename as two-digit hex" {
     const filename: Filename = .{ .bank = 0xFE };
 
-    testing.expectEqualStrings("BANKFE", try filename.printDOSName(&buffer));
+    const dos_name = try filename.dosName(testing.allocator);
+    defer testing.allocator.free(dos_name);
+
+    testing.expectEqualStrings("BANKFE", dos_name);
 }
 
-test "printDOSName returns error when destination buffer was too small" {
-    var buffer: [6]u8 = undefined;
+test "dosName returns error when memory could not be allocated" {
     const filename: Filename = .resource_list;
 
-    testing.expectError(error.NoSpaceLeft, filename.printDOSName(&buffer));
-    testing.expectEqualStrings("MEMLIS", &buffer);
+    testing.expectError(
+        error.OutOfMemory,
+        filename.dosName(testing.failing_allocator),
+    );
 }
