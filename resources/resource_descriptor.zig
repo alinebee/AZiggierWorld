@@ -1,4 +1,7 @@
 const ResourceType = @import("resource_type.zig");
+const std = @import("std");
+const mem = std.mem;
+const ArrayList = std.ArrayList;
 
 //! Another World compresses hundreds of game resources (audio, bitmaps, bytecode polygon data)
 //! into a set of BANK01-BANK0D data files. To keep track of where each resource lives,
@@ -28,38 +31,39 @@ pub const Instance = struct {
 };
 
 pub const Error = ResourceType.Error || error {
-    /// The provided buffer was too small to fully parse the resource list.
-    NoSpaceLeft,
+    /// The stream of resource descriptors contained more than the maximum number of entries.
+    ResourceListTooLarge,
 };
 
-/// Read resource descriptors from an I/O reader into the specified destination buffer,
-/// until it reaches an end-of-file marker or the buffer is full.
-/// On success, returns the slice of `destination` that was filled with valid data,
-/// which may be less than `destination.len`. The caller owns the returned slice.
-/// Returns error.NoSpaceLeft if the destination buffer was too small to fully read the list;
-/// In this case, `destination` will be valid and contains all of the descriptors that would fit.
-/// Returns other kinds of errors if the data contained invalid descriptors or if reading failed;
-/// in this case, `destination` may contain invalid or uninitialized data and should not be read.
-pub fn parse(reader: anytype, destination: []Instance) ![]Instance {
-    const max_descriptors = destination.len;
-    var count: usize = 0;
+/// Sanity check: stop parsing a resource list when it contains more than this many items.
+/// (This is much larger than necessary; another World's actual MEMLIST.BIN file contains ~150 resources.)
+const max_resource_descriptors = 1000;
+
+/// Read resource descriptors from an I/O reader until it reaches an end-of-file marker.
+/// On success, returns a slice containing the parsed resource descriptors.
+/// The caller owns the returned slice.
+/// `expected_count` indicates the number of descriptors that the stream is expected to contain;
+/// the returned slice may contain less or more than that.
+/// Returns an error if the stream contained invalid descriptor data,
+/// did not contain an end-of-file marker, or ran out of memory before parsing completed.
+pub fn parse(allocator: *mem.Allocator, reader: anytype, expected_count: usize) ![]Instance {
+    var list = try ArrayList(Instance).initCapacity(allocator, expected_count);
+    errdefer list.deinit();
 
     while (true) {
         const result = try parseNext(reader);
         switch (result) {
             .descriptor => |descriptor| {
-                if (count >= max_descriptors) {
-                    return error.NoSpaceLeft;
+                if (list.items.len >= max_resource_descriptors) {
+                    return error.ResourceListTooLarge;
                 }
-
-                destination[count] = descriptor;
-                count += 1;
+                try list.append(descriptor);
             },
             // Stop reading if-and-when we encounter an end-of-file marker.
             // Another World's MEMLIST.BIN is expected to contain such a marker;
             // if we hit the actual end of the file without encountering it,
-            // parseNext will return an EndOfStream error indicating a truncated file.
-            .end_of_file => return destination[0..count],
+            // parseNext will return error.EndOfStream indicating a truncated file.
+            .end_of_file => return list.toOwnedSlice(),
         }
     }
 }
@@ -174,6 +178,8 @@ const DescriptorExamples = struct {
 const FileExamples = struct {
     const valid = (DescriptorExamples.valid_data ** 3) ++ DescriptorExamples.valid_end_of_file;
     const truncated = DescriptorExamples.valid_data ** 2;
+    const too_many_descriptors = DescriptorExamples.valid_data ** (max_resource_descriptors + 1);
+
     const invalid_resource_type = 
         DescriptorExamples.valid_data ++ 
         DescriptorExamples.invalid_resource_type ++ 
@@ -214,36 +220,35 @@ test "parseNext returns error on incomplete data" {
 test "parse parses all expected descriptors from file data" {
     var reader = fixedBufferStream(&FileExamples.valid).reader();
 
-    var buffer: [10]Instance = undefined;
-    const descriptors = try parse(reader, &buffer);
+    const descriptors = try parse(testing.allocator, reader, 3);
+    defer testing.allocator.free(descriptors);
 
     testing.expectEqual(3, descriptors.len);
-    testing.expectEqual(buffer[0..3], descriptors);
     testing.expectEqual(DescriptorExamples.valid_descriptor, descriptors[0]);
     testing.expectEqual(DescriptorExamples.valid_descriptor, descriptors[1]);
     testing.expectEqual(DescriptorExamples.valid_descriptor, descriptors[2]);
 }
 
-test "parse returns error.NoSpaceLeft when it fills up the destination buffer before encountering an end-of-file marker" {
+test "parse returns error.OutOfMemory when it runs out of memory" {
     var reader = fixedBufferStream(&FileExamples.valid).reader();
 
-    var buffer: [2]Instance = undefined;
-
-    testing.expectError(error.NoSpaceLeft, parse(reader, &buffer));
-    testing.expectEqual(DescriptorExamples.valid_descriptor, buffer[0]);
-    testing.expectEqual(DescriptorExamples.valid_descriptor, buffer[1]);
+    testing.expectError(error.OutOfMemory, parse(testing.failing_allocator, reader, 3));
 }
 
 test "parse returns error.EndOfStream when it runs out of data before encountering an end-of-file marker" {
     var reader = fixedBufferStream(&FileExamples.truncated).reader();
 
-    var buffer: [10]Instance = undefined;
-    testing.expectError(error.EndOfStream, parse(reader, &buffer));
+    testing.expectError(error.EndOfStream, parse(testing.allocator, reader, 3));
+}
+
+test "parse returns error.ResourceListTooLarge when stream contains too many descriptors" {
+    var reader = fixedBufferStream(&FileExamples.too_many_descriptors).reader();
+
+    testing.expectError(error.ResourceListTooLarge, parse(testing.allocator, reader, 3));
 }
 
 test "parse returns error.InvalidResourceType when it encounters malformed descriptor data in a file" {
     var reader = fixedBufferStream(&FileExamples.invalid_resource_type).reader();
 
-    var buffer: [10]Instance = undefined;
-    testing.expectError(error.InvalidResourceType, parse(reader, &buffer));
+    testing.expectError(error.InvalidResourceType, parse(testing.allocator, reader, 3));
 }
