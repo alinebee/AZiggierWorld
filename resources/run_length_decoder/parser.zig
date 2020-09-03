@@ -136,107 +136,101 @@ pub const Instruction = union(enum) {
 
 const testing = @import("../../utils/testing.zig");
 
-/// Real run-length-encoded data is stored backwards and has checksums to worry about,
-/// and so is exceedingly cumbersome to set up fake fixture data for.
-/// This is a simplified reader that walks through an array of bytes bit by bit from start to end.
-const TestReader = struct {
-    bytes: []const u8,
-    counter: usize = 0,
+/// Constructs a reader that walks through every bit of an arbitrary-width integer
+/// in order from highest to lowest.
+fn IntReader(comptime Integer: type) type {
+    comptime const ShiftType = std.math.Log2Int(Integer);
+    comptime const max_shift = Integer.bit_count - 1;
 
-    fn readBit(self: *TestReader) !u1 {
-        const byte_index = self.counter / 8;
-        const bit_index = @intCast(u3, self.counter % 8);
+    return struct {
+        const Self = @This();
 
-        if (byte_index >= self.bytes.len) {
-            return error.EndOfStream;
+        bits: Integer,
+        count: usize = 0,
+
+        fn readBit(self: *Self) !u1 {
+            if (self.isAtEnd()) {
+                return error.EndOfStream;
+            }
+
+            const shift = @intCast(ShiftType, max_shift - self.count);
+            self.count += 1;
+
+            return @truncate(u1, self.bits >> shift);
         }
 
-        self.counter += 1;
+        fn isAtEnd(self: Self) bool {
+            return self.count >= Integer.bit_count;
+        }
+    };
+}
 
-        // Walk through the bits from highest to lowest to preserve definition order
-        const shift = 7 - bit_index;
-        return @truncate(u1, self.bytes[byte_index] >> shift);
-    }
-};
+fn intReader(comptime Integer: type, bits: Integer) IntReader(Integer) {
+    return IntReader(Integer) { .bits = bits };
+}
 
 test "TestReader.readBit reads all bits in order from highest to lowest" {
-    const bytes = [_]u8 { 0b1001_0110 };
-
-    var reader = TestReader { .bytes = &bytes };
+    var reader = intReader(u8, 0b1001_0110);
     for ([_]u1 { 1, 0, 0, 1, 0, 1, 1, 0 }) |bit| {
         testing.expectEqual(bit, reader.readBit());
     }
+    testing.expect(reader.isAtEnd());
 }
 
-test "TestReader.readBit returns error.EndOfStream when it runs out of bits" {
-    const bytes = [_]u8 { };
-
-    var reader = TestReader { .bytes = &bytes };
+test "TestReader.readBit returns error.EndOfStream once it runs out of bits" {
+    var reader = intReader(u1, 1);
+    testing.expectEqual(1, reader.readBit());
     testing.expectError(error.EndOfStream, reader.readBit());
+    testing.expect(reader.isAtEnd());
 }
 
 // -- Tests --
 
 test "Instance.readInt reads integers of the specified width" {
-    const source = [_]u8 { 
-        0xDE, 0xAD, 0xBE, 0xEF, 
-        0x0B, 0xAD, 0xF0, 0x0D,
-    };
-
-    var parser = new(TestReader { .bytes = &source });
+    var parser = new(intReader(u64, 0xDEAD_BEEF_0BAD_F00D));
 
     testing.expectEqual(0xDE, parser.readInt(u8));
     testing.expectEqual(0xAD, parser.readInt(u8));
     testing.expectEqual(0xBEEF, parser.readInt(u16));
     testing.expectEqual(0x0BADF00D, parser.readInt(u32));
+    testing.expect(parser.reader.isAtEnd());
 }
 
 test "Instance.readInt returns error.EndOfStream when source buffer is too short" {
-    const source = [_]u8 { 0xDE };
-
-    var parser = new(TestReader { .bytes = &source });
+    var parser = new(intReader(u8, 0xDE));
 
     testing.expectError(error.EndOfStream, parser.readInt(u16));
+    testing.expect(parser.reader.isAtEnd());
 }
 
 test "Instance.readInstruction parses 111 instruction" {
     // 111|cccc_cccc: 11 bits total
     // next 8 bits are count: copy the next (count + 9) bytes of packed data immediately after this.
-    const source = [_]u8 {
-        0b111_0111_1, 0b101_00000,
-    };
+    var parser = new(intReader(u11, 0b111_0111_1101));
 
-    var parser = new(TestReader { .bytes = &source });
     testing.expectEqual(
         Instruction { .write_from_compressed = 0b0111_1101 + 9 },
         parser.readInstruction(),
     );
+    testing.expect(parser.reader.isAtEnd());
 }
 
-
 test "Instance.readInstruction parses 111 instruction with max count without overflowing" {
-    // 111|cccc_cccc: 11 bits total
-    // next 8 bits are count: copy the next (count + 9) bytes of packed data immediately after this.
-    const source = [_]u8 {
-        0b111_1111_1, 0b111_00000,
-    };
-
-    var parser = new(TestReader { .bytes = &source });
+    var parser = new(intReader(u11, 0b111_1111_1111));
+    
     testing.expectEqual(
         Instruction { .write_from_compressed = 0b1111_1111 + 9 },
         parser.readInstruction(),
     );
+    testing.expect(parser.reader.isAtEnd());
 }
 
 test "Instance.readInstruction parses 110 instruction" {
     // 110|cccc_cccc|oooo_oooo_oooo: 23 bits total
     // next 8 bits are count, next 12 bits are relative offset within uncompressed data:
     // copy (count + 1) bytes from the uncompressed data at that offset.
-    const source = [_]u8 {
-        0b110_0111_1, 0b101_1101_1, 0b001_1010_0,
-    };
+    var parser = new(intReader(u23, 0b110_0111_1101_1101_1001_1010));
 
-    var parser = new(TestReader { .bytes = &source });
     testing.expectEqual(
         Instruction { .copy_from_uncompressed = .{
             .count = 0b0111_1101 + 1,
@@ -244,16 +238,14 @@ test "Instance.readInstruction parses 110 instruction" {
         } },
         parser.readInstruction(),
     );
+    testing.expect(parser.reader.isAtEnd());
 }
 
 test "Instance.readInstruction parses 101 instruction" {
     // 101|oooo_oooo_oo: 13 bits total
     // next 10 bits are relative offset: copy 4 bytes from uncompressed data at offset.
-    const source = [_]u8 {
-        0b101_0111_1, 0b101_11_000,
-    };
+    var parser = new(intReader(u13, 0b101_0111_1101_11));
 
-    var parser = new(TestReader { .bytes = &source });
     testing.expectEqual(
         Instruction { .copy_from_uncompressed = .{
             .count = 4,
@@ -261,16 +253,14 @@ test "Instance.readInstruction parses 101 instruction" {
         } },
         parser.readInstruction(),
     );
+    testing.expect(parser.reader.isAtEnd());
 }
 
 test "Instance.readInstruction parses 100 instruction" {
     // 100|oooo_oooo_o: 12 bits total
     // next 9 bits are relative offset: copy 3 bytes from uncompressed data at offset.
-    const source = [_]u8 {
-        0b100_0111_1, 0b101_1_0000,
-    };
+    var parser = new(intReader(u12, 0b100_0111_1101_1));
 
-    var parser = new(TestReader { .bytes = &source });
     testing.expectEqual(
         Instruction { .copy_from_uncompressed = .{
             .count = 3,
@@ -278,16 +268,14 @@ test "Instance.readInstruction parses 100 instruction" {
         } },
         parser.readInstruction(),
     );
+    testing.expect(parser.reader.isAtEnd());
 }
 
 test "Instance.readInstruction parses 01 instruction" {
     // 01|oooo_oooo: 10 bits total
     // next 8 bits are relative offset: copy 2 bytes from uncompressed data at offset.
-    const source = [_]u8 {
-        0b01_0111_11, 0b01_000000,
-    };
+    var parser = new(intReader(u10, 0b01_0111_1101));
 
-    var parser = new(TestReader { .bytes = &source });
     testing.expectEqual(
         Instruction { .copy_from_uncompressed = .{
             .count = 2,
@@ -295,18 +283,17 @@ test "Instance.readInstruction parses 01 instruction" {
         } },
         parser.readInstruction(),
     );
+    testing.expect(parser.reader.isAtEnd());
 }
 
 test "Instance.readInstruction parses 00 instruction" {
     // 00|ccc: 5 bits total
     // next 3 bits are count: copy the next (count + 1) bytes immediately after the instruction.
-    const source = [_]u8 {
-        0b00_110_000,
-    };
-
-    var parser = new(TestReader { .bytes = &source });
+    var parser = new(intReader(u5, 0b00_110));
+    
     testing.expectEqual(
         Instruction { .write_from_compressed = 0b110 + 1 },
         parser.readInstruction(),
     );
+    testing.expect(parser.reader.isAtEnd());
 }
