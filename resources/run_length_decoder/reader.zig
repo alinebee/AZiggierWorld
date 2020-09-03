@@ -26,9 +26,9 @@ pub const Instance = struct {
     /// The reader works backward from the end of the source buffer, 4 bytes at a time.
     cursor: usize,
 
-    /// The expected decoded size of the compressed data, read from the last byte of the data.
+    /// The expected uncompressed size of the compressed data, read from the last byte of the data.
     /// Only used as a sanity check, and is not used during parsing.
-    decoded_size: usize,
+    uncompressed_size: usize,
 
     /// The current chunk that `readBit` is currently pulling bits from.
     /// Once this chunk is exhausted, `readBit` will load the next one.
@@ -42,23 +42,27 @@ pub const Instance = struct {
     fn init(self: *Instance, source: []const u8) !void {
         self.source = source;
         self.cursor = source.len;
-        self.decoded_size = try self.popChunk();
+        self.uncompressed_size = try self.popChunk();
         self.crc = try self.popChunk();
         
-        // CHECKME: the reference implementation loads the next 4 bytes as the current chunk, as per the code below.
-        // This possibly contains a bug: it does not set the high bit on the loaded chunk the way `readBit` does,
-        // which would cause it to stop parsing the chunk early if there are any leading zeroes.
-        // That *ought* to corrupt all subsequent output, and result in the decode operation failing to read 
-        // all the bits; but the reference implementation worked fine, so that suggests that this is by design.
-        // The encoding algorithm may store the last chunk as a partial chunk with the high bit sentinel "further in"
-        // to the chunk than bit 31, to allow for resources that don't fall on 4-byte boundaries.
+        // HERE BE DRAGONS
         //
-        // We can verify this once we get as far as parsing game resource files properly.
-        // self.current_chunk = try self.readNextChunk();
-        // self.crc ^= self.current_chunk;
-
-        // This ensures that the first time `readBit` is called, it will load the next chunk.
-        self.current_chunk = 0;
+        // currentChunk always has an extra 1 after its most significant bit, to mark how many bits are left to consume
+        // from that chunk. Once the chunk is down to a single 1,it means we've consumed all of the significant bits
+        // before that marker and it's time to load the next chunk.
+        //
+        // Normally when `readBit` loads in the next chunk, it sets its top bit to 1 to mark that we have 31 more bits
+        // to go in that chunk. But that step does *not* happen for the first chunk when we load it here in `init`:
+        // Instead, the first chunk *already* has the most significant bit 1 encoded into it in the original game data.
+        // This is because compressed game resources usually won't fall on nice tidy 4-byte boundaries, and the first
+        // chunk will be a partial chunk containing the remainder.
+        
+        // (This also means that the first chunk can have a maximum of 31 significant bits; at least one bit is "lost"
+        // to the hardcoded marker. In the event that all the real data did fall on a 4-byte boundary, we would expect
+        // the first chunk to consist of all zeroes, or 31 zeroes and a 1 at the end. Such a chunk would be skipped
+        // altogether by `readBit`.
+        self.current_chunk = try self.popChunk();
+        self.crc ^= self.current_chunk;
     }
 
     /// Consume the next bit from the source data, automatically advancing to the next chunk of source data if necessary.
@@ -108,7 +112,8 @@ pub const Instance = struct {
         return std.mem.readIntSliceBig(u32, self.source[self.cursor..old_cursor]);
     }
 
-    fn status(self: Instance) Status {
+    /// Whether the reader has finished reading successfully.
+    pub fn status(self: Instance) Status {
         // The most significant bit of the current chunk is always 1;
         // once the chunk is down to a value of 1 or 0, all its bits have been fully consumed.
         if (self.cursor == 0 and self.current_chunk <= 0b1) {
@@ -134,8 +139,11 @@ pub fn new(source: []const u8) !Instance {
 
 const testing = @import("../../utils/testing.zig");
 
-test "new() reads unpacked size and initial checksum from end of source buffer" {
+test "new() reads unpacked size, initial checksum and first chunk from end of source buffer" {
     const source = [_]u8 {
+        // Preceding bytes are compressed resource data
+        0x00, 0x00, 0x00, 0x00,
+        
         // Second-to-last 4 bytes are checksum
         0xDE, 0xAD, 0xBE, 0xEF,
 
@@ -145,9 +153,9 @@ test "new() reads unpacked size and initial checksum from end of source buffer" 
 
     const reader = try new(&source);
 
-    testing.expectEqual(0x0BADF00D, reader.decoded_size);
+    testing.expectEqual(0x0BADF00D, reader.uncompressed_size);
     testing.expectEqual(0xDEADBEEF, reader.crc);
-    testing.expectEqual(0, reader.cursor);
+    testing.expectEqual(0x00000000, reader.current_chunk);
 }
 
 test "new() returns `error.ReadBufferEmpty` when source buffer is too small" {
@@ -160,6 +168,8 @@ test "readBit() reads next bit and advances to next chunk" {
     const pattern: u8 = 0b0101_000;
 
     const source = ([_]u8 { pattern } ** 8) ++ ([_]u8 {
+        // Empty chunk to ensure preceding chunks are consumed in full - see comment in Instance.init.
+        0x00, 0x00, 0x00, 0x01,
         0xDE, 0xAD, 0xBE, 0xEF,
         0x0B, 0xAD, 0xF0, 0x0D,
     });
@@ -192,13 +202,12 @@ test "readBit() reads next bit and advances to next chunk" {
 
 test "status() returns .data_remaining for reader that hasn't exhausted its chunks" {
     const source = [_]u8 {
-        0x00, 0x00, 0x00, 0x00,
+        0x01, 0x01, 0x01, 0x01,
         0xDE, 0xAD, 0xBE, 0xEF,
         0x0B, 0xAD, 0xF0, 0x0D,
     };
 
     var reader = try new(&source);
-    testing.expectEqual(4, reader.cursor);
     testing.expectEqual(.data_remaining, reader.status());
     
     // Even once it has begun consuming its last chunk,
@@ -212,9 +221,11 @@ test "status() returns .finished_with_valid_checksum for exhausted reader whose 
     const source = [_]u8 {
         0x0B, 0xAD, 0xF0, 0x0D,
         0xDE, 0xAD, 0xBE, 0xEF,
+        // Empty chunk to ensure preceding chunks are consumed in full - see comment in Instance.init.
+        0x00, 0x00, 0x00, 0x01,
         // The starting checksum is XORed with each subsequent chunk as it is read;
         // the end result of XORing all chunks into the original checksum should be 0.
-        (0x0B ^ 0xDE), (0xAD ^ 0xAD), (0xF0 ^ 0xBE), (0x0D ^ 0xEF),
+        (0x0B ^ 0xDE ^ 0x00), (0xAD ^ 0xAD ^ 0x00), (0xF0 ^ 0xBE ^ 0x00), (0x0D ^ 0xEF ^ 0x01),
         0x0B, 0xAD, 0xF0, 0x0D,
     };
 
@@ -235,6 +246,7 @@ test "status() returns .finished_with_invalid_checksum for exhausted reader whos
     const source = [_]u8 {
         0x0B, 0xAD, 0xF0, 0x0D,
         0xDE, 0xAD, 0xBE, 0xEF,
+        0x00, 0x00, 0x00, 0x01,
         0x00, 0x00, 0x00, 0x00, // Invalid checksum for the preceding chunks
         0x0B, 0xAD, 0xF0, 0x0D,
     };
