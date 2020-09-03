@@ -24,6 +24,8 @@ pub fn new(underlying_reader: anytype) Instance(@TypeOf(underlying_reader)) {
 /// Wraps a bitwise reader in something that can parse whole integers and RLE instructions.
 /// Reader is expected to have a `readBit` function, but can otherwise be any type.
 pub fn Instance(comptime ReaderType: type) type {
+    const reader_errors = @TypeOf(ReaderType.readBit).ReturnType.ErrorSet;
+
     return struct {
         const Self = @This();
 
@@ -31,7 +33,7 @@ pub fn Instance(comptime ReaderType: type) type {
 
         /// Read the next run-length encoding instruction from the reader.
         /// Returns an error if data could not be read fully.
-        pub fn readInstruction(self: *Self) !Instruction {
+        pub fn readInstruction(self: *Self) reader_errors!Instruction {
             switch (try self.reader.readBit()) {
                 0b1 => {
                     switch (try self.readInt(u2)) {
@@ -99,7 +101,7 @@ pub fn Instance(comptime ReaderType: type) type {
         /// Reads a run of bytes from the reader into the specified destination buffer.
         /// Returns an error if data could not be read fully; in this situation,
         /// `destination` may contain partial data.
-        pub fn readBytes(self: *Self, destination: []u8) !void {
+        pub fn readBytes(self: *Self, destination: []u8) reader_errors!void {
             var index: usize = 0;
             while (index < destination.len) : (index += 1) {
                 destination[index] = try self.readInt(u8);
@@ -108,7 +110,7 @@ pub fn Instance(comptime ReaderType: type) type {
         
         /// Reads the specified number of bits from the reader into an unsigned integer.
         /// Returns an error if the required bits could not be read.
-        fn readInt(self: *Self, comptime Integer: type) !Integer {
+        fn readInt(self: *Self, comptime Integer: type) reader_errors!Integer {
             comptime assert(trait.isUnsignedInt(Integer));
 
             var value: Integer = 0;
