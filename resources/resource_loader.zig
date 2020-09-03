@@ -38,6 +38,12 @@ pub const Instance = struct {
     /// Caller owns the returned slice.
     /// Returns an error if the data could not be read or decompressed.
     pub fn readResource(self: Instance, data_allocator: *mem.Allocator, descriptor: ResourceDescriptor.Instance) ![]const u8 {
+        // Guard against mismatched sizes in the descriptor,
+        // which would otherwise cause an out-of-bounds error below when slicing the buffer.
+        if (descriptor.compressed_size > descriptor.uncompressed_size) {
+            return error.InvalidResourceSize;
+        }
+
         const bank_path = try resourcePath(self.allocator, self.path, .{ .bank = descriptor.bank_id });
         defer self.allocator.free(bank_path);
 
@@ -122,7 +128,7 @@ test "resourcePath allocates and returns expected path to BANKXX file" {
     testing.expectEqualStrings("/path/to/another_world/BANK0A", path);
 }
 
-test "resourcePath returns error if memory could not be allocated" {
+test "resourcePath returns error.OutOfMemory if memory could not be allocated" {
     const game_path = "/path/to/another_world/";
 
     testing.expectError(

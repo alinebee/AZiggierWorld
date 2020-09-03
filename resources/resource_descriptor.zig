@@ -35,6 +35,8 @@ pub const Instance = struct {
 pub const Error = ResourceType.Error || error {
     /// The stream of resource descriptors contained more than the maximum number of entries.
     ResourceListTooLarge,
+    /// A resource defined a compressed size that was larger than its uncompressed size. 
+    InvalidResourceSize,
 };
 
 /// Sanity check: stop parsing a resource list when it contains more than this many items.
@@ -119,6 +121,10 @@ fn parseNext(reader: anytype) !ParsingResult {
     _ = try reader.readInt(u16, .Big);
     const uncompressed_size = try reader.readInt(u16, .Big);
 
+    if (compressed_size > uncompressed_size) {
+        return error.InvalidResourceSize;
+    }
+
     return ParsingResult { .descriptor = Instance {
         .type = try ResourceType.parse(raw_type),
         .bank_id = bank_id,
@@ -165,6 +171,14 @@ const DescriptorExamples = struct {
         break :block invalid_data;
     };
 
+    const invalid_resource_size = block: {
+        var invalid_data = valid_data;
+        // Zero out the unpacked size to ensure that the compressed size is higher
+        invalid_data[18] = 0x00;
+        invalid_data[19] = 0x00;
+        break :block invalid_data;
+    };
+
     const valid_end_of_file = [_]u8 { end_of_file_marker };
 
     const valid_descriptor = Instance {
@@ -201,9 +215,14 @@ test "parseNext correctly parses file descriptor" {
     testing.expectError(error.EndOfStream, reader.readByte());
 }
 
-test "parseNext returns error on malformed descriptor data" {
+test "parseNext returns error.InvalidResourceType when resource type byte is not recognized" {
     var reader = fixedBufferStream(&DescriptorExamples.invalid_resource_type).reader();
     testing.expectError(error.InvalidResourceType, parseNext(reader));
+}
+
+test "parseNext returns error.InvalidResourceSize when compressed size is larger than uncompressed size" {
+    var reader = fixedBufferStream(&DescriptorExamples.invalid_resource_size).reader();
+    testing.expectError(error.InvalidResourceSize, parseNext(reader));
 }
 
 test "parseNext stops parsing at end-of-file marker" {
