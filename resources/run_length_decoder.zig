@@ -21,5 +21,53 @@
 //!    - The checksum should be equal to 0.
 
 const Reader = @import("run_length_decoder/reader.zig");
+const Writer = @import("run_length_decoder/writer.zig");
+const Parser = @import("run_length_decoder/parser.zig");
 
-const Error = Reader.Error;
+const Error = Reader.Error || Writer.Error || error {
+    /// The buffer allocated for uncompressed data was a different size
+    /// than the compressed data claimed to need.
+    UncompressedSizeMismatch,
+    /// The writer filled up its destination buffer before the reader had finished.
+    FinishedEarly,
+    /// The reader failed its checksum, likely indicating that the compressed data was corrupt or truncated.
+    ChecksumFailed,
+};
+
+/// Decodes Run-Length-Encoded data, reading RLE-compressed data from the source
+/// and writing decompressed data to the destination.
+/// `source` and `destination` are allowed to be the same buffer; if they are,
+/// `source` should be located at the start of `destination` to prevent the writer
+/// from overtaking the reader.
+/// On success, `destination` contains fully uncompressed data.
+/// Returns an error if decoding failed.
+pub fn decode(source: []const u8, destination: []u8) Error!void {
+    var parser = Parser.new(try Reader.new(source));
+
+    if (parser.reader.uncompressed_size != destination.len) {
+        return error.UncompressedSizeMismatch;
+    }
+
+    var writer = Writer.new(destination);
+
+    while (writer.isAtEnd() == false) {
+        switch(try parser.readInstruction()) {
+            .write_from_compressed => |count| {
+                var bytes_remaining = count;
+                while (bytes_remaining > 0) : (bytes_remaining -= 1) {
+                    const byte = try parser.readByte();
+                    try writer.writeByte(byte);
+                }
+            },
+            .copy_from_uncompressed => |params| {
+                try writer.copyBytes(params.count, params.offset);
+            }
+        }
+    } else {
+        switch (parser.reader.status()) {
+            .data_remaining => return error.FinishedEarly,
+            .finished_with_invalid_checksum => return error.ChecksumFailed,
+            .finished_with_valid_checksum => return,
+        }
+    }
+}

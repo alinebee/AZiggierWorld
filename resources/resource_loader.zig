@@ -1,5 +1,6 @@
 const ResourceDescriptor = @import("resource_descriptor.zig");
 const Filename = @import("filename.zig");
+const decode = @import("run_length_decoder.zig").decode;
 
 const std = @import("std");
 const mem = std.mem;
@@ -48,11 +49,11 @@ pub const Instance = struct {
         try file.seekTo(descriptor.bank_offset);
 
         // Create a buffer large enough to decompress the resource into.
-        var data = try data_allocator.alloc(u8, descriptor.uncompressed_size);
-        errdefer data_allocator.free(data);
+        var uncompressed_data = try data_allocator.alloc(u8, descriptor.uncompressed_size);
+        errdefer data_allocator.free(uncompressed_data);
 
         // Read the compressed data into the start of the buffer.
-        const compressed_data = data[0..descriptor.compressed_size];
+        const compressed_data = uncompressed_data[0..descriptor.compressed_size];
         const bytes_read = try file.readAll(compressed_data);
 
         if (bytes_read < compressed_data.len) {
@@ -60,10 +61,11 @@ pub const Instance = struct {
         }
 
         if (descriptor.isCompressed()) {
-            // TODO: decompress RLE-compressed data in place.
+            // Decompress RLE-compressed data in place.
+            try decode(compressed_data, uncompressed_data);
         }
 
-        return data;
+        return uncompressed_data;
     }
 };
 
