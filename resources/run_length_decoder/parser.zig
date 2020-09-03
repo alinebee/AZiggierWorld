@@ -98,14 +98,10 @@ pub fn Instance(comptime ReaderType: type) type {
             }
         }
 
-        /// Reads a run of bytes from the reader into the specified destination buffer.
-        /// Returns an error if data could not be read fully; in this situation,
-        /// `destination` may contain partial data.
-        pub fn readBytes(self: *Self, destination: []u8) reader_errors!void {
-            var index: usize = 0;
-            while (index < destination.len) : (index += 1) {
-                destination[index] = try self.readInt(u8);
-            }
+        /// Reads a raw byte from the reader.
+        /// Returns an error if the required bits could not be read.
+        pub fn readByte(self: *Self) reader_errors!u8 {
+            return self.readInt(u8);
         }
         
         /// Reads the specified number of bits from the reader into an unsigned integer.
@@ -201,33 +197,6 @@ test "Instance.readInt returns error.EndOfStream when source buffer is too short
     var parser = new(TestReader { .bytes = &source });
 
     testing.expectError(error.EndOfStream, parser.readInt(u16));
-}
-
-test "Instance.readBytes reads expected bytes" {
-    const source = [_]u8 { 
-        0xDE, 0xAD, 0xBE, 0xEF,
-        0x0B, 0xAD, 0xF0, 0x0D,
-    };
-
-    var destination: [8]u8 = undefined;
-    
-    var parser = new(TestReader { .bytes = &source });
-
-    try parser.readBytes(destination[0..8]);
-    testing.expectEqualSlices(u8, &source, &destination);
-}
-
-test "Instance.readBytes returns error.EndOfStream when source buffer is too short" {
-    const source = [_]u8 { 
-        0xDE, 0xAD, 0xBE, 0xEF,
-        0x0B, 0xAD, 0xF0,
-    };
-
-    var destination: [8]u8 = undefined;
-    
-    var parser = new(TestReader { .bytes = &source });
-
-    testing.expectError(error.EndOfStream, parser.readBytes(destination[0..8]));
 }
 
 test "Instance.readInstruction parses 111 instruction" {
