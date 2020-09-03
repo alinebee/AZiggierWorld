@@ -8,7 +8,7 @@ pub const Error = error {
 /// The bitwise reader for the run-length decoder.
 /// This reads chunks of 4 bytes starting from the end of the packed data and returns their individual bits,
 /// to be interpreted by the decoder as RLE instructions or data.
-pub const Reader = struct {
+pub const Instance = struct {
     /// The source buffer to read from.
     source: []const u8,
 
@@ -20,8 +20,8 @@ pub const Reader = struct {
     /// Only used as a sanity check, and is not used during parsing.
     decoded_size: usize,
 
-    /// The current chunk that `readNextBit` is currently pulling bits from.
-    /// Once this chunk is exhausted, `readNextBit` will load the next one.
+    /// The current chunk that `readBit` is currently pulling bits from.
+    /// Once this chunk is exhausted, `readBit` will load the next one.
     current_chunk: u32,
 
     /// The current CRC. This is updated as each subsequent chunk is read;
@@ -29,14 +29,14 @@ pub const Reader = struct {
     crc: u32,
 
     /// Prepares the reader to consume the specified source data.
-    fn init(self: *Reader, source: []const u8) !void {
+    fn init(self: *Instance, source: []const u8) !void {
         self.source = source;
         self.cursor = source.len;
-        self.decoded_size = try self.readNextChunk();
-        self.crc = try self.readNextChunk();
+        self.decoded_size = try self.popChunk();
+        self.crc = try self.popChunk();
         
         // CHECKME: the reference implementation loads the next 4 bytes as the current chunk, as per the code below.
-        // This possibly contains a bug: it does not set the high bit on the loaded chunk the way `readNextBit` does,
+        // This possibly contains a bug: it does not set the high bit on the loaded chunk the way `readBit` does,
         // which would cause it to stop parsing the chunk early if there are any leading zeroes.
         // That *ought* to corrupt all subsequent output, and result in the decode operation failing to read 
         // all the bits; but the reference implementation worked fine, so that suggests that this is by design.
@@ -47,24 +47,24 @@ pub const Reader = struct {
         // self.current_chunk = try self.readNextChunk();
         // self.crc ^= self.current_chunk;
 
-        // This ensures that the first time `readNextBit` is called, it will load the next chunk.
+        // This ensures that the first time `readBit` is called, it will load the next chunk.
         self.current_chunk = 0;
     }
 
     /// Consume the next bit from the source data, automatically advancing to the next chunk of source data if necessary.
     /// Returns error.ReadBufferEmpty if there are no more chunks remaining.
-    pub fn readNextBit(self: *Reader) Error!u1 {
-        const next_bit = self.popNextBit();
+    pub fn readBit(self: *Instance) Error!u1 {
+        const next_bit = self.popBit();
 
         // Because we set the highest bit of the in-progress chunk to 1, if `current_chunk` is ever equal to 0
         // after we pop the lowest bit, it means we've read through all the meaningful bits in the chunk.
         // Once we exhaust the chunk, disregard the popped bit (which was therefore our "done" marker)
         // and load in the next chunk.
         if (self.current_chunk == 0) {
-            self.current_chunk = try self.readNextChunk();
+            self.current_chunk = try self.popChunk();
             self.crc ^= self.current_chunk;
             
-            const real_next_bit = self.popNextBit();
+            const real_next_bit = self.popBit();
             // Set the last bit of the chunk to be our marker that we have exhausted the chunk:
             // once that final bit is popped off, the chunk will be equal to 0.
             // (This way, we don't have to maintain a counter of how many bits we've read.)
@@ -75,10 +75,18 @@ pub const Reader = struct {
             return next_bit;
         }
     }
-    
-    /// Return the next 4 bytes from the source data and advance the chunk cursor.
-    /// Returns error.ReadBufferEmpty if there are no more chunks remaining.
-    fn readNextChunk(self: *Reader) Error!u32 {
+
+    /// Pop the rightmost bit from the current chunk.
+    fn popBit(self: *Instance) u1 {
+        const next_bit = @truncate(u1, self.current_chunk);
+        self.current_chunk >>= 1;
+        return next_bit;
+    }
+
+    /// Return the next 4 bytes from the end of the source data and move the cursor
+    /// backwards to the preceding chunk.
+    /// Returns `error.ReadBufferEmpty` if there are no more chunks remaining.
+    fn popChunk(self: *Instance) Error!u32 {
         comptime const chunk_size = @divExact(u32.bit_count, 8);
 
         const old_cursor = self.cursor;
@@ -89,18 +97,11 @@ pub const Reader = struct {
         self.cursor -= chunk_size;
         return std.mem.readIntSliceBig(u32, self.source[self.cursor..old_cursor]);
     }
-
-    /// Pop the rightmost bit from the current chunk.
-    fn popNextBit(self: *Reader) u1 {
-        const next_bit = @truncate(u1, self.current_chunk);
-        self.current_chunk >>= 1;
-        return next_bit;
-    }
 };
 
 /// Construct a new reader that consumes the specified source slice.
-pub fn makeReader(source: []const u8) !Reader {
-    var reader: Reader = undefined;
+pub fn new(source: []const u8) !Instance {
+    var reader: Instance = undefined;
     try reader.init(source);
     return reader;
 }
@@ -118,7 +119,7 @@ test "Reader.init reads unpacked size and initial checksum from end of source bu
         0x0B, 0xAD, 0xF0, 0x0D,
     };
 
-    const reader = try makeReader(&source);
+    const reader = try new(&source);
 
     testing.expectEqual(0x0BADF00D, reader.decoded_size);
     testing.expectEqual(0xDEADBEEF, reader.crc);
@@ -128,17 +129,17 @@ test "Reader.init reads unpacked size and initial checksum from end of source bu
 test "Reader.init returns error.ReadBufferEmpty when source buffer is too small" {
     const source = [_]u8 { 0 };
 
-    testing.expectError(error.ReadBufferEmpty, makeReader(&source));
+    testing.expectError(error.ReadBufferEmpty, new(&source));
 }
 
-test "Reader.readNextBit() reads next bit and advances to next chunk" {
+test "Reader.readBit() reads next bit and advances to next chunk" {
     const pattern: u8 = 0b0101_000;
 
     const source = ([_]u8 { pattern } ** 8) ++ ([_]u8 {
         0xDE, 0xAD, 0xBE, 0xEF,
         0x0B, 0xAD, 0xF0, 0x0D,
     });
-    var reader = try makeReader(&source);
+    var reader = try new(&source);
 
     // HERE BE DRAGONS: to test the output of the reader, we push each bit
     // back into a BitWriter and compare the final slice it writes at the end.
@@ -154,7 +155,7 @@ test "Reader.readNextBit() reads next bit and advances to next chunk" {
 
     var bits_remaining = destination.len * 8;
     while (bits_remaining > 0) : (bits_remaining -= 1) {
-        const bit = try reader.readNextBit();
+        const bit = try reader.readBit();
         try writer.writeBits(bit, 1);
     }
 
