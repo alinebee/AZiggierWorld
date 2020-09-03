@@ -38,12 +38,6 @@ pub const Instance = struct {
     /// Caller owns the returned slice.
     /// Returns an error if the data could not be read or decompressed.
     pub fn readResource(self: Instance, data_allocator: *mem.Allocator, descriptor: ResourceDescriptor.Instance) ![]const u8 {
-        // Guard against mismatched sizes in the descriptor,
-        // which would otherwise cause an out-of-bounds error below when slicing the buffer.
-        if (descriptor.compressed_size > descriptor.uncompressed_size) {
-            return error.InvalidResourceSize;
-        }
-
         const bank_path = try resourcePath(self.allocator, self.path, .{ .bank = descriptor.bank_id });
         defer self.allocator.free(bank_path);
 
@@ -58,19 +52,7 @@ pub const Instance = struct {
         var uncompressed_data = try data_allocator.alloc(u8, descriptor.uncompressed_size);
         errdefer data_allocator.free(uncompressed_data);
 
-        // Read the compressed data into the start of the buffer.
-        const compressed_data = uncompressed_data[0..descriptor.compressed_size];
-        const bytes_read = try file.readAll(compressed_data);
-
-        if (bytes_read < compressed_data.len) {
-            return error.EndOfStream;
-        }
-
-        if (descriptor.isCompressed()) {
-            // Decompress RLE-compressed data in place.
-            try decode(compressed_data, uncompressed_data);
-        }
-
+        try bufReadResource(file.reader(), uncompressed_data, descriptor.compressed_size);
         return uncompressed_data;
     }
 };
@@ -105,6 +87,42 @@ fn readResourceList(allocator: *mem.Allocator, path: []const u8) ![]ResourceDesc
     return try ResourceDescriptor.parse(allocator, file.reader(), expected_descriptors);
 }
 
+const BufReadResourceError = error {
+    InvalidResourceSize,
+    InvalidCompressedData,
+    EndOfStream,
+};
+
+/// The type of errors that can be returned from bufReadResource.
+fn bufReadResourceError(comptime reader: type) type {
+    const reader_errors = @TypeOf(reader.readNoEof).ReturnType.ErrorSet;
+    return reader_errors || error {
+        InvalidResourceSize,
+        InvalidCompressedData,
+    };
+}
+
+/// Read resource data from a reader into the specified buffer, decompressing it if necessary.
+/// On success, `buffer` will be filled with uncompressed data.
+/// If reading fails, `buffer`'s contents should be treated as invalid.
+fn bufReadResource(reader: anytype, buffer: []u8, compressed_size: usize) bufReadResourceError(@TypeOf(reader))!void {
+    if (compressed_size > buffer.len) {
+        return error.InvalidResourceSize;
+    }
+
+    var compressed_region = buffer[0..compressed_size];
+    const bytes_read = try reader.readNoEof(compressed_region);
+
+    if (compressed_size < buffer.len) {
+        // Decompress RLE-compressed data in place.
+        decode(compressed_region, buffer) catch {
+            // Normalize errors to a generic "welp compressed data was invalid somehow"
+            // since the specific errors are meaningless to an upstream context.
+            return error.InvalidCompressedData;
+        };
+    }
+}
+
 // -- Tests --
 
 const testing = @import("../utils/testing.zig");
@@ -137,5 +155,55 @@ test "resourcePath returns error.OutOfMemory if memory could not be allocated" {
     );
 }
 
+test "bufReadResource reads uncompressed data into buffer" {
+    const source = [_]u8 { 0xDE, 0xAD, 0xBE, 0xEF };
+    const reader = std.io.fixedBufferStream(&source).reader();
+
+    var destination: [4]u8 = undefined;
+    try bufReadResource(reader, &destination, source.len);
+
+    testing.expectEqualSlices(u8, &source, &destination);
+}
+
+test "bufReadResource reads compressed data into buffer" {
+    // TODO: we need valid fixture data for this
+}
+
+test "bufReadResource returns error.InvalidCompressedData if data could not be decompressed" {
+    const source = [_]u8 { 0xDE, 0xAD, 0xBE };
+    const reader = std.io.fixedBufferStream(&source).reader();
+
+    var destination: [4]u8 = undefined;
+
+    testing.expectError(
+        error.InvalidCompressedData,
+        bufReadResource(reader, &destination, source.len),
+    );
+}
+
+test "bufReadResource returns error.InvalidResourceSize on mismatched compressed size" {
+    const source = [_]u8 { 0xDE, 0xAD, 0xBE, 0xEF };
+    const reader = std.io.fixedBufferStream(&source).reader();
+
+    var destination: [3]u8 = undefined;
+
+    testing.expectError(
+        error.InvalidResourceSize,
+        bufReadResource(reader, &destination, source.len),
+    );
+}
+
+test "bufReadResource returns error.EndOfStream when source data is truncated" {
+    const source = [_]u8 { 0xDE, 0xAD, 0xBE };
+    const reader = std.io.fixedBufferStream(&source).reader();
+
+    var destination: [4]u8 = undefined;
+
+    testing.expectError(
+        error.EndOfStream,
+        bufReadResource(reader, &destination, destination.len),
+    );
+}
+
 // See integration_tests/resource_loading.zig for tests of Instance itself,
-// since it depends heavily on access to real game files.
+// since it relies on Another World's folder structure and resource data.
