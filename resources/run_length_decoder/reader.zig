@@ -5,6 +5,16 @@ pub const Error = error {
     ReadBufferEmpty,
 };
 
+/// The completion status of the reader.
+pub const Status = enum {
+    /// The reader still has data left to parse.
+    data_remaining,
+    /// The reader has read all data and its checksum is valid.
+    finished_with_valid_checksum,
+    /// The reader has read all data and its checksum is invalid.
+    finished_with_invalid_checksum,
+};
+
 /// The bitwise reader for the run-length decoder.
 /// This reads chunks of 4 bytes starting from the end of the packed data and returns their individual bits,
 /// to be interpreted by the decoder as RLE instructions or data.
@@ -12,8 +22,8 @@ pub const Instance = struct {
     /// The source buffer to read from.
     source: []const u8,
 
-    /// The current position of the reader within `data`.
-    /// The reader works backward through the input data, 4 bytes at a time.
+    /// The current position of the reader within `source`.
+    /// The reader works backward from the end of the source buffer, 4 bytes at a time.
     cursor: usize,
 
     /// The expected decoded size of the compressed data, read from the last byte of the data.
@@ -97,6 +107,20 @@ pub const Instance = struct {
         self.cursor -= chunk_size;
         return std.mem.readIntSliceBig(u32, self.source[self.cursor..old_cursor]);
     }
+
+    fn status(self: Instance) Status {
+        // The most significant bit of the current chunk is always 1;
+        // once the chunk is down to a value of 1 or 0, all its bits have been fully consumed.
+        if (self.cursor == 0 and self.current_chunk <= 0b1) {
+            if (self.crc == 0) {
+                return .finished_with_valid_checksum;
+            } else {
+                return .finished_with_invalid_checksum;
+            }
+        } else {
+            return .data_remaining;
+        }
+    }
 };
 
 /// Construct a new reader that consumes the specified source slice.
@@ -110,7 +134,7 @@ pub fn new(source: []const u8) !Instance {
 
 const testing = @import("../../utils/testing.zig");
 
-test "Reader.init reads unpacked size and initial checksum from end of source buffer" {
+test "new() reads unpacked size and initial checksum from end of source buffer" {
     const source = [_]u8 {
         // Second-to-last 4 bytes are checksum
         0xDE, 0xAD, 0xBE, 0xEF,
@@ -126,13 +150,13 @@ test "Reader.init reads unpacked size and initial checksum from end of source bu
     testing.expectEqual(0, reader.cursor);
 }
 
-test "Reader.init returns error.ReadBufferEmpty when source buffer is too small" {
+test "new() returns `error.ReadBufferEmpty` when source buffer is too small" {
     const source = [_]u8 { 0 };
 
     testing.expectError(error.ReadBufferEmpty, new(&source));
 }
 
-test "Reader.readBit() reads next bit and advances to next chunk" {
+test "readBit() reads next bit and advances to next chunk" {
     const pattern: u8 = 0b0101_000;
 
     const source = ([_]u8 { pattern } ** 8) ++ ([_]u8 {
@@ -164,4 +188,65 @@ test "Reader.readBit() reads next bit and advances to next chunk" {
     // since two chunks have been read fully.
     testing.expectEqual(0b1, reader.current_chunk);
     testing.expectEqualSlices(u8, source[0..destination.len], &destination);
+}
+
+test "status() returns .data_remaining for reader that hasn't exhausted its chunks" {
+    const source = [_]u8 {
+        0x00, 0x00, 0x00, 0x00,
+        0xDE, 0xAD, 0xBE, 0xEF,
+        0x0B, 0xAD, 0xF0, 0x0D,
+    };
+
+    var reader = try new(&source);
+    testing.expectEqual(4, reader.cursor);
+    testing.expectEqual(.data_remaining, reader.status());
+    
+    // Even once it has begun consuming its last chunk,
+    // it should not report as done until all bits of the chunk have been read
+    _ = try reader.readBit();
+    testing.expectEqual(0, reader.cursor);
+    testing.expectEqual(.data_remaining, reader.status());
+}
+
+test "status() returns .finished_with_valid_checksum for exhausted reader whose checksum is 0" {
+    const source = [_]u8 {
+        0x0B, 0xAD, 0xF0, 0x0D,
+        0xDE, 0xAD, 0xBE, 0xEF,
+        // The starting checksum is XORed with each subsequent chunk as it is read;
+        // the end result of XORing all chunks into the original checksum should be 0.
+        (0x0B ^ 0xDE), (0xAD ^ 0xAD), (0xF0 ^ 0xBE), (0x0D ^ 0xEF),
+        0x0B, 0xAD, 0xF0, 0x0D,
+    };
+
+    var reader = try new(&source);
+
+    var bits_remaining: usize = 8 * 8;
+    while (bits_remaining > 0) : (bits_remaining -= 1) {
+        testing.expectEqual(.data_remaining, reader.status());
+        _ = try reader.readBit();
+    } else {
+        testing.expectEqual(0, reader.cursor);
+        testing.expectEqual(0, reader.crc);
+        testing.expectEqual(.finished_with_valid_checksum, reader.status());
+    }
+}
+
+test "status() returns .finished_with_invalid_checksum for exhausted reader whose checksum is non-0" {
+    const source = [_]u8 {
+        0x0B, 0xAD, 0xF0, 0x0D,
+        0xDE, 0xAD, 0xBE, 0xEF,
+        0x00, 0x00, 0x00, 0x00, // Invalid checksum for the preceding chunks
+        0x0B, 0xAD, 0xF0, 0x0D,
+    };
+
+    var reader = try new(&source);
+
+    var bits_remaining: usize = 8 * 8;
+    while (bits_remaining > 0) : (bits_remaining -= 1) {
+        testing.expectEqual(.data_remaining, reader.status());
+        _ = try reader.readBit();
+    } else {
+        testing.expectEqual(0, reader.cursor);
+        testing.expectEqual(.finished_with_invalid_checksum, reader.status());
+    }
 }
