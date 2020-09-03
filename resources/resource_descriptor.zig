@@ -45,20 +45,17 @@ const max_resource_descriptors = 1000;
 /// On success, returns a slice containing the parsed resource descriptors.
 /// The caller owns the returned slice.
 /// `expected_count` indicates the number of descriptors that the stream is expected to contain;
-/// the returned slice may contain less or more than that.
-/// Returns an error if the stream contained invalid descriptor data,
-/// did not contain an end-of-file marker, or ran out of memory before parsing completed.
+/// this is only a hint, and the returned slice may contain more or fewer than that.
+/// Returns an error if the stream was too long, contained invalid descriptor data,
+/// or ran out of memory before parsing completed.
 pub fn parse(allocator: *mem.Allocator, reader: anytype, expected_count: usize) ![]Instance {
     var list = try ArrayList(Instance).initCapacity(allocator, expected_count);
     errdefer list.deinit();
 
-    while (true) {
+    while (list.items.len < max_resource_descriptors) {
         const result = try parseNext(reader);
         switch (result) {
             .descriptor => |descriptor| {
-                if (list.items.len >= max_resource_descriptors) {
-                    return error.ResourceListTooLarge;
-                }
                 try list.append(descriptor);
             },
             // Stop reading if-and-when we encounter an end-of-file marker.
@@ -67,6 +64,8 @@ pub fn parse(allocator: *mem.Allocator, reader: anytype, expected_count: usize) 
             // parseNext will return error.EndOfStream indicating a truncated file.
             .end_of_file => return list.toOwnedSlice(),
         }
+    } else {
+        return error.ResourceListTooLarge;
     }
 }
 
