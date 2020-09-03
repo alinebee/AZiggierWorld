@@ -11,6 +11,7 @@
 
 const std = @import("std");
 const assert = std.debug.assert;
+const trait = std.meta.trait;
 
 /// Construct a new RLE instruction parser that wraps a bitwise reader
 /// and reads RLE instructions and raw byte sequences from it.
@@ -33,19 +34,19 @@ pub fn Instance(comptime ReaderType: type) type {
         pub fn readInstruction(self: *Self) !Instruction {
             switch (try self.reader.readBit()) {
                 0b1 => {
-                    switch (try self.readInt(2)) {
+                    switch (try self.readInt(u2)) {
                         0b11 => {
                             // 111|cccc_cccc
                             // next 8 bits are count: copy the following `count + 9` bytes of data
-                            const count = try self.readInt(8);
+                            const count: usize = try self.readInt(u8);
                             return Instruction { .write_from_compressed = count + 9 };
                         },
                         0b10 => {
                             // 110|cccc_cccc|oooo_oooo_oooo
                             // next 8 bits are count, next 12 bits are relative offset within uncompressed data:
                             // copy `count + 1` bytes from uncompressed data at offset
-                            const count = try self.readInt(8);
-                            const offset = try self.readInt(12);
+                            const count: usize = try self.readInt(u8);
+                            const offset: usize = try self.readInt(u12);
                             return Instruction { .copy_from_uncompressed = .{
                                 .count = count + 1,
                                 .offset = offset,
@@ -55,7 +56,7 @@ pub fn Instance(comptime ReaderType: type) type {
                             // 101|oooo_oooo_oo
                             // next 10 bits are relative offset within uncompressed data:
                             // copy 4 bytes from uncompressed data at offset
-                            const offset = try self.readInt(10);
+                            const offset: usize = try self.readInt(u10);
                             return Instruction { .copy_from_uncompressed = .{
                                 .count = 4,
                                 .offset = offset,
@@ -64,13 +65,12 @@ pub fn Instance(comptime ReaderType: type) type {
                         0b00 => {
                             // 100|oooo_oooo_o
                             // next 9 bits are relative offset: copy 3 bytes from uncompressed data at offset
-                            const offset = try self.readInt(9);
+                            const offset: usize = try self.readInt(u9);
                             return Instruction { .copy_from_uncompressed = .{
                                 .count = 3,
                                 .offset = offset,
                             } };
                         },
-                        else => unreachable,
                     }
                 },
                 0b0 => {
@@ -78,7 +78,7 @@ pub fn Instance(comptime ReaderType: type) type {
                         0b1 => {
                             // 01|oooo_oooo
                             // next 8 bits are relative offset: copy 2 bytes from uncompressed data at offset
-                            const offset = try self.readInt(8);
+                            const offset: usize = try self.readInt(u8);
                             return Instruction { .copy_from_uncompressed = .{
                                 .count = 2,
                                 .offset = offset,
@@ -87,7 +87,7 @@ pub fn Instance(comptime ReaderType: type) type {
                         0b0 => {
                             // 00|ccc
                             // next 3 bits are count: copy the next (count + 1) bytes of packed data
-                            const count = try self.readInt(3);
+                            const count: usize = try self.readInt(u3);
                             return Instruction { .write_from_compressed = count + 1 };
                         },
                     }
@@ -102,20 +102,20 @@ pub fn Instance(comptime ReaderType: type) type {
         pub fn readBytes(self: *Self, destination: []u8) !void {
             var index: usize = 0;
             while (index < destination.len) : (index += 1) {
-                destination[index] = @truncate(u8, try self.readInt(8));
+                destination[index] = try self.readInt(u8);
             }
         }
         
         /// Reads the specified number of bits from the reader into an unsigned integer.
         /// Returns an error if the required bits could not be read.
-        fn readInt(self: *Self, comptime bit_count: usize) !usize {
-            comptime assert(bit_count <= usize.bit_count);
+        fn readInt(self: *Self, comptime Integer: type) !Integer {
+            comptime assert(trait.isUnsignedInt(Integer));
 
-            var value: usize = 0;
+            var value: Integer = 0;
             // TODO: This could be an inline-while: benchmark this to see if that helps.
-            var bits_remaining: usize = bit_count;
+            var bits_remaining: usize = Integer.bit_count;
             while (bits_remaining > 0) : (bits_remaining -= 1) {
-                value <<= 1;
+                value = @shlExact(value, 1);
                 value |= try self.reader.readBit();
             }
             return value;
@@ -187,10 +187,10 @@ test "Instance.readInt reads integers of the specified width" {
 
     var parser = new(TestReader { .bytes = &source });
 
-    testing.expectEqual(0xDE, parser.readInt(8));
-    testing.expectEqual(0xAD, parser.readInt(8));
-    testing.expectEqual(0xBEEF, parser.readInt(16));
-    testing.expectEqual(0x0BADF00D, parser.readInt(32));
+    testing.expectEqual(0xDE, parser.readInt(u8));
+    testing.expectEqual(0xAD, parser.readInt(u8));
+    testing.expectEqual(0xBEEF, parser.readInt(u16));
+    testing.expectEqual(0x0BADF00D, parser.readInt(u32));
 }
 
 test "Instance.readInt returns error.EndOfStream when source buffer is too short" {
@@ -198,7 +198,7 @@ test "Instance.readInt returns error.EndOfStream when source buffer is too short
 
     var parser = new(TestReader { .bytes = &source });
 
-    testing.expectError(error.EndOfStream, parser.readInt(16));
+    testing.expectError(error.EndOfStream, parser.readInt(u16));
 }
 
 test "Instance.readBytes reads expected bytes" {
@@ -238,6 +238,21 @@ test "Instance.readInstruction parses 111 instruction" {
     var parser = new(TestReader { .bytes = &source });
     testing.expectEqual(
         Instruction { .write_from_compressed = 0b0111_1101 + 9 },
+        parser.readInstruction(),
+    );
+}
+
+
+test "Instance.readInstruction parses 111 instruction with max count without overflowing" {
+    // 111|cccc_cccc: 11 bits total
+    // next 8 bits are count: copy the next (count + 9) bytes of packed data immediately after this.
+    const source = [_]u8 {
+        0b111_1111_1, 0b111_00000,
+    };
+
+    var parser = new(TestReader { .bytes = &source });
+    testing.expectEqual(
+        Instruction { .write_from_compressed = 0b1111_1111 + 9 },
         parser.readInstruction(),
     );
 }
