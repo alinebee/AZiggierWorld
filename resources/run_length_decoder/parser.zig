@@ -104,7 +104,8 @@ pub fn Instance(comptime ReaderType: type) type {
             return self.readInt(u8);
         }
         
-        /// Reads the specified number of bits from the reader into an unsigned integer.
+        /// Reads bits from the reader into an unsigned integer up to the integer's width:
+        /// e.g. readInt(u7) would read 7 bits.
         /// Returns an error if the required bits could not be read.
         fn readInt(self: *Self, comptime Integer: type) reader_errors!Integer {
             comptime assert(trait.isUnsignedInt(Integer));
@@ -132,62 +133,13 @@ pub const Instruction = union(enum) {
     copy_from_uncompressed: struct { count: usize, offset: usize },
 };
 
-// -- Test helpers --
-
-const testing = @import("../../utils/testing.zig");
-
-/// Constructs a reader that walks through every bit of an arbitrary-width integer
-/// in order from highest to lowest.
-fn IntReader(comptime Integer: type) type {
-    comptime const ShiftType = std.math.Log2Int(Integer);
-    comptime const max_shift = Integer.bit_count - 1;
-
-    return struct {
-        const Self = @This();
-
-        bits: Integer,
-        count: usize = 0,
-
-        fn readBit(self: *Self) !u1 {
-            if (self.isAtEnd()) {
-                return error.EndOfStream;
-            }
-
-            const shift = @intCast(ShiftType, max_shift - self.count);
-            self.count += 1;
-
-            return @truncate(u1, self.bits >> shift);
-        }
-
-        fn isAtEnd(self: Self) bool {
-            return self.count >= Integer.bit_count;
-        }
-    };
-}
-
-fn intReader(comptime Integer: type, bits: Integer) IntReader(Integer) {
-    return IntReader(Integer) { .bits = bits };
-}
-
-test "TestReader.readBit reads all bits in order from highest to lowest" {
-    var reader = intReader(u8, 0b1001_0110);
-    for ([_]u1 { 1, 0, 0, 1, 0, 1, 1, 0 }) |bit| {
-        testing.expectEqual(bit, reader.readBit());
-    }
-    testing.expect(reader.isAtEnd());
-}
-
-test "TestReader.readBit returns error.EndOfStream once it runs out of bits" {
-    var reader = intReader(u1, 1);
-    testing.expectEqual(1, reader.readBit());
-    testing.expectError(error.EndOfStream, reader.readBit());
-    testing.expect(reader.isAtEnd());
-}
-
 // -- Tests --
 
+const testing = @import("../../utils/testing.zig");
+const MockReader = @import("test_helpers/mock_reader.zig");
+
 test "Instance.readInt reads integers of the specified width" {
-    var parser = new(intReader(u64, 0xDEAD_BEEF_0BAD_F00D));
+    var parser = new(MockReader.new(u64, 0xDEAD_BEEF_0BAD_F00D));
 
     testing.expectEqual(0xDE, parser.readInt(u8));
     testing.expectEqual(0xAD, parser.readInt(u8));
@@ -197,7 +149,7 @@ test "Instance.readInt reads integers of the specified width" {
 }
 
 test "Instance.readInt returns error.EndOfStream when source buffer is too short" {
-    var parser = new(intReader(u8, 0xDE));
+    var parser = new(MockReader.new(u8, 0xDE));
 
     testing.expectError(error.EndOfStream, parser.readInt(u16));
     testing.expect(parser.reader.isAtEnd());
@@ -206,7 +158,7 @@ test "Instance.readInt returns error.EndOfStream when source buffer is too short
 test "Instance.readInstruction parses 111 instruction" {
     // 111|cccc_cccc: 11 bits total
     // next 8 bits are count: copy the next (count + 9) bytes of packed data immediately after this.
-    var parser = new(intReader(u11, 0b111_0111_1101));
+    var parser = new(MockReader.new(u11, 0b111_0111_1101));
 
     testing.expectEqual(
         Instruction { .write_from_compressed = 0b0111_1101 + 9 },
@@ -216,7 +168,7 @@ test "Instance.readInstruction parses 111 instruction" {
 }
 
 test "Instance.readInstruction parses 111 instruction with max count without overflowing" {
-    var parser = new(intReader(u11, 0b111_1111_1111));
+    var parser = new(MockReader.new(u11, 0b111_1111_1111));
     
     testing.expectEqual(
         Instruction { .write_from_compressed = 0b1111_1111 + 9 },
@@ -229,7 +181,7 @@ test "Instance.readInstruction parses 110 instruction" {
     // 110|cccc_cccc|oooo_oooo_oooo: 23 bits total
     // next 8 bits are count, next 12 bits are relative offset within uncompressed data:
     // copy (count + 1) bytes from the uncompressed data at that offset.
-    var parser = new(intReader(u23, 0b110_0111_1101_1101_1001_1010));
+    var parser = new(MockReader.new(u23, 0b110_0111_1101_1101_1001_1010));
 
     testing.expectEqual(
         Instruction { .copy_from_uncompressed = .{
@@ -244,7 +196,7 @@ test "Instance.readInstruction parses 110 instruction" {
 test "Instance.readInstruction parses 101 instruction" {
     // 101|oooo_oooo_oo: 13 bits total
     // next 10 bits are relative offset: copy 4 bytes from uncompressed data at offset.
-    var parser = new(intReader(u13, 0b101_0111_1101_11));
+    var parser = new(MockReader.new(u13, 0b101_0111_1101_11));
 
     testing.expectEqual(
         Instruction { .copy_from_uncompressed = .{
@@ -259,7 +211,7 @@ test "Instance.readInstruction parses 101 instruction" {
 test "Instance.readInstruction parses 100 instruction" {
     // 100|oooo_oooo_o: 12 bits total
     // next 9 bits are relative offset: copy 3 bytes from uncompressed data at offset.
-    var parser = new(intReader(u12, 0b100_0111_1101_1));
+    var parser = new(MockReader.new(u12, 0b100_0111_1101_1));
 
     testing.expectEqual(
         Instruction { .copy_from_uncompressed = .{
@@ -274,7 +226,7 @@ test "Instance.readInstruction parses 100 instruction" {
 test "Instance.readInstruction parses 01 instruction" {
     // 01|oooo_oooo: 10 bits total
     // next 8 bits are relative offset: copy 2 bytes from uncompressed data at offset.
-    var parser = new(intReader(u10, 0b01_0111_1101));
+    var parser = new(MockReader.new(u10, 0b01_0111_1101));
 
     testing.expectEqual(
         Instruction { .copy_from_uncompressed = .{
@@ -289,7 +241,7 @@ test "Instance.readInstruction parses 01 instruction" {
 test "Instance.readInstruction parses 00 instruction" {
     // 00|ccc: 5 bits total
     // next 3 bits are count: copy the next (count + 1) bytes immediately after the instruction.
-    var parser = new(intReader(u5, 0b00_110));
+    var parser = new(MockReader.new(u5, 0b00_110));
     
     testing.expectEqual(
         Instruction { .write_from_compressed = 0b110 + 1 },
