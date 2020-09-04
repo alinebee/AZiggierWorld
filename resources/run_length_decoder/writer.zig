@@ -8,8 +8,8 @@ pub const Error = error {
 };
 
 /// Create a new writer that will begin writing to the end of the specified destination buffer.
-pub fn new(destination: []u8) Writer {
-    return Writer { 
+pub fn new(destination: []u8) Instance {
+    return Instance { 
         .destination = destination,
         .cursor = destination.len
     };
@@ -17,7 +17,7 @@ pub fn new(destination: []u8) Writer {
 
 /// The byte-wise writer for the run-length decoder. This writing decompressed bytes
 /// to a destination buffer, starting from the end of the buffer and working its way forward.
-pub const Writer = struct {
+pub const Instance = struct {
     /// The destination buffer to write to.
     destination: []u8,
 
