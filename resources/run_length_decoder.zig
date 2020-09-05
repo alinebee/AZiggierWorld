@@ -20,11 +20,12 @@
 //!    - The read cursor and write cursors should both be at the start of the buffer.
 //!    - The checksum should be equal to 0.
 
-const Reader = @import("run_length_decoder/reader.zig");
+const BitReader = @import("run_length_decoder/bit_reader.zig");
+const IntReader = @import("run_length_decoder/int_reader.zig");
 const Writer = @import("run_length_decoder/writer.zig");
-const Parser = @import("run_length_decoder/parser.zig");
+const decodeInstruction = @import("run_length_decoder/decode.zig").decodeInstruction;
 
-const Error = Reader.Error || Writer.Error || error {
+const Error = BitReader.Error || Writer.Error || error {
     /// The buffer allocated for uncompressed data was a different size
     /// than the compressed data claimed to need.
     UncompressedSizeMismatch,
@@ -42,28 +43,21 @@ const Error = Reader.Error || Writer.Error || error {
 /// On success, `destination` contains fully uncompressed data.
 /// Returns an error if decoding failed.
 pub fn decode(source: []const u8, destination: []u8) Error!void {
-    var parser = Parser.new(try Reader.new(source));
+    var reader = IntReader.new(try BitReader.new(source));
 
-    if (parser.reader.uncompressed_size != destination.len) {
+    if (reader.bit_reader.uncompressed_size != destination.len) {
         return error.UncompressedSizeMismatch;
     }
 
     var writer = Writer.new(destination);
 
     while (writer.isAtEnd() == false) {
-        switch(try parser.readInstruction()) {
-            .write_from_compressed => |count| {
-                try writer.writeFromSource(@TypeOf(parser), &parser, count);
-            },
-            .copy_from_uncompressed => |params| {
-                try writer.copyFromDestination(params.count, params.offset);
-            }
-        }
-    } else {
-        switch (parser.reader.status()) {
-            .data_remaining => return error.FinishedEarly,
-            .finished_with_invalid_checksum => return error.ChecksumFailed,
-            .finished_with_valid_checksum => return,
-        }
+        try decodeInstruction(&reader, &writer);
+    }
+    
+    switch (reader.bit_reader.status()) {
+        .data_remaining => return error.FinishedEarly,
+        .finished_with_invalid_checksum => return error.ChecksumFailed,
+        .finished_with_valid_checksum => return,
     }
 }

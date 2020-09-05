@@ -3,6 +3,8 @@ const Log2Int = std.math.Log2Int;
 const assert = std.debug.assert;
 const trait = std.meta.trait;
 
+const IntReader = @import("../int_reader.zig");
+
 /// Returns a mock bitwise reader that reads every bit from a specified integer value
 /// in order from left to right (highest to lowest).
 ///

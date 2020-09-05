@@ -1,24 +1,16 @@
 const std = @import("std");
 
-pub const Error = error {
-    /// The read buffer ran out of bytes to read before decoding was completed.
-    ReadBufferEmpty,
-};
-
-/// The completion status of the reader.
-pub const Status = enum {
-    /// The reader still has data left to parse.
-    data_remaining,
-    /// The reader has read all data and its checksum is valid.
-    finished_with_valid_checksum,
-    /// The reader has read all data and its checksum is invalid.
-    finished_with_invalid_checksum,
-};
+/// Construct a new reader that consumes the specified source slice.
+pub fn new(source: []const u8) !Instance {
+    var reader: Instance = undefined;
+    try reader.init(source);
+    return reader;
+}
 
 /// The bitwise reader for the run-length decoder.
 /// This reads chunks of 4 bytes starting from the end of the packed data and returns their individual bits,
 /// to be interpreted by the decoder as RLE instructions or data.
-pub const Instance = struct {
+const Instance = struct {
     /// The source buffer to read from.
     source: []const u8,
 
@@ -39,7 +31,7 @@ pub const Instance = struct {
     crc: u32,
 
     /// Prepares the reader to consume the specified source data.
-    fn init(self: *Instance, source: []const u8) !void {
+    fn init(self: *Instance, source: []const u8) Error!void {
         self.source = source;
         self.cursor = source.len;
         self.uncompressed_size = try self.popChunk();
@@ -128,12 +120,20 @@ pub const Instance = struct {
     }
 };
 
-/// Construct a new reader that consumes the specified source slice.
-pub fn new(source: []const u8) !Instance {
-    var reader: Instance = undefined;
-    try reader.init(source);
-    return reader;
-}
+pub const Error = error {
+    /// The read buffer ran out of bytes to read before decoding was completed.
+    ReadBufferEmpty,
+};
+
+/// The completion status of the reader.
+pub const Status = enum {
+    /// The reader still has data left to parse.
+    data_remaining,
+    /// The reader has read all data and its checksum is valid.
+    finished_with_valid_checksum,
+    /// The reader has read all data and its checksum is invalid.
+    finished_with_invalid_checksum,
+};
 
 // -- Tests --
 
