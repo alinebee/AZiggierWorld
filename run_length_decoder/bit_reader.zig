@@ -137,7 +137,7 @@ pub const Status = enum {
 
 // -- Tests --
 
-const testing = @import("../../utils/testing.zig");
+const testing = @import("../utils/testing.zig");
 
 test "new() reads unpacked size, initial checksum and first chunk from end of source buffer" {
     const source = [_]u8 {

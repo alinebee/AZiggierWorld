@@ -75,7 +75,7 @@ pub const Instance = struct {
 
 // -- Tests --
 
-const testing = @import("../../utils/testing.zig");
+const testing = @import("../utils/testing.zig");
 const fixedBufferStream = @import("std").io.fixedBufferStream;
 
 test "writeFromSource writes bytes in reverse order starting at the end of the destination" {

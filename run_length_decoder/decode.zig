@@ -20,10 +20,10 @@
 //!    - The read cursor and write cursors should both be at the start of the buffer.
 //!    - The checksum should be equal to 0.
 
-const BitReader = @import("run_length_decoder/bit_reader.zig");
-const IntReader = @import("run_length_decoder/int_reader.zig");
-const Writer = @import("run_length_decoder/writer.zig");
-const decodeInstruction = @import("run_length_decoder/decode.zig").decodeInstruction;
+const BitReader = @import("bit_reader.zig");
+const IntReader = @import("int_reader.zig");
+const Writer = @import("writer.zig");
+const decodeInstruction = @import("decode_instruction.zig").decodeInstruction;
 
 const Error = BitReader.Error || Writer.Error || error {
     /// The buffer allocated for uncompressed data was a different size

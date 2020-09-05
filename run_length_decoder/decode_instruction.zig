@@ -69,7 +69,7 @@ pub fn decodeInstruction(reader: anytype, writer: anytype) !void {
 
 // -- Tests --
 
-const testing = @import("../../utils/testing.zig");
+const testing = @import("../utils/testing.zig");
 const MockReader = @import("test_helpers/mock_reader.zig");
 const MockWriter = @import("test_helpers/mock_writer.zig");
 const IntReader = @import("int_reader.zig");

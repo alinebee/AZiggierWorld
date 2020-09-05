@@ -32,7 +32,7 @@ pub const Instance = struct {
 
 // -- Testing --
 
-const testing = @import("../../../utils/testing.zig");
+const testing = @import("../../utils/testing.zig");
 
 const FakeReader = struct {
     fn readByte() void { unreachable; }

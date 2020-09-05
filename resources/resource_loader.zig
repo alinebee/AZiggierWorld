@@ -1,6 +1,6 @@
 const ResourceDescriptor = @import("resource_descriptor.zig");
 const Filename = @import("filename.zig");
-const decode = @import("run_length_decoder.zig").decode;
+const decode = @import("../run_length_decoder/decode.zig").decode;
 
 const std = @import("std");
 const mem = std.mem;

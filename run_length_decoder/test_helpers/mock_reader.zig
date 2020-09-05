@@ -55,7 +55,7 @@ pub const Error = error {
 
 // -- Tests --
 
-const testing = @import("../../../utils/testing.zig");
+const testing = @import("../../utils/testing.zig");
 
 test "readBit reads all bits in order from highest to lowest" {
     var reader = new(u8, 0b1001_0110);

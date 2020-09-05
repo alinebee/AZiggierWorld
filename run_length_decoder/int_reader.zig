@@ -46,7 +46,7 @@ pub fn Instance(comptime Reader: type) type {
 
 // -- Tests --
 
-const testing = @import("../../utils/testing.zig");
+const testing = @import("../utils/testing.zig");
 const MockReader = @import("test_helpers/mock_reader.zig");
 
 test "readInt reads integers of the specified width" {
