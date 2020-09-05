@@ -1,4 +1,6 @@
 const std = @import("std");
+const mem = std.mem;
+const io = std.io;
 
 const ReaderInterface = @import("reader_interface.zig");
 
@@ -107,7 +109,7 @@ const Instance = struct {
         }
 
         self.cursor -= chunk_size;
-        return std.mem.readIntSliceBig(u32, self.source[self.cursor..old_cursor]);
+        return mem.readIntSliceBig(u32, self.source[self.cursor..old_cursor]);
     }
 
     /// Whether the reader still has bits remaining to consume.
@@ -144,27 +146,47 @@ pub const Error = error {
     ChecksumFailed,
 };
 
+// -- Test helpers --
+
+const DataExamples = struct {
+    const valid = [_]u8 {
+        // A couple of chunks of raw data that will be returned by readBit.
+        0x0B, 0xAD, 0xF0, 0x0D,
+        0xDE, 0xAD, 0xBE, 0xEF,
+        // Empty chunk to ensure preceding chunks are consumed in full - see comment in Instance.init.
+        // This chunk will contribute to the CRC but will not be returned by readBit.
+        0x00, 0x00, 0x00, 0x01,
+        // The starting checksum is XORed with each subsequent chunk as it is read;
+        // the end result of XORing all chunks into the original checksum should be 0.
+        (0x0B ^ 0xDE ^ 0x00), (0xAD ^ 0xAD ^ 0x00), (0xF0 ^ 0xBE ^ 0x00), (0x0D ^ 0xEF ^ 0x01),
+        // Expected size of uncompressed data (unused in tests)
+        0x0B, 0xAD, 0xF0, 0x0D,
+    };
+
+    const invalid_checksum = [_]u8 {
+        0x0B, 0xAD, 0xF0, 0x0D,
+        0xDE, 0xAD, 0xBE, 0xEF,
+        0x00, 0x00, 0x00, 0x01,
+        0x00, 0x00, 0x00, 0x00, // Invalid checksum for the preceding chunks
+        0x0B, 0xAD, 0xF0, 0x0D,
+    };
+};
+
 // -- Tests --
 
 const testing = @import("../utils/testing.zig");
 
 test "init() reads unpacked size, initial checksum and first chunk from end of source buffer" {
-    const source = [_]u8 {
-        // Preceding bytes are compressed resource data
-        0x00, 0x00, 0x00, 0x00,
-        
-        // Second-to-last 4 bytes are checksum
-        0xDE, 0xAD, 0xBE, 0xEF,
+    const source = DataExamples.valid;
 
-        // Last 4 bytes are decoded size
-        0x0B, 0xAD, 0xF0, 0x0D,
-    };
+    // Upon initialization, the CRC stored in the source data is XORed with the first raw chunk of data.
+    const expected_crc = mem.readIntBig(u32, source[12..16]) ^ mem.readIntBig(u32, source[8..12]);
 
     var reader = try Instance.init(&source);
 
     testing.expectEqual(0x0BADF00D, reader.uncompressed_size);
-    testing.expectEqual(0xDEADBEEF, reader.crc);
-    testing.expectEqual(0x00000000, reader.current_chunk);
+    testing.expectEqual(0x00000001, reader.current_chunk);
+    testing.expectEqual(expected_crc, reader.crc);
 }
 
 test "new() returns `error.SourceBufferEmpty` when source buffer is too small" {
@@ -173,47 +195,33 @@ test "new() returns `error.SourceBufferEmpty` when source buffer is too small" {
     testing.expectError(error.SourceBufferEmpty, new(&source));
 }
 
-test "readBit() reads next bit and advances to next chunk" {
-    const pattern: u8 = 0b0101_000;
-
-    const source = ([_]u8 { pattern } ** 8) ++ ([_]u8 {
-        // Empty chunk to ensure preceding chunks are consumed in full - see comment in Instance.init.
-        0x00, 0x00, 0x00, 0x01,
-        0xDE, 0xAD, 0xBE, 0xEF,
-        0x0B, 0xAD, 0xF0, 0x0D,
-    });
+test "readBit() reads chunks bit by bit in reverse order" {
+    const source = DataExamples.valid;
     var reader = try new(&source);
 
-    // HERE BE DRAGONS: to test the output of the reader, we push each bit
-    // back into a BitWriter and compare the final slice it writes at the end.
-    // The output of Reader is big-endian, so low bits come out first.
-    // If we pushed those into a big-endian BitWriter, it would flip the order,
-    // because the lowmost bits from the source would end up as the highmost
-    // bits of the destination.
-    // By creating a little-endian BitWriter, the lowmost bits we push in end up
-    // as the lowmost bits of the destination too, allowing for an easier comparison.
     var destination: [8]u8 = undefined;
-    const destination_stream = std.io.fixedBufferStream(&destination).writer();
-    var writer = std.io.bitWriter(.Little, destination_stream);
+    const destination_stream = io.fixedBufferStream(&destination).writer();
+    var writer = io.bitWriter(.Big, destination_stream);
 
     var bits_remaining = destination.len * 8;
     while (bits_remaining > 0) : (bits_remaining -= 1) {
         const bit = try reader.readBit();
         try writer.writeBits(bit, 1);
     }
-
     testing.expectEqual(true, reader.isAtEnd());
-    testing.expectEqualSlices(u8, source[0..destination.len], &destination);
+
+    // readBit() returns source bits in reverse order, starting from the end of the last chunk of real data.
+    const source_bits = mem.readIntBig(u64, source[0..destination.len]);
+    const expected_bits = @bitReverse(u64, source_bits);
+    const actual_bits = mem.readIntBig(u64, &destination);
+
+    testing.expectEqual(expected_bits, actual_bits);
 }
 
 test "isAtEnd() returns false and validateAfterDecoding() returns error.SourceBufferNotFullyConsumed when reader hasn't consumed all bits yet" {
-    const source = [_]u8 {
-        0x01, 0x01, 0x01, 0x01,
-        0xDE, 0xAD, 0xBE, 0xEF,
-        0x0B, 0xAD, 0xF0, 0x0D,
-    };
+    const single_chunk_source = DataExamples.valid[4..];
 
-    var reader = try new(&source);
+    var reader = try new(single_chunk_source);
     testing.expectEqual(false, reader.isAtEnd());
     testing.expectError(error.SourceBufferNotFullyConsumed, reader.validateAfterDecoding());
     
@@ -225,15 +233,7 @@ test "isAtEnd() returns false and validateAfterDecoding() returns error.SourceBu
 }
 
 test "isAtEnd() returns true and validateAfterDecoding() returns error.ChecksumFailed when reader has consumed all bits but has a non-0 checksum" {
-    const source = [_]u8 {
-        0x0B, 0xAD, 0xF0, 0x0D,
-        0xDE, 0xAD, 0xBE, 0xEF,
-        0x00, 0x00, 0x00, 0x01,
-        0x00, 0x00, 0x00, 0x00, // Invalid checksum for the preceding chunks
-        0x0B, 0xAD, 0xF0, 0x0D,
-    };
-
-    var reader = try new(&source);
+    var reader = try new(&DataExamples.invalid_checksum);
 
     var bits_remaining: usize = 8 * 8;
     while (bits_remaining > 0) : (bits_remaining -= 1) {
@@ -247,18 +247,7 @@ test "isAtEnd() returns true and validateAfterDecoding() returns error.ChecksumF
 }
 
 test "isAtEnd() returns true and validateAfterDecoding() passes when reader has consumed all bits and has a 0 checksum" {
-    const source = [_]u8 {
-        0x0B, 0xAD, 0xF0, 0x0D,
-        0xDE, 0xAD, 0xBE, 0xEF,
-        // Empty chunk to ensure preceding chunks are consumed in full - see comment in Instance.init.
-        0x00, 0x00, 0x00, 0x01,
-        // The starting checksum is XORed with each subsequent chunk as it is read;
-        // the end result of XORing all chunks into the original checksum should be 0.
-        (0x0B ^ 0xDE ^ 0x00), (0xAD ^ 0xAD ^ 0x00), (0xF0 ^ 0xBE ^ 0x00), (0x0D ^ 0xEF ^ 0x01),
-        0x0B, 0xAD, 0xF0, 0x0D,
-    };
-
-    var reader = try new(&source);
+    var reader = try new(&DataExamples.valid);
 
     var bits_remaining: usize = 8 * 8;
     while (bits_remaining > 0) : (bits_remaining -= 1) {
