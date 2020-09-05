@@ -8,7 +8,8 @@ pub fn new(bit_reader: anytype) Instance(@TypeOf(bit_reader)) {
 }
 
 pub fn Instance(comptime Reader: type) type {
-    const ReaderError = @TypeOf(Reader.readBit).ReturnType.ErrorSet;
+    const ReadBitError = @TypeOf(Reader.readBit).ReturnType.ErrorSet;
+    const ValidationError = @TypeOf(Reader.validateAfterDecoding).ReturnType.ErrorSet;
 
     return struct {
         const Self = @This();
@@ -16,20 +17,20 @@ pub fn Instance(comptime Reader: type) type {
         bit_reader: Reader,
 
         /// Read a single bit from the underlying reader.
-        pub fn readBit(self: *Self) ReaderError!u1 {
+        pub fn readBit(self: *Self) ReadBitError!u1 {
             return self.bit_reader.readBit();
         }
 
         /// Returns a raw byte constructed by consuming 8 bits from the underlying reader.
         /// Returns an error if the required bits could not be read.
-        pub fn readByte(self: *Self) ReaderError!u8 {
+        pub fn readByte(self: *Self) ReadBitError!u8 {
             return self.readInt(u8);
         }
         
         /// Returns an unsigned integer constructed by consuming bits from the underlying reader
         /// up to the integer's width: e.g. readInt(u7) will consume 7 bits.
         /// Returns an error if the required bits could not be read.
-        pub fn readInt(self: *Self, comptime Integer: type) ReaderError!Integer {
+        pub fn readInt(self: *Self, comptime Integer: type) ReadBitError!Integer {
             comptime assert(trait.isUnsignedInt(Integer));
 
             var value: Integer = 0;
@@ -40,6 +41,16 @@ pub fn Instance(comptime Reader: type) type {
                 value |= try self.bit_reader.readBit();
             }
             return value;
+        }
+
+        /// Whether the underlying reader has consumed all bits.
+        pub fn isAtEnd(self: Self) bool {
+            return self.bit_reader.isAtEnd();
+        }
+
+        /// Call once decoding is complete to verify that the underlying reader decoded all its data successfully.
+        pub fn validateAfterDecoding(self: Self) ValidationError!void {
+            return self.bit_reader.validateAfterDecoding();
         }
     };
 }
@@ -56,12 +67,12 @@ test "readInt reads integers of the specified width" {
     testing.expectEqual(0xAD, parser.readInt(u8));
     testing.expectEqual(0xBEEF, parser.readInt(u16));
     testing.expectEqual(0x0BADF00D, parser.readInt(u32));
-    testing.expect(parser.bit_reader.isAtEnd());
+    testing.expectEqual(true, parser.isAtEnd());
 }
 
-test "readInt returns error.EndOfStream when source buffer is too short" {
+test "readInt returns error.SourceBufferEmpty when source buffer is too short" {
     var parser = new(MockReader.new(u8, 0xDE));
 
-    testing.expectError(error.EndOfStream, parser.readInt(u16));
-    testing.expect(parser.bit_reader.isAtEnd());
+    testing.expectError(error.SourceBufferEmpty, parser.readInt(u16));
+    testing.expectEqual(true, parser.isAtEnd());
 }

@@ -33,7 +33,7 @@ fn Instance(comptime Integer: type) type {
 
         pub fn readBit(self: *Self) Error!u1 {
             if (self.isAtEnd()) {
-                return error.EndOfStream;
+                return error.SourceBufferEmpty;
             }
 
             const shift = @intCast(ShiftType, max_shift - self.count);
@@ -45,12 +45,22 @@ fn Instance(comptime Integer: type) type {
         pub fn isAtEnd(self: Self) bool {
             return self.count >= Integer.bit_count;
         }
+
+        pub fn validateAfterDecoding(self: Self) Error!void {
+            if (self.isAtEnd() == false) {
+                return error.SourceBufferNotFullyConsumed;
+            }
+        }
     };
 }
 
 /// All possible errors produced by the mock bitwise reader.
 pub const Error = error {
-    EndOfStream,
+    /// The reader ran out of bits to consume before decoding was completed.
+    SourceBufferEmpty,
+
+    /// Decoding completed before the reader had fully consumed all bits.
+    SourceBufferNotFullyConsumed,
 };
 
 // -- Tests --
@@ -64,7 +74,7 @@ test "readBit reads all bits in order from highest to lowest" {
     for (expected) |bit| {
         testing.expectEqual(bit, reader.readBit());
     }
-    testing.expect(reader.isAtEnd());
+    testing.expectEqual(true, reader.isAtEnd());
 }
 
 test "readBit is left-padded" {
@@ -74,12 +84,18 @@ test "readBit is left-padded" {
     for (expected) |bit| {
         testing.expectEqual(bit, reader.readBit());
     }
-    testing.expect(reader.isAtEnd());
+    testing.expectEqual(true, reader.isAtEnd());
 }
 
-test "readBit returns error.EndOfStream once it runs out of bits" {
+test "readBit returns error.SourceBufferEmpty once it runs out of bits" {
     var reader = new(u1, 1);
     testing.expectEqual(1, reader.readBit());
-    testing.expectError(error.EndOfStream, reader.readBit());
-    testing.expect(reader.isAtEnd());
+    testing.expectError(error.SourceBufferEmpty, reader.readBit());
+    testing.expectEqual(true, reader.isAtEnd());
+}
+
+test "validateAfterDecoding returns error.SourceBufferNotFullyConsumed if reader hasn't consumed all bits" {
+    var reader = new(u1, 1);
+    testing.expectError(error.SourceBufferNotFullyConsumed, reader.validateAfterDecoding());
+    testing.expectEqual(false, reader.isAtEnd());
 }

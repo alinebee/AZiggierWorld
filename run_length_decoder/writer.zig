@@ -1,12 +1,4 @@
 
-/// The possible errors from a Writer.
-pub const Error = error {
-    /// The write buffer ran out of room in the destination buffer before decoding was completed.
-    WriteBufferFull,
-    /// The write buffer attempted to copy bytes from outside the destination buffer.
-    CopyOutOfRange,
-};
-
 /// Create a new writer that will begin writing to the end of the specified destination buffer.
 pub fn new(destination: []u8) Instance {
     return Instance { 
@@ -61,7 +53,7 @@ pub const Instance = struct {
     /// Write a single byte to the cursor at the current offset.
     fn writeByte(self: *Instance, byte: u8) Error!void {
         if (self.isAtEnd()) {
-            return error.WriteBufferFull;
+            return error.DestinationBufferFull;
         }
 
         self.cursor -= 1;
@@ -72,6 +64,16 @@ pub const Instance = struct {
         return self.cursor <= 0;
     }
 };
+
+/// The possible errors from a writer instance.
+pub const Error = error {
+    /// The writer ran out of room in its destination buffer before decoding was completed.
+    DestinationBufferFull,
+    
+    /// The writer attempted to copy bytes from outside the destination buffer.
+    CopyOutOfRange,
+};
+
 
 // -- Tests --
 
@@ -92,14 +94,14 @@ test "writeFromSource writes bytes in reverse order starting at the end of the d
     testing.expectEqualSlices(u8, &expected, &destination);
 }
 
-test "writeByte returns error.WriteBufferFull once destination is full" {
+test "writeByte returns error.DestinationBufferFull once destination is full" {
     const source = [_]u8 { 0xDE, 0xAD, 0xBE, 0xEF };
     var reader = fixedBufferStream(&source).reader();
 
     var destination: [2]u8 = undefined;
     var writer = new(&destination);
 
-    testing.expectError(error.WriteBufferFull, writer.writeFromSource(&reader, 4));
+    testing.expectError(error.DestinationBufferFull, writer.writeFromSource(&reader, 4));
     testing.expect(writer.isAtEnd());
 }
 
@@ -149,7 +151,7 @@ test "copyFromDestination copies bytes from location in destination relative to 
     testing.expectEqualSlices(u8, &expected_after_third_copy, &destination);
 }
 
-test "copyFromDestination returns error.WriteBufferFull when writing too many bytes" {
+test "copyFromDestination returns error.DestinationBufferFull when writing too many bytes" {
     var destination: [5]u8 = undefined;
 
     var writer = new(&destination);
@@ -161,7 +163,7 @@ test "copyFromDestination returns error.WriteBufferFull when writing too many by
     try writer.writeByte(0xEF);
     testing.expectEqual(1, writer.cursor);
 
-    testing.expectError(error.WriteBufferFull, writer.copyFromDestination(2, 2));
+    testing.expectError(error.DestinationBufferFull, writer.copyFromDestination(2, 2));
     testing.expectEqual(0, writer.cursor);
 }
 

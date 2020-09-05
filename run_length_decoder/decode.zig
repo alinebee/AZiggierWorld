@@ -29,10 +29,6 @@ const Error = BitReader.Error || Writer.Error || error {
     /// The buffer allocated for uncompressed data was a different size
     /// than the compressed data claimed to need.
     UncompressedSizeMismatch,
-    /// The writer filled up its destination buffer before the reader had finished.
-    FinishedEarly,
-    /// The reader failed its checksum, likely indicating that the compressed data was corrupt or truncated.
-    ChecksumFailed,
 };
 
 /// Decodes Run-Length-Encoded data, reading RLE-compressed data from the source
@@ -55,9 +51,5 @@ pub fn decode(source: []const u8, destination: []u8) Error!void {
         try decodeInstruction(&reader, &writer);
     }
     
-    switch (reader.bit_reader.status()) {
-        .data_remaining => return error.FinishedEarly,
-        .finished_with_invalid_checksum => return error.ChecksumFailed,
-        .finished_with_valid_checksum => return,
-    }
+    try reader.validateAfterDecoding();
 }
