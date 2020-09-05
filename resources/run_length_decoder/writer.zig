@@ -27,20 +27,21 @@ pub const Instance = struct {
     /// destination[3] is the next byte to be written.
     cursor: usize,
 
-    /// Write a single byte to the cursor at the current offset.
-    pub fn writeByte(self: *Writer, byte: u8) Error!void {
-        if (self.isAtEnd()) {
-            return error.WriteBufferFull;
+    /// Consume `count` bytes from the specified source reader (which must implement a `readByte() !u8` method)
+    /// and write them to the destination starting at the current cursor.
+    /// The copied bytes will be in the reverse order they are returned by the reader.
+    pub fn writeFromSource(self: *Instance, reader: anytype, count: usize) !void {
+        var bytes_remaining = count;
+        while (bytes_remaining > 0) : (bytes_remaining -= 1) {
+            const byte = try reader.readByte();
+            try self.writeByte(byte);
         }
-
-        self.cursor -= 1;
-        self.destination[self.cursor] = byte;
     }
-
+    
     /// Read a sequence of bytes working backwards from a location in the destination relative
     // to the current cursor, and write them to the destination starting at the current cursor.
     /// The copied bytes will be in the same order they appeared in the original sequence.
-    pub fn copyBytes(self: *Writer, count: usize, offset: usize) Error!void {
+    pub fn copyFromDestination(self: *Instance, count: usize, offset: usize) Error!void {
         var bytes_remaining: usize = count;
         while (bytes_remaining > 0) : (bytes_remaining -= 1) {
             // -1 accounts for the fact that our internal cursor is at the "end" of the byte,
@@ -57,7 +58,17 @@ pub const Instance = struct {
         }
     }
 
-    pub inline fn isAtEnd(self: Writer) bool {
+    /// Write a single byte to the cursor at the current offset.
+    fn writeByte(self: *Instance, byte: u8) Error!void {
+        if (self.isAtEnd()) {
+            return error.WriteBufferFull;
+        }
+
+        self.cursor -= 1;
+        self.destination[self.cursor] = byte;
+    }
+
+    pub inline fn isAtEnd(self: Instance) bool {
         return self.cursor <= 0;
     }
 };
@@ -65,18 +76,16 @@ pub const Instance = struct {
 // -- Tests --
 
 const testing = @import("../../utils/testing.zig");
+const fixedBufferStream = @import("std").io.fixedBufferStream;
 
-test "writeByte writes a single byte starting at the end of the destination" {
+test "writeFromSource writes bytes in reverse order starting at the end of the destination" {
+    const source = [_]u8 { 0xDE, 0xAD, 0xBE, 0xEF };
+    var reader = fixedBufferStream(&source).reader();
+
     var destination: [4]u8 = undefined;
-
     var writer = new(&destination);
-    testing.expect(!writer.isAtEnd());
 
-    try writer.writeByte(0xDE);
-    try writer.writeByte(0xAD);
-    try writer.writeByte(0xBE);
-    try writer.writeByte(0xEF);
-
+    try writer.writeFromSource(&reader, 4);
     testing.expect(writer.isAtEnd());
 
     const expected = [_]u8 { 0xEF, 0xBE, 0xAD, 0xDE };
@@ -84,18 +93,17 @@ test "writeByte writes a single byte starting at the end of the destination" {
 }
 
 test "writeByte returns error.WriteBufferFull once destination is full" {
-    var destination: [2]u8 = undefined;
+    const source = [_]u8 { 0xDE, 0xAD, 0xBE, 0xEF };
+    var reader = fixedBufferStream(&source).reader();
 
+    var destination: [2]u8 = undefined;
     var writer = new(&destination);
 
-    try writer.writeByte(0xDE);
-    try writer.writeByte(0xAD);
-    
-    testing.expectError(error.WriteBufferFull, writer.writeByte(0xBE));
+    testing.expectError(error.WriteBufferFull, writer.writeFromSource(&reader, 4));
     testing.expect(writer.isAtEnd());
 }
 
-test "copyBytes copies bytes from location in destination relative to current cursor" {
+test "copyFromDestination copies bytes from location in destination relative to current cursor" {
     var destination = [_]u8 { 0 } ** 8;
 
     var writer = new(&destination);
@@ -113,7 +121,7 @@ test "copyBytes copies bytes from location in destination relative to current cu
     testing.expectEqualSlices(u8, &expected_after_write, &destination);
 
     // Copy the last byte (4 bytes ahead of the write cursor)
-    try writer.copyBytes(1, 4);
+    try writer.copyFromDestination(1, 4);
 
     const expected_after_first_copy = [_]u8 {
         0x00, 0x00, 0x00, 0xDE,
@@ -122,7 +130,7 @@ test "copyBytes copies bytes from location in destination relative to current cu
     testing.expectEqualSlices(u8, &expected_after_first_copy, &destination);
 
     // Copy the last two bytes (the second of which is now 5 bytes ahead of write cursor)
-    try writer.copyBytes(2, 5);
+    try writer.copyFromDestination(2, 5);
 
     const expected_after_second_copy = [_]u8 {
         0x00, 0xAD, 0xDE, 0xDE,
@@ -131,7 +139,7 @@ test "copyBytes copies bytes from location in destination relative to current cu
     testing.expectEqualSlices(u8, &expected_after_second_copy, &destination);
 
     // Copy the 4th-to-last byte (which is now 4 bytes ahead of write cursor)
-    try writer.copyBytes(1, 4);
+    try writer.copyFromDestination(1, 4);
     testing.expect(writer.isAtEnd());
 
     const expected_after_third_copy = [_]u8 {
@@ -141,7 +149,7 @@ test "copyBytes copies bytes from location in destination relative to current cu
     testing.expectEqualSlices(u8, &expected_after_third_copy, &destination);
 }
 
-test "copyBytes returns error.WriteBufferFull when writing too many bytes" {
+test "copyFromDestination returns error.WriteBufferFull when writing too many bytes" {
     var destination: [5]u8 = undefined;
 
     var writer = new(&destination);
@@ -153,11 +161,11 @@ test "copyBytes returns error.WriteBufferFull when writing too many bytes" {
     try writer.writeByte(0xEF);
     testing.expectEqual(1, writer.cursor);
 
-    testing.expectError(error.WriteBufferFull, writer.copyBytes(2, 2));
+    testing.expectError(error.WriteBufferFull, writer.copyFromDestination(2, 2));
     testing.expectEqual(0, writer.cursor);
 }
 
-test "copyBytes returns error.CopyOutOfRange when offset is out of range" {
+test "copyFromDestination returns error.CopyOutOfRange when offset is out of range" {
     var destination: [8]u8 = undefined;
 
     var writer = new(&destination);
@@ -168,5 +176,5 @@ test "copyBytes returns error.CopyOutOfRange when offset is out of range" {
     try writer.writeByte(0xBE);
     try writer.writeByte(0xEF);
 
-    testing.expectError(error.CopyOutOfRange, writer.copyBytes(1, 5));
+    testing.expectError(error.CopyOutOfRange, writer.copyFromDestination(1, 5));
 }

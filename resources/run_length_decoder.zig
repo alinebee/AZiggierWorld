@@ -53,14 +53,10 @@ pub fn decode(source: []const u8, destination: []u8) Error!void {
     while (writer.isAtEnd() == false) {
         switch(try parser.readInstruction()) {
             .write_from_compressed => |count| {
-                var bytes_remaining = count;
-                while (bytes_remaining > 0) : (bytes_remaining -= 1) {
-                    const byte = try parser.readByte();
-                    try writer.writeByte(byte);
-                }
+                try writer.writeFromSource(@TypeOf(parser), &parser, count);
             },
             .copy_from_uncompressed => |params| {
-                try writer.copyBytes(params.count, params.offset);
+                try writer.copyFromDestination(params.count, params.offset);
             }
         }
     } else {
