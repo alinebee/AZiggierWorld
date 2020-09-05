@@ -2,23 +2,24 @@ const std = @import("std");
 const assert = std.debug.assert;
 const trait = std.meta.trait;
 
-/// Wraps any bitwise reader in a reader that can read whole integers of arbitrary sizes.
-pub fn new(bit_reader: anytype) Instance(@TypeOf(bit_reader)) {
-    return Instance(@TypeOf(bit_reader)) { .bit_reader = bit_reader };
+/// Wraps a bitwise reader in an interface that adds methods to read integers of arbitrary sizes.
+/// The underlying reader is expected to implement `readBit() !u8` and `validateAfterDecoding() !error`.
+pub fn new(underlying_reader: anytype) Instance(@TypeOf(underlying_reader)) {
+    return Instance(@TypeOf(underlying_reader)) { .underlying_reader = underlying_reader };
 }
 
-pub fn Instance(comptime Reader: type) type {
-    const ReadBitError = @TypeOf(Reader.readBit).ReturnType.ErrorSet;
-    const ValidationError = @TypeOf(Reader.validateAfterDecoding).ReturnType.ErrorSet;
+pub fn Instance(comptime Wrapped: type) type {
+    const ReadBitError = @TypeOf(Wrapped.readBit).ReturnType.ErrorSet;
+    const ValidationError = @TypeOf(Wrapped.validateAfterDecoding).ReturnType.ErrorSet;
 
     return struct {
         const Self = @This();
 
-        bit_reader: Reader,
+        underlying_reader: Wrapped,
 
         /// Read a single bit from the underlying reader.
         pub fn readBit(self: *Self) ReadBitError!u1 {
-            return self.bit_reader.readBit();
+            return self.underlying_reader.readBit();
         }
 
         /// Returns a raw byte constructed by consuming 8 bits from the underlying reader.
@@ -38,19 +39,24 @@ pub fn Instance(comptime Reader: type) type {
             var bits_remaining: usize = Integer.bit_count;
             while (bits_remaining > 0) : (bits_remaining -= 1) {
                 value = @shlExact(value, 1);
-                value |= try self.bit_reader.readBit();
+                value |= try self.underlying_reader.readBit();
             }
             return value;
         }
 
+        /// The expected size of the data once uncompressed.
+        pub fn uncompressedSize(self: Self) usize {
+            return self.underlying_reader.uncompressed_size;
+        }
+
         /// Whether the underlying reader has consumed all bits.
         pub fn isAtEnd(self: Self) bool {
-            return self.bit_reader.isAtEnd();
+            return self.underlying_reader.isAtEnd();
         }
 
         /// Call once decoding is complete to verify that the underlying reader decoded all its data successfully.
         pub fn validateAfterDecoding(self: Self) ValidationError!void {
-            return self.bit_reader.validateAfterDecoding();
+            return self.underlying_reader.validateAfterDecoding();
         }
     };
 }
@@ -61,7 +67,8 @@ const testing = @import("../utils/testing.zig");
 const MockReader = @import("test_helpers/mock_reader.zig");
 
 test "readInt reads integers of the specified width" {
-    var parser = new(MockReader.new(u64, 0xDEAD_BEEF_0BAD_F00D));
+    // MockReader.new returns a bitwise reader that's already wrapped in a `ReaderInterface`.
+    var parser = MockReader.new(u64, 0xDEAD_BEEF_0BAD_F00D);
 
     testing.expectEqual(0xDE, parser.readInt(u8));
     testing.expectEqual(0xAD, parser.readInt(u8));
@@ -71,7 +78,7 @@ test "readInt reads integers of the specified width" {
 }
 
 test "readInt returns error.SourceBufferEmpty when source buffer is too short" {
-    var parser = new(MockReader.new(u8, 0xDE));
+    var parser = MockReader.new(u8, 0xDE);
 
     testing.expectError(error.SourceBufferEmpty, parser.readInt(u16));
     testing.expectEqual(true, parser.isAtEnd());

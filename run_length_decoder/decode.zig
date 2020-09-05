@@ -20,12 +20,11 @@
 //!    - The read cursor and write cursors should both be at the start of the buffer.
 //!    - The checksum should be equal to 0.
 
-const BitReader = @import("bit_reader.zig");
-const IntReader = @import("int_reader.zig");
+const Reader = @import("reader.zig");
 const Writer = @import("writer.zig");
 const decodeInstruction = @import("decode_instruction.zig").decodeInstruction;
 
-const Error = BitReader.Error || Writer.Error || error {
+const Error = Reader.Error || Writer.Error || error {
     /// The buffer allocated for uncompressed data was a different size
     /// than the compressed data claimed to need.
     UncompressedSizeMismatch,
@@ -39,9 +38,9 @@ const Error = BitReader.Error || Writer.Error || error {
 /// On success, `destination` contains fully uncompressed data.
 /// Returns an error if decoding failed.
 pub fn decode(source: []const u8, destination: []u8) Error!void {
-    var reader = IntReader.new(try BitReader.new(source));
+    var reader = try Reader.new(source);
 
-    if (reader.bit_reader.uncompressed_size != destination.len) {
+    if (reader.uncompressedSize() != destination.len) {
         return error.UncompressedSizeMismatch;
     }
 

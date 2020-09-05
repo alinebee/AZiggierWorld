@@ -1,15 +1,15 @@
 const std = @import("std");
 
-/// Construct a new reader that consumes the specified source slice.
-pub fn new(source: []const u8) !Instance {
-    var reader: Instance = undefined;
-    try reader.init(source);
-    return reader;
+const ReaderInterface = @import("reader_interface.zig");
+
+/// Returns a new reader that consumes the specified source buffer.
+/// This reads chunks of 4 bytes starting from the end of the buffer and returns their individual bits,
+/// to be interpreted by the decoder as RLE instructions or raw data.
+pub fn new(source: []const u8) Error!ReaderInterface.Instance(Instance) {
+    return ReaderInterface.new(try Instance.init(source));
 }
 
-/// The bitwise reader for the run-length decoder.
-/// This reads chunks of 4 bytes starting from the end of the packed data and returns their individual bits,
-/// to be interpreted by the decoder as RLE instructions or data.
+/// The underlying bitwise reader. Intended to be wrapped in a `ReaderInterface` for decoding.
 const Instance = struct {
     /// The source buffer to read from.
     source: []const u8,
@@ -31,8 +31,11 @@ const Instance = struct {
     /// While decoding is in progress, the CRC should be ignored.
     crc: u32,
 
-    /// Prepares the reader to consume the specified source data.
-    fn init(self: *Instance, source: []const u8) Error!void {
+    /// Create and initialize a reader to consume the specified source data.
+    /// Returns an error if the source buffer does not contain enough bytes to initialize the reader.
+    fn init(source: []const u8) Error!Instance {
+        var self: Instance = undefined;
+
         self.source = source;
         self.cursor = source.len;
         self.uncompressed_size = try self.popChunk();
@@ -56,6 +59,8 @@ const Instance = struct {
         // altogether by `readBit`.
         self.current_chunk = try self.popChunk();
         self.crc ^= self.current_chunk;
+
+        return self;
     }
 
     /// Consume the next bit from the source data, automatically advancing to the next chunk of source data if necessary.
@@ -143,7 +148,7 @@ pub const Error = error {
 
 const testing = @import("../utils/testing.zig");
 
-test "new() reads unpacked size, initial checksum and first chunk from end of source buffer" {
+test "init() reads unpacked size, initial checksum and first chunk from end of source buffer" {
     const source = [_]u8 {
         // Preceding bytes are compressed resource data
         0x00, 0x00, 0x00, 0x00,
@@ -155,7 +160,7 @@ test "new() reads unpacked size, initial checksum and first chunk from end of so
         0x0B, 0xAD, 0xF0, 0x0D,
     };
 
-    const reader = try new(&source);
+    var reader = try Instance.init(&source);
 
     testing.expectEqual(0x0BADF00D, reader.uncompressed_size);
     testing.expectEqual(0xDEADBEEF, reader.crc);
@@ -197,10 +202,7 @@ test "readBit() reads next bit and advances to next chunk" {
         try writer.writeBits(bit, 1);
     }
 
-    testing.expectEqual(0, reader.cursor);
-    // Only a single sentinel bit should be left in the reader at this point,
-    // since two chunks have been read fully.
-    testing.expectEqual(0b1, reader.current_chunk);
+    testing.expectEqual(true, reader.isAtEnd());
     testing.expectEqualSlices(u8, source[0..destination.len], &destination);
 }
 
@@ -218,7 +220,6 @@ test "isAtEnd() returns false and validateAfterDecoding() returns error.SourceBu
     // Even once it has begun consuming its last chunk,
     // it should not report as done until all bits of the chunk have been read
     _ = try reader.readBit();
-    testing.expectEqual(0, reader.cursor);
     testing.expectEqual(false, reader.isAtEnd());
     testing.expectError(error.SourceBufferNotFullyConsumed, reader.validateAfterDecoding());
 }
@@ -240,7 +241,6 @@ test "isAtEnd() returns true and validateAfterDecoding() returns error.ChecksumF
         testing.expectError(error.SourceBufferNotFullyConsumed, reader.validateAfterDecoding());
         _ = try reader.readBit();
     } else {
-        testing.expectEqual(0, reader.cursor);
         testing.expectEqual(true, reader.isAtEnd());
         testing.expectError(error.ChecksumFailed, reader.validateAfterDecoding());
     }
@@ -266,8 +266,6 @@ test "isAtEnd() returns true and validateAfterDecoding() passes when reader has 
         testing.expectError(error.SourceBufferNotFullyConsumed, reader.validateAfterDecoding());
         _ = try reader.readBit();
     } else {
-        testing.expectEqual(0, reader.cursor);
-        testing.expectEqual(0, reader.crc);
         testing.expectEqual(true, reader.isAtEnd());
         try reader.validateAfterDecoding();
     }
