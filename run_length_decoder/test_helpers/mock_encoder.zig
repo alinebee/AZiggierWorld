@@ -1,0 +1,189 @@
+const std = @import("std");
+const mem = std.mem;
+const io = std.io;
+
+const ArrayList = std.ArrayList;
+const Log2Int = std.math.Log2Int;
+const assert = std.debug.assert;
+const trait = std.meta.trait;
+
+/// Builds an RLE-encoded payload that can be decompressed by a call to decode.
+/// Only intended to be used for creating test fixtures.
+pub const Instance = struct {
+    payload: ArrayList(u8),
+    bits_written: usize,
+    uncompressed_size: u32,
+
+    /// Create a new empty encoder.
+    /// Caller owns the returned encoder and must free it by calling `deinit`.
+    pub fn init(allocator: *mem.Allocator) Instance {
+        var self: Instance = undefined;
+
+        self.payload = ArrayList(u8).init(allocator);
+        errdefer self.deinit();
+
+        self.bits_written = 0;
+        self.uncompressed_size = 0;
+        return self;
+    }
+
+    /// Free the memory used by the encoder itself.
+    /// Any data that was returned by `finalize` is not owned and must be freed separately.
+    /// After calling this function, the encoder can no longer be used.
+    pub fn deinit(self: *Instance) void {
+        self.payload.deinit();
+        self.* = undefined;
+    }
+
+    /// Add an instruction that writes a raw 4-byte sequence to the end of the destination.
+    pub fn write4Bytes(self: *Instance, bytes: u32) !void {
+        const instruction: u5 = 0b00_011;
+        try self.writeBits(instruction);
+
+        // reverse the bytes, so that the RLE writer will write them
+        // from last to first to the end of its destination buffer.
+        // That way they'll come out in the original intended order.
+        const swapped_bytes = @byteSwap(u32, bytes);
+        try self.writeBits(swapped_bytes);
+
+        self.uncompressed_size += 4;
+    }
+
+    /// Add an instruction that copies the previous 4 bytes that were written to the destination.
+    pub fn copyPrevious4Bytes(self: *Instance) !void {
+        const instruction: u13 = 0b101_0000_0001_00;
+        try self.writeBits(instruction);
+
+        self.uncompressed_size += 4;
+    }
+
+    /// Add the specified bit to the end of the payload, starting from the most significant bit of the first byte.
+    fn writeBit(self: *Instance, bit: u1) !void {
+        var byte_index = self.bits_written / 8;
+        var shift = @intCast(u3, 7 - (self.bits_written % 8));
+
+        const mask = @as(u8, bit) << shift;
+
+        if (byte_index == self.payload.items.len) {
+            _ = try self.payload.append(mask);
+        } else {
+            self.payload.items[byte_index] |= mask;
+        }
+
+        self.bits_written += 1;
+    }
+
+    /// Add the specified bits to the end of the payload, starting from the most significant bit of the first byte.
+    fn writeBits(self: *Instance, bits: anytype) !void {
+        comptime const Integer = @TypeOf(bits);
+        comptime assert(trait.isUnsignedInt(Integer));
+
+        comptime const ShiftType = std.math.Log2Int(Integer);
+
+        var bits_remaining: usize = Integer.bit_count;
+        while (bits_remaining > 0) : (bits_remaining -= 1) {
+            const shift = @intCast(ShiftType, bits_remaining - 1);
+            const bit = @truncate(u1, bits >> shift);
+            try self.writeBit(bit);
+        }
+    }
+
+    /// The expected compressed size of the data returned by `finalize`, in bytes.
+    pub fn compressedSize(self: Instance) usize {
+        // Filled payload chunks + final partial chunk +  32-bit CRC + 32-bit uncompressed byte count
+        var chunk_count = (self.bits_written / 32) + 1 + 1 + 1;
+        return chunk_count * 4;
+    }
+
+    /// Convert the encoded instructions into valid compressed data with the proper CRC and uncompressed size chunks.
+    /// Caller owns the returned slice and must deallocate it using `allocator`.
+    pub fn finalize(self: *Instance, allocator: *mem.Allocator) ![]const u8 {
+        var output = ArrayList(u8).init(allocator);
+        errdefer output.deinit();
+
+        try output.ensureCapacity(self.compressedSize());
+
+        var writer = output.writer();
+
+        // Sentinel bit: this marks the end of the significant bits in the chunk.
+        // For full chunks this will eventually get shifted off, but it will
+        // remain in the final chunk (which is always partially filled)
+        // to let the decoder know how many significant bits to read from it.
+        var current_chunk: u32 = 0b1;
+        var crc: u32 = 0;
+
+        var bits_remaining: usize = self.bits_written;
+        while (bits_remaining > 0) : (bits_remaining -= 1) {
+            const index = bits_remaining - 1;
+            const byte_index = index / 8;
+            const shift = @intCast(u3, 7 - (index % 8));
+            const bit = @truncate(u1, self.payload.items[byte_index] >> shift);
+            
+            // If the sentinel bit is in the topmost place, it means the bit we're adding is the last one
+            // that will fit in this chunk: after this, push the chunk and start with a new one.
+            const chunk_full = (current_chunk >> 31 == 0b1);
+
+            current_chunk <<= 1;
+            current_chunk |= bit;
+
+            if (chunk_full) {
+                try writer.writeIntBig(u32, current_chunk);
+                crc ^= current_chunk;
+                current_chunk = 0b1;
+            }
+        }
+
+        // Push whatever's left of the current chunk as the final chunk.
+        // This will include a sentinel bit as the highest significant bit,
+        // to let the decoder know how many bits to pop off.
+        //
+        // If encoding had finished exactly on a chunk boundary,
+        // this sentinel will be the lowest significant bit of the final chunk,
+        // which will cause the rest of the (empty) chunk to be skipped.
+        try writer.writeIntBig(u32, current_chunk);
+        crc ^= current_chunk;
+
+        // Write the final CRC and the uncompressed size.
+        try writer.writeIntBig(u32, crc);
+        try writer.writeIntBig(u32, self.uncompressed_size);
+
+        return output.toOwnedSlice();
+    }
+};
+
+// -- Tests --
+
+const testing = @import("../../utils/testing.zig");
+const decode = @import("../decode.zig").decode;
+
+test "Encoder produces valid decodable data" {
+    var encoder = Instance.init(testing.allocator);
+    defer encoder.deinit();
+
+    try encoder.write4Bytes(0xDEADBEEF);
+    testing.expectEqual(5 + 32, encoder.bits_written);
+    testing.expectEqual(4, encoder.uncompressed_size);
+
+    try encoder.copyPrevious4Bytes();
+    testing.expectEqual(5 + 32 + 13, encoder.bits_written);
+    testing.expectEqual(8, encoder.uncompressed_size);
+
+    var stream = io.fixedBufferStream(encoder.payload.items);
+    var reader = io.bitReader(.Big, stream.reader());
+
+    testing.expectEqual(0b00_011, reader.readBitsNoEof(u5, 5));
+    testing.expectEqual(0xEFBEADDE, reader.readBitsNoEof(u32, 32));
+    testing.expectEqual(0b101_0000_0001_00, reader.readBitsNoEof(u13, 13));
+
+    testing.expectEqual(16, encoder.compressedSize());
+    var compressed_data = try encoder.finalize(testing.allocator);
+    defer testing.allocator.free(compressed_data);
+
+    testing.expectEqual(encoder.compressedSize(), compressed_data.len);
+
+    var destination: [8]u8 = undefined;
+    try decode(compressed_data, &destination);
+
+    testing.expectEqual(0xDEADBEEF, mem.readIntBig(u32, destination[4..8]));
+    testing.expectEqual(0xDEADBEEF, mem.readIntBig(u32, destination[0..4]));
+}
