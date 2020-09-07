@@ -156,7 +156,7 @@ pub const Instance = struct {
 const testing = @import("../../utils/testing.zig");
 const decode = @import("../decode.zig").decode;
 
-test "Encoder produces valid decodable data" {
+test "write4Bytes generates expected payload" {
     var encoder = Instance.init(testing.allocator);
     defer encoder.deinit();
 
@@ -164,26 +164,55 @@ test "Encoder produces valid decodable data" {
     testing.expectEqual(5 + 32, encoder.bits_written);
     testing.expectEqual(4, encoder.uncompressed_size);
 
-    try encoder.copyPrevious4Bytes();
-    testing.expectEqual(5 + 32 + 13, encoder.bits_written);
-    testing.expectEqual(8, encoder.uncompressed_size);
-
     var stream = io.fixedBufferStream(encoder.payload.items);
     var reader = io.bitReader(.Big, stream.reader());
 
     testing.expectEqual(0b00_011, reader.readBitsNoEof(u5, 5));
+    // Raw bytes should be in reverse order so that they decode into their original order
     testing.expectEqual(0xEFBEADDE, reader.readBitsNoEof(u32, 32));
-    testing.expectEqual(0b101_0000_0001_00, reader.readBitsNoEof(u13, 13));
+}
 
-    testing.expectEqual(16, encoder.compressedSize());
+test "copyPrevious4Bytes generates expected payload" {
+    var encoder = Instance.init(testing.allocator);
+    defer encoder.deinit();
+
+    try encoder.copyPrevious4Bytes();
+    testing.expectEqual(13, encoder.bits_written);
+    testing.expectEqual(4, encoder.uncompressed_size);
+
+    var stream = io.fixedBufferStream(encoder.payload.items);
+    var reader = io.bitReader(.Big, stream.reader());
+
+    testing.expectEqual(0b101_0000_0001_00, reader.readBitsNoEof(u13, 13));
+}
+
+test "finalize produces valid decodable data" {
+    var encoder = Instance.init(testing.allocator);
+    defer encoder.deinit();
+
+    try encoder.write4Bytes(0xDEADBEEF);
+    try encoder.copyPrevious4Bytes();
+
+    try encoder.write4Bytes(0x8BADF00D);
+    try encoder.copyPrevious4Bytes();
+
+    testing.expectEqual(16, encoder.uncompressed_size);
+    testing.expectEqual(24, encoder.compressedSize());
+
     var compressed_data = try encoder.finalize(testing.allocator);
     defer testing.allocator.free(compressed_data);
 
     testing.expectEqual(encoder.compressedSize(), compressed_data.len);
 
-    var destination: [8]u8 = undefined;
-    try decode(compressed_data, &destination);
+    var destination = try testing.allocator.alloc(u8, encoder.uncompressed_size);
+    defer testing.allocator.free(destination);
 
-    testing.expectEqual(0xDEADBEEF, mem.readIntBig(u32, destination[4..8]));
-    testing.expectEqual(0xDEADBEEF, mem.readIntBig(u32, destination[0..4]));
+    try decode(compressed_data, destination);
+    var destination_reader = io.fixedBufferStream(destination).reader();
+
+    testing.expectEqual(0x8BADF00D, destination_reader.readIntBig(u32));
+    testing.expectEqual(0x8BADF00D, destination_reader.readIntBig(u32));
+
+    testing.expectEqual(0xDEADBEEF, destination_reader.readIntBig(u32));
+    testing.expectEqual(0xDEADBEEF, destination_reader.readIntBig(u32));
 }
