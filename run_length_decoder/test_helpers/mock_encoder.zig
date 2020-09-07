@@ -7,9 +7,13 @@ const Log2Int = std.math.Log2Int;
 const assert = std.debug.assert;
 const trait = std.meta.trait;
 
+pub fn new(allocator: *mem.Allocator) Instance {
+    return Instance.init(allocator);
+}
+
 /// Builds an RLE-encoded payload that can be decompressed by a call to decode.
 /// Only intended to be used for creating test fixtures.
-pub const Instance = struct {
+const Instance = struct {
     payload: ArrayList(u8),
     bits_written: usize,
     uncompressed_size: u32,
@@ -49,6 +53,14 @@ pub const Instance = struct {
         self.uncompressed_size += 4;
     }
 
+    /// Encode an invalid instruction to write more bytes than exist in the payload.
+    pub fn invalidWrite(self: *Instance) !void {
+        const instruction: u5 = 0b00_111;
+        try self.writeBits(instruction);
+
+        self.uncompressed_size += 4;
+    }
+
     /// Add an instruction that copies the previous 4 bytes that were written to the destination.
     pub fn copyPrevious4Bytes(self: *Instance) !void {
         const instruction: u13 = 0b101_0000_0001_00;
@@ -57,7 +69,8 @@ pub const Instance = struct {
         self.uncompressed_size += 4;
     }
 
-    /// Add the specified bit to the end of the payload, starting from the most significant bit of the first byte.
+    /// Add the specified bit to the end of the payload,
+    /// starting from the most significant bit of the first byte.
     fn writeBit(self: *Instance, bit: u1) !void {
         var byte_index = self.bits_written / 8;
         var shift = @intCast(u3, 7 - (self.bits_written % 8));
@@ -97,7 +110,7 @@ pub const Instance = struct {
 
     /// Convert the encoded instructions into valid compressed data with the proper CRC and uncompressed size chunks.
     /// Caller owns the returned slice and must deallocate it using `allocator`.
-    pub fn finalize(self: *Instance, allocator: *mem.Allocator) ![]const u8 {
+    pub fn finalize(self: *Instance, allocator: *mem.Allocator) ![]u8 {
         var output = ArrayList(u8).init(allocator);
         errdefer output.deinit();
 

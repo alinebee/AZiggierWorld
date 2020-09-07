@@ -52,3 +52,106 @@ pub fn decode(source: []const u8, destination: []u8) Error!void {
     
     try reader.validateChecksum();
 }
+
+// -- Tests --
+
+const std =  @import("std");
+const mem = std.mem;
+const io = std.io;
+
+const testing = @import("../utils/testing.zig");
+const Encoder = @import("test_helpers/mock_encoder.zig");
+
+test "decode decodes valid payload" {
+    var encoder = Encoder.new(testing.allocator);
+    defer encoder.deinit();
+
+    try encoder.write4Bytes(0x8BADf00D);
+
+    const source = try encoder.finalize(testing.allocator);
+    defer testing.allocator.free(source);
+
+    var destination = try testing.allocator.alloc(u8, encoder.uncompressed_size);
+    defer testing.allocator.free(destination);
+
+    try decode(source, destination);
+}
+
+test "decode returns error.UncompressedSizeMismatch when passed a destination that doesn't matchthe reported uncompressed size" {
+    var encoder = Encoder.new(testing.allocator);
+    defer encoder.deinit();
+    
+    try encoder.copyPrevious4Bytes();
+
+    const source = try encoder.finalize(testing.allocator);
+    defer testing.allocator.free(source);
+
+    var destination = try testing.allocator.alloc(u8, encoder.uncompressed_size + 10);
+    defer testing.allocator.free(destination);
+
+    testing.expectError(error.UncompressedSizeMismatch, decode(source, destination));
+}
+
+test "decode returns error.CopyOutOfRange on payload with invalid copy pointer" {
+    var encoder = Encoder.new(testing.allocator);
+    defer encoder.deinit();
+    
+    try encoder.copyPrevious4Bytes();
+
+    const source = try encoder.finalize(testing.allocator);
+    defer testing.allocator.free(source);
+
+    var destination = try testing.allocator.alloc(u8, encoder.uncompressed_size);
+    defer testing.allocator.free(destination);
+
+    testing.expectError(error.CopyOutOfRange, decode(source, destination));
+}
+
+test "decode returns error.SourceExhausted on payload with too few bytes" {
+    var encoder = Encoder.new(testing.allocator);
+    defer encoder.deinit();
+    
+    try encoder.invalidWrite();
+
+    const source = try encoder.finalize(testing.allocator);
+    defer testing.allocator.free(source);
+
+    var destination = try testing.allocator.alloc(u8, encoder.uncompressed_size);
+    defer testing.allocator.free(destination);
+
+    testing.expectError(error.SourceExhausted, decode(source, destination));
+}
+
+test "decode returns error.DestinationExhausted on payload with undercounted uncompressed size" {
+    var encoder = Encoder.new(testing.allocator);
+    defer encoder.deinit();
+    
+    try encoder.write4Bytes(0x8BADF00D);
+    encoder.uncompressed_size -= 2;
+
+    const source = try encoder.finalize(testing.allocator);
+    defer testing.allocator.free(source);
+
+    var destination = try testing.allocator.alloc(u8, encoder.uncompressed_size);
+    defer testing.allocator.free(destination);
+
+    testing.expectError(error.DestinationExhausted, decode(source, destination));
+}
+
+test "decode returns error.InvalidChecksum on payload with corrupted byte" {
+    var encoder = Encoder.new(testing.allocator);
+    defer encoder.deinit();
+    
+    try encoder.write4Bytes(0x8BADF00D);
+
+    const source = try encoder.finalize(testing.allocator);
+    defer testing.allocator.free(source);
+
+    std.debug.assert(source[0] != 0xFF);
+    source[0] = 0xFF;
+
+    var destination = try testing.allocator.alloc(u8, encoder.uncompressed_size);
+    defer testing.allocator.free(destination);
+
+    testing.expectError(error.ChecksumFailed, decode(source, destination));
+}
