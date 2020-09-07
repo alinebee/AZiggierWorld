@@ -12,6 +12,7 @@ pub const Instance = struct {
     path: []const u8,
 
     /// Creates a new resource loader that reads from the specified base path.
+    /// Call `deinit` to deinitialize.
     fn init(self: *Instance, allocator: *mem.Allocator, path: []const u8) !void {
         self.allocator = allocator;
         
@@ -126,32 +127,41 @@ fn bufReadResource(reader: anytype, buffer: []u8, compressed_size: usize) bufRea
 // -- Tests --
 
 const testing = @import("../utils/testing.zig");
+const platform = @import("builtin").os.tag;
+
+const example_game_path = if (platform == .windows) "C:\\Another World\\" else "/path/to/another_world/";
 
 // TODO: write separate resourcePath tests for Windows paths
 test "resourcePath allocates and returns expected path to MEMLIST.BIN" {
-    const game_path = "/path/to/another_world/";
-
-    const path = try resourcePath(testing.allocator, game_path, .resource_list);
+    const expected_path = if (platform == .windows)
+        "C:\\Another World\\MEMLIST.BIN"
+    else
+        "/path/to/another_world/MEMLIST.BIN"
+    ;
+    
+    const path = try resourcePath(testing.allocator, example_game_path, .resource_list);
     defer testing.allocator.free(path);
 
-    testing.expectEqualStrings("/path/to/another_world/MEMLIST.BIN", path);
+    testing.expectEqualStrings(expected_path, path);
 }
 
 test "resourcePath allocates and returns expected path to BANKXX file" {
-    const game_path = "/path/to/another_world/";
+    const expected_path = if (platform == .windows)
+        "C:\\Another World\\BANK0A"
+    else
+        "/path/to/another_world/BANK0A"
+    ;
 
-    const path = try resourcePath(testing.allocator, game_path, .{ .bank = 0x0A });
+    const path = try resourcePath(testing.allocator, example_game_path, .{ .bank = 0x0A });
     defer testing.allocator.free(path);
 
-    testing.expectEqualStrings("/path/to/another_world/BANK0A", path);
+    testing.expectEqualStrings(expected_path, path);
 }
 
 test "resourcePath returns error.OutOfMemory if memory could not be allocated" {
-    const game_path = "/path/to/another_world/";
-
     testing.expectError(
         error.OutOfMemory,
-        resourcePath(testing.failing_allocator, game_path, .resource_list),
+        resourcePath(testing.failing_allocator, example_game_path, .resource_list),
     );
 }
 
