@@ -179,13 +179,13 @@ const testing = @import("../utils/testing.zig");
 test "init() reads unpacked size, initial checksum and first chunk from end of source buffer" {
     const source = DataExamples.valid;
 
-    // Upon initialization, the CRC stored in the source data is XORed with the first raw chunk of data.
-    const expected_crc = mem.readIntBig(u32, source[12..16]) ^ mem.readIntBig(u32, source[8..12]);
-
     var reader = try Instance.init(&source);
 
     testing.expectEqual(0x0BADF00D, reader.uncompressed_size);
     testing.expectEqual(0x00000001, reader.current_chunk);
+
+    // During initialization, the CRC stored in the source data gets XORed with the first raw chunk of data.
+    const expected_crc = mem.readIntBig(u32, source[12..16]) ^ mem.readIntBig(u32, source[8..12]);
     testing.expectEqual(expected_crc, reader.crc);
 }
 

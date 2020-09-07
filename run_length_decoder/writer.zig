@@ -61,7 +61,7 @@ pub const Instance = struct {
     }
 
     pub inline fn isAtEnd(self: Instance) bool {
-        return self.cursor <= 0;
+        return self.cursor == 0;
     }
 };
 

@@ -20,7 +20,7 @@ pub fn decodeInstruction(reader: anytype, writer: anytype) !void {
             switch (try reader.readInt(u2)) {
                 0b11 => {
                     // 111|cccc_cccc
-                    // next 8 bits are count: copy the following `count + 9` bytes of data
+                    // next 8 bits are count: write the subsequent `count + 9` bytes of raw data
                     const count: usize = try reader.readInt(u8);
                     try writer.writeFromSource(reader, count + 9);
                 },
@@ -57,7 +57,7 @@ pub fn decodeInstruction(reader: anytype, writer: anytype) !void {
                 },
                 0b0 => {
                     // 00|ccc
-                    // next 3 bits are count: copy the next (count + 1) bytes of packed data
+                    // next 3 bits are count: write the subsequent (count + 1) bytes of raw data
                     const count: usize = try reader.readInt(u3);
                     try writer.writeFromSource(reader, count + 1);
                 },
