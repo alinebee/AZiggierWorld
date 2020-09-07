@@ -3,14 +3,14 @@ const assert = std.debug.assert;
 const trait = std.meta.trait;
 
 /// Wraps a bitwise reader in an interface that adds methods to read integers of arbitrary sizes.
-/// The underlying reader is expected to implement `readBit() !u8` and `validateAfterDecoding() !error`.
+/// The underlying reader is expected to implement `readBit() !u8` and `validateChecksum() !error`.
 pub fn new(underlying_reader: anytype) Instance(@TypeOf(underlying_reader)) {
     return Instance(@TypeOf(underlying_reader)) { .underlying_reader = underlying_reader };
 }
 
 pub fn Instance(comptime Wrapped: type) type {
     const ReadBitError = @TypeOf(Wrapped.readBit).ReturnType.ErrorSet;
-    const ValidationError = @TypeOf(Wrapped.validateAfterDecoding).ReturnType.ErrorSet;
+    const ValidationError = @TypeOf(Wrapped.validateChecksum).ReturnType.ErrorSet;
 
     return struct {
         const Self = @This();
@@ -55,8 +55,8 @@ pub fn Instance(comptime Wrapped: type) type {
         }
 
         /// Call once decoding is complete to verify that the underlying reader decoded all its data successfully.
-        pub fn validateAfterDecoding(self: Self) ValidationError!void {
-            return self.underlying_reader.validateAfterDecoding();
+        pub fn validateChecksum(self: Self) ValidationError!void {
+            return self.underlying_reader.validateChecksum();
         }
     };
 }
@@ -77,9 +77,9 @@ test "readInt reads integers of the specified width" {
     testing.expectEqual(true, parser.isAtEnd());
 }
 
-test "readInt returns error.SourceBufferEmpty when source buffer is too short" {
+test "readInt returns error.SourceExhausted when source buffer is too short" {
     var parser = MockReader.new(u8, 0xDE);
 
-    testing.expectError(error.SourceBufferEmpty, parser.readInt(u16));
+    testing.expectError(error.SourceExhausted, parser.readInt(u16));
     testing.expectEqual(true, parser.isAtEnd());
 }

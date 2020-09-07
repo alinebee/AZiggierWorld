@@ -53,7 +53,7 @@ pub const Instance = struct {
     /// Write a single byte to the cursor at the current offset.
     fn writeByte(self: *Instance, byte: u8) Error!void {
         if (self.isAtEnd()) {
-            return error.DestinationBufferFull;
+            return error.DestinationExhausted;
         }
 
         self.cursor -= 1;
@@ -68,7 +68,7 @@ pub const Instance = struct {
 /// The possible errors from a writer instance.
 pub const Error = error {
     /// The writer ran out of room in its destination buffer before decoding was completed.
-    DestinationBufferFull,
+    DestinationExhausted,
     
     /// The writer attempted to copy bytes from outside the destination buffer.
     CopyOutOfRange,
@@ -94,14 +94,14 @@ test "writeFromSource writes bytes in reverse order starting at the end of the d
     testing.expectEqualSlices(u8, &expected, &destination);
 }
 
-test "writeByte returns error.DestinationBufferFull once destination is full" {
+test "writeByte returns error.DestinationExhausted once destination is full" {
     const source = [_]u8 { 0xDE, 0xAD, 0xBE, 0xEF };
     var reader = fixedBufferStream(&source).reader();
 
     var destination: [2]u8 = undefined;
     var writer = new(&destination);
 
-    testing.expectError(error.DestinationBufferFull, writer.writeFromSource(&reader, 4));
+    testing.expectError(error.DestinationExhausted, writer.writeFromSource(&reader, 4));
     testing.expect(writer.isAtEnd());
 }
 
@@ -151,7 +151,7 @@ test "copyFromDestination copies bytes from location in destination relative to 
     testing.expectEqualSlices(u8, &expected_after_third_copy, &destination);
 }
 
-test "copyFromDestination returns error.DestinationBufferFull when writing too many bytes" {
+test "copyFromDestination returns error.DestinationExhausted when writing too many bytes" {
     var destination: [5]u8 = undefined;
 
     var writer = new(&destination);
@@ -163,7 +163,7 @@ test "copyFromDestination returns error.DestinationBufferFull when writing too m
     try writer.writeByte(0xEF);
     testing.expectEqual(1, writer.cursor);
 
-    testing.expectError(error.DestinationBufferFull, writer.copyFromDestination(2, 2));
+    testing.expectError(error.DestinationExhausted, writer.copyFromDestination(2, 2));
     testing.expectEqual(0, writer.cursor);
 }
 

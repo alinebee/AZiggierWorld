@@ -35,7 +35,7 @@ fn Instance(comptime Integer: type) type {
 
         pub fn readBit(self: *Self) Error!u1 {
             if (self.isAtEnd()) {
-                return error.SourceBufferEmpty;
+                return error.SourceExhausted;
             }
 
             const shift = @intCast(ShiftType, max_shift - self.count);
@@ -48,9 +48,9 @@ fn Instance(comptime Integer: type) type {
             return self.count >= Integer.bit_count;
         }
 
-        pub fn validateAfterDecoding(self: Self) Error!void {
+        pub fn validateChecksum(self: Self) Error!void {
             if (self.isAtEnd() == false) {
-                return error.SourceBufferNotFullyConsumed;
+                return error.ChecksumNotReady;
             }
         }
     };
@@ -59,10 +59,10 @@ fn Instance(comptime Integer: type) type {
 /// All possible errors produced by the mock bitwise reader.
 pub const Error = error {
     /// The reader ran out of bits to consume before decoding was completed.
-    SourceBufferEmpty,
+    SourceExhausted,
 
     /// Decoding completed before the reader had fully consumed all bits.
-    SourceBufferNotFullyConsumed,
+    ChecksumNotReady,
 };
 
 // -- Tests --
@@ -89,15 +89,15 @@ test "readBit is left-padded" {
     testing.expectEqual(true, reader.isAtEnd());
 }
 
-test "readBit returns error.SourceBufferEmpty once it runs out of bits" {
+test "readBit returns error.SourceExhausted once it runs out of bits" {
     var reader = new(u1, 0b1);
     testing.expectEqual(1, reader.readBit());
-    testing.expectError(error.SourceBufferEmpty, reader.readBit());
+    testing.expectError(error.SourceExhausted, reader.readBit());
     testing.expectEqual(true, reader.isAtEnd());
 }
 
-test "validateAfterDecoding returns error.SourceBufferNotFullyConsumed if reader hasn't consumed all bits" {
+test "validateChecksum returns error.ChecksumNotReady if reader hasn't consumed all bits" {
     var reader = new(u1, 0b1);
-    testing.expectError(error.SourceBufferNotFullyConsumed, reader.validateAfterDecoding());
+    testing.expectError(error.ChecksumNotReady, reader.validateChecksum());
     testing.expectEqual(false, reader.isAtEnd());
 }

@@ -46,9 +46,9 @@ pub fn decode(source: []const u8, destination: []u8) Error!void {
 
     var writer = Writer.new(destination);
 
-    while (writer.isAtEnd() == false) {
+    while (reader.isAtEnd() == false and writer.isAtEnd() == false) {
         try decodeInstruction(&reader, &writer);
     }
     
-    try reader.validateAfterDecoding();
+    try reader.validateChecksum();
 }

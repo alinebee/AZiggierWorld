@@ -66,7 +66,7 @@ const Instance = struct {
     }
 
     /// Consume the next bit from the source data, automatically advancing to the next chunk of source data if necessary.
-    /// Returns error.SourceBufferEmpty if there are no more chunks remaining.
+    /// Returns error.SourceExhausted if there are no more chunks remaining.
     pub fn readBit(self: *Instance) Error!u1 {
         const next_bit = self.popBit();
 
@@ -99,13 +99,13 @@ const Instance = struct {
 
     /// Return the next 4 bytes from the end of the source data and move the cursor
     /// backwards to the preceding chunk.
-    /// Returns `error.SourceBufferEmpty` if there are no more chunks remaining.
+    /// Returns `error.SourceExhausted` if there are no more chunks remaining.
     fn popChunk(self: *Instance) Error!u32 {
         comptime const chunk_size = @divExact(u32.bit_count, 8);
 
         const old_cursor = self.cursor;
         if (old_cursor < chunk_size) {
-            return error.SourceBufferEmpty;
+            return error.SourceExhausted;
         }
 
         self.cursor -= chunk_size;
@@ -120,10 +120,12 @@ const Instance = struct {
     }
 
     /// Call once decoding is complete and the reader is expected to be fully consumed,
-    /// to verify that all bits *were* actually consumed and the final checksum is valid.
-    pub fn validateAfterDecoding(self: Instance) Error!void {
+    /// to verify that the final checksum is valid.
+    pub fn validateChecksum(self: Instance) Error!void {
+        // It is an error to check the checksum before the reader has consumed all its chunks,
+        // since the checksum will be in a partial state.
         if (self.isAtEnd() == false) {
-            return error.SourceBufferNotFullyConsumed;
+            return error.ChecksumNotReady;
         }
 
         if (self.crc != 0) {
@@ -137,10 +139,10 @@ const Instance = struct {
 /// The possible errors from a reader instance.
 pub const Error = error {
     /// The reader ran out of bits to consume before decoding was completed.
-    SourceBufferEmpty,
+    SourceExhausted,
     
-    /// Decoding completed before the reader had fully consumed all bits.
-    SourceBufferNotFullyConsumed,
+    /// Attempted to validate the checksum before reading had finished.
+    ChecksumNotReady,
 
     /// The reader failed its checksum, likely indicating that the compressed data was corrupt or truncated.
     ChecksumFailed,
@@ -189,10 +191,10 @@ test "init() reads unpacked size, initial checksum and first chunk from end of s
     testing.expectEqual(expected_crc, reader.crc);
 }
 
-test "new() returns `error.SourceBufferEmpty` when source buffer is too small" {
+test "new() returns `error.SourceExhausted` when source buffer is too small" {
     const source = [_]u8 { 0 };
 
-    testing.expectError(error.SourceBufferEmpty, new(&source));
+    testing.expectError(error.SourceExhausted, new(&source));
 }
 
 test "readBit() reads chunks bit by bit in reverse order" {
@@ -218,44 +220,44 @@ test "readBit() reads chunks bit by bit in reverse order" {
     testing.expectEqual(expected_bits, actual_bits);
 }
 
-test "isAtEnd() returns false and validateAfterDecoding() returns error.SourceBufferNotFullyConsumed when reader hasn't consumed all bits yet" {
+test "isAtEnd() returns false and validateChecksum() returns error.ChecksumNotReady when reader hasn't consumed all bits yet" {
     const single_chunk_source = DataExamples.valid[4..];
 
     var reader = try new(single_chunk_source);
     testing.expectEqual(false, reader.isAtEnd());
-    testing.expectError(error.SourceBufferNotFullyConsumed, reader.validateAfterDecoding());
+    testing.expectError(error.ChecksumNotReady, reader.validateChecksum());
     
     // Even once it has begun consuming its last chunk,
     // it should not report as done until all bits of the chunk have been read
     _ = try reader.readBit();
     testing.expectEqual(false, reader.isAtEnd());
-    testing.expectError(error.SourceBufferNotFullyConsumed, reader.validateAfterDecoding());
+    testing.expectError(error.ChecksumNotReady, reader.validateChecksum());
 }
 
-test "isAtEnd() returns true and validateAfterDecoding() returns error.ChecksumFailed when reader has consumed all bits but has a non-0 checksum" {
+test "isAtEnd() returns true and validateChecksum() returns error.ChecksumFailed when reader has consumed all bits but has a non-0 checksum" {
     var reader = try new(&DataExamples.invalid_checksum);
 
     var bits_remaining: usize = 8 * 8;
     while (bits_remaining > 0) : (bits_remaining -= 1) {
         testing.expectEqual(false, reader.isAtEnd());
-        testing.expectError(error.SourceBufferNotFullyConsumed, reader.validateAfterDecoding());
+        testing.expectError(error.ChecksumNotReady, reader.validateChecksum());
         _ = try reader.readBit();
     } else {
         testing.expectEqual(true, reader.isAtEnd());
-        testing.expectError(error.ChecksumFailed, reader.validateAfterDecoding());
+        testing.expectError(error.ChecksumFailed, reader.validateChecksum());
     }
 }
 
-test "isAtEnd() returns true and validateAfterDecoding() passes when reader has consumed all bits and has a 0 checksum" {
+test "isAtEnd() returns true and validateChecksum() passes when reader has consumed all bits and has a 0 checksum" {
     var reader = try new(&DataExamples.valid);
 
     var bits_remaining: usize = 8 * 8;
     while (bits_remaining > 0) : (bits_remaining -= 1) {
         testing.expectEqual(false, reader.isAtEnd());
-        testing.expectError(error.SourceBufferNotFullyConsumed, reader.validateAfterDecoding());
+        testing.expectError(error.ChecksumNotReady, reader.validateChecksum());
         _ = try reader.readBit();
     } else {
         testing.expectEqual(true, reader.isAtEnd());
-        try reader.validateAfterDecoding();
+        try reader.validateChecksum();
     }
 }
