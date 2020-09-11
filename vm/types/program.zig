@@ -12,6 +12,10 @@ pub const Address = u16;
 
 /// An Another World bytecode program, which maintains a counter to the next instruction to execute.
 pub const Instance = struct {
+    // This is essentially a read-only `FixedBufferStream` with a more limited
+    // and prescriptive API; the only behavioural difference is that it does
+    // bounds-checking on seek (jump/skip) operations, not just on read.
+
     /// The bytecode making up the program.
     bytecode: []const u8,
 
