@@ -66,7 +66,7 @@ test "decode decodes valid payload" {
     var encoder = Encoder.new(testing.allocator);
     defer encoder.deinit();
 
-    try encoder.write4Bytes(0x8BADf00D);
+    try encoder.write4Bytes(0x8BADF00D);
 
     const source = try encoder.finalize(testing.allocator);
     defer testing.allocator.free(source);

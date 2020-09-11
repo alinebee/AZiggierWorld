@@ -153,24 +153,24 @@ pub const Error = error {
 const DataExamples = struct {
     const valid = [_]u8 {
         // A couple of chunks of raw data that will be returned by readBit.
-        0x0B, 0xAD, 0xF0, 0x0D,
+        0x8B, 0xAD, 0xF0, 0x0D,
         0xDE, 0xAD, 0xBE, 0xEF,
         // Empty chunk to ensure preceding chunks are consumed in full - see comment in Instance.init.
         // This chunk will contribute to the CRC but will not be returned by readBit.
         0x00, 0x00, 0x00, 0x01,
         // The starting checksum is XORed with each subsequent chunk as it is read;
         // the end result of XORing all chunks into the original checksum should be 0.
-        (0x0B ^ 0xDE ^ 0x00), (0xAD ^ 0xAD ^ 0x00), (0xF0 ^ 0xBE ^ 0x00), (0x0D ^ 0xEF ^ 0x01),
+        (0x8B ^ 0xDE ^ 0x00), (0xAD ^ 0xAD ^ 0x00), (0xF0 ^ 0xBE ^ 0x00), (0x0D ^ 0xEF ^ 0x01),
         // Expected size of uncompressed data (unused in tests)
-        0x0B, 0xAD, 0xF0, 0x0D,
+        0x8B, 0xAD, 0xF0, 0x0D,
     };
 
     const invalid_checksum = [_]u8 {
-        0x0B, 0xAD, 0xF0, 0x0D,
+        0x8B, 0xAD, 0xF0, 0x0D,
         0xDE, 0xAD, 0xBE, 0xEF,
         0x00, 0x00, 0x00, 0x01,
         0x00, 0x00, 0x00, 0x00, // Invalid checksum for the preceding chunks
-        0x0B, 0xAD, 0xF0, 0x0D,
+        0x8B, 0xAD, 0xF0, 0x0D,
     };
 };
 
@@ -183,7 +183,7 @@ test "init() reads unpacked size, initial checksum and first chunk from end of s
 
     var reader = try Instance.init(&source);
 
-    testing.expectEqual(0x0BADF00D, reader.uncompressed_size);
+    testing.expectEqual(0x8BADF00D, reader.uncompressed_size);
     testing.expectEqual(0x00000001, reader.current_chunk);
 
     // During initialization, the CRC stored in the source data gets XORed with the first raw chunk of data.

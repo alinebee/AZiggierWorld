@@ -68,12 +68,12 @@ const MockReader = @import("test_helpers/mock_reader.zig");
 
 test "readInt reads integers of the specified width" {
     // MockReader.new returns a bitwise reader that's already wrapped in a `ReaderInterface`.
-    var parser = MockReader.new(u64, 0xDEAD_BEEF_0BAD_F00D);
+    var parser = MockReader.new(u64, 0xDEAD_BEEF_8BAD_F00D);
 
     testing.expectEqual(0xDE, parser.readInt(u8));
     testing.expectEqual(0xAD, parser.readInt(u8));
     testing.expectEqual(0xBEEF, parser.readInt(u16));
-    testing.expectEqual(0x0BADF00D, parser.readInt(u32));
+    testing.expectEqual(0x8BADF00D, parser.readInt(u32));
     testing.expectEqual(true, parser.isAtEnd());
 }
 

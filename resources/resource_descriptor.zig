@@ -134,7 +134,7 @@ pub const DescriptorExamples = struct {
         0x05,                   // bank ID (5 == BANK05 file)
         0xDE, 0xAD, 0xBE, 0xEF, // bank offset (big-endian 32-bit unsigned integer)
         0x00, 0x00,             // unknown: unused
-        0x0B, 0xAD,             // packed size (big-endian 16-bit unsigned integer)
+        0x8B, 0xAD,             // packed size (big-endian 16-bit unsigned integer)
         0x00, 0x00,             // unknown: unused
         0xF0, 0x0D,             // unpacked size (big-endian 16-bit unsigned integer)
     };
@@ -159,7 +159,7 @@ pub const DescriptorExamples = struct {
         .type = .bytecode,
         .bank_id = 5,
         .bank_offset = 0xDEADBEEF,
-        .compressed_size = 0x0BAD,
+        .compressed_size = 0x8BAD,
         .uncompressed_size = 0xF00D,
     };
 };

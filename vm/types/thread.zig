@@ -100,7 +100,7 @@ test "scheduleJump schedules activation with specified program counter for next 
     thread.scheduleJump(0xDEAD);
 
     testing.expectEqual(.inactive, thread.execution_state);
-    testing.expectEqual(.{ .active = 0xDEAD, }, thread.scheduled_execution_state);
+    testing.expectEqual(.{ .active = 0xDEAD }, thread.scheduled_execution_state);
 }
 
 test "scheduleDeactivate schedules deactivation for next tic" {
