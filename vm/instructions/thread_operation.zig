@@ -16,9 +16,11 @@ pub const Error = error {
     InvalidThreadOperation,
 };
 
-pub fn parse(raw_operation: Raw) Error!Enum {
+/// Parse a valid operation type from a raw bytecode value.
+/// Returns error.InvalidThreadOperation if the value could not be parsed.
+pub fn parse(raw: Raw) Error!Enum {
     // It would be nicer to use @intToEnum, but that has undefined behaviour when the value is out of range.
-    return switch (raw_operation) {
+    return switch (raw) {
         0 => .Resume,
         1 => .Suspend,
         2 => .Deactivate,

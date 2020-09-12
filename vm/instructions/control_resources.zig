@@ -6,7 +6,7 @@ const GamePart = @import("../types/game_part.zig");
 
 const print = @import("std").debug.print;
 
-/// An instruction that loads individual resources and new game parts into memory.
+/// Loads individual resources or entire game parts into memory.
 pub const Instance = union(enum) {
     /// Unload all loaded resources and stop audio.
     unload_all,
@@ -39,7 +39,7 @@ pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instance 
     } else if (GamePart.parse(resource_id_or_game_part)) |game_part| {
         return Instance { .load_game_part = game_part };
     } else |_err| {
-        // If it can't be parsed as a game part, assume it's a resource ID
+        // If the value doesn't match any game part, assume it's a resource ID
         return Instance { .load_resource = resource_id_or_game_part };
     }
 }
@@ -77,6 +77,7 @@ test "parse parses load_resource instruction and consumes 2 bytes" {
     testing.expectEqual(.{ .load_resource = 0xDEAD }, instruction);
 }
 
+// TODO: flesh these tests out once we have resource-loading implemented in the VM
 test "execute with unload_all instruction runs on machine without errors" {
     const instruction = Instance.unload_all;
     var machine = Machine.new();

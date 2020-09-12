@@ -29,7 +29,8 @@ pub const Error = error {
     InvalidJumpComparison,
 };
 
-
+/// Parse a valid comparison type from a raw bytecode value.
+/// Returns error.InvalidJumpComparison if the value could not be parsed.
 pub fn parse(raw: Raw) Error!Enum {
     if (raw > @enumToInt(Enum.less_than_or_equal_to)) {
         return error.InvalidJumpComparison;

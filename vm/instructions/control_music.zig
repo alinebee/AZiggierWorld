@@ -95,6 +95,7 @@ test "parse parses stop instruction and consumes 5 bytes" {
     testing.expectEqual(.stop, instruction);
 }
 
+// TODO: flesh these tests out once we have music playback implemented in the VM
 test "execute with play instruction runs on machine without errors" {
     const instruction = Instance { .play = .{
         .resource_id = 0x8BAD,
