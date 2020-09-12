@@ -28,7 +28,7 @@ pub const Instance = union(enum) {
 
     pub fn execute(self: Instance, machine: *Machine.Instance) void {
         switch (self) {
-            .play       => |operation| print("\nControlMusic: play {} at {} after {}\n", .{ operation.resource_id, operation.offset, operation.delay }),
+            .play       => |operation| print("\nControlMusic: play #{X} at offset {} after delay {}\n", .{ operation.resource_id, operation.offset, operation.delay }),
             .set_delay  => |delay| print("\nControlMusic: set delay to {}\n", .{ delay }),
             .stop       => print("\nControlResources: stop playing\n", .{}),
         }

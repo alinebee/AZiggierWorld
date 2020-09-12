@@ -20,8 +20,8 @@ pub const Instance = union(enum) {
     pub fn execute(self: Instance, machine: *Machine.Instance) void {
         switch (self) {
             .unload_all => print("\nControlResources: unload all resources\n", .{}),
-            .load_game_part => |game_part| print("\nControlResources: load game part {X}\n", .{ @enumToInt(game_part) }),
-            .load_resource => |resource_id| print("\nControlResources: load resource {X}\n", .{ resource_id }),
+            .load_game_part => |game_part| print("\nControlResources: load game part {}\n", .{ @tagName(game_part) }),
+            .load_resource => |resource_id| print("\nControlResources: load resource #{X}\n", .{ resource_id }),
         }
     }
 };

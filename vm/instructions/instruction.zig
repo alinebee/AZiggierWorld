@@ -10,6 +10,7 @@ const SetRegister = @import("set_register.zig");
 const CopyRegister = @import("copy_register.zig");
 const ControlResources = @import("control_resources.zig");
 const ControlMusic = @import("control_music.zig");
+const ControlSound = @import("control_sound.zig");
 const ConditionalJump = @import("conditional_jump.zig");
 
 pub const Error = 
@@ -20,6 +21,7 @@ pub const Error =
     CopyRegister.Error || 
     ControlResources.Error || 
     ControlMusic.Error || 
+    ControlSound.Error || 
     ConditionalJump.Error ||
     error {
     /// Bytecode contained an unrecognized opcode.
@@ -35,6 +37,7 @@ pub const Wrapped = union(enum) {
     CopyRegister: CopyRegister.Instance,
     ControlResources: ControlResources.Instance,
     ControlMusic: ControlMusic.Instance,
+    ControlSound: ControlSound.Instance,
     ConditionalJump: ConditionalJump.Instance,
 };
 
@@ -51,6 +54,7 @@ pub fn parseNextInstruction(program: *Program.Instance) Error!Wrapped {
         .CopyRegister       => wrap("CopyRegister", CopyRegister, raw_opcode, program),
         .ControlResources   => wrap("ControlResources", ControlResources, raw_opcode, program),
         .ControlMusic       => wrap("ControlMusic", ControlMusic, raw_opcode, program),
+        .ControlSound       => wrap("ControlSound", ControlSound, raw_opcode, program),
         .ConditionalJump    => wrap("ConditionalJump", ConditionalJump, raw_opcode, program),
         else => error.UnsupportedOpcode,
     };
@@ -74,6 +78,7 @@ pub fn executeNextInstruction(program: *Program.Instance, machine: *Machine.Inst
         .CopyRegister       => execute(CopyRegister, raw_opcode, program, machine),
         .ControlResources   => execute(ControlResources, raw_opcode, program, machine),
         .ControlMusic       => execute(ControlMusic, raw_opcode, program, machine),
+        .ControlSound       => execute(ControlSound, raw_opcode, program, machine),
         .ConditionalJump    => execute(ConditionalJump, raw_opcode, program, machine),
         else => error.UnsupportedOpcode,
     };
@@ -135,6 +140,11 @@ test "parseNextInstruction returns ControlResources instruction when given valid
 test "parseNextInstruction returns ControlMusic instruction when given valid bytecode" {
     const instruction = try debugParseInstruction(&ControlMusic.BytecodeExamples.play);
     expectWrappedType(.ControlMusic, instruction);
+}
+
+test "parseNextInstruction returns ControlSound instruction when given valid bytecode" {
+    const instruction = try debugParseInstruction(&ControlSound.BytecodeExamples.play);
+    expectWrappedType(.ControlSound, instruction);
 }
 
 test "parseNextInstruction returns ConditionalJump instruction when given valid bytecode" {
