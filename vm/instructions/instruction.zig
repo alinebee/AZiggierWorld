@@ -8,6 +8,7 @@ const ActivateThread = @import("activate_thread.zig");
 const ControlThreads = @import("control_threads.zig");
 const SetRegister = @import("set_register.zig");
 const CopyRegister = @import("copy_register.zig");
+const ControlResources = @import("control_resources.zig");
 
 pub const Error = 
     Program.Error || 
@@ -15,6 +16,7 @@ pub const Error =
     ControlThreads.Error || 
     SetRegister.Error || 
     CopyRegister.Error || 
+    ControlResources.Error || 
     error {
     /// Bytecode contained an unrecognized opcode.
     UnsupportedOpcode,
@@ -27,6 +29,7 @@ pub const Wrapped = union(enum) {
     ControlThreads: ControlThreads.Instance,
     SetRegister: SetRegister.Instance,
     CopyRegister: CopyRegister.Instance,
+    ControlResources: ControlResources.Instance,
 };
 
 /// Parse the next instruction from a bytecode program and wrap it in a Wrapped union type.
@@ -36,10 +39,11 @@ pub fn parseNextInstruction(program: *Program.Instance) Error!Wrapped {
     const opcode = Opcode.parse(raw_opcode);
 
     return switch (opcode) {
-        .ActivateThread => wrap("ActivateThread", ActivateThread, raw_opcode, program),
-        .ControlThreads => wrap("ControlThreads", ControlThreads, raw_opcode, program),
-        .SetRegister    => wrap("SetRegister", SetRegister, raw_opcode, program),
-        .CopyRegister   => wrap("CopyRegister", CopyRegister, raw_opcode, program),
+        .ActivateThread     => wrap("ActivateThread", ActivateThread, raw_opcode, program),
+        .ControlThreads     => wrap("ControlThreads", ControlThreads, raw_opcode, program),
+        .SetRegister        => wrap("SetRegister", SetRegister, raw_opcode, program),
+        .CopyRegister       => wrap("CopyRegister", CopyRegister, raw_opcode, program),
+        .ControlResources   => wrap("ControlResources", ControlResources, raw_opcode, program),
         else => error.UnsupportedOpcode,
     };
 }
@@ -50,10 +54,11 @@ pub fn executeNextInstruction(program: *Program.Instance, machine: *Machine.Inst
     const opcode = Opcode.parse(raw_opcode);
 
     try switch (opcode) {
-        .ActivateThread => execute(ActivateThread, raw_opcode, program, machine),
-        .ControlThreads => execute(ControlThreads, raw_opcode, program, machine),
-        .SetRegister    => execute(SetRegister, raw_opcode, program, machine),
-        .CopyRegister   => execute(CopyRegister, raw_opcode, program, machine),
+        .ActivateThread     => execute(ActivateThread, raw_opcode, program, machine),
+        .ControlThreads     => execute(ControlThreads, raw_opcode, program, machine),
+        .SetRegister        => execute(SetRegister, raw_opcode, program, machine),
+        .CopyRegister       => execute(CopyRegister, raw_opcode, program, machine),
+        .ControlResources   => execute(ControlResources, raw_opcode, program, machine),
         else => error.UnsupportedOpcode,
     };
 }
@@ -110,6 +115,11 @@ test "parseNextInstruction returns SetRegister instruction when given valid byte
 test "parseNextInstruction returns CopyRegister instruction when given valid bytecode" {
     const instruction = try debugParseInstruction(&CopyRegister.BytecodeExamples.valid);
     expectWrappedType(.CopyRegister, instruction);
+}
+
+test "parseNextInstruction returns ControlResources instruction when given valid bytecode" {
+    const instruction = try debugParseInstruction(&ControlResources.BytecodeExamples.unload_all);
+    expectWrappedType(.ControlResources, instruction);
 }
 
 test "parseNextInstruction returns UnsupportedOpcode error when it encounters an unknown opcode" {

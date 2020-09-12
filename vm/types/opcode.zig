@@ -34,7 +34,7 @@ pub const Enum = enum (Raw) {
     ShiftRegisterLeft,
     ShiftRegisterRight,
     ControlSound,
-    ControlResource,
+    ControlResources,
     ControlMusic,
 
     // Beyond these simple enums there are two higher opcodes marked by bits 6 and 7 of the opcode,
