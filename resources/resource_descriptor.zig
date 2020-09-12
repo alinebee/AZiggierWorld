@@ -40,11 +40,11 @@ pub fn Error(comptime Reader: type) type {
 
 /// An iterator that parses resource descriptors from a `Reader` instance until it reaches an end-of-file marker.
 /// Intended for use when parsing the MEMLIST.BIN file in an Another World game directory.
-pub fn iterator(reader: anytype) ResourceIterator(@TypeOf(reader)) {
-    return ResourceIterator(@TypeOf(reader)) { .reader = reader };
+pub fn iterator(reader: anytype) Iterator(@TypeOf(reader)) {
+    return Iterator(@TypeOf(reader)) { .reader = reader };
 }
 
-fn ResourceIterator(comptime Reader: type) type {
+fn Iterator(comptime Reader: type) type {
     return struct {
         const Self = @This();
 
@@ -55,11 +55,12 @@ fn ResourceIterator(comptime Reader: type) type {
         /// Returns null if it hits an end-of-file marker, or an error if it cannot parse more descriptor data.
         pub fn next(self: *Self) Error(Reader)!?Instance {
             // The layout of each entry in the MEMLIST.BIN file matches the layout of an in-memory data structure
-            // which the original Another World executable used for tracking whether a given resource was currently loaded.
-            // The contents of the file were poured directly into a contiguous memory block and used as-is for tracking state.
+            // which the original Another World executable used for tracking whether a given resource was currently
+            // loaded. The contents of the file were poured directly into a contiguous memory block and used as-is
+            // for tracking state.
             //
-            // Because of this layout, there are gaps in the stored data that corresponded to fields in that in-memory struct: 
-            // fields which were used at runtime, but whose values are irrelevant in the file itself.
+            // Because of this layout, there are gaps in the stored data that corresponded to fields in that
+            // in-memory struct: fields which were used at runtime, but whose values are irrelevant in the file itself.
             // (These fields are expected to be filled with zeroes in MEMLIST.BIN, but we don't actually check.)
             // Our own Instance struct doesn't match this layout, so we just pick out the fields we care about.
             //
@@ -70,13 +71,14 @@ fn ResourceIterator(comptime Reader: type) type {
             // 								0: "not needed, can be cleaned up"
             // 								1: "loaded"
             // 								2: "needs to be loaded"
-            // 1	u8	resource type	The type of data in this resource: values correspond to `ResourceType.Enum` members.
+            // 1	u8	resource type	The type of data in this resource: values correspond to `ResourceType.Enum`s.
             // 2	u16	buffer pointer 	In MEMLIST.BIN: Unused.
             // 							In original runtime: a 16-bit pointer to the location in memory
             //                          at which the resource is loaded.
             // 4	u16	<unknown>		Unknown, apparently unused.
             // 6	u8	load priority	In MEMLIST.BIN: Unused.
-            //							In original runtime: used to load resources in order of priority (higher was better).
+            //							In original runtime: used to load resources in order of priority
+            //                          (higher was better).
             // 7	u8	bank ID			Which BANKXX file this resource is located in (from 01-0D).
             // 8	u32	bank offset		The byte offset within the BANK file at which the resource is located.
             // 12	u16	<unknown>		Unknown, apparently unused.

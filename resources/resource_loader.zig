@@ -1,4 +1,5 @@
 const ResourceDescriptor = @import("resource_descriptor.zig");
+const ResourceID = @import("../vm/types/resource_id.zig");
 const Filename = @import("filename.zig");
 const decode = @import("../run_length_decoder/decode.zig").decode;
 
@@ -47,8 +48,8 @@ const Instance = struct {
     }
 
     /// Read the specified resource from the appropriate BANKXX file,
-    /// and return a slice initialized by the specified allocator that contains the decompressed resource data.
-    /// Caller owns the returned slice and must free it with `allocator.free`.
+    /// and return a slice that contains the decompressed resource data.
+    /// Caller owns the returned slice and must free it with `data_allocator.free`.
     /// Returns an error if the data could not be read or decompressed.
     pub fn readResource(self: Instance, data_allocator: *mem.Allocator, descriptor: ResourceDescriptor.Instance) ![]const u8 {
         const bank_path = try resourcePath(self.allocator, self.path, .{ .bank = descriptor.bank_id });
@@ -68,6 +69,23 @@ const Instance = struct {
         try bufReadResource(file.reader(), uncompressed_data, descriptor.compressed_size);
         return uncompressed_data;
     }
+
+    /// Read the resource with the specified ID from the appropriate BANKXX file,
+    /// and return a slice that contains the decompressed resource data.
+    /// Caller owns the returned slice and must free it with `data_allocator.free`.
+    /// Returns an error if the data could not be read or decompressed.
+    pub fn readResourceByID(self: Instance, data_allocator: *mem.Allocator, id: ResourceID.Raw) ![]const u8 {
+        if (id >= self.resource_descriptors.len) {
+            return error.InvalidResourceID;
+        }
+        const descriptor = self.resource_descriptors[id];
+        return self.readResource(data_allocator, descriptor);
+    }
+};
+
+pub const ReadResourceIDError = error {
+    /// The resource ID does not exist in the game's resource list.
+    InvalidResourceID,
 };
 
 /// The number of descriptors expected in an Another World MEMLIST.BIN file.
