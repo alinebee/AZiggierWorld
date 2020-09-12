@@ -9,7 +9,7 @@ const Point = @import("../types/point.zig");
 /// since the polygons cannot be scaled or repositioned programmatically.
 pub const Instance = struct {
     /// The address within the currently-loaded polygon resource from which to read polygon data.
-    address: Video.Address,
+    address: Video.PolygonAddress,
     /// The X and Y position in screen space at which to draw the polygon.
     point: Point.Instance,
 
@@ -34,8 +34,8 @@ pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instance 
     // see types/opcode.zig).
     // Since the lowest bit will always be zero as a result, polygons must therefore start
     // on even address boundaries within Another World's polygon resources.
-    const high_byte: Video.Address = raw_opcode;
-    const low_byte: Video.Address = try program.read(u8);
+    const high_byte: Video.PolygonAddress = raw_opcode;
+    const low_byte: Video.PolygonAddress = try program.read(u8);
     self.address = (high_byte << 8 | low_byte) << 1;
 
     // Copypasta from the original reference implementation:

@@ -10,6 +10,7 @@ const ControlResources = @import("control_resources.zig");
 const ControlMusic = @import("control_music.zig");
 const ControlSound = @import("control_sound.zig");
 const ConditionalJump = @import("conditional_jump.zig");
+const DrawSpritePolygon = @import("draw_sprite_polygon.zig");
 const DrawBackgroundPolygon = @import("draw_background_polygon.zig");
 
 pub const Error =
@@ -23,6 +24,7 @@ pub const Error =
     ControlMusic.Error ||
     ControlSound.Error ||
     ConditionalJump.Error ||
+    DrawSpritePolygon.Error ||
     DrawBackgroundPolygon.Error ||
     error{
     /// Bytecode contained an opcode that is not yet implemented.
@@ -40,6 +42,7 @@ pub const Wrapped = union(enum) {
     ControlMusic: ControlMusic.Instance,
     ControlSound: ControlSound.Instance,
     ConditionalJump: ConditionalJump.Instance,
+    DrawSpritePolygon: DrawSpritePolygon.Instance,
     DrawBackgroundPolygon: DrawBackgroundPolygon.Instance,
 };
 
@@ -58,6 +61,7 @@ pub fn parseNextInstruction(program: *Program.Instance) Error!Wrapped {
         .ControlMusic           => wrap("ControlMusic", ControlMusic, raw_opcode, program),
         .ControlSound           => wrap("ControlSound", ControlSound, raw_opcode, program),
         .ConditionalJump        => wrap("ConditionalJump", ConditionalJump, raw_opcode, program),
+        .DrawSpritePolygon      => wrap("DrawSpritePolygon", DrawSpritePolygon, raw_opcode, program),
         .DrawBackgroundPolygon  => wrap("DrawBackgroundPolygon", DrawBackgroundPolygon, raw_opcode, program),
         else => error.UnimplementedOpcode,
     };
@@ -83,6 +87,7 @@ pub fn executeNextInstruction(program: *Program.Instance, machine: *Machine.Inst
         .ControlMusic           => execute(ControlMusic, raw_opcode, program, machine),
         .ControlSound           => execute(ControlSound, raw_opcode, program, machine),
         .ConditionalJump        => execute(ConditionalJump, raw_opcode, program, machine),
+        .DrawSpritePolygon      => execute(DrawSpritePolygon, raw_opcode, program, machine),
         .DrawBackgroundPolygon  => execute(DrawBackgroundPolygon, raw_opcode, program, machine),
         else => error.UnimplementedOpcode,
     };
@@ -156,6 +161,11 @@ test "parseNextInstruction returns ConditionalJump instruction when given valid 
     expectWrappedType(.ConditionalJump, instruction);
 }
 
+test "parseNextInstruction returns DrawSpriteolygon instruction when given valid bytecode" {
+    const instruction = try debugParseInstruction(&DrawSpritePolygon.BytecodeExamples.registers);
+    expectWrappedType(.DrawSpritePolygon, instruction);
+}
+
 test "parseNextInstruction returns DrawBackgroundPolygon instruction when given valid bytecode" {
     const instruction = try debugParseInstruction(&DrawBackgroundPolygon.BytecodeExamples.low_x);
     expectWrappedType(.DrawBackgroundPolygon, instruction);
@@ -167,7 +177,7 @@ test "parseNextInstruction returns error.InvalidOpcode error when it encounters 
 }
 
 test "parseNextInstruction returns error.UnimplementedOpcode error when it encounters a not-yet-implemented opcode" {
-    const bytecode = [_]u8{@enumToInt(Opcode.Enum.DrawSpritePolygon)};
+    const bytecode = [_]u8{@enumToInt(Opcode.Enum.Yield)};
     testing.expectError(error.UnimplementedOpcode, debugParseInstruction(&bytecode));
 }
 
