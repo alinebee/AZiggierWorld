@@ -1,5 +1,3 @@
-const std = @import("std");
-
 const Program = @import("../types/program.zig");
 const Opcode = @import("../types/opcode.zig");
 const Machine = @import("../machine.zig");

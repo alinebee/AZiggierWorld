@@ -5,8 +5,6 @@ const ResourceID = @import("../types/resource_id.zig");
 const GamePart = @import("../types/game_part.zig");
 const Resources = @import("../types/resources.zig");
 
-const print = @import("std").debug.print;
-
 /// Loads individual resources or entire game parts into memory.
 pub const Instance = union(enum) {
     /// Unload all loaded resources and stop audio.
