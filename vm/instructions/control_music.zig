@@ -1,12 +1,8 @@
 const Opcode = @import("../types/opcode.zig");
 const Program = @import("../types/program.zig");
 const Machine = @import("../machine.zig");
+const Audio = @import("../audio.zig");
 const ResourceID = @import("../types/resource_id.zig");
-
-const print = @import("std").debug.print;
-
-const Delay = u16;
-const Offset = u8;
 
 /// Starts, stops or delays the current music track.
 pub const Instance = union(enum) {
@@ -16,21 +12,21 @@ pub const Instance = union(enum) {
         resource_id: ResourceID.Raw,
         /// The offset within the music resource at which to start playing.
         /// (TODO: document the meaning and units of this value.)
-        offset: Offset,
+        offset: Audio.Offset,
         /// The delay before playing the track.
         /// (TODO: document what units this is in. Tics?)
-        delay: Delay,
+        delay: Audio.Delay,
     },
     /// Override the delay on the current or subsequent `play` instruction.
-    set_delay: Delay,
+    set_delay: Audio.Delay,
     /// Stop playing any currently-playing music track.
     stop,
 
-    pub fn execute(self: Instance, machine: *Machine.Instance) void {
+    pub fn execute(self: Instance, machine: *Machine.Instance) !void {
         switch (self) {
-            .play       => |operation| print("\nControlMusic: play #{X} at offset {} after delay {}\n", .{ operation.resource_id, operation.offset, operation.delay }),
-            .set_delay  => |delay| print("\nControlMusic: set delay to {}\n", .{ delay }),
-            .stop       => print("\nControlResources: stop playing\n", .{}),
+            .play       => |operation| try machine.playMusic(operation.resource_id, operation.offset, operation.delay),
+            .set_delay  => |delay| machine.setMusicDelay(delay),
+            .stop       => machine.stopMusic(),
         }
     }
 };
@@ -42,8 +38,8 @@ pub const Error = Program.Error;
 /// Returns an error if the bytecode could not be read or contained an invalid instruction.
 pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instance {
     const resource_id = try program.read(ResourceID.Raw);
-    const delay = try program.read(Delay);
-    const offset = try program.read(Offset);
+    const delay = try program.read(Audio.Delay);
+    const offset = try program.read(Audio.Offset);
 
     if (resource_id != 0) {
         return Instance { .play = .{ 
@@ -103,17 +99,17 @@ test "execute with play instruction runs on machine without errors" {
         .delay = 0xF00D,
     } };
     var machine = Machine.new();
-    instruction.execute(&machine);
+    try instruction.execute(&machine);
 }
 
 test "execute with set_delay instruction runs on machine without errors" {
     const instruction = Instance { .set_delay = 0xF00D };
     var machine = Machine.new();
-    instruction.execute(&machine);
+    try instruction.execute(&machine);
 }
 
 test "execute with stop instruction runs on machine without errors" {
     const instruction = Instance.stop;
     var machine = Machine.new();
-    instruction.execute(&machine);
+    try instruction.execute(&machine);
 }

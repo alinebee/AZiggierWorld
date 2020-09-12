@@ -1,14 +1,10 @@
 const Opcode = @import("../types/opcode.zig");
 const Program = @import("../types/program.zig");
 const Machine = @import("../machine.zig");
+const Audio = @import("../audio.zig");
 
 const ResourceID = @import("../types/resource_id.zig");
 const Channel = @import("../types/channel.zig");
-
-const print = @import("std").debug.print;
-
-pub const Volume = u8;
-pub const Frequency = u8;
 
 /// Play a sound on a channel, or stop a channel from playing.
 pub const Instance = union(enum) {
@@ -19,22 +15,17 @@ pub const Instance = union(enum) {
         channel: Channel.Enum,
         /// The volume at which to play the sound.
         /// TODO: document default volume and observed range.
-        volume: Volume,
+        volume: Audio.Volume,
         /// The pitch at which to play the sound.
         /// TODO: document default frequency and observed range.
-        frequency: Frequency,
+        frequency: Audio.Frequency,
     },
     stop: Channel.Enum,
 
     pub fn execute(self: Instance, machine: *Machine.Instance) void {
         switch (self) {
-            .play => |operation| print("\nControlSound: play #{X} on channel {} at volume {}, frequency {}\n", .{ 
-                operation.resource_id,
-                @tagName(operation.channel),
-                operation.volume,
-                operation.frequency,
-            }),
-            .stop => |channel| print("\nControlResources: stop playing on channel {}\n", .{ @tagName(channel) }),
+            .play => |operation| try machine.playSound(operation.resource_id, operation.channel, operation.volume, operation.frequency),
+            .stop => |channel| machine.stopChannel(channel),
         }
     }
 };
@@ -46,8 +37,8 @@ pub const Error = Program.Error || Channel.Error;
 /// Returns an error if the bytecode could not be read or contained an invalid instruction.
 pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instance {
     const resource_id = try program.read(ResourceID.Raw);
-    const frequency = try program.read(Frequency);
-    const volume = try program.read(Volume);
+    const frequency = try program.read(Audio.Frequency);
+    const volume = try program.read(Audio.Volume);
     const channel = try Channel.parse(try program.read(Channel.Raw));
     
     if (volume > 0) {
