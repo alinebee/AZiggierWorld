@@ -131,7 +131,7 @@ const Instance = struct {
             const byte_index = index / 8;
             const shift = @intCast(u3, 7 - (index % 8));
             const bit = @truncate(u1, self.payload.items[byte_index] >> shift);
-            
+
             // If the sentinel bit is in the topmost place, it means the bit we're adding is the last one
             // that will fit in this chunk: after this, push the chunk and start with a new one.
             const chunk_full = (current_chunk >> 31 == 0b1);

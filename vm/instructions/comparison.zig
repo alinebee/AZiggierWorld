@@ -24,7 +24,7 @@ pub const Enum = enum(Raw) {
     }
 };
 
-pub const Error = error {
+pub const Error = error{
     /// The bytecode specified an unknown ConditionalJump comparison.
     InvalidJumpComparison,
 };
@@ -49,7 +49,7 @@ test "parse parses raw comparison values correctly" {
     testing.expectEqual(.greater_than_or_equal_to,  parse(0b011));
     testing.expectEqual(.less_than,                 parse(0b100));
     testing.expectEqual(.less_than_or_equal_to,     parse(0b101));
-    
+
     testing.expectError(error.InvalidJumpComparison, parse(0b110));
     testing.expectError(error.InvalidJumpComparison, parse(0b111));
 }

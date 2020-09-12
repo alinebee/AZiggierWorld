@@ -42,13 +42,15 @@ pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instance 
     const offset = try program.read(Audio.Offset);
 
     if (resource_id != 0) {
-        return Instance { .play = .{ 
-            .resource_id = resource_id,
-            .offset = offset,
-            .delay = delay,
-        } };
+        return Instance{
+            .play = .{
+                .resource_id = resource_id,
+                .offset = offset,
+                .delay = delay,
+            },
+        };
     } else if (delay != 0) {
-        return Instance { .set_delay = delay };
+        return Instance{ .set_delay = delay };
     } else {
         return .stop;
     }
@@ -59,9 +61,9 @@ pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instance 
 pub const BytecodeExamples = struct {
     const raw_opcode = @enumToInt(Opcode.Enum.ControlMusic);
 
-    pub const play      = [_]u8 { raw_opcode, 0xDE, 0xAD, 0xBE, 0xEF, 0xFF };
-    pub const set_delay = [_]u8 { raw_opcode, 0x00, 0x00, 0xBE, 0xEF, 0xFF };
-    pub const stop      = [_]u8 { raw_opcode, 0x00, 0x00, 0x00, 0x00, 0xFF };
+    pub const play      = [_]u8{ raw_opcode, 0xDE, 0xAD, 0xBE, 0xEF, 0xFF };
+    pub const set_delay = [_]u8{ raw_opcode, 0x00, 0x00, 0xBE, 0xEF, 0xFF };
+    pub const stop      = [_]u8{ raw_opcode, 0x00, 0x00, 0x00, 0x00, 0xFF };
 };
 
 // -- Tests --
@@ -71,39 +73,43 @@ const debugParseInstruction = @import("test_helpers.zig").debugParseInstruction;
 
 test "parse parses play instruction and consumes 5 bytes" {
     const instruction = try debugParseInstruction(parse, &BytecodeExamples.play, 5);
-    const expected = Instance { .play = .{
-        .resource_id = 0xDEAD,
-        .offset = 0xFF,
-        .delay = 0xBEEF,
-    } };
+    const expected = Instance{
+        .play = .{
+            .resource_id = 0xDEAD,
+            .offset = 0xFF,
+            .delay = 0xBEEF,
+        },
+    };
     testing.expectEqual(expected, instruction);
 }
 
 test "parse parses set_delay instruction and consumes 5 bytes" {
     const instruction = try debugParseInstruction(parse, &BytecodeExamples.set_delay, 5);
-    
+
     testing.expectEqual(.{ .set_delay = 0xBEEF }, instruction);
 }
 
 test "parse parses stop instruction and consumes 5 bytes" {
     const instruction = try debugParseInstruction(parse, &BytecodeExamples.stop, 5);
-    
+
     testing.expectEqual(.stop, instruction);
 }
 
 // TODO: flesh these tests out once we have music playback implemented in the VM
 test "execute with play instruction runs on machine without errors" {
-    const instruction = Instance { .play = .{
-        .resource_id = 0x8BAD,
-        .offset = 0x00,
-        .delay = 0xF00D,
-    } };
+    const instruction = Instance{
+        .play = .{
+            .resource_id = 0x8BAD,
+            .offset = 0x00,
+            .delay = 0xF00D,
+        },
+    };
     var machine = Machine.new();
     try instruction.execute(&machine);
 }
 
 test "execute with set_delay instruction runs on machine without errors" {
-    const instruction = Instance { .set_delay = 0xF00D };
+    const instruction = Instance{ .set_delay = 0xF00D };
     var machine = Machine.new();
     try instruction.execute(&machine);
 }

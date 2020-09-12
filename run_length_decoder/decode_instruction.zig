@@ -1,6 +1,5 @@
 //! Another World's run-length encoding system uses several decoding instructions,
 //! which are marked by the first 2 or 3 bits of every encoded sequence:
-    
 //! 111|cccc_cccc: next 8 bits are count: copy the next (count + 9) bytes immediately after this instruction.
 //! 110|cccc_cccc|oooo_oooo_oooo: next 8 bits are count, next 12 bits are offset relative to write cursor:
 //! copy (count + 1) bytes from the already-uncompressed data at that offset.
@@ -79,7 +78,7 @@ test "decodeNextInstruction parses 111 instruction" {
     var writer = MockWriter.new();
 
     try decodeInstruction(&reader, &writer);
-    
+
     testing.expectEqual(
         .{ .write_from_source = 0b0111_1101 + 9 },
         writer.last_instruction,
@@ -92,7 +91,7 @@ test "decodeNextInstruction parses 111 instruction with max count without overfl
     var writer = MockWriter.new();
 
     try decodeInstruction(&reader, &writer);
-    
+
     testing.expectEqual(
         .{ .write_from_source = 0b1111_1111 + 9 },
         writer.last_instruction,
@@ -108,12 +107,14 @@ test "decodeNextInstruction parses 110 instruction" {
     var writer = MockWriter.new();
 
     try decodeInstruction(&reader, &writer);
-    
+
     testing.expectEqual(
-        .{ .copy_from_destination = .{
-            .count = 0b0111_1101 + 1,
-            .offset = 0b1101_1001_1010,
-        } },
+        .{
+            .copy_from_destination = .{
+                .count = 0b0111_1101 + 1,
+                .offset = 0b1101_1001_1010,
+            },
+        },
         writer.last_instruction,
     );
     testing.expect(reader.isAtEnd());
@@ -126,12 +127,14 @@ test "decodeNextInstruction parses 101 instruction" {
     var writer = MockWriter.new();
 
     try decodeInstruction(&reader, &writer);
-    
+
     testing.expectEqual(
-        .{ .copy_from_destination = .{
-            .count = 4,
-            .offset = 0b0111_1101_11,
-        } },
+        .{
+            .copy_from_destination = .{
+                .count = 4,
+                .offset = 0b0111_1101_11,
+            },
+        },
         writer.last_instruction,
     );
     testing.expect(reader.isAtEnd());
@@ -144,12 +147,14 @@ test "decodeNextInstruction parses 100 instruction" {
     var writer = MockWriter.new();
 
     try decodeInstruction(&reader, &writer);
-    
+
     testing.expectEqual(
-        .{ .copy_from_destination = .{
-            .count = 3,
-            .offset = 0b0111_1101_1,
-        } },
+        .{
+            .copy_from_destination = .{
+                .count = 3,
+                .offset = 0b0111_1101_1,
+            },
+        },
         writer.last_instruction,
     );
     testing.expect(reader.isAtEnd());
@@ -162,12 +167,14 @@ test "decodeNextInstruction parses 01 instruction" {
     var writer = MockWriter.new();
 
     try decodeInstruction(&reader, &writer);
-    
+
     testing.expectEqual(
-        .{ .copy_from_destination = .{
-            .count = 2,
-            .offset = 0b0111_1101,
-        } },
+        .{
+            .copy_from_destination = .{
+                .count = 2,
+                .offset = 0b0111_1101,
+            },
+        },
         writer.last_instruction,
     );
     testing.expect(reader.isAtEnd());
@@ -180,7 +187,7 @@ test "decodeNextInstruction parses 00 instruction" {
     var writer = MockWriter.new();
 
     try decodeInstruction(&reader, &writer);
-    
+
     testing.expectEqual(
         .{ .write_from_source = 0b110 + 1 },
         writer.last_instruction,

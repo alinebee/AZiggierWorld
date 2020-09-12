@@ -16,7 +16,7 @@ const ReaderInterface = @import("../reader_interface.zig");
 /// the bits will be left-padded with zeroes out to the full width.
 /// e.g. `intReader(u5, 0b110)` would return 0, 0, 1, 1, 0.
 pub fn new(comptime Integer: type, bits: Integer) ReaderInterface.Instance(Instance(Integer)) {
-    return ReaderInterface.new(Instance(Integer) { .bits = bits });
+    return ReaderInterface.new(Instance(Integer){ .bits = bits });
 }
 
 /// The underlying bitwise reader. Intended to be wrapped in a `ReaderInterface` for decoding.
@@ -57,7 +57,7 @@ fn Instance(comptime Integer: type) type {
 }
 
 /// All possible errors produced by the mock bitwise reader.
-pub const Error = error {
+pub const Error = error{
     /// The reader ran out of bits to consume before decoding was completed.
     SourceExhausted,
 
@@ -71,8 +71,8 @@ const testing = @import("../../utils/testing.zig");
 
 test "readBit reads all bits in order from highest to lowest" {
     var reader = new(u8, 0b1001_0110);
-    const expected = [_]u1 { 1, 0, 0, 1, 0, 1, 1, 0 };
-    
+    const expected = [_]u1{ 1, 0, 0, 1, 0, 1, 1, 0 };
+
     for (expected) |bit| {
         testing.expectEqual(bit, reader.readBit());
     }
@@ -81,7 +81,7 @@ test "readBit reads all bits in order from highest to lowest" {
 
 test "readBit is left-padded" {
     var reader = new(u5, 0b110);
-    const expected = [_]u1 { 0, 0, 1, 1, 0 };
+    const expected = [_]u1{ 0, 0, 1, 1, 0 };
 
     for (expected) |bit| {
         testing.expectEqual(bit, reader.readBit());

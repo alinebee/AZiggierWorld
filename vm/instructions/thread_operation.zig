@@ -11,7 +11,7 @@ pub const Enum = enum {
     Deactivate,
 };
 
-pub const Error = error {
+pub const Error = error{
     /// The bytecode specified an unknown thread operation.
     InvalidThreadOperation,
 };

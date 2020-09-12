@@ -7,7 +7,7 @@ pub const Enum = enum(Raw) {
     intro_cinematic,
     /// Starting in tentacle pool, escaping from beast
     gameplay1,
-    /// Breaking out of prison  
+    /// Breaking out of prison
     gameplay2,
     /// Fleeing through the caves
     gameplay3,
@@ -22,15 +22,15 @@ pub const Enum = enum(Raw) {
     /// The IDs of the resources to load for this game part.
     pub fn resourceIDs(self: Enum) ResourceIDs {
         return switch (self) {
-            .copy_protection    => .{ .palettes = 0x14, .bytecode = 0x15, .polygons = 0x16, },
-            .intro_cinematic    => .{ .palettes = 0x17, .bytecode = 0x18, .polygons = 0x19, },
-            .gameplay1          => .{ .palettes = 0x1A, .bytecode = 0x1B, .polygons = 0x1C, .animations = 0x11, },
-            .gameplay2          => .{ .palettes = 0x1D, .bytecode = 0x1E, .polygons = 0x1F, .animations = 0x11, },
-            .gameplay3          => .{ .palettes = 0x20, .bytecode = 0x21, .polygons = 0x22, .animations = 0x11, },
-            .arena_cinematic    => .{ .palettes = 0x23, .bytecode = 0x24, .polygons = 0x25, },
-            .gameplay4          => .{ .palettes = 0x26, .bytecode = 0x27, .polygons = 0x28, .animations = 0x11, },
-            .gameplay5          => .{ .palettes = 0x29, .bytecode = 0x2A, .polygons = 0x2B, .animations = 0x11, },
-            .password_entry     => .{ .palettes = 0x7D, .bytecode = 0x7E, .polygons = 0x7F, },
+            .copy_protection    => .{ .palettes = 0x14, .bytecode = 0x15, .polygons = 0x16 },
+            .intro_cinematic    => .{ .palettes = 0x17, .bytecode = 0x18, .polygons = 0x19 },
+            .gameplay1          => .{ .palettes = 0x1A, .bytecode = 0x1B, .polygons = 0x1C, .animations = 0x11 },
+            .gameplay2          => .{ .palettes = 0x1D, .bytecode = 0x1E, .polygons = 0x1F, .animations = 0x11 },
+            .gameplay3          => .{ .palettes = 0x20, .bytecode = 0x21, .polygons = 0x22, .animations = 0x11 },
+            .arena_cinematic    => .{ .palettes = 0x23, .bytecode = 0x24, .polygons = 0x25 },
+            .gameplay4          => .{ .palettes = 0x26, .bytecode = 0x27, .polygons = 0x28, .animations = 0x11 },
+            .gameplay5          => .{ .palettes = 0x29, .bytecode = 0x2A, .polygons = 0x2B, .animations = 0x11 },
+            .password_entry     => .{ .palettes = 0x7D, .bytecode = 0x7E, .polygons = 0x7F },
         };
     }
 };
@@ -67,7 +67,7 @@ pub fn parse(raw: Raw) Error!Enum {
     return @intToEnum(Enum, raw);
 }
 
-pub const Error = error {
+pub const Error = error{
     /// The bytecode specified an unknown game part.
     InvalidGamePart,
 };

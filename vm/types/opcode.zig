@@ -8,7 +8,7 @@ pub const Raw = u8;
 /// These map to individual instruction types, each defined in their own zig file with the same name.
 /// See https://github.com/fabiensanglard/Another-World-Bytecode-Interpreter for a list of opccodes
 /// (whose names do not match the ones I have chosen here).
-pub const Enum = enum (Raw) {
+pub const Enum = enum(Raw) {
     SetRegister,
     CopyRegister,
     AddToRegister,

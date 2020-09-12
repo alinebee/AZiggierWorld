@@ -12,7 +12,7 @@ pub const Instruction = union(enum) {
 /// Intended solely for testing RLE instruction parsing: in particular, it will not consume any bytes from
 /// a reader when receiving a `writeFromReader` command.
 pub fn new() Instance {
-    return Instance { .last_instruction = null };
+    return Instance{ .last_instruction = null };
 }
 
 pub const Instance = struct {
@@ -23,10 +23,12 @@ pub const Instance = struct {
     }
 
     pub fn copyFromDestination(self: *Instance, count: usize, offset: usize) !void {
-        self.last_instruction = .{ .copy_from_destination = .{
-            .count = count, 
-            .offset = offset,
-        } };
+        self.last_instruction = .{
+            .copy_from_destination = .{
+                .count = count,
+                .offset = offset,
+            },
+        };
     }
 };
 
@@ -35,12 +37,14 @@ pub const Instance = struct {
 const testing = @import("../../utils/testing.zig");
 
 const FakeReader = struct {
-    fn readByte() void { unreachable; }
+    fn readByte() void {
+        unreachable;
+    }
 };
 
 test "writeFromReader records correct instruction without consuming any bytes from reader" {
     var writer = new();
-    var fakeReader = FakeReader {};
+    var fakeReader = FakeReader{};
 
     try writer.writeFromSource(&fakeReader, 16);
     testing.expectEqual(
@@ -54,10 +58,12 @@ test "copyFromDestination records correct instruction" {
 
     try writer.copyFromDestination(16, 0xDEADBEEF);
     testing.expectEqual(
-        .{ .copy_from_destination = .{ 
-            .count = 16,
-            .offset = 0xDEADBEEF,
-        } },
+        .{
+            .copy_from_destination = .{
+                .count = 16,
+                .offset = 0xDEADBEEF,
+            },
+        },
         writer.last_instruction,
     );
 }

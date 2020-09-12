@@ -32,8 +32,8 @@ pub const Instance = struct {
 pub fn Error(comptime Reader: type) type {
     comptime const ReaderError = @TypeOf(Reader.readNoEof).ReturnType.ErrorSet;
 
-    return ReaderError || ResourceType.Error || error {
-        /// A resource defined a compressed size that was larger than its uncompressed size. 
+    return ReaderError || ResourceType.Error || error{
+        /// A resource defined a compressed size that was larger than its uncompressed size.
         InvalidResourceSize,
     };
 }
@@ -41,7 +41,7 @@ pub fn Error(comptime Reader: type) type {
 /// An iterator that parses resource descriptors from a `Reader` instance until it reaches an end-of-file marker.
 /// Intended for use when parsing the MEMLIST.BIN file in an Another World game directory.
 pub fn iterator(reader: anytype) Iterator(@TypeOf(reader)) {
-    return Iterator(@TypeOf(reader)) { .reader = reader };
+    return Iterator(@TypeOf(reader)){ .reader = reader };
 }
 
 fn Iterator(comptime Reader: type) type {
@@ -107,7 +107,7 @@ fn Iterator(comptime Reader: type) type {
                 return error.InvalidResourceSize;
             }
 
-            return Instance {
+            return Instance{
                 .type = try ResourceType.parse(raw_type),
                 .bank_id = bank_id,
                 .bank_offset = bank_offset,
@@ -126,7 +126,7 @@ const end_of_file_marker: u8 = 0xFF;
 // -- Example data --
 
 pub const DescriptorExamples = struct {
-    pub const valid_data = [_]u8 {
+    pub const valid_data = [_]u8{
         // See documentation in `parse` for the expected byte layout.
         0x00,                   // loading state/end-of-file marker
         0x04,                   // resource type (4 == ResourceType.Enum.bytecode)
@@ -155,9 +155,9 @@ pub const DescriptorExamples = struct {
         break :block invalid_data;
     };
 
-    const valid_end_of_file = [_]u8 { end_of_file_marker };
+    const valid_end_of_file = [_]u8{end_of_file_marker};
 
-    const valid_descriptor = Instance {
+    const valid_descriptor = Instance{
         .type = .bytecode,
         .bank_id = 5,
         .bank_offset = 0xDEADBEEF,

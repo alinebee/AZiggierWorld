@@ -18,7 +18,7 @@ test "ResourceLoader loads all game resources" {
     defer loader.deinit();
 
     testing.expectEqual(146, loader.resource_descriptors.len);
-    
+
     // For each resource, test that it can be parsed and decompressed without errors.
     for (loader.resource_descriptors) |descriptor, index| {
         const id = @intCast(ResourceID.Raw, index);
@@ -35,11 +35,15 @@ test "Instance.readResource returns error.OutOfMemory if it runs out of memory w
 
     const loader = try ResourceLoader.new(testing.allocator, game_path);
     defer loader.deinit();
-    
+
     // Some resources are zero-length; testing.failing_allocator would not fail if the memory required is 0.
     const non_empty_descriptor = for (loader.resource_descriptors) |descriptor| {
-        if (descriptor.uncompressed_size > 0) { break descriptor; }
-    } else { unreachable; };
+        if (descriptor.uncompressed_size > 0) {
+            break descriptor;
+        }
+    } else {
+        unreachable;
+    };
 
     testing.expectError(
         error.OutOfMemory,
@@ -55,7 +59,7 @@ test "Instance.readResourceByID returns error.InvalidResourceID when given a res
     defer loader.deinit();
 
     testing.expectError(
-        error.InvalidResourceID, 
+        error.InvalidResourceID,
         loader.readResourceByID(testing.allocator, @intCast(ResourceID.Raw, loader.resource_descriptors.len)),
     );
 }

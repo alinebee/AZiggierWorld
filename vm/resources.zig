@@ -9,13 +9,13 @@ const log_unimplemented = @import("../utils/logging.zig").log_unimplemented;
 /// Load the resources for the specified game part and begin executing its program.
 /// Returns an error if one or more resources do not exist or could not be loaded.
 pub fn startGamePart(self: *Machine.Instance, game_part: GamePart.Enum) !void {
-    log_unimplemented("Resources.startGamePart: load game part {}", .{ @tagName(game_part) });
+    log_unimplemented("Resources.startGamePart: load game part {}", .{@tagName(game_part)});
 }
 
 /// Load the specified resource if it is not already loaded.
 /// Returns an error if the specified resource ID does not exist or could not be loaded.
 pub fn loadResource(self: *Machine.Instance, resource_id: ResourceID.Raw) !void {
-    log_unimplemented("Resources.loadResource: load #{X}", .{ resource_id });
+    log_unimplemented("Resources.loadResource: load #{X}", .{resource_id});
 }
 
 /// Unload all resources and stop any currently-playing sound.

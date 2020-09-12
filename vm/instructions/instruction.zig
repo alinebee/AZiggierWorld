@@ -23,7 +23,7 @@ pub const Error =
     ControlMusic.Error || 
     ControlSound.Error || 
     ConditionalJump.Error ||
-    error {
+    error{
     /// Bytecode contained an unrecognized opcode.
     UnsupportedOpcode,
 };
@@ -153,7 +153,7 @@ test "parseNextInstruction returns ConditionalJump instruction when given valid 
 }
 
 test "parseNextInstruction returns UnsupportedOpcode error when it encounters an unknown opcode" {
-    const bytecode = [_]u8{ 0xFF }; // unknown opcode
+    const bytecode = [_]u8{0xFF}; // unknown opcode
     testing.expectError(error.UnsupportedOpcode, debugParseInstruction(&bytecode));
 }
 

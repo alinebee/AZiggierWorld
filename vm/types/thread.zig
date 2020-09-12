@@ -39,7 +39,6 @@ pub const Instance = struct {
     // 3. Inactive and not suspended
     // 4. Inactive and suspended
     // States 3 and 4 have the same effect; but we cannot rule out that a program will suspend an inactive thread, then start running the thread *but expect it to remain suspended*. To allow that, we must track each variable independently.
-
     /// The active/inactive execution state of this thread during the current game tic.
     execution_state: ExecutionState = .inactive,
     /// The scheduled active/inactive execution state of this thread for the next game tic.
@@ -95,7 +94,7 @@ pub const Instance = struct {
 const testing = @import("../../utils/testing.zig");
 
 test "scheduleJump schedules activation with specified program counter for next tic" {
-    var thread = Instance { };
+    var thread = Instance{};
 
     thread.scheduleJump(0xDEAD);
 
@@ -104,7 +103,7 @@ test "scheduleJump schedules activation with specified program counter for next 
 }
 
 test "scheduleDeactivate schedules deactivation for next tic" {
-    var thread = Instance { .execution_state = .{ .active = 0xDEAD } };
+    var thread = Instance{ .execution_state = .{ .active = 0xDEAD } };
 
     thread.scheduleDeactivate();
 
@@ -113,7 +112,7 @@ test "scheduleDeactivate schedules deactivation for next tic" {
 }
 
 test "scheduleResume schedules resuming for next tic" {
-    var thread = Instance { .suspend_state = .suspended };
+    var thread = Instance{ .suspend_state = .suspended };
 
     thread.scheduleResume();
 
@@ -122,7 +121,7 @@ test "scheduleResume schedules resuming for next tic" {
 }
 
 test "scheduleSuspend schedules suspending for next tic" {
-    var thread = Instance { };
+    var thread = Instance{};
 
     thread.scheduleSuspend();
 
@@ -131,7 +130,7 @@ test "scheduleSuspend schedules suspending for next tic" {
 }
 
 test "update applies scheduled execution state" {
-    var thread = Instance { };
+    var thread = Instance{};
 
     thread.scheduleJump(0xDEAD);
     testing.expectEqual(.inactive, thread.execution_state);
@@ -151,7 +150,7 @@ test "update applies scheduled execution state" {
 }
 
 test "update applies scheduled suspend state" {
-    var thread = Instance { };
+    var thread = Instance{};
 
     testing.expectEqual(.running, thread.suspend_state);
     testing.expectEqual(null, thread.scheduled_suspend_state);

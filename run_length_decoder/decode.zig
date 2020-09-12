@@ -24,7 +24,7 @@ const Reader = @import("reader.zig");
 const Writer = @import("writer.zig");
 const decodeInstruction = @import("decode_instruction.zig").decodeInstruction;
 
-const Error = Reader.Error || Writer.Error || error {
+const Error = Reader.Error || Writer.Error || error{
     /// The buffer allocated for uncompressed data was a different size
     /// than the compressed data claimed to need.
     UncompressedSizeMismatch,
@@ -49,13 +49,13 @@ pub fn decode(source: []const u8, destination: []u8) Error!void {
     while (reader.isAtEnd() == false and writer.isAtEnd() == false) {
         try decodeInstruction(&reader, &writer);
     }
-    
+
     try reader.validateChecksum();
 }
 
 // -- Tests --
 
-const std =  @import("std");
+const std = @import("std");
 const mem = std.mem;
 const io = std.io;
 
@@ -80,7 +80,7 @@ test "decode decodes valid payload" {
 test "decode returns error.UncompressedSizeMismatch when passed a destination that doesn't matchthe reported uncompressed size" {
     var encoder = Encoder.new(testing.allocator);
     defer encoder.deinit();
-    
+
     try encoder.copyPrevious4Bytes();
 
     const source = try encoder.finalize(testing.allocator);
@@ -95,7 +95,7 @@ test "decode returns error.UncompressedSizeMismatch when passed a destination th
 test "decode returns error.CopyOutOfRange on payload with invalid copy pointer" {
     var encoder = Encoder.new(testing.allocator);
     defer encoder.deinit();
-    
+
     try encoder.copyPrevious4Bytes();
 
     const source = try encoder.finalize(testing.allocator);
@@ -110,7 +110,7 @@ test "decode returns error.CopyOutOfRange on payload with invalid copy pointer" 
 test "decode returns error.SourceExhausted on payload with too few bytes" {
     var encoder = Encoder.new(testing.allocator);
     defer encoder.deinit();
-    
+
     try encoder.invalidWrite();
 
     const source = try encoder.finalize(testing.allocator);
@@ -125,7 +125,7 @@ test "decode returns error.SourceExhausted on payload with too few bytes" {
 test "decode returns error.DestinationExhausted on payload with undercounted uncompressed size" {
     var encoder = Encoder.new(testing.allocator);
     defer encoder.deinit();
-    
+
     try encoder.write4Bytes(0x8BADF00D);
     encoder.uncompressed_size -= 2;
 
@@ -141,7 +141,7 @@ test "decode returns error.DestinationExhausted on payload with undercounted unc
 test "decode returns error.InvalidChecksum on payload with corrupted byte" {
     var encoder = Encoder.new(testing.allocator);
     defer encoder.deinit();
-    
+
     try encoder.write4Bytes(0x8BADF00D);
 
     const source = try encoder.finalize(testing.allocator);

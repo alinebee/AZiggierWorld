@@ -13,9 +13,7 @@ pub const max: Trusted = count - 1;
 /// Thread ID 0 is treated as the main thread: program execution will begin on that thread.
 pub const main: Trusted = 0;
 
-pub const Error = error {
-    InvalidThreadID,
-};
+pub const Error = error{InvalidThreadID};
 
 /// Given a raw byte value, return a trusted thread ID.
 /// Returns InvalidThreadID error if the value is out of range.

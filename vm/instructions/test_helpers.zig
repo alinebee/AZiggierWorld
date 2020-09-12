@@ -31,7 +31,7 @@ pub fn debugParseInstruction(comptime parseFn: anytype, bytecode: []const u8, ex
     return instruction;
 }
 
-const Error = error {
+const Error = error{
     /// The instruction consumed too few bytes from the program.
     UnderRead,
     /// The instruction consumed too many bytes from the program.
@@ -44,12 +44,12 @@ const EmptyInstruction = struct {};
 /// from the passed-in program (not including the opcode byte).
 fn parse5Bytes(raw_opcode: Opcode.Raw, program: *Program.Instance) Program.Error!EmptyInstruction {
     try program.skip(5);
-    return EmptyInstruction {};
+    return EmptyInstruction{};
 }
 
 /// Create a fake bytecode sequence of n bytes plus an opcode byte.
 fn fakeBytecode(comptime size: usize) [size + 1]u8 {
-    return [_]u8 { 0 } ** (size + 1);
+    return [_]u8{0} ** (size + 1);
 }
 
 // -- Tests --
@@ -58,9 +58,9 @@ const testing = @import("../../utils/testing.zig");
 
 test "debugParseInstruction returns parsed instruction if all bytes were parsed" {
     const bytecode = fakeBytecode(5);
-    
+
     const instruction = try debugParseInstruction(parse5Bytes, &bytecode, 5);
-    testing.expectEqual(EmptyInstruction {}, instruction);
+    testing.expectEqual(EmptyInstruction{}, instruction);
 }
 
 test "debugParseInstruction returns error.UnderRead if too few bytes were parsed" {

@@ -30,7 +30,7 @@ test "expectEqual correctly coerces types that std.testing.expectEqual does not"
     expectEqual(.One, enum_value);
 }
 
-const Error = error { FakeError };
+const Error = error{FakeError};
 fn return_error() Error!void {
     return error.FakeError;
 }

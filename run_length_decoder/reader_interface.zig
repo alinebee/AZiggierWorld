@@ -5,7 +5,7 @@ const trait = std.meta.trait;
 /// Wraps a bitwise reader in an interface that adds methods to read integers of arbitrary sizes.
 /// The underlying reader is expected to implement `readBit() !u8` and `validateChecksum() !error`.
 pub fn new(underlying_reader: anytype) Instance(@TypeOf(underlying_reader)) {
-    return Instance(@TypeOf(underlying_reader)) { .underlying_reader = underlying_reader };
+    return Instance(@TypeOf(underlying_reader)){ .underlying_reader = underlying_reader };
 }
 
 pub fn Instance(comptime Wrapped: type) type {
@@ -27,7 +27,7 @@ pub fn Instance(comptime Wrapped: type) type {
         pub fn readByte(self: *Self) ReadBitError!u8 {
             return self.readInt(u8);
         }
-        
+
         /// Returns an unsigned integer constructed by consuming bits from the underlying reader
         /// up to the integer's width: e.g. readInt(u7) will consume 7 bits.
         /// Returns an error if the required bits could not be read.

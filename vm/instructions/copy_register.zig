@@ -21,7 +21,7 @@ pub const Instance = struct {
 /// Consumes 2 bytes from the bytecode on success.
 /// Returns an error if the bytecode could not be read or contained an invalid instruction.
 pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instance {
-    return Instance {
+    return Instance{
         .destination = try program.read(Machine.RegisterID),
         .source = try program.read(Machine.RegisterID),
     };
@@ -32,7 +32,7 @@ pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instance 
 pub const BytecodeExamples = struct {
     const raw_opcode = @enumToInt(Opcode.Enum.CopyRegister);
 
-    pub const valid = [_]u8 { raw_opcode, 16, 17 };
+    pub const valid = [_]u8{ raw_opcode, 16, 17 };
 };
 
 // -- Tests --
@@ -55,7 +55,7 @@ test "parse fails to parse incomplete bytecode and consumes all available bytes"
 }
 
 test "execute updates specified register with value" {
-    const instruction = Instance {
+    const instruction = Instance{
         .destination = 16,
         .source = 17,
     };

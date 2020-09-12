@@ -1,4 +1,3 @@
-
 const Opcode = @import("../types/opcode.zig");
 const ThreadID = @import("../types/thread_id.zig");
 const Program = @import("../types/program.zig");
@@ -24,7 +23,7 @@ pub const Instance = struct {
 /// Consumes 3 bytes from the bytecode on success.
 /// Returns an error if the bytecode could not be read or contained an invalid instruction.
 pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instance {
-    return Instance {
+    return Instance{
         .thread_id = try ThreadID.parse(try program.read(ThreadID.Raw)),
         .address = try program.read(Program.Address),
     };
@@ -36,10 +35,10 @@ pub const BytecodeExamples = struct {
     const raw_opcode = @enumToInt(Opcode.Enum.ActivateThread);
 
     /// Example bytecode that should produce a valid instruction.
-    pub const valid = [_]u8 { raw_opcode, 63, 0xDE, 0xAD };
+    pub const valid = [_]u8{ raw_opcode, 63, 0xDE, 0xAD };
 
     /// Example bytecode with an invalid thread ID that should produce an error.
-    const invalid_thread_id = [_]u8 { raw_opcode, 255, 0xDE, 0xAD };
+    const invalid_thread_id = [_]u8{ raw_opcode, 255, 0xDE, 0xAD };
 };
 
 // -- Tests --
@@ -49,7 +48,7 @@ const debugParseInstruction = @import("test_helpers.zig").debugParseInstruction;
 
 test "parse parses instruction from valid bytecode and consumes 3 bytes" {
     const instruction = try debugParseInstruction(parse, &BytecodeExamples.valid, 3);
-    
+
     testing.expectEqual(63, instruction.thread_id);
     testing.expectEqual(0xDEAD, instruction.address);
 }
@@ -69,7 +68,7 @@ test "parse fails to parse incomplete bytecode and consumes all remaining bytes"
 }
 
 test "execute schedules specified thread to jump to specified address" {
-    const instruction = Instance {
+    const instruction = Instance{
         .thread_id = 63,
         .address = 0xDEAD,
     };
@@ -77,8 +76,5 @@ test "execute schedules specified thread to jump to specified address" {
     var machine = Machine.new();
     instruction.execute(&machine);
 
-    testing.expectEqual(
-        .{ .active = 0xDEAD },
-        machine.threads[63].scheduled_execution_state
-    );
+    testing.expectEqual(.{ .active = 0xDEAD }, machine.threads[63].scheduled_execution_state);
 }

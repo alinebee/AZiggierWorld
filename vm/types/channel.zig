@@ -9,7 +9,7 @@ pub const Enum = enum(Raw) {
     four,
 };
 
-pub const Error = error {
+pub const Error = error{
     /// Bytecode specified an invalid channel ID.
     InvalidChannel,
 };

@@ -11,10 +11,10 @@ pub const RegisterID = u8;
 
 pub const Instance = struct {
     /// The current state of the VM's 64 threads.
-    threads: [max_threads]Thread.Instance = [_]Thread.Instance { .{} } ** max_threads,
+    threads: [max_threads]Thread.Instance = [_]Thread.Instance{.{}} ** max_threads,
 
     /// The current state of the VM's 256 registers.
-    registers: [max_registers]RegisterValue = [_]RegisterValue { 0 } ** max_registers,
+    registers: [max_registers]RegisterValue = [_]RegisterValue{0} ** max_registers,
 
     /// The currently-running program.
     program: Program.Instance,
@@ -26,10 +26,10 @@ pub const Instance = struct {
 
 /// A placeholder program to keep tests happy until we flesh out the VM enough
 /// to load a real program during its initialization.
-const empty_program = [0]u8 {};
+const empty_program = [0]u8{};
 
 pub fn new() Instance {
-    var machine = Instance { .program = Program.new(&empty_program) };
+    var machine = Instance{ .program = Program.new(&empty_program) };
 
     // Initialize the main thread to begin execution at the start of the current program
     machine.threads[ThreadID.main].execution_state = .{ .active = 0 };

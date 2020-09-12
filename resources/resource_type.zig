@@ -4,32 +4,32 @@ pub const Enum = enum(u8) {
     /// Descriptors for 0-byte resources also have this type.
     /// Those may be be a file marker of some kind and not intended to be "played"?
     sound_or_empty = 0,
-    
+
     /// The resource contains music data.
     music = 1,
-    
+
     /// The resource contains a single bitmap image.
     bitmap = 2,
-    
+
     /// The resource contains a set of 32 palettes.
     /// In the original release of Another World, each part of the game has its own set of palettes.
     palettes = 3,
-    
+
     /// The resource contains executable bytecode.
     /// In the original release of Another World, each part of the game has its own bytecode resource.
     bytecode = 4,
-    
+
     /// The resource contains polygon data for rendering cinematics and world backgrounds.
     /// In the original release of Another World, each part of the game has its own polygon resource.
     polygons = 5,
-    
+
     /// The resource contains polygon data for rendering player and enemy sprites.
     /// In the original release of Another World, there is only one resource with this type,
     /// which is shared across all parts of the game.
     sprite_polygons = 6,
 };
 
-pub const Error = error {
+pub const Error = error{
     /// An Another World resource list specified an unknown resource type.
     InvalidResourceType,
 };

@@ -8,7 +8,7 @@ const Comparison = @import("comparison.zig");
 pub const Instance = struct {
     /// The register to use for the left-hand side of the condition.
     lhs: Machine.RegisterID,
-    
+
     /// The register or constant to use for the right-hand side of the condition.
     rhs: union(enum) {
         constant: Machine.RegisterValue,
@@ -18,12 +18,12 @@ pub const Instance = struct {
     /// How to compare the two sides of the condition.
     comparison: Comparison.Enum,
 
-    /// The program address to jump to if the condition succeeds. 
+    /// The program address to jump to if the condition succeeds.
     address: Program.Address,
 
     pub fn execute(self: Instance, machine: *Machine.Instance) !void {
         const lhs = machine.registers[self.lhs];
-        const rhs = switch(self.rhs) {
+        const rhs = switch (self.rhs) {
             .constant => |value| value,
             .register => |register_id| machine.registers[register_id],
         };
@@ -60,7 +60,7 @@ pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instance 
     // Operand source is the top 2 bits; comparison is the bottom 3 bits
     const raw_source = @truncate(u2, control_code >> 6);
     const raw_comparison = @truncate(Comparison.Raw, control_code);
-    
+
     self.lhs = try program.read(Machine.RegisterID);
     self.rhs = switch (raw_source) {
         // Even though 16-bit constants are signed, the reference implementation treats 8-bit constants as unsigned.
@@ -68,9 +68,9 @@ pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instance 
         0b01        => .{ .constant = try program.read(Machine.RegisterValue) },
         0b10, 0b11  => .{ .register = try program.read(Machine.RegisterID) },
     };
-    
+
     self.address = try program.read(Program.Address);
-    
+
     // Do failable comparison parsing *after* loading all the bytes that this instruction would normally consume;
     // This way, tests that recover from failed parsing will parse the rest of the bytecode correctly.
     self.comparison = try Comparison.parse(raw_comparison);
@@ -85,16 +85,16 @@ pub const Error = Program.Error || Comparison.Error;
 pub const BytecodeExamples = struct {
     const raw_opcode = @enumToInt(Opcode.Enum.ConditionalJump);
 
-    pub const equal_to_register     = [_]u8 { raw_opcode, 0b11_000_000, 0xFF, 0x00, 0xDE, 0xAD, };
-    pub const equal_to_const16      = [_]u8 { raw_opcode, 0b01_000_000, 0xFF, 0x4B, 0x1D, 0xDE, 0xAD, };
-    pub const equal_to_const8       = [_]u8 { raw_opcode, 0b00_000_000, 0xFF, 0xBE, 0xDE, 0xAD, };
+    pub const equal_to_register     = [_]u8{ raw_opcode, 0b11_000_000, 0xFF, 0x00, 0xDE, 0xAD };
+    pub const equal_to_const16      = [_]u8{ raw_opcode, 0b01_000_000, 0xFF, 0x4B, 0x1D, 0xDE, 0xAD };
+    pub const equal_to_const8       = [_]u8{ raw_opcode, 0b00_000_000, 0xFF, 0xBE, 0xDE, 0xAD };
 
-    pub const not_equal                 = [_]u8 { raw_opcode, 0b11_000_001, 0xFF, 0x00, 0xDE, 0xAD, };
-    pub const greater_than              = [_]u8 { raw_opcode, 0b11_000_010, 0xFF, 0x00, 0xDE, 0xAD, };
-    pub const greater_than_or_equal_to  = [_]u8 { raw_opcode, 0b11_000_011, 0xFF, 0x00, 0xDE, 0xAD, };
-    pub const less_than                 = [_]u8 { raw_opcode, 0b11_000_100, 0xFF, 0x00, 0xDE, 0xAD, };
-    pub const less_than_or_equal_to     = [_]u8 { raw_opcode, 0b11_000_101, 0xFF, 0x00, 0xDE, 0xAD, };
-    pub const invalid_comparison        = [_]u8 { raw_opcode, 0b11_000_110, 0xFF, 0x00, 0xDE, 0xAD, };
+    pub const not_equal                 = [_]u8{ raw_opcode, 0b11_000_001, 0xFF, 0x00, 0xDE, 0xAD };
+    pub const greater_than              = [_]u8{ raw_opcode, 0b11_000_010, 0xFF, 0x00, 0xDE, 0xAD };
+    pub const greater_than_or_equal_to  = [_]u8{ raw_opcode, 0b11_000_011, 0xFF, 0x00, 0xDE, 0xAD };
+    pub const less_than                 = [_]u8{ raw_opcode, 0b11_000_100, 0xFF, 0x00, 0xDE, 0xAD };
+    pub const less_than_or_equal_to     = [_]u8{ raw_opcode, 0b11_000_101, 0xFF, 0x00, 0xDE, 0xAD };
+    pub const invalid_comparison        = [_]u8{ raw_opcode, 0b11_000_110, 0xFF, 0x00, 0xDE, 0xAD };
 };
 
 // -- Tests --
@@ -104,7 +104,7 @@ const debugParseInstruction = @import("test_helpers.zig").debugParseInstruction;
 
 test "parse parses equal_to_register instruction and consumes 5 bytes" {
     const instruction = try debugParseInstruction(parse, &BytecodeExamples.equal_to_register, 5);
-    const expected = Instance {
+    const expected = Instance{
         .lhs = 0xFF,
         .rhs = .{ .register = 0x00 },
         .comparison = .equal,
@@ -115,7 +115,7 @@ test "parse parses equal_to_register instruction and consumes 5 bytes" {
 
 test "parse parses equal_to_const16 instruction and consumes 6 bytes" {
     const instruction = try debugParseInstruction(parse, &BytecodeExamples.equal_to_const16, 6);
-    const expected = Instance {
+    const expected = Instance{
         .lhs = 0xFF,
         .rhs = .{ .constant = 0x4B1D },
         .comparison = .equal,
@@ -126,7 +126,7 @@ test "parse parses equal_to_const16 instruction and consumes 6 bytes" {
 
 test "parse parses equal_to_const8 instruction and consumes 5 bytes" {
     const instruction = try debugParseInstruction(parse, &BytecodeExamples.equal_to_const8, 5);
-    const expected = Instance {
+    const expected = Instance{
         .lhs = 0xFF,
         .rhs = .{ .constant = 0xBE },
         .comparison = .equal,
@@ -137,7 +137,7 @@ test "parse parses equal_to_const8 instruction and consumes 5 bytes" {
 
 test "parse parses not_equal instruction and consumes 5 bytes" {
     const instruction = try debugParseInstruction(parse, &BytecodeExamples.not_equal, 5);
-    const expected = Instance {
+    const expected = Instance{
         .lhs = 0xFF,
         .rhs = .{ .register = 0x00 },
         .comparison = .not_equal,
@@ -148,7 +148,7 @@ test "parse parses not_equal instruction and consumes 5 bytes" {
 
 test "parse parses greater_than instruction and consumes 5 bytes" {
     const instruction = try debugParseInstruction(parse, &BytecodeExamples.greater_than, 5);
-    const expected = Instance {
+    const expected = Instance{
         .lhs = 0xFF,
         .rhs = .{ .register = 0x00 },
         .comparison = .greater_than,
@@ -159,7 +159,7 @@ test "parse parses greater_than instruction and consumes 5 bytes" {
 
 test "parse parses greater_than_or_equal_to instruction and consumes 5 bytes" {
     const instruction = try debugParseInstruction(parse, &BytecodeExamples.greater_than_or_equal_to, 5);
-    const expected = Instance {
+    const expected = Instance{
         .lhs = 0xFF,
         .rhs = .{ .register = 0x00 },
         .comparison = .greater_than_or_equal_to,
@@ -170,7 +170,7 @@ test "parse parses greater_than_or_equal_to instruction and consumes 5 bytes" {
 
 test "parse parses less_than instruction and consumes 5 bytes" {
     const instruction = try debugParseInstruction(parse, &BytecodeExamples.less_than, 5);
-    const expected = Instance {
+    const expected = Instance{
         .lhs = 0xFF,
         .rhs = .{ .register = 0x00 },
         .comparison = .less_than,
@@ -181,7 +181,7 @@ test "parse parses less_than instruction and consumes 5 bytes" {
 
 test "parse parses less_than_or_equal_to instruction and consumes 5 bytes" {
     const instruction = try debugParseInstruction(parse, &BytecodeExamples.less_than_or_equal_to, 5);
-    const expected = Instance {
+    const expected = Instance{
         .lhs = 0xFF,
         .rhs = .{ .register = 0x00 },
         .comparison = .less_than_or_equal_to,
@@ -193,19 +193,19 @@ test "parse parses less_than_or_equal_to instruction and consumes 5 bytes" {
 test "parse returns error.InvalidJumpComparison for instruction with invalid comparison" {
     testing.expectError(
         error.InvalidJumpComparison,
-        debugParseInstruction(parse, &BytecodeExamples.invalid_comparison, 5)
+        debugParseInstruction(parse, &BytecodeExamples.invalid_comparison, 5),
     );
 }
 
 test "execute compares expected registers and jumps to expected address when condition succeeds" {
-    const bytecode = [_]u8 { 0 } ** 10;
+    const bytecode = [_]u8{0} ** 10;
 
     var machine = Machine.new();
     machine.program = Program.new(&bytecode);
     machine.registers[1] = 0xFF;
     machine.registers[2] = 0xFF;
 
-    const instruction = Instance {
+    const instruction = Instance{
         .lhs = 1,
         .rhs = .{ .register = 2 },
         .comparison = .equal,
@@ -220,13 +220,13 @@ test "execute compares expected registers and jumps to expected address when con
 }
 
 test "execute compares expected register to constant and jumps to expected address when condition succeeds" {
-    const bytecode = [_]u8 { 0 } ** 10;
+    const bytecode = [_]u8{0} ** 10;
 
     var machine = Machine.new();
     machine.program = Program.new(&bytecode);
     machine.registers[1] = 0x41BD;
 
-    const instruction = Instance {
+    const instruction = Instance{
         .lhs = 1,
         .rhs = .{ .constant = 0x41BD },
         .comparison = .equal,
@@ -239,14 +239,14 @@ test "execute compares expected register to constant and jumps to expected addre
 }
 
 test "execute does not jump when condition fails" {
-    const bytecode = [_]u8 { 0 } ** 10;
+    const bytecode = [_]u8{0} ** 10;
 
     var machine = Machine.new();
     machine.program = Program.new(&bytecode);
     machine.registers[1] = 0xFF;
     machine.registers[2] = 0xFE;
 
-    const instruction = Instance {
+    const instruction = Instance{
         .lhs = 1,
         .rhs = .{ .register = 2 },
         .comparison = .equal,
@@ -261,14 +261,14 @@ test "execute does not jump when condition fails" {
 }
 
 test "execute returns error.InvalidAddress when address is out of range" {
-    const bytecode = [_]u8 { 0 } ** 10;
+    const bytecode = [_]u8{0} ** 10;
 
     var machine = Machine.new();
     machine.program = Program.new(&bytecode);
     machine.registers[0] = 0xFF;
     machine.registers[1] = 0xFF;
 
-    const instruction = Instance {
+    const instruction = Instance{
         .lhs = 0,
         .rhs = .{ .register = 1 },
         .comparison = .equal,

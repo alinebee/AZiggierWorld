@@ -26,10 +26,10 @@ const Instance = struct {
     /// Call `deinit` to deinitialize.
     fn init(self: *Instance, allocator: *mem.Allocator, path: []const u8) !void {
         self.allocator = allocator;
-        
+
         self.path = try allocator.dupe(u8, path);
         errdefer allocator.free(self.path);
-        
+
         const list_path = try resourcePath(allocator, self.path, .resource_list);
         defer allocator.free(list_path);
 
@@ -83,7 +83,7 @@ const Instance = struct {
     }
 };
 
-pub const ReadResourceIDError = error {
+pub const ReadResourceIDError = error{
     /// The resource ID does not exist in the game's resource list.
     InvalidResourceID,
 };
@@ -101,13 +101,13 @@ fn resourcePath(allocator: *mem.Allocator, game_path: []const u8, filename: File
     const dos_name = try filename.dosName(allocator);
     defer allocator.free(dos_name);
 
-    const paths = [_][]const u8 { game_path, dos_name };
+    const paths = [_][]const u8{ game_path, dos_name };
     return try fs.path.join(allocator, &paths);
 }
 
 /// The type of errors that can be returned from a call to `readResourceList`.
 fn ResourceListError(comptime Reader: type) type {
-    return ResourceDescriptor.Error(Reader) || error {
+    return ResourceDescriptor.Error(Reader) || error{
         OutOfMemory,
 
         /// The resource list contained way too many descriptors.
@@ -133,14 +133,14 @@ fn readResourceList(allocator: *mem.Allocator, reader: anytype, expected_count: 
         }
         try descriptors.append(descriptor);
     }
-    
+
     return descriptors.toOwnedSlice();
 }
 
 /// The type of errors that can be returned from a call to `bufReadResource`.
 fn ResourceError(comptime Reader: type) type {
     const ReaderError = @TypeOf(Reader.readNoEof).ReturnType.ErrorSet;
-    return ReaderError || error {
+    return ReaderError || error{
         /// Attempted to copy a resource's data into a buffer that was too small for it.
         InvalidResourceSize,
         /// An error occurred when decompressing RLE-encoded data.
@@ -189,9 +189,8 @@ test "resourcePath allocates and returns expected path to MEMLIST.BIN" {
     const expected_path = if (platform == .windows)
         "C:\\Another World\\MEMLIST.BIN"
     else
-        "/path/to/another_world/MEMLIST.BIN"
-    ;
-    
+        "/path/to/another_world/MEMLIST.BIN";
+
     const path = try resourcePath(testing.allocator, example_game_path, .resource_list);
     defer testing.allocator.free(path);
 
@@ -202,8 +201,7 @@ test "resourcePath allocates and returns expected path to BANKXX file" {
     const expected_path = if (platform == .windows)
         "C:\\Another World\\BANK0A"
     else
-        "/path/to/another_world/BANK0A"
-    ;
+        "/path/to/another_world/BANK0A";
 
     const path = try resourcePath(testing.allocator, example_game_path, .{ .bank = 0x0A });
     defer testing.allocator.free(path);
@@ -219,7 +217,7 @@ test "resourcePath returns error.OutOfMemory if memory could not be allocated" {
 }
 
 test "bufReadResource reads uncompressed data into buffer" {
-    const source = [_]u8 { 0xDE, 0xAD, 0xBE, 0xEF };
+    const source = [_]u8{ 0xDE, 0xAD, 0xBE, 0xEF };
     const reader = io.fixedBufferStream(&source).reader();
 
     var destination: [4]u8 = undefined;
@@ -233,7 +231,7 @@ test "bufReadResource reads compressed data into buffer" {
 }
 
 test "bufReadResource returns error.InvalidCompressedData if data could not be decompressed" {
-    const source = [_]u8 { 0xDE, 0xAD, 0xBE };
+    const source = [_]u8{ 0xDE, 0xAD, 0xBE };
     const reader = io.fixedBufferStream(&source).reader();
 
     var destination: [4]u8 = undefined;
@@ -245,7 +243,7 @@ test "bufReadResource returns error.InvalidCompressedData if data could not be d
 }
 
 test "bufReadResource returns error.InvalidResourceSize on mismatched compressed size" {
-    const source = [_]u8 { 0xDE, 0xAD, 0xBE, 0xEF };
+    const source = [_]u8{ 0xDE, 0xAD, 0xBE, 0xEF };
     const reader = io.fixedBufferStream(&source).reader();
 
     var destination: [3]u8 = undefined;
@@ -257,7 +255,7 @@ test "bufReadResource returns error.InvalidResourceSize on mismatched compressed
 }
 
 test "bufReadResource returns error.EndOfStream when source data is truncated" {
-    const source = [_]u8 { 0xDE, 0xAD, 0xBE };
+    const source = [_]u8{ 0xDE, 0xAD, 0xBE };
     const reader = io.fixedBufferStream(&source).reader();
 
     var destination: [4]u8 = undefined;

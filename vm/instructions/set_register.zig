@@ -8,7 +8,7 @@ pub const Error = Program.Error;
 pub const Instance = struct {
     /// The ID of the register to set.
     destination: Machine.RegisterID,
-    
+
     /// The constant value to set the register to.
     value: Machine.RegisterValue,
 
@@ -21,7 +21,7 @@ pub const Instance = struct {
 /// Consumes 3 bytes from the bytecode on success.
 /// Returns an error if the bytecode could not be read or contained an invalid instruction.
 pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instance {
-    return Instance {
+    return Instance{
         .destination = try program.read(Machine.RegisterID),
         .value = try program.read(Machine.RegisterValue),
     };
@@ -32,7 +32,7 @@ pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instance 
 pub const BytecodeExamples = struct {
     const raw_opcode = @enumToInt(Opcode.Enum.SetRegister);
 
-    pub const valid = [_]u8 { raw_opcode, 16, 0b1011_0110, 0b0010_1011 }; // -18901 in two's complement
+    pub const valid = [_]u8{ raw_opcode, 16, 0b1011_0110, 0b0010_1011 }; // -18901 in two's complement
 };
 
 // -- Tests --
@@ -55,7 +55,7 @@ test "parse fails to parse incomplete bytecode and consumes all available bytes"
 }
 
 test "execute updates specified register with value" {
-    const instruction = Instance {
+    const instruction = Instance{
         .destination = 16,
         .value = -1234,
     };

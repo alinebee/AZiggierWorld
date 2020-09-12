@@ -4,7 +4,7 @@ const Program = @import("../types/program.zig");
 const Machine = @import("../machine.zig");
 const Operation = @import("thread_operation.zig");
 
-pub const Error = Program.Error || ThreadID.Error || Operation.Error || error {
+pub const Error = Program.Error || ThreadID.Error || Operation.Error || error{
     /// The end thread came before the start thread.
     InvalidThreadRange,
 };
@@ -40,7 +40,7 @@ pub const Instance = struct {
 /// Consumes 3 bytes from the bytecode on success.
 /// Returns an error if the bytecode could not be read or contained an invalid instruction.
 pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instance {
-    const instruction = Instance {
+    const instruction = Instance{
         .start_thread_id = try ThreadID.parse(try program.read(ThreadID.Raw)),
         .end_thread_id = try ThreadID.parse(try program.read(ThreadID.Raw)),
         .operation = try Operation.parse(try program.read(Operation.Raw)),
@@ -59,19 +59,19 @@ pub const BytecodeExamples = struct {
     const raw_opcode = @enumToInt(Opcode.Enum.ControlThreads);
 
     /// Example bytecode that should produce a valid instruction.
-    pub const valid = [_]u8 { raw_opcode, 62, 63, 0x02 };
+    pub const valid = [_]u8{ raw_opcode, 62, 63, 0x02 };
 
     /// Example bytecode with an invalid starting thread ID that should produce an error.
-    const invalid_start_thread_id = [_]u8 { raw_opcode, 64, 64, 0x02 };
+    const invalid_start_thread_id = [_]u8{ raw_opcode, 64, 64, 0x02 };
 
     /// Example bytecode with an invalid ending thread ID that should produce an error.
-    const invalid_end_thread_id = [_]u8 { raw_opcode, 63, 64, 0x02 };
+    const invalid_end_thread_id = [_]u8{ raw_opcode, 63, 64, 0x02 };
 
     /// Example bytecode with a start thread ID higher than its end thread ID, which should produce an error.
-    const transposed_thread_ids = [_]u8 { raw_opcode, 63, 62, 0x02 };
+    const transposed_thread_ids = [_]u8{ raw_opcode, 63, 62, 0x02 };
 
     /// Example bytecode with an invalid operation that should produce an error.
-    const invalid_operation = [_]u8 { raw_opcode, 62, 63, 0x02 };
+    const invalid_operation = [_]u8{ raw_opcode, 62, 63, 0x02 };
 };
 
 // -- Tests --
@@ -81,7 +81,7 @@ const debugParseInstruction = @import("test_helpers.zig").debugParseInstruction;
 
 test "parse parses valid bytecode and consumes 3 bytes" {
     const instruction = try debugParseInstruction(parse, &BytecodeExamples.valid, 3);
-    
+
     testing.expectEqual(62, instruction.start_thread_id);
     testing.expectEqual(63, instruction.end_thread_id);
     testing.expectEqual(.Deactivate, instruction.operation);
@@ -116,7 +116,7 @@ test "parse fails to parse incomplete bytecode and consumes all available bytes"
 }
 
 test "execute with resume operation schedules specified threads to resume" {
-    const instruction = Instance {
+    const instruction = Instance{
         .start_thread_id = 1,
         .end_thread_id = 3,
         .operation = .Resume,
@@ -136,7 +136,7 @@ test "execute with resume operation schedules specified threads to resume" {
 }
 
 test "execute with suspend operation schedules specified threads to suspend" {
-    const instruction = Instance {
+    const instruction = Instance{
         .start_thread_id = 1,
         .end_thread_id = 3,
         .operation = .Suspend,
@@ -156,7 +156,7 @@ test "execute with suspend operation schedules specified threads to suspend" {
 }
 
 test "execute with deactivate operation schedules specified threads to deactivate" {
-    const instruction = Instance {
+    const instruction = Instance{
         .start_thread_id = 1,
         .end_thread_id = 3,
         .operation = .Deactivate,

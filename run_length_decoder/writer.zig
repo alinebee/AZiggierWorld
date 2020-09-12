@@ -1,9 +1,8 @@
-
 /// Create a new writer that will begin writing to the end of the specified destination buffer.
 pub fn new(destination: []u8) Instance {
-    return Instance { 
+    return Instance{
         .destination = destination,
-        .cursor = destination.len
+        .cursor = destination.len,
     };
 }
 
@@ -15,7 +14,7 @@ pub const Instance = struct {
 
     /// The current position of the reader within `destination`.
     /// Starts at the end of the destination buffer and works backward from there.
-    /// Note that the cursor is 1 higher than you may expect: e.g. when the cursor is 4, 
+    /// Note that the cursor is 1 higher than you may expect: e.g. when the cursor is 4,
     /// destination[3] is the next byte to be written.
     cursor: usize,
 
@@ -29,7 +28,6 @@ pub const Instance = struct {
             try self.writeByte(byte);
         }
     }
-    
     /// Read a sequence of bytes working backwards from a location in the destination relative
     // to the current cursor, and write them to the destination starting at the current cursor.
     /// The copied bytes will be in the same order they appeared in the original sequence.
@@ -41,7 +39,7 @@ pub const Instance = struct {
             // The offset we get from Another World's data files assume the cursor indicates
             // the start of the byte.
             const index = self.cursor + offset - 1;
-            
+
             if (index >= self.destination.len) {
                 return error.CopyOutOfRange;
             }
@@ -66,14 +64,13 @@ pub const Instance = struct {
 };
 
 /// The possible errors from a writer instance.
-pub const Error = error {
+pub const Error = error{
     /// The writer ran out of room in its destination buffer before decoding was completed.
     DestinationExhausted,
-    
+
     /// The writer attempted to copy bytes from outside the destination buffer.
     CopyOutOfRange,
 };
-
 
 // -- Tests --
 
@@ -81,7 +78,7 @@ const testing = @import("../utils/testing.zig");
 const fixedBufferStream = @import("std").io.fixedBufferStream;
 
 test "writeFromSource writes bytes in reverse order starting at the end of the destination" {
-    const source = [_]u8 { 0xDE, 0xAD, 0xBE, 0xEF };
+    const source = [_]u8{ 0xDE, 0xAD, 0xBE, 0xEF };
     var reader = fixedBufferStream(&source).reader();
 
     var destination: [4]u8 = undefined;
@@ -90,12 +87,12 @@ test "writeFromSource writes bytes in reverse order starting at the end of the d
     try writer.writeFromSource(&reader, 4);
     testing.expect(writer.isAtEnd());
 
-    const expected = [_]u8 { 0xEF, 0xBE, 0xAD, 0xDE };
+    const expected = [_]u8{ 0xEF, 0xBE, 0xAD, 0xDE };
     testing.expectEqualSlices(u8, &expected, &destination);
 }
 
 test "writeByte returns error.DestinationExhausted once destination is full" {
-    const source = [_]u8 { 0xDE, 0xAD, 0xBE, 0xEF };
+    const source = [_]u8{ 0xDE, 0xAD, 0xBE, 0xEF };
     var reader = fixedBufferStream(&source).reader();
 
     var destination: [2]u8 = undefined;
@@ -106,7 +103,7 @@ test "writeByte returns error.DestinationExhausted once destination is full" {
 }
 
 test "copyFromDestination copies bytes from location in destination relative to current cursor" {
-    var destination = [_]u8 { 0 } ** 8;
+    var destination = [_]u8{0} ** 8;
 
     var writer = new(&destination);
 
@@ -116,7 +113,7 @@ test "copyFromDestination copies bytes from location in destination relative to 
     try writer.writeByte(0xBE);
     try writer.writeByte(0xEF);
 
-    const expected_after_write = [_]u8 {
+    const expected_after_write = [_]u8{
         0x00, 0x00, 0x00, 0x00,
         0xEF, 0xBE, 0xAD, 0xDE,
     };
@@ -125,7 +122,7 @@ test "copyFromDestination copies bytes from location in destination relative to 
     // Copy the last byte (4 bytes ahead of the write cursor)
     try writer.copyFromDestination(1, 4);
 
-    const expected_after_first_copy = [_]u8 {
+    const expected_after_first_copy = [_]u8{
         0x00, 0x00, 0x00, 0xDE,
         0xEF, 0xBE, 0xAD, 0xDE,
     };
@@ -134,7 +131,7 @@ test "copyFromDestination copies bytes from location in destination relative to 
     // Copy the last two bytes (the second of which is now 5 bytes ahead of write cursor)
     try writer.copyFromDestination(2, 5);
 
-    const expected_after_second_copy = [_]u8 {
+    const expected_after_second_copy = [_]u8{
         0x00, 0xAD, 0xDE, 0xDE,
         0xEF, 0xBE, 0xAD, 0xDE,
     };
@@ -144,7 +141,7 @@ test "copyFromDestination copies bytes from location in destination relative to 
     try writer.copyFromDestination(1, 4);
     testing.expect(writer.isAtEnd());
 
-    const expected_after_third_copy = [_]u8 {
+    const expected_after_third_copy = [_]u8{
         0xEF, 0xAD, 0xDE, 0xDE,
         0xEF, 0xBE, 0xAD, 0xDE,
     };

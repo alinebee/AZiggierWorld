@@ -11,7 +11,7 @@ pub const Instance = union(enum) {
     /// A manifest of where each resource is located within the bank files.
     /// Named `MEMLIST.BIN` in the MS-DOS version.
     resource_list,
-    
+
     /// An archive containing one or more compressed game resources.
     /// Named `BANK01`–`BANK0D` in the MS-DOS version.
     bank: BankID,
@@ -22,7 +22,7 @@ pub const Instance = union(enum) {
     pub fn dosName(self: Instance, allocator: *mem.Allocator) fmt.AllocPrintError![]const u8 {
         return switch (self) {
             .resource_list => fmt.allocPrint(allocator, "MEMLIST.BIN", .{}),
-            .bank => |id| fmt.allocPrint(allocator, "BANK{X:0>2}", .{ id }),
+            .bank => |id| fmt.allocPrint(allocator, "BANK{X:0>2}", .{id}),
         };
     }
 };

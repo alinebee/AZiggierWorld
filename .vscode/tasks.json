@@ -59,5 +59,19 @@
         },
         "problemMatcher": []
     }
+    {
+        "label": "zig fmt",
+        "type": "process",
+        "command": "zig",
+        "args": [
+            "fmt",
+            "${file}",
+        ],
+        "group": "build",
+        "presentation": {
+            "clear": true
+        },
+        "problemMatcher": []
+    }
 ]
 }

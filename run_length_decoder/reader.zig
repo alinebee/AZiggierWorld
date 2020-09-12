@@ -42,7 +42,7 @@ const Instance = struct {
         self.cursor = source.len;
         self.uncompressed_size = try self.popChunk();
         self.crc = try self.popChunk();
-        
+
         // HERE BE DRAGONS
         //
         // currentChunk always has an extra 1 after its most significant bit, to mark how many bits are left to consume
@@ -54,7 +54,7 @@ const Instance = struct {
         // Instead, the first chunk *already* has the most significant bit 1 encoded into it in the original game data.
         // This is because compressed game resources usually won't fall on nice tidy 4-byte boundaries, and the first
         // chunk will be a partial chunk containing the remainder.
-        
+
         // (This also means that the first chunk can have a maximum of 31 significant bits; at least one bit is "lost"
         // to the hardcoded marker. In the event that all the real data did fall on a 4-byte boundary, we would expect
         // the first chunk to consist of all zeroes, or 31 zeroes and a 1 at the end. Such a chunk would be skipped
@@ -77,13 +77,13 @@ const Instance = struct {
         if (self.current_chunk == 0) {
             self.current_chunk = try self.popChunk();
             self.crc ^= self.current_chunk;
-            
+
             const real_next_bit = self.popBit();
             // Set the last bit of the chunk to be our marker that we have exhausted the chunk:
             // once that final bit is popped off, the chunk will be equal to 0.
             // (This way, we don't have to maintain a counter of how many bits we've read.)
             self.current_chunk |= 0b10000000_00000000_00000000_00000000;
-            
+
             return real_next_bit;
         } else {
             return next_bit;
@@ -137,10 +137,10 @@ const Instance = struct {
 };
 
 /// The possible errors from a reader instance.
-pub const Error = error {
+pub const Error = error{
     /// The reader ran out of bits to consume before decoding was completed.
     SourceExhausted,
-    
+
     /// Attempted to validate the checksum before reading had finished.
     ChecksumNotReady,
 
@@ -151,7 +151,7 @@ pub const Error = error {
 // -- Test helpers --
 
 const DataExamples = struct {
-    const valid = [_]u8 {
+    const valid = [_]u8{
         // A couple of chunks of raw data that will be returned by readBit.
         0x8B, 0xAD, 0xF0, 0x0D,
         0xDE, 0xAD, 0xBE, 0xEF,
@@ -165,7 +165,7 @@ const DataExamples = struct {
         0x8B, 0xAD, 0xF0, 0x0D,
     };
 
-    const invalid_checksum = [_]u8 {
+    const invalid_checksum = [_]u8{
         0x8B, 0xAD, 0xF0, 0x0D,
         0xDE, 0xAD, 0xBE, 0xEF,
         0x00, 0x00, 0x00, 0x01,
@@ -192,7 +192,7 @@ test "init() reads unpacked size, initial checksum and first chunk from end of s
 }
 
 test "new() returns `error.SourceExhausted` when source buffer is too small" {
-    const source = [_]u8 { 0 };
+    const source = [_]u8{0};
 
     testing.expectError(error.SourceExhausted, new(&source));
 }
@@ -226,7 +226,7 @@ test "isAtEnd() returns false and validateChecksum() returns error.ChecksumNotRe
     var reader = try new(single_chunk_source);
     testing.expectEqual(false, reader.isAtEnd());
     testing.expectError(error.ChecksumNotReady, reader.validateChecksum());
-    
+
     // Even once it has begun consuming its last chunk,
     // it should not report as done until all bits of the chunk have been read
     _ = try reader.readBit();
