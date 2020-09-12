@@ -12,25 +12,28 @@ const ControlResources = @import("control_resources.zig");
 const ControlMusic = @import("control_music.zig");
 const ControlSound = @import("control_sound.zig");
 const ConditionalJump = @import("conditional_jump.zig");
+const DrawBackgroundPolygon = @import("draw_background_polygon.zig");
 
-pub const Error = 
-    Program.Error || 
-    ActivateThread.Error || 
-    ControlThreads.Error || 
-    SetRegister.Error || 
-    CopyRegister.Error || 
-    ControlResources.Error || 
-    ControlMusic.Error || 
-    ControlSound.Error || 
+pub const Error =
+    Opcode.Error ||
+    Program.Error ||
+    ActivateThread.Error ||
+    ControlThreads.Error ||
+    SetRegister.Error ||
+    CopyRegister.Error ||
+    ControlResources.Error ||
+    ControlMusic.Error ||
+    ControlSound.Error ||
     ConditionalJump.Error ||
+    DrawBackgroundPolygon.Error ||
     error{
-    /// Bytecode contained an unrecognized opcode.
-    UnsupportedOpcode,
+    /// Bytecode contained an opcode that is not yet implemented.
+    UnimplementedOpcode,
 };
 
 /// A union type that wraps all possible bytecode instructions.
 pub const Wrapped = union(enum) {
-    // TODO: see if we can codegen all this because it's going to get tiresome for 26-odd opcodes.
+    // TODO: once all instructions are implemented, this union can use Opcode.Enum as its enum type.
     ActivateThread: ActivateThread.Instance,
     ControlThreads: ControlThreads.Instance,
     SetRegister: SetRegister.Instance,
@@ -39,24 +42,26 @@ pub const Wrapped = union(enum) {
     ControlMusic: ControlMusic.Instance,
     ControlSound: ControlSound.Instance,
     ConditionalJump: ConditionalJump.Instance,
+    DrawBackgroundPolygon: DrawBackgroundPolygon.Instance,
 };
 
 /// Parse the next instruction from a bytecode program and wrap it in a Wrapped union type.
 /// Returns the wrapped instruction or an error if the bytecode could not be interpreted as an instruction.
 pub fn parseNextInstruction(program: *Program.Instance) Error!Wrapped {
     const raw_opcode = try program.read(Opcode.Raw);
-    const opcode = Opcode.parse(raw_opcode);
+    const opcode = try Opcode.parse(raw_opcode);
 
     return switch (opcode) {
-        .ActivateThread     => wrap("ActivateThread", ActivateThread, raw_opcode, program),
-        .ControlThreads     => wrap("ControlThreads", ControlThreads, raw_opcode, program),
-        .SetRegister        => wrap("SetRegister", SetRegister, raw_opcode, program),
-        .CopyRegister       => wrap("CopyRegister", CopyRegister, raw_opcode, program),
-        .ControlResources   => wrap("ControlResources", ControlResources, raw_opcode, program),
-        .ControlMusic       => wrap("ControlMusic", ControlMusic, raw_opcode, program),
-        .ControlSound       => wrap("ControlSound", ControlSound, raw_opcode, program),
-        .ConditionalJump    => wrap("ConditionalJump", ConditionalJump, raw_opcode, program),
-        else => error.UnsupportedOpcode,
+        .ActivateThread         => wrap("ActivateThread", ActivateThread, raw_opcode, program),
+        .ControlThreads         => wrap("ControlThreads", ControlThreads, raw_opcode, program),
+        .SetRegister            => wrap("SetRegister", SetRegister, raw_opcode, program),
+        .CopyRegister           => wrap("CopyRegister", CopyRegister, raw_opcode, program),
+        .ControlResources       => wrap("ControlResources", ControlResources, raw_opcode, program),
+        .ControlMusic           => wrap("ControlMusic", ControlMusic, raw_opcode, program),
+        .ControlSound           => wrap("ControlSound", ControlSound, raw_opcode, program),
+        .ConditionalJump        => wrap("ConditionalJump", ConditionalJump, raw_opcode, program),
+        .DrawBackgroundPolygon  => wrap("DrawBackgroundPolygon", DrawBackgroundPolygon, raw_opcode, program),
+        else => error.UnimplementedOpcode,
     };
 }
 
@@ -69,18 +74,19 @@ inline fn wrap(comptime field_name: []const u8, comptime Instruction: type, raw_
 /// Parse and execute the next instruction from a bytecode program on the specified virtual machine.
 pub fn executeNextInstruction(program: *Program.Instance, machine: *Machine.Instance) Error!void {
     const raw_opcode = try program.read(Opcode.Raw);
-    const opcode = Opcode.parse(raw_opcode);
+    const opcode = try Opcode.parse(raw_opcode);
 
     try switch (opcode) {
-        .ActivateThread     => execute(ActivateThread, raw_opcode, program, machine),
-        .ControlThreads     => execute(ControlThreads, raw_opcode, program, machine),
-        .SetRegister        => execute(SetRegister, raw_opcode, program, machine),
-        .CopyRegister       => execute(CopyRegister, raw_opcode, program, machine),
-        .ControlResources   => execute(ControlResources, raw_opcode, program, machine),
-        .ControlMusic       => execute(ControlMusic, raw_opcode, program, machine),
-        .ControlSound       => execute(ControlSound, raw_opcode, program, machine),
-        .ConditionalJump    => execute(ConditionalJump, raw_opcode, program, machine),
-        else => error.UnsupportedOpcode,
+        .ActivateThread         => execute(ActivateThread, raw_opcode, program, machine),
+        .ControlThreads         => execute(ControlThreads, raw_opcode, program, machine),
+        .SetRegister            => execute(SetRegister, raw_opcode, program, machine),
+        .CopyRegister           => execute(CopyRegister, raw_opcode, program, machine),
+        .ControlResources       => execute(ControlResources, raw_opcode, program, machine),
+        .ControlMusic           => execute(ControlMusic, raw_opcode, program, machine),
+        .ControlSound           => execute(ControlSound, raw_opcode, program, machine),
+        .ConditionalJump        => execute(ConditionalJump, raw_opcode, program, machine),
+        .DrawBackgroundPolygon  => execute(DrawBackgroundPolygon, raw_opcode, program, machine),
+        else => error.UnimplementedOpcode,
     };
 }
 
@@ -152,9 +158,19 @@ test "parseNextInstruction returns ConditionalJump instruction when given valid 
     expectWrappedType(.ConditionalJump, instruction);
 }
 
-test "parseNextInstruction returns UnsupportedOpcode error when it encounters an unknown opcode" {
-    const bytecode = [_]u8{0xFF}; // unknown opcode
-    testing.expectError(error.UnsupportedOpcode, debugParseInstruction(&bytecode));
+test "parseNextInstruction returns DrawBackgroundPolygon instruction when given valid bytecode" {
+    const instruction = try debugParseInstruction(&DrawBackgroundPolygon.BytecodeExamples.low_x);
+    expectWrappedType(.DrawBackgroundPolygon, instruction);
+}
+
+test "parseNextInstruction returns error.InvalidOpcode error when it encounters an unknown opcode" {
+    const bytecode = [_]u8{63}; // Not a valid opcode
+    testing.expectError(error.InvalidOpcode, debugParseInstruction(&bytecode));
+}
+
+test "parseNextInstruction returns error.UnimplementedOpcode error when it encounters a not-yet-implemented opcode" {
+    const bytecode = [_]u8{@enumToInt(Opcode.Enum.DrawSpritePolygon)};
+    testing.expectError(error.UnimplementedOpcode, debugParseInstruction(&bytecode));
 }
 
 test "executeNextInstruction executes arbitrary instruction on machine when given valid bytecode" {

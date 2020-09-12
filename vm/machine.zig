@@ -20,6 +20,7 @@ pub const Instance = struct {
     program: Program.Instance,
 
     // Import subsystem functions into the Instance namespace.
+    usingnamespace @import("video.zig");
     usingnamespace @import("audio.zig");
     usingnamespace @import("resources.zig");
 };
