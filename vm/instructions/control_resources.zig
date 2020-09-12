@@ -28,6 +28,9 @@ pub const Instance = union(enum) {
 
 pub const Error = Program.Error;
 
+/// Parse the next instruction from a bytecode program.
+/// Consumes 2 bytes from the bytecode on success.
+/// Returns an error if the bytecode could not be read or contained an invalid instruction.
 pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instance {
     const resource_id_or_game_part = try program.read(ResourceID.Raw);
     

@@ -10,6 +10,7 @@ const SetRegister = @import("set_register.zig");
 const CopyRegister = @import("copy_register.zig");
 const ControlResources = @import("control_resources.zig");
 const ControlMusic = @import("control_music.zig");
+const ConditionalJump = @import("conditional_jump.zig");
 
 pub const Error = 
     Program.Error || 
@@ -19,6 +20,7 @@ pub const Error =
     CopyRegister.Error || 
     ControlResources.Error || 
     ControlMusic.Error || 
+    ConditionalJump.Error ||
     error {
     /// Bytecode contained an unrecognized opcode.
     UnsupportedOpcode,
@@ -33,6 +35,7 @@ pub const Wrapped = union(enum) {
     CopyRegister: CopyRegister.Instance,
     ControlResources: ControlResources.Instance,
     ControlMusic: ControlMusic.Instance,
+    ConditionalJump: ConditionalJump.Instance,
 };
 
 /// Parse the next instruction from a bytecode program and wrap it in a Wrapped union type.
@@ -48,8 +51,15 @@ pub fn parseNextInstruction(program: *Program.Instance) Error!Wrapped {
         .CopyRegister       => wrap("CopyRegister", CopyRegister, raw_opcode, program),
         .ControlResources   => wrap("ControlResources", ControlResources, raw_opcode, program),
         .ControlMusic       => wrap("ControlMusic", ControlMusic, raw_opcode, program),
+        .ConditionalJump    => wrap("ConditionalJump", ConditionalJump, raw_opcode, program),
         else => error.UnsupportedOpcode,
     };
+}
+
+/// Parse an instruction of the specified type from the program,
+/// and wrap it in a Wrapped union type initialized to the appropriate field.
+inline fn wrap(comptime field_name: []const u8, comptime Instruction: type, raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Wrapped {
+    return @unionInit(Wrapped, field_name, try Instruction.parse(raw_opcode, program));
 }
 
 /// Parse and execute the next instruction from a bytecode program on the specified virtual machine.
@@ -64,6 +74,7 @@ pub fn executeNextInstruction(program: *Program.Instance, machine: *Machine.Inst
         .CopyRegister       => execute(CopyRegister, raw_opcode, program, machine),
         .ControlResources   => execute(ControlResources, raw_opcode, program, machine),
         .ControlMusic       => execute(ControlMusic, raw_opcode, program, machine),
+        .ConditionalJump    => execute(ConditionalJump, raw_opcode, program, machine),
         else => error.UnsupportedOpcode,
     };
 }
@@ -76,12 +87,6 @@ inline fn execute(comptime Instruction: type, raw_opcode: Opcode.Raw, program: *
     } else {
         instruction.execute(machine);
     }
-}
-
-/// Parse an instruction of the specified type from the program,
-/// and wrap it in a Wrapped union type initialized to the appropriate field.
-inline fn wrap(comptime field_name: []const u8, comptime Instruction: type, raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Wrapped {
-    return @unionInit(Wrapped, field_name, try Instruction.parse(raw_opcode, program));
 }
 
 // -- Test helpers --
@@ -130,6 +135,11 @@ test "parseNextInstruction returns ControlResources instruction when given valid
 test "parseNextInstruction returns ControlMusic instruction when given valid bytecode" {
     const instruction = try debugParseInstruction(&ControlMusic.BytecodeExamples.play);
     expectWrappedType(.ControlMusic, instruction);
+}
+
+test "parseNextInstruction returns ConditionalJump instruction when given valid bytecode" {
+    const instruction = try debugParseInstruction(&ConditionalJump.BytecodeExamples.equal_to_register);
+    expectWrappedType(.ConditionalJump, instruction);
 }
 
 test "parseNextInstruction returns UnsupportedOpcode error when it encounters an unknown opcode" {
