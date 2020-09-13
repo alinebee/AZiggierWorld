@@ -100,10 +100,10 @@ pub const BytecodeExamples = struct {
 // -- Tests --
 
 const testing = @import("../../utils/testing.zig");
-const debugParseInstruction = @import("test_helpers.zig").debugParseInstruction;
+const expectParse = @import("test_helpers/parse.zig").expectParse;
 
 test "parse parses equal_to_register instruction and consumes 5 bytes" {
-    const instruction = try debugParseInstruction(parse, &BytecodeExamples.equal_to_register, 5);
+    const instruction = try expectParse(parse, &BytecodeExamples.equal_to_register, 5);
     const expected = Instance{
         .lhs = 0xFF,
         .rhs = .{ .register = 0x00 },
@@ -114,7 +114,7 @@ test "parse parses equal_to_register instruction and consumes 5 bytes" {
 }
 
 test "parse parses equal_to_const16 instruction and consumes 6 bytes" {
-    const instruction = try debugParseInstruction(parse, &BytecodeExamples.equal_to_const16, 6);
+    const instruction = try expectParse(parse, &BytecodeExamples.equal_to_const16, 6);
     const expected = Instance{
         .lhs = 0xFF,
         .rhs = .{ .constant = 0x4B1D },
@@ -125,7 +125,7 @@ test "parse parses equal_to_const16 instruction and consumes 6 bytes" {
 }
 
 test "parse parses equal_to_const8 instruction and consumes 5 bytes" {
-    const instruction = try debugParseInstruction(parse, &BytecodeExamples.equal_to_const8, 5);
+    const instruction = try expectParse(parse, &BytecodeExamples.equal_to_const8, 5);
     const expected = Instance{
         .lhs = 0xFF,
         .rhs = .{ .constant = 0xBE },
@@ -136,7 +136,7 @@ test "parse parses equal_to_const8 instruction and consumes 5 bytes" {
 }
 
 test "parse parses not_equal instruction and consumes 5 bytes" {
-    const instruction = try debugParseInstruction(parse, &BytecodeExamples.not_equal, 5);
+    const instruction = try expectParse(parse, &BytecodeExamples.not_equal, 5);
     const expected = Instance{
         .lhs = 0xFF,
         .rhs = .{ .register = 0x00 },
@@ -147,7 +147,7 @@ test "parse parses not_equal instruction and consumes 5 bytes" {
 }
 
 test "parse parses greater_than instruction and consumes 5 bytes" {
-    const instruction = try debugParseInstruction(parse, &BytecodeExamples.greater_than, 5);
+    const instruction = try expectParse(parse, &BytecodeExamples.greater_than, 5);
     const expected = Instance{
         .lhs = 0xFF,
         .rhs = .{ .register = 0x00 },
@@ -158,7 +158,7 @@ test "parse parses greater_than instruction and consumes 5 bytes" {
 }
 
 test "parse parses greater_than_or_equal_to instruction and consumes 5 bytes" {
-    const instruction = try debugParseInstruction(parse, &BytecodeExamples.greater_than_or_equal_to, 5);
+    const instruction = try expectParse(parse, &BytecodeExamples.greater_than_or_equal_to, 5);
     const expected = Instance{
         .lhs = 0xFF,
         .rhs = .{ .register = 0x00 },
@@ -169,7 +169,7 @@ test "parse parses greater_than_or_equal_to instruction and consumes 5 bytes" {
 }
 
 test "parse parses less_than instruction and consumes 5 bytes" {
-    const instruction = try debugParseInstruction(parse, &BytecodeExamples.less_than, 5);
+    const instruction = try expectParse(parse, &BytecodeExamples.less_than, 5);
     const expected = Instance{
         .lhs = 0xFF,
         .rhs = .{ .register = 0x00 },
@@ -180,7 +180,7 @@ test "parse parses less_than instruction and consumes 5 bytes" {
 }
 
 test "parse parses less_than_or_equal_to instruction and consumes 5 bytes" {
-    const instruction = try debugParseInstruction(parse, &BytecodeExamples.less_than_or_equal_to, 5);
+    const instruction = try expectParse(parse, &BytecodeExamples.less_than_or_equal_to, 5);
     const expected = Instance{
         .lhs = 0xFF,
         .rhs = .{ .register = 0x00 },
@@ -193,7 +193,7 @@ test "parse parses less_than_or_equal_to instruction and consumes 5 bytes" {
 test "parse returns error.InvalidJumpComparison for instruction with invalid comparison" {
     testing.expectError(
         error.InvalidJumpComparison,
-        debugParseInstruction(parse, &BytecodeExamples.invalid_comparison, 5),
+        expectParse(parse, &BytecodeExamples.invalid_comparison, 5),
     );
 }
 

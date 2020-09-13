@@ -38,10 +38,10 @@ pub const BytecodeExamples = struct {
 // -- Tests --
 
 const testing = @import("../../utils/testing.zig");
-const debugParseInstruction = @import("test_helpers.zig").debugParseInstruction;
+const expectParse = @import("test_helpers/parse.zig").expectParse;
 
 test "parse parses valid bytecode and consumes 3 bytes" {
-    const instruction = try debugParseInstruction(parse, &BytecodeExamples.valid, 3);
+    const instruction = try expectParse(parse, &BytecodeExamples.valid, 3);
 
     testing.expectEqual(16, instruction.destination);
     testing.expectEqual(-18901, instruction.value);
@@ -50,7 +50,7 @@ test "parse parses valid bytecode and consumes 3 bytes" {
 test "parse fails to parse incomplete bytecode and consumes all available bytes" {
     testing.expectError(
         error.EndOfProgram,
-        debugParseInstruction(parse, BytecodeExamples.valid[0..3], 2),
+        expectParse(parse, BytecodeExamples.valid[0..3], 2),
     );
 }
 

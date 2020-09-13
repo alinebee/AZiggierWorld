@@ -106,7 +106,7 @@ inline fn execute(comptime Instruction: type, raw_opcode: Opcode.Raw, program: *
 // -- Test helpers --
 
 /// Try to parse a literal sequence of bytecode into an Instruction union value.
-fn debugParseInstruction(bytecode: []const u8) !Wrapped {
+fn expectParse(bytecode: []const u8) !Wrapped {
     var program = Program.new(bytecode);
     return try parseNextInstruction(&program);
 }
@@ -122,63 +122,63 @@ fn expectWrappedType(expected: @TagType(Wrapped), actual: @TagType(Wrapped)) voi
 const testing = @import("../../utils/testing.zig");
 
 test "parseNextInstruction returns ActivateThread instruction when given valid bytecode" {
-    const instruction = try debugParseInstruction(&ActivateThread.BytecodeExamples.valid);
+    const instruction = try expectParse(&ActivateThread.BytecodeExamples.valid);
     expectWrappedType(.ActivateThread, instruction);
 }
 
 test "parseNextInstruction returns ControlThreads instruction when given valid bytecode" {
-    const instruction = try debugParseInstruction(&ControlThreads.BytecodeExamples.valid);
+    const instruction = try expectParse(&ControlThreads.BytecodeExamples.valid);
     expectWrappedType(.ControlThreads, instruction);
 }
 
 test "parseNextInstruction returns SetRegister instruction when given valid bytecode" {
-    const instruction = try debugParseInstruction(&SetRegister.BytecodeExamples.valid);
+    const instruction = try expectParse(&SetRegister.BytecodeExamples.valid);
     expectWrappedType(.SetRegister, instruction);
 }
 
 test "parseNextInstruction returns CopyRegister instruction when given valid bytecode" {
-    const instruction = try debugParseInstruction(&CopyRegister.BytecodeExamples.valid);
+    const instruction = try expectParse(&CopyRegister.BytecodeExamples.valid);
     expectWrappedType(.CopyRegister, instruction);
 }
 
 test "parseNextInstruction returns ControlResources instruction when given valid bytecode" {
-    const instruction = try debugParseInstruction(&ControlResources.BytecodeExamples.unload_all);
+    const instruction = try expectParse(&ControlResources.BytecodeExamples.unload_all);
     expectWrappedType(.ControlResources, instruction);
 }
 
 test "parseNextInstruction returns ControlMusic instruction when given valid bytecode" {
-    const instruction = try debugParseInstruction(&ControlMusic.BytecodeExamples.play);
+    const instruction = try expectParse(&ControlMusic.BytecodeExamples.play);
     expectWrappedType(.ControlMusic, instruction);
 }
 
 test "parseNextInstruction returns ControlSound instruction when given valid bytecode" {
-    const instruction = try debugParseInstruction(&ControlSound.BytecodeExamples.play);
+    const instruction = try expectParse(&ControlSound.BytecodeExamples.play);
     expectWrappedType(.ControlSound, instruction);
 }
 
 test "parseNextInstruction returns ConditionalJump instruction when given valid bytecode" {
-    const instruction = try debugParseInstruction(&ConditionalJump.BytecodeExamples.equal_to_register);
+    const instruction = try expectParse(&ConditionalJump.BytecodeExamples.equal_to_register);
     expectWrappedType(.ConditionalJump, instruction);
 }
 
 test "parseNextInstruction returns DrawSpriteolygon instruction when given valid bytecode" {
-    const instruction = try debugParseInstruction(&DrawSpritePolygon.BytecodeExamples.registers);
+    const instruction = try expectParse(&DrawSpritePolygon.BytecodeExamples.registers);
     expectWrappedType(.DrawSpritePolygon, instruction);
 }
 
 test "parseNextInstruction returns DrawBackgroundPolygon instruction when given valid bytecode" {
-    const instruction = try debugParseInstruction(&DrawBackgroundPolygon.BytecodeExamples.low_x);
+    const instruction = try expectParse(&DrawBackgroundPolygon.BytecodeExamples.low_x);
     expectWrappedType(.DrawBackgroundPolygon, instruction);
 }
 
 test "parseNextInstruction returns error.InvalidOpcode error when it encounters an unknown opcode" {
     const bytecode = [_]u8{63}; // Not a valid opcode
-    testing.expectError(error.InvalidOpcode, debugParseInstruction(&bytecode));
+    testing.expectError(error.InvalidOpcode, expectParse(&bytecode));
 }
 
 test "parseNextInstruction returns error.UnimplementedOpcode error when it encounters a not-yet-implemented opcode" {
     const bytecode = [_]u8{@enumToInt(Opcode.Enum.Yield)};
-    testing.expectError(error.UnimplementedOpcode, debugParseInstruction(&bytecode));
+    testing.expectError(error.UnimplementedOpcode, expectParse(&bytecode));
 }
 
 test "executeNextInstruction executes arbitrary instruction on machine when given valid bytecode" {

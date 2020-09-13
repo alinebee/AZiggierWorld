@@ -56,22 +56,22 @@ pub const BytecodeExamples = struct {
 // -- Tests --
 
 const testing = @import("../../utils/testing.zig");
-const debugParseInstruction = @import("test_helpers.zig").debugParseInstruction;
+const expectParse = @import("test_helpers/parse.zig").expectParse;
 
 test "parse parses unload_all instruction and consumes 2 bytes" {
-    const instruction = try debugParseInstruction(parse, &BytecodeExamples.unload_all, 2);
+    const instruction = try expectParse(parse, &BytecodeExamples.unload_all, 2);
 
     testing.expectEqual(.unload_all, instruction);
 }
 
 test "parse parses start_game_part instruction and consumes 2 bytes" {
-    const instruction = try debugParseInstruction(parse, &BytecodeExamples.start_game_part, 2);
+    const instruction = try expectParse(parse, &BytecodeExamples.start_game_part, 2);
 
     testing.expectEqual(.{ .start_game_part = .arena_cinematic }, instruction);
 }
 
 test "parse parses load_resource instruction and consumes 2 bytes" {
-    const instruction = try debugParseInstruction(parse, &BytecodeExamples.load_resource, 2);
+    const instruction = try expectParse(parse, &BytecodeExamples.load_resource, 2);
 
     testing.expectEqual(.{ .load_resource = 0xDEAD }, instruction);
 }

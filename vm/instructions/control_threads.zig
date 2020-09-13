@@ -77,10 +77,10 @@ pub const BytecodeExamples = struct {
 // -- Tests --
 
 const testing = @import("../../utils/testing.zig");
-const debugParseInstruction = @import("test_helpers.zig").debugParseInstruction;
+const expectParse = @import("test_helpers/parse.zig").expectParse;
 
 test "parse parses valid bytecode and consumes 3 bytes" {
-    const instruction = try debugParseInstruction(parse, &BytecodeExamples.valid, 3);
+    const instruction = try expectParse(parse, &BytecodeExamples.valid, 3);
 
     testing.expectEqual(62, instruction.start_thread_id);
     testing.expectEqual(63, instruction.end_thread_id);
@@ -90,28 +90,28 @@ test "parse parses valid bytecode and consumes 3 bytes" {
 test "parse returns Error.InvalidThreadID and consumes 1 byte when start thread ID is invalid" {
     testing.expectError(
         Error.InvalidThreadID,
-        debugParseInstruction(parse, &BytecodeExamples.invalid_start_thread_id, 1),
+        expectParse(parse, &BytecodeExamples.invalid_start_thread_id, 1),
     );
 }
 
 test "parse returns Error.InvalidThreadID and consumes 2 bytes when end thread ID is invalid" {
     testing.expectError(
         error.InvalidThreadID,
-        debugParseInstruction(parse, &BytecodeExamples.invalid_end_thread_id, 2),
+        expectParse(parse, &BytecodeExamples.invalid_end_thread_id, 2),
     );
 }
 
 test "parse returns Error.InvalidThreadRange and consumes 3 bytes when thread range is transposed" {
     testing.expectError(
         error.InvalidThreadRange,
-        debugParseInstruction(parse, &BytecodeExamples.transposed_thread_ids, 3),
+        expectParse(parse, &BytecodeExamples.transposed_thread_ids, 3),
     );
 }
 
 test "parse fails to parse incomplete bytecode and consumes all available bytes" {
     testing.expectError(
         error.EndOfProgram,
-        debugParseInstruction(parse, BytecodeExamples.valid[0..3], 2),
+        expectParse(parse, BytecodeExamples.valid[0..3], 2),
     );
 }
 

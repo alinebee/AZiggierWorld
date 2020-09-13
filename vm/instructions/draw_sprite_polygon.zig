@@ -184,11 +184,11 @@ pub const BytecodeExamples = struct {
 // -- Tests --
 
 const testing = @import("../../utils/testing.zig");
-const debugParseInstruction = @import("test_helpers.zig").debugParseInstruction;
+const expectParse = @import("test_helpers/parse.zig").expectParse;
 const MockMachine = @import("test_helpers/mock_machine.zig");
 
 test "parse parses all-registers instruction and consumes 5 extra bytes" {
-    const instruction = try debugParseInstruction(parse, &BytecodeExamples.registers, 5);
+    const instruction = try expectParse(parse, &BytecodeExamples.registers, 5);
 
     testing.expectEqual(.polygons, instruction.source);
     // Address is right-shifted by 1
@@ -199,7 +199,7 @@ test "parse parses all-registers instruction and consumes 5 extra bytes" {
 }
 
 test "parse parses instruction with full-width constants and consumes 7 extra bytes" {
-    const instruction = try debugParseInstruction(parse, &BytecodeExamples.wide_constants, 7);
+    const instruction = try expectParse(parse, &BytecodeExamples.wide_constants, 7);
 
     testing.expectEqual(.polygons, instruction.source);
     testing.expectEqual(0b0001_1110_0001_1110, instruction.address);
@@ -209,7 +209,7 @@ test "parse parses instruction with full-width constants and consumes 7 extra by
 }
 
 test "parse parses instruction with short constants and consumes 5 extra bytes" {
-    const instruction = try debugParseInstruction(parse, &BytecodeExamples.short_constants, 5);
+    const instruction = try expectParse(parse, &BytecodeExamples.short_constants, 5);
 
     testing.expectEqual(.polygons, instruction.source);
     testing.expectEqual(0b0001_1110_0001_1110, instruction.address);
@@ -219,7 +219,7 @@ test "parse parses instruction with short constants and consumes 5 extra bytes" 
 }
 
 test "parse parses instruction with short constants with boosted X and consumes 5 extra bytes" {
-    const instruction = try debugParseInstruction(parse, &BytecodeExamples.short_boosted_x_constants, 5);
+    const instruction = try expectParse(parse, &BytecodeExamples.short_boosted_x_constants, 5);
 
     testing.expectEqual(.polygons, instruction.source);
     testing.expectEqual(0b0001_1110_0001_1110, instruction.address);
@@ -229,7 +229,7 @@ test "parse parses instruction with short constants with boosted X and consumes 
 }
 
 test "parse parses instruction with default scale/polygon source and consumes 4 extra bytes" {
-    const instruction = try debugParseInstruction(parse, &BytecodeExamples.default_scale_from_polygons, 4);
+    const instruction = try expectParse(parse, &BytecodeExamples.default_scale_from_polygons, 4);
 
     testing.expectEqual(.polygons, instruction.source);
     testing.expectEqual(0b0001_1110_0001_1110, instruction.address);
@@ -239,7 +239,7 @@ test "parse parses instruction with default scale/polygon source and consumes 4 
 }
 
 test "parse parses instruction with default scale/animation source and consumes 4 extra bytes" {
-    const instruction = try debugParseInstruction(parse, &BytecodeExamples.default_scale_from_animations, 4);
+    const instruction = try expectParse(parse, &BytecodeExamples.default_scale_from_animations, 4);
 
     testing.expectEqual(.animations, instruction.source);
     testing.expectEqual(0b0001_1110_0001_1110, instruction.address);

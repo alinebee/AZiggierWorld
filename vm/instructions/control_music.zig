@@ -69,10 +69,10 @@ pub const BytecodeExamples = struct {
 // -- Tests --
 
 const testing = @import("../../utils/testing.zig");
-const debugParseInstruction = @import("test_helpers.zig").debugParseInstruction;
+const expectParse = @import("test_helpers/parse.zig").expectParse;
 
 test "parse parses play instruction and consumes 5 bytes" {
-    const instruction = try debugParseInstruction(parse, &BytecodeExamples.play, 5);
+    const instruction = try expectParse(parse, &BytecodeExamples.play, 5);
     const expected = Instance{
         .play = .{
             .resource_id = 0xDEAD,
@@ -84,13 +84,13 @@ test "parse parses play instruction and consumes 5 bytes" {
 }
 
 test "parse parses set_delay instruction and consumes 5 bytes" {
-    const instruction = try debugParseInstruction(parse, &BytecodeExamples.set_delay, 5);
+    const instruction = try expectParse(parse, &BytecodeExamples.set_delay, 5);
 
     testing.expectEqual(.{ .set_delay = 0xBEEF }, instruction);
 }
 
 test "parse parses stop instruction and consumes 5 bytes" {
-    const instruction = try debugParseInstruction(parse, &BytecodeExamples.stop, 5);
+    const instruction = try expectParse(parse, &BytecodeExamples.stop, 5);
 
     testing.expectEqual(.stop, instruction);
 }

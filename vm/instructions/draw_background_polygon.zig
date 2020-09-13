@@ -70,10 +70,10 @@ pub const BytecodeExamples = struct {
 // -- Tests --
 
 const testing = @import("../../utils/testing.zig");
-const debugParseInstruction = @import("test_helpers.zig").debugParseInstruction;
+const expectParse = @import("test_helpers/parse.zig").expectParse;
 
 test "parse parses bytecode with low X coordinate and consumes 3 bytes after opcode" {
-    const instruction = try debugParseInstruction(parse, &BytecodeExamples.low_x, 3);
+    const instruction = try expectParse(parse, &BytecodeExamples.low_x, 3);
 
     // Address will be the first two bytes right-shifted by 1
     testing.expectEqual(0b0001_1110_0001_1110, instruction.address);
@@ -82,7 +82,7 @@ test "parse parses bytecode with low X coordinate and consumes 3 bytes after opc
 }
 
 test "parse parses bytecode with high X coordinate and consumes 3 bytes after opcode" {
-    const instruction = try debugParseInstruction(parse, &BytecodeExamples.high_x, 3);
+    const instruction = try expectParse(parse, &BytecodeExamples.high_x, 3);
 
     testing.expectEqual(0b0001_1110_0001_1110, instruction.address);
     testing.expectEqual(255 + (240 - 199), instruction.point.x);
