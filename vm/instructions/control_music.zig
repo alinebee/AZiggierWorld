@@ -22,7 +22,13 @@ pub const Instance = union(enum) {
     /// Stop playing any currently-playing music track.
     stop,
 
-    pub fn execute(self: Instance, machine: *Machine.Instance) !void {
+    // Public implementation is constrained to concrete type so that instruction.zig can infer errors.
+    pub inline fn execute(self: Instance, machine: *Machine.Instance) !void {
+        return self._execute(machine);
+    }
+
+    // Private implementation is generic to allow tests to use mocks.
+    fn _execute(self: Instance, machine: anytype) !void {
         switch (self) {
             .play       => |operation| try machine.playMusic(operation.resource_id, operation.offset, operation.delay),
             .set_delay  => |delay| machine.setMusicDelay(delay),
@@ -70,6 +76,7 @@ pub const BytecodeExamples = struct {
 
 const testing = @import("../../utils/testing.zig");
 const expectParse = @import("test_helpers/parse.zig").expectParse;
+const MockMachine = @import("test_helpers/mock_machine.zig");
 
 test "parse parses play instruction and consumes 5 bytes" {
     const instruction = try expectParse(parse, &BytecodeExamples.play, 5);
@@ -95,27 +102,84 @@ test "parse parses stop instruction and consumes 5 bytes" {
     testing.expectEqual(.stop, instruction);
 }
 
-// TODO: flesh these tests out once we have music playback implemented in the VM
-test "execute with play instruction runs on machine without errors" {
+test "execute with play instruction calls playMusic with correct parameters" {
     const instruction = Instance{
         .play = .{
             .resource_id = 0x8BAD,
-            .offset = 0x00,
+            .offset = 0x12,
             .delay = 0xF00D,
         },
     };
-    var machine = Machine.new();
-    try instruction.execute(&machine);
+
+    const Stubs = struct {
+        var call_count: usize = 0;
+
+        pub fn playMusic(resource_id: ResourceID.Raw, offset: Audio.Offset, delay: Audio.Delay) !void {
+            call_count += 1;
+            testing.expectEqual(0x8BAD, resource_id);
+            testing.expectEqual(0x12, offset);
+            testing.expectEqual(0xF00D, delay);
+        }
+
+        pub fn setMusicDelay(delay: Audio.Delay) void {
+            unreachable;
+        }
+
+        pub fn stopMusic() void {
+            unreachable;
+        }
+    };
+
+    var machine = MockMachine.new(Stubs);
+    try instruction._execute(&machine);
+    testing.expectEqual(1, Stubs.call_count);
 }
 
-test "execute with set_delay instruction runs on machine without errors" {
+test "execute with set_delay instruction calls setMusicDelay with correct parameters" {
     const instruction = Instance{ .set_delay = 0xF00D };
-    var machine = Machine.new();
-    try instruction.execute(&machine);
+
+    const Stubs = struct {
+        var call_count: usize = 0;
+
+        pub fn playMusic(resource_id: ResourceID.Raw, offset: Audio.Offset, delay: Audio.Delay) !void {
+            unreachable;
+        }
+
+        pub fn setMusicDelay(delay: Audio.Delay) void {
+            call_count += 1;
+            testing.expectEqual(0xF00D, delay);
+        }
+
+        pub fn stopMusic() void {
+            unreachable;
+        }
+    };
+
+    var machine = MockMachine.new(Stubs);
+    try instruction._execute(&machine);
+    testing.expectEqual(1, Stubs.call_count);
 }
 
-test "execute with stop instruction runs on machine without errors" {
+test "execute with stop instruction calls stopMusic with correct parameters" {
     const instruction = Instance.stop;
-    var machine = Machine.new();
-    try instruction.execute(&machine);
+
+    const Stubs = struct {
+        var call_count: usize = 0;
+
+        pub fn playMusic(resource_id: ResourceID.Raw, offset: Audio.Offset, delay: Audio.Delay) !void {
+            unreachable;
+        }
+
+        pub fn setMusicDelay(delay: Audio.Delay) void {
+            unreachable;
+        }
+
+        pub fn stopMusic() void {
+            call_count += 1;
+        }
+    };
+
+    var machine = MockMachine.new(Stubs);
+    try instruction._execute(&machine);
+    testing.expectEqual(1, Stubs.call_count);
 }

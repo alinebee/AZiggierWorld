@@ -1,5 +1,6 @@
 const Machine = @import("../../machine.zig");
 const Video = @import("../../video.zig");
+const Audio = @import("../../audio.zig");
 
 const Point = @import("../../types/point.zig");
 const GamePart = @import("../../types/game_part.zig");
@@ -36,6 +37,18 @@ fn MockMachine(comptime Implementation: type) type {
 
         pub fn unloadAllResources(self: *Self) void {
             Implementation.unloadAllResources();
+        }
+
+        pub fn playMusic(self: *Self, resource_id: ResourceID.Raw, offset: Audio.Offset, delay: Audio.Delay) !void {
+            try Implementation.playMusic(resource_id, offset, delay);
+        }
+
+        pub fn setMusicDelay(self: *Self, delay: Audio.Delay) void {
+            Implementation.setMusicDelay(delay);
+        }
+
+        pub fn stopMusic(self: *Self) void {
+            Implementation.stopMusic();
         }
     };
 }
@@ -104,5 +117,52 @@ test "MockMachine calls unloadAllResources correctly on stub implementation" {
 
     var mock = new(Stubs);
     mock.unloadAllResources();
+    testing.expectEqual(1, Stubs.call_count);
+}
+
+test "MockMachine calls playMusic correctly on stub implementation" {
+    const Stubs = struct {
+        var call_count: usize = 0;
+
+        fn playMusic(resource_id: ResourceID.Raw, offset: Audio.Offset, delay: Audio.Delay) !void {
+            call_count += 1;
+            testing.expectEqual(0xBEEF, resource_id);
+            testing.expectEqual(128, offset);
+            testing.expectEqual(1234, delay);
+        }
+    };
+
+    var mock = new(Stubs);
+    try mock.playMusic(0xBEEF, 128, 1234);
+    testing.expectEqual(1, Stubs.call_count);
+}
+
+
+test "MockMachine calls setMusicDelay correctly on stub implementation" {
+    const Stubs = struct {
+        var call_count: usize = 0;
+
+        fn setMusicDelay(delay: Audio.Delay) void {
+            call_count += 1;
+            testing.expectEqual(1234, delay);
+        }
+    };
+
+    var mock = new(Stubs);
+    mock.setMusicDelay(1234);
+    testing.expectEqual(1, Stubs.call_count);
+}
+
+test "MockMachine calls stopMusic correctly on stub implementation" {
+    const Stubs = struct {
+        var call_count: usize = 0;
+
+        fn stopMusic() void {
+            call_count += 1;
+        }
+    };
+
+    var mock = new(Stubs);
+    mock.stopMusic();
     testing.expectEqual(1, Stubs.call_count);
 }
