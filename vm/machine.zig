@@ -2,19 +2,19 @@ const Thread = @import("types/thread.zig");
 const ThreadID = @import("types/thread_id.zig");
 const Program = @import("types/program.zig");
 
-pub const max_threads = 64;
-pub const max_registers = 256;
-
 /// Register values are interpreted as signed 16-bit integers.
 pub const RegisterValue = i16;
 pub const RegisterID = u8;
 
+pub const Registers = [256]RegisterValue;
+pub const Threads = [64]Thread.Instance;
+
 pub const Instance = struct {
     /// The current state of the VM's 64 threads.
-    threads: [max_threads]Thread.Instance = [_]Thread.Instance{.{}} ** max_threads,
+    threads: Threads,
 
     /// The current state of the VM's 256 registers.
-    registers: [max_registers]RegisterValue = [_]RegisterValue{0} ** max_registers,
+    registers: Registers,
 
     /// The currently-running program.
     program: Program.Instance,
@@ -30,7 +30,11 @@ pub const Instance = struct {
 const empty_program = [0]u8{};
 
 pub fn new() Instance {
-    var machine = Instance{ .program = Program.new(&empty_program) };
+    var machine = Instance{
+        .threads = [_]Thread.Instance{.{}} ** Threads.len,
+        .registers = [_]RegisterValue{0} ** Registers.len,
+        .program = Program.new(&empty_program),
+    };
 
     // Initialize the main thread to begin execution at the start of the current program
     machine.threads[ThreadID.main].execution_state = .{ .active = 0 };
@@ -42,7 +46,7 @@ pub fn new() Instance {
 
 const testing = @import("../utils/testing.zig");
 
-test "init creates new virtual machine with expected state" {
+test "new creates new virtual machine with expected state" {
     const machine = new();
 
     for (machine.threads) |thread, id| {

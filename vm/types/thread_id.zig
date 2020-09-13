@@ -1,11 +1,11 @@
+const count = @import("../machine.zig").Threads.len;
+
 /// The ID of a thread as a value from 0-63. This is guaranteed to be valid.
 pub const Trusted = u6;
 
 /// The raw ID of a thread as stored in bytecode as an 8-bit unsigned integer.
 /// This can potentially be out of range.
 pub const Raw = u8;
-
-const count = @import("../machine.zig").max_threads;
 
 /// The maximum legal value for a thread ID.
 pub const max: Trusted = count - 1;
