@@ -1,6 +1,5 @@
 const std = @import("std");
 const mem = std.mem;
-const io = std.io;
 
 const ReaderInterface = @import("reader_interface.zig");
 
@@ -177,6 +176,7 @@ const DataExamples = struct {
 // -- Tests --
 
 const testing = @import("../utils/testing.zig");
+const io = std.io;
 
 test "init() reads unpacked size, initial checksum and first chunk from end of source buffer" {
     const source = DataExamples.valid;

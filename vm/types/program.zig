@@ -1,4 +1,4 @@
-const std = @import("std");
+const readIntSliceBig = @import("std").mem.readIntSliceBig;
 
 pub const Error = error{
     /// The program was asked to seek to an address beyond the end of the program.
@@ -27,7 +27,7 @@ pub const Instance = struct {
     /// Returns error.EndOfProgram and leaves the counter at the end of the program
     /// if there are not enough bytes left in the program.
     pub fn read(self: *Instance, comptime Integer: type) Error!Integer {
-        // std.mem.readIntSliceBig uses this construction internally.
+        // readIntSliceBig uses this construction internally.
         // @sizeOf would be nicer, but may include padding bytes.
         comptime const byte_width = @divExact(Integer.bit_count, 8);
 
@@ -38,7 +38,7 @@ pub const Instance = struct {
         }
 
         const slice = self.bytecode[self.counter..upper_bound];
-        const int = std.mem.readIntSliceBig(Integer, slice);
+        const int = readIntSliceBig(Integer, slice);
         self.counter = upper_bound;
 
         return int;

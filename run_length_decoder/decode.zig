@@ -55,10 +55,6 @@ pub fn decode(source: []const u8, destination: []u8) Error!void {
 
 // -- Tests --
 
-const std = @import("std");
-const mem = std.mem;
-const io = std.io;
-
 const testing = @import("../utils/testing.zig");
 const Encoder = @import("test_helpers/mock_encoder.zig");
 
@@ -147,7 +143,7 @@ test "decode returns error.InvalidChecksum on payload with corrupted byte" {
     const source = try encoder.finalize(testing.allocator);
     defer testing.allocator.free(source);
 
-    std.debug.assert(source[0] != 0xFF);
+    testing.expect(source[0] != 0xFF);
     source[0] = 0xFF;
 
     var destination = try testing.allocator.alloc(u8, encoder.uncompressed_size);
