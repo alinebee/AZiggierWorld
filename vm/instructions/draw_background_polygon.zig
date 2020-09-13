@@ -105,7 +105,7 @@ test "execute calls drawPolygon with correct parameters" {
     const Stubs = struct {
         var call_count: usize = 0;
 
-        pub fn drawPolygon(source: Video.PolygonSource, address: Video.PolygonAddress, point: Point.Instance, scale: ?Video.PolygonScale) void {
+        pub fn drawPolygon(source: Video.PolygonSource, address: Video.PolygonAddress, point: Point.Instance, scale: ?Video.PolygonScale) !void {
             call_count += 1;
             testing.expectEqual(.polygons, source);
             testing.expectEqual(0xDEAD, address);

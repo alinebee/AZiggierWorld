@@ -16,7 +16,13 @@ pub const Instance = union(enum) {
     /// Load the specified resource individually.
     load_resource: ResourceID.Raw,
 
-    pub fn execute(self: Instance, machine: *Machine.Instance) void {
+    // Public implementation is constrained to concrete type so that instruction.zig can infer errors.
+    pub inline fn execute(self: Instance, machine: *Machine.Instance) !void {
+        return self._execute(machine);
+    }
+
+    // Private implementation is generic to allow tests to use mocks.
+    fn _execute(self: Instance, machine: anytype) !void {
         switch (self) {
             .unload_all => machine.unloadAllResources(),
             .start_game_part => |game_part| try machine.startGamePart(game_part),
@@ -57,6 +63,7 @@ pub const BytecodeExamples = struct {
 
 const testing = @import("../../utils/testing.zig");
 const expectParse = @import("test_helpers/parse.zig").expectParse;
+const MockMachine = @import("test_helpers/mock_machine.zig");
 
 test "parse parses unload_all instruction and consumes 2 bytes" {
     const instruction = try expectParse(parse, &BytecodeExamples.unload_all, 2);
@@ -76,21 +83,76 @@ test "parse parses load_resource instruction and consumes 2 bytes" {
     testing.expectEqual(.{ .load_resource = 0xDEAD }, instruction);
 }
 
-// TODO: flesh these tests out once we have resource-loading implemented in the VM
-test "execute with unload_all instruction runs on machine without errors" {
+test "execute with unload_all instruction calls unloadAllResources with correct parameters" {
     const instruction = Instance.unload_all;
-    var machine = Machine.new();
-    instruction.execute(&machine);
+
+    const Stubs = struct {
+        var call_count: usize = 0;
+
+        pub fn startGamePart(game_part: GamePart.Enum) !void {
+            unreachable;
+        }
+
+        pub fn loadResource(resource_id: ResourceID.Raw) !void {
+            unreachable;
+        }
+
+        pub fn unloadAllResources() void {
+            call_count += 1;
+        }
+    };
+
+    var machine = MockMachine.new(Stubs);
+    try instruction._execute(&machine);
+    testing.expectEqual(1, Stubs.call_count);
 }
 
-test "execute with start_game_part instruction runs on machine without errors" {
-    const instruction = Instance{ .start_game_part = .copy_protection };
-    var machine = Machine.new();
-    instruction.execute(&machine);
+test "execute with start_game_part instruction calls startGamePart with correct parameters" {
+    const instruction = Instance{ .start_game_part = .arena_cinematic };
+
+    const Stubs = struct {
+        var call_count: usize = 0;
+
+        pub fn startGamePart(game_part: GamePart.Enum) !void {
+            call_count += 1;
+            testing.expectEqual(.arena_cinematic, game_part);
+        }
+
+        pub fn loadResource(resource_id: ResourceID.Raw) !void {
+            unreachable;
+        }
+
+        pub fn unloadAllResources() void {
+            unreachable;
+        }
+    };
+
+    var machine = MockMachine.new(Stubs);
+    try instruction._execute(&machine);
+    testing.expectEqual(1, Stubs.call_count);
 }
 
-test "execute with load_resource instruction runs on machine without errors" {
+test "execute with load_resource instruction calls loadResource with correct parameters" {
     const instruction = Instance{ .load_resource = 0xBEEF };
-    var machine = Machine.new();
-    instruction.execute(&machine);
+
+    const Stubs = struct {
+        var call_count: usize = 0;
+
+        pub fn startGamePart(game_part: GamePart.Enum) !void {
+            unreachable;
+        }
+
+        pub fn loadResource(resource_id: ResourceID.Raw) !void {
+            call_count += 1;
+            testing.expectEqual(0xBEEF, resource_id);
+        }
+
+        pub fn unloadAllResources() void {
+            unreachable;
+        }
+    };
+
+    var machine = MockMachine.new(Stubs);
+    try instruction._execute(&machine);
+    testing.expectEqual(1, Stubs.call_count);
 }
