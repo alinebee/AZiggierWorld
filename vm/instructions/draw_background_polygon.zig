@@ -102,22 +102,17 @@ test "execute calls drawPolygon with correct parameters" {
         .point = .{ .x = 320, .y = 200 },
     };
 
-    const Stubs = struct {
-        var call_count: usize = 0;
-
+    var machine = MockMachine.new(struct {
         pub fn drawPolygon(source: Video.PolygonSource, address: Video.PolygonAddress, point: Point.Instance, scale: ?Video.PolygonScale) !void {
-            call_count += 1;
             testing.expectEqual(.polygons, source);
             testing.expectEqual(0xDEAD, address);
             testing.expectEqual(320, point.x);
             testing.expectEqual(200, point.y);
             testing.expectEqual(null, scale);
         }
-    };
-
-    var machine = MockMachine.new(Stubs);
+    });
 
     try instruction._execute(&machine);
 
-    testing.expectEqual(1, Stubs.call_count);
+    testing.expectEqual(1, machine.call_counts.drawPolygon);
 }

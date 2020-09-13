@@ -111,11 +111,8 @@ test "execute with play instruction calls playMusic with correct parameters" {
         },
     };
 
-    const Stubs = struct {
-        var call_count: usize = 0;
-
+    var machine = MockMachine.new(struct {
         pub fn playMusic(resource_id: ResourceID.Raw, offset: Audio.Offset, delay: Audio.Delay) !void {
-            call_count += 1;
             testing.expectEqual(0x8BAD, resource_id);
             testing.expectEqual(0x12, offset);
             testing.expectEqual(0xF00D, delay);
@@ -128,44 +125,37 @@ test "execute with play instruction calls playMusic with correct parameters" {
         pub fn stopMusic() void {
             unreachable;
         }
-    };
+    });
 
-    var machine = MockMachine.new(Stubs);
     try instruction._execute(&machine);
-    testing.expectEqual(1, Stubs.call_count);
+    testing.expectEqual(1, machine.call_counts.playMusic);
 }
 
 test "execute with set_delay instruction calls setMusicDelay with correct parameters" {
     const instruction = Instance{ .set_delay = 0xF00D };
 
-    const Stubs = struct {
-        var call_count: usize = 0;
-
+    var machine = MockMachine.new(struct {
         pub fn playMusic(resource_id: ResourceID.Raw, offset: Audio.Offset, delay: Audio.Delay) !void {
             unreachable;
         }
 
         pub fn setMusicDelay(delay: Audio.Delay) void {
-            call_count += 1;
             testing.expectEqual(0xF00D, delay);
         }
 
         pub fn stopMusic() void {
             unreachable;
         }
-    };
+    });
 
-    var machine = MockMachine.new(Stubs);
     try instruction._execute(&machine);
-    testing.expectEqual(1, Stubs.call_count);
+    testing.expectEqual(1, machine.call_counts.setMusicDelay);
 }
 
 test "execute with stop instruction calls stopMusic with correct parameters" {
     const instruction = Instance.stop;
 
-    const Stubs = struct {
-        var call_count: usize = 0;
-
+    var machine = MockMachine.new(struct {
         pub fn playMusic(resource_id: ResourceID.Raw, offset: Audio.Offset, delay: Audio.Delay) !void {
             unreachable;
         }
@@ -174,12 +164,9 @@ test "execute with stop instruction calls stopMusic with correct parameters" {
             unreachable;
         }
 
-        pub fn stopMusic() void {
-            call_count += 1;
-        }
-    };
+        pub fn stopMusic() void {}
+    });
 
-    var machine = MockMachine.new(Stubs);
     try instruction._execute(&machine);
-    testing.expectEqual(1, Stubs.call_count);
+    testing.expectEqual(1, machine.call_counts.stopMusic);
 }

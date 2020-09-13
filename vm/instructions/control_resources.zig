@@ -86,9 +86,7 @@ test "parse parses load_resource instruction and consumes 2 bytes" {
 test "execute with unload_all instruction calls unloadAllResources with correct parameters" {
     const instruction = Instance.unload_all;
 
-    const Stubs = struct {
-        var call_count: usize = 0;
-
+    var machine = MockMachine.new(struct {
         pub fn startGamePart(game_part: GamePart.Enum) !void {
             unreachable;
         }
@@ -97,24 +95,18 @@ test "execute with unload_all instruction calls unloadAllResources with correct 
             unreachable;
         }
 
-        pub fn unloadAllResources() void {
-            call_count += 1;
-        }
-    };
+        pub fn unloadAllResources() void {}
+    });
 
-    var machine = MockMachine.new(Stubs);
     try instruction._execute(&machine);
-    testing.expectEqual(1, Stubs.call_count);
+    testing.expectEqual(1, machine.call_counts.unloadAllResources);
 }
 
 test "execute with start_game_part instruction calls startGamePart with correct parameters" {
     const instruction = Instance{ .start_game_part = .arena_cinematic };
 
-    const Stubs = struct {
-        var call_count: usize = 0;
-
+    var machine = MockMachine.new(struct {
         pub fn startGamePart(game_part: GamePart.Enum) !void {
-            call_count += 1;
             testing.expectEqual(.arena_cinematic, game_part);
         }
 
@@ -125,34 +117,29 @@ test "execute with start_game_part instruction calls startGamePart with correct 
         pub fn unloadAllResources() void {
             unreachable;
         }
-    };
+    });
 
-    var machine = MockMachine.new(Stubs);
     try instruction._execute(&machine);
-    testing.expectEqual(1, Stubs.call_count);
+    testing.expectEqual(1, machine.call_counts.startGamePart);
 }
 
 test "execute with load_resource instruction calls loadResource with correct parameters" {
     const instruction = Instance{ .load_resource = 0xBEEF };
 
-    const Stubs = struct {
-        var call_count: usize = 0;
-
+    var machine = MockMachine.new(struct {
         pub fn startGamePart(game_part: GamePart.Enum) !void {
             unreachable;
         }
 
         pub fn loadResource(resource_id: ResourceID.Raw) !void {
-            call_count += 1;
             testing.expectEqual(0xBEEF, resource_id);
         }
 
         pub fn unloadAllResources() void {
             unreachable;
         }
-    };
+    });
 
-    var machine = MockMachine.new(Stubs);
     try instruction._execute(&machine);
-    testing.expectEqual(1, Stubs.call_count);
+    testing.expectEqual(1, machine.call_counts.loadResource);
 }

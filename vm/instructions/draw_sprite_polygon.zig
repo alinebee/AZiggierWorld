@@ -257,23 +257,19 @@ test "execute with constants calls drawPolygon with correct parameters" {
         .scale = .default,
     };
 
-    const Stubs = struct {
-        var call_count: usize = 0;
-
+    var machine = MockMachine.new(struct {
         pub fn drawPolygon(source: Video.PolygonSource, address: Video.PolygonAddress, point: Point.Instance, scale: ?Video.PolygonScale) !void {
-            call_count += 1;
             testing.expectEqual(.animations, source);
             testing.expectEqual(0xDEAD, address);
             testing.expectEqual(320, point.x);
             testing.expectEqual(200, point.y);
             testing.expectEqual(null, scale);
         }
-    };
-    var machine = MockMachine.new(Stubs);
+    });
 
     try instruction._execute(&machine);
 
-    testing.expectEqual(1, Stubs.call_count);
+    testing.expectEqual(1, machine.call_counts.drawPolygon);
 }
 
 test "execute with registers calls drawPolygon with correct parameters" {
@@ -285,19 +281,15 @@ test "execute with registers calls drawPolygon with correct parameters" {
         .scale = .{ .register = 3 },
     };
 
-    const Stubs = struct {
-        var call_count: usize = 0;
-
+    var machine = MockMachine.new(struct {
         pub fn drawPolygon(source: Video.PolygonSource, address: Video.PolygonAddress, point: Point.Instance, scale: ?Video.PolygonScale) !void {
-            call_count += 1;
             testing.expectEqual(.polygons, source);
             testing.expectEqual(0xDEAD, address);
             testing.expectEqual(-1234, point.x);
             testing.expectEqual(5678, point.y);
             testing.expectEqual(128, scale);
         }
-    };
-    var machine = MockMachine.new(Stubs);
+    });
 
     machine.registers[1] = -1234;
     machine.registers[2] = 5678;
@@ -305,7 +297,7 @@ test "execute with registers calls drawPolygon with correct parameters" {
 
     try instruction._execute(&machine);
 
-    testing.expectEqual(1, Stubs.call_count);
+    testing.expectEqual(1, machine.call_counts.drawPolygon);
 }
 
 test "execute with register scale value truncates out-of-range scale" {
@@ -317,15 +309,11 @@ test "execute with register scale value truncates out-of-range scale" {
         .scale = .{ .register = 1 },
     };
 
-    const Stubs = struct {
-        var call_count: usize = 0;
-
+    var machine = MockMachine.new(struct {
         pub fn drawPolygon(_source: Video.PolygonSource, _address: Video.PolygonAddress, _point: Point.Instance, scale: ?Video.PolygonScale) !void {
-            call_count += 1;
             testing.expectEqual(0b0010_1011, scale);
         }
-    };
-    var machine = MockMachine.new(Stubs);
+    });
 
     // -18901 = 0b1011_0110_0010_1011 in two's-complement;
     // top 8 bits should get truncated
@@ -333,5 +321,5 @@ test "execute with register scale value truncates out-of-range scale" {
 
     try instruction._execute(&machine);
 
-    testing.expectEqual(1, Stubs.call_count);
+    testing.expectEqual(1, machine.call_counts.drawPolygon);
 }

@@ -114,11 +114,8 @@ test "execute with play instruction calls playSound with correct parameters" {
         },
     };
 
-    const Stubs = struct {
-        var call_count: usize = 0;
-
+    var machine = MockMachine.new(struct {
         pub fn playSound(resource_id: ResourceID.Raw, channel: Channel.Enum, volume: Audio.Volume, frequency: Audio.Frequency) !void {
-            call_count += 1;
             testing.expectEqual(0xDEAD, resource_id);
             testing.expectEqual(.one, channel);
             testing.expectEqual(20, volume);
@@ -128,30 +125,25 @@ test "execute with play instruction calls playSound with correct parameters" {
         pub fn stopChannel(channel: Channel.Enum) void {
             unreachable;
         }
-    };
+    });
 
-    var machine = MockMachine.new(Stubs);
     try instruction._execute(&machine);
-    testing.expectEqual(1, Stubs.call_count);
+    testing.expectEqual(1, machine.call_counts.playSound);
 }
 
 test "execute with stop instruction runs on machine without errors" {
     const instruction = Instance{ .stop = .two };
 
-    const Stubs = struct {
-        var call_count: usize = 0;
-
+    var machine = MockMachine.new(struct {
         pub fn playSound(resource_id: ResourceID.Raw, channel: Channel.Enum, volume: Audio.Volume, frequency: Audio.Frequency) !void {
             unreachable;
         }
 
         pub fn stopChannel(channel: Channel.Enum) void {
-            call_count += 1;
             testing.expectEqual(.two, channel);
         }
-    };
+    });
 
-    var machine = MockMachine.new(Stubs);
     try instruction._execute(&machine);
-    testing.expectEqual(1, Stubs.call_count);
+    testing.expectEqual(1, machine.call_counts.stopChannel);
 }
