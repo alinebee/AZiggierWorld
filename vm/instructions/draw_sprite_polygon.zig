@@ -32,7 +32,13 @@ pub const Instance = struct {
         register: Machine.RegisterID,
     },
 
-    pub fn execute(self: Instance, machine: *Machine.Instance) !void {
+    // Public implementation is constrained to concrete type so that instruction.zig can infer errors.
+    pub inline fn execute(self: Instance, machine: *Machine.Instance) !void {
+        return self._execute(machine);
+    }
+
+    // Private implementation is generic to allow tests to use mocks.
+    fn _execute(self: Instance, machine: anytype) !void {
         const x = switch (self.x) {
             .constant => |constant| constant,
             .register => |id| machine.registers[id],
@@ -70,26 +76,27 @@ pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instance 
     // The low 6 bits of the opcode byte determine where to read the x, y and scale values from,
     // and therefore how many bytes to consume for the operation.
     // This opcode byte has a layout of `01|xx|yy|ss`, where:
-    // - `01` was the initial opcode identifier that indicated this was a DrawSpritePolygon instruction
+    //
+    // - `01` was the initial opcode identifier that indicated this as a DrawSpritePolygon instruction
     // in the first place.
     //
-    // - `xx` controls where the X offset is read from:
-    //   - 00: read from 16-bit constant in bytecode
-    //   - 01: read from register
-    //   - 10: read from 8-bit constant in bytecode
-    //   - 11: read from 8-bit constant in bytecode, add 256
-    //   (presumably needed since an 8-bit X coordinate can't address an entire 320-pixel-wide screen)
+    // - `xx` controls where to read the X offset from:
+    //   - 00: read next 2 bytes as signed 16-bit constant
+    //   - 01: read next byte as ID of register containing X coordinate
+    //   - 10: read next byte as unsigned 8-bit constant
+    //   - 11: read next byte as unsigned 8-bit constant, add 256
+    //     (necessary since an 8-bit X coordinate can't address an entire 320-pixel-wide screen)
     //
-    // - `yy` controls where the Y offset is read from:
-    //   - 00: read 16-bit constant from bytecode
-    //   - 01: read from register
-    //   - 10, 11: read 8-bit constant from bytecode
+    // - `yy` controls where to read the Y offset from:
+    //   - 00: read next 2 bytes as signed 16-bit constant
+    //   - 01: read next byte as ID of register containing Y coordinate
+    //   - 10, 11: read next byte as unsigned 8-bit constant
     //
-    // - `ss` controls where the scale is read from, and which memory region polygon data is read from:
-    //   - 00: default scale, use `.polygons` region
-    //   - 01: read scale from register, use `.polygons` region
-    //   - 10: read scale as 16-bit constant from bytecode, use `.polygons` region
-    //   - 11: default scale, use `.animations` region
+    // - `ss` controls where to read the scale from and which memory to read region polygon data from:
+    //   - 00: use `.polygons` region, set default scale
+    //   - 01: use `.polygons` region, read next byte as ID of register containing scale
+    //   - 10: use `.polygons` region, read next byte as unsigned 8-bit constant
+    //   - 11: use `.animations` region, set default scale
 
     const raw_x     = @truncate(u2, raw_opcode >> 4);
     const raw_y     = @truncate(u2, raw_opcode >> 2);
@@ -178,6 +185,7 @@ pub const BytecodeExamples = struct {
 
 const testing = @import("../../utils/testing.zig");
 const debugParseInstruction = @import("test_helpers.zig").debugParseInstruction;
+const MockMachine = @import("test_helpers/mock_machine.zig");
 
 test "parse parses all-registers instruction and consumes 5 extra bytes" {
     const instruction = try debugParseInstruction(parse, &BytecodeExamples.registers, 5);
@@ -240,8 +248,7 @@ test "parse parses instruction with default scale/animation source and consumes 
     testing.expectEqual(.default, instruction.scale);
 }
 
-// TODO: inject a mock VM to test the logic for reading X, Y and scale values from the VM's registers.
-test "execute runs on machine without errors" {
+test "execute with constant values runs on machine without errors" {
     const instruction = Instance{
         .source = .animations,
         .address = 0xDEAD,
@@ -250,6 +257,63 @@ test "execute runs on machine without errors" {
         .scale = .default,
     };
 
-    var machine = Machine.new();
-    try instruction.execute(&machine);
+    var machine = MockMachine.new(struct {
+        pub fn drawPolygon(source: Video.PolygonSource, address: Video.PolygonAddress, point: Point.Instance, scale: ?Video.PolygonScale) void {
+            testing.expectEqual(.animations, source);
+            testing.expectEqual(0xDEAD, address);
+            testing.expectEqual(320, point.x);
+            testing.expectEqual(200, point.y);
+            testing.expectEqual(null, scale);
+        }
+    });
+
+    try instruction._execute(&machine);
+}
+
+test "execute with register values runs on machine without errors" {
+    const instruction = Instance{
+        .source = .polygons,
+        .address = 0xDEAD,
+        .x = .{ .register = 1 },
+        .y = .{ .register = 2 },
+        .scale = .{ .register = 3 },
+    };
+
+    var machine = MockMachine.new(struct {
+        pub fn drawPolygon(source: Video.PolygonSource, address: Video.PolygonAddress, point: Point.Instance, scale: ?Video.PolygonScale) void {
+            testing.expectEqual(.polygons, source);
+            testing.expectEqual(0xDEAD, address);
+            testing.expectEqual(-1234, point.x);
+            testing.expectEqual(5678, point.y);
+            testing.expectEqual(128, scale);
+        }
+    });
+
+    machine.registers[1] = -1234;
+    machine.registers[2] = 5678;
+    machine.registers[3] = 128;
+
+    try instruction._execute(&machine);
+}
+
+test "execute with register scale value truncates out-of-range scale" {
+    const instruction = Instance{
+        .source = .polygons,
+        .address = 0xDEAD,
+        .x = .{ .constant = 320 },
+        .y = .{ .constant = 200 },
+        .scale = .{ .register = 1 },
+    };
+
+    var machine = MockMachine.new(struct {
+        pub fn drawPolygon(_source: Video.PolygonSource, _address: Video.PolygonAddress, _point: Point.Instance, scale: ?Video.PolygonScale) void {
+            testing.expectEqual(0b0010_1011, scale);
+        }
+    });
+
+    // -18901 = 0b1011_0110_0010_1011 in two's-complement;
+    // top 8 bits should get truncated
+    machine.registers[1] = -18901;
+
+    try instruction._execute(&machine);
 }
