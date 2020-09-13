@@ -4,6 +4,7 @@ const Audio = @import("../../audio.zig");
 
 const Point = @import("../../types/point.zig");
 const GamePart = @import("../../types/game_part.zig");
+const Channel = @import("../../types/channel.zig");
 const ResourceID = @import("../../types/resource_id.zig");
 
 const zeroes = @import("std").mem.zeroes;
@@ -49,6 +50,14 @@ fn MockMachine(comptime Implementation: type) type {
 
         pub fn stopMusic(self: *Self) void {
             Implementation.stopMusic();
+        }
+
+        pub fn playSound(self: *Self, resource_id: ResourceID.Raw, channel: Channel.Enum, volume: Audio.Volume, frequency: Audio.Frequency) !void {
+            try Implementation.playSound(resource_id, channel, volume, frequency);
+        }
+
+        pub fn stopChannel(self: *Self, channel: Channel.Enum) void {
+            Implementation.stopChannel(channel);
         }
     };
 }
@@ -137,7 +146,6 @@ test "MockMachine calls playMusic correctly on stub implementation" {
     testing.expectEqual(1, Stubs.call_count);
 }
 
-
 test "MockMachine calls setMusicDelay correctly on stub implementation" {
     const Stubs = struct {
         var call_count: usize = 0;
@@ -164,5 +172,38 @@ test "MockMachine calls stopMusic correctly on stub implementation" {
 
     var mock = new(Stubs);
     mock.stopMusic();
+    testing.expectEqual(1, Stubs.call_count);
+}
+
+test "MockMachine calls playSound correctly on stub implementation" {
+    const Stubs = struct {
+        var call_count: usize = 0;
+
+        fn playSound(resource_id: ResourceID.Raw, channel: Channel.Enum, volume: Audio.Volume, frequency: Audio.Frequency) !void {
+            call_count += 1;
+            testing.expectEqual(0xBEEF, resource_id);
+            testing.expectEqual(.three, channel);
+            testing.expectEqual(64, volume);
+            testing.expectEqual(128, frequency);
+        }
+    };
+
+    var mock = new(Stubs);
+    try mock.playSound(0xBEEF, .three, 64, 128);
+    testing.expectEqual(1, Stubs.call_count);
+}
+
+test "MockMachine calls stopChannel correctly on stub implementation" {
+    const Stubs = struct {
+        var call_count: usize = 0;
+
+        fn stopChannel(channel: Channel.Enum) void {
+            call_count += 1;
+            testing.expectEqual(.two, channel);
+        }
+    };
+
+    var mock = new(Stubs);
+    mock.stopChannel(.two);
     testing.expectEqual(1, Stubs.call_count);
 }

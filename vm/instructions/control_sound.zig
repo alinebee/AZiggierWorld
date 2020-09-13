@@ -22,7 +22,13 @@ pub const Instance = union(enum) {
     },
     stop: Channel.Enum,
 
-    pub fn execute(self: Instance, machine: *Machine.Instance) void {
+    // Public implementation is constrained to concrete type so that instruction.zig can infer errors.
+    pub inline fn execute(self: Instance, machine: *Machine.Instance) !void {
+        return self._execute(machine);
+    }
+
+    // Private implementation is generic to allow tests to use mocks.
+    fn _execute(self: Instance, machine: anytype) !void {
         switch (self) {
             .play => |operation| try machine.playSound(operation.resource_id, operation.channel, operation.volume, operation.frequency),
             .stop => |channel| machine.stopChannel(channel),
@@ -70,6 +76,7 @@ pub const BytecodeExamples = struct {
 
 const testing = @import("../../utils/testing.zig");
 const expectParse = @import("test_helpers/parse.zig").expectParse;
+const MockMachine = @import("test_helpers/mock_machine.zig");
 
 test "parse parses play instruction and consumes 5 bytes" {
     const instruction = try expectParse(parse, &BytecodeExamples.play, 5);
@@ -97,8 +104,7 @@ test "parse returns error.InvalidChannel when unknown channel is specified in by
     );
 }
 
-// TODO: flesh these tests out once we have sound playback implemented in the VM
-test "execute with play instruction runs on machine without errors" {
+test "execute with play instruction calls playSound with correct parameters" {
     const instruction = Instance{
         .play = .{
             .resource_id = 0xDEAD,
@@ -108,13 +114,44 @@ test "execute with play instruction runs on machine without errors" {
         },
     };
 
-    var machine = Machine.new();
-    instruction.execute(&machine);
+    const Stubs = struct {
+        var call_count: usize = 0;
+
+        pub fn playSound(resource_id: ResourceID.Raw, channel: Channel.Enum, volume: Audio.Volume, frequency: Audio.Frequency) !void {
+            call_count += 1;
+            testing.expectEqual(0xDEAD, resource_id);
+            testing.expectEqual(.one, channel);
+            testing.expectEqual(20, volume);
+            testing.expectEqual(0, frequency);
+        }
+
+        pub fn stopChannel(channel: Channel.Enum) void {
+            unreachable;
+        }
+    };
+
+    var machine = MockMachine.new(Stubs);
+    try instruction._execute(&machine);
+    testing.expectEqual(1, Stubs.call_count);
 }
 
 test "execute with stop instruction runs on machine without errors" {
     const instruction = Instance{ .stop = .two };
 
-    var machine = Machine.new();
-    instruction.execute(&machine);
+    const Stubs = struct {
+        var call_count: usize = 0;
+
+        pub fn playSound(resource_id: ResourceID.Raw, channel: Channel.Enum, volume: Audio.Volume, frequency: Audio.Frequency) !void {
+            unreachable;
+        }
+
+        pub fn stopChannel(channel: Channel.Enum) void {
+            call_count += 1;
+            testing.expectEqual(.two, channel);
+        }
+    };
+
+    var machine = MockMachine.new(Stubs);
+    try instruction._execute(&machine);
+    testing.expectEqual(1, Stubs.call_count);
 }
