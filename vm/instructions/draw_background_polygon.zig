@@ -13,7 +13,13 @@ pub const Instance = struct {
     /// The X and Y position in screen space at which to draw the polygon.
     point: Point.Instance,
 
-    pub fn execute(self: Instance, machine: *Machine.Instance) !void {
+    // Public implementation is constrained to concrete type so that instruction.zig can infer errors.
+    pub inline fn execute(self: Instance, machine: *Machine.Instance) !void {
+        return self._execute(machine);
+    }
+
+    // Private implementation is generic to allow tests to use mocks.
+    fn _execute(self: Instance, machine: anytype) !void {
         try machine.drawPolygon(.polygons, self.address, self.point, null);
     }
 };
@@ -71,6 +77,7 @@ pub const BytecodeExamples = struct {
 
 const testing = @import("../../utils/testing.zig");
 const expectParse = @import("test_helpers/parse.zig").expectParse;
+const MockMachine = @import("test_helpers/mock_machine.zig");
 
 test "parse parses bytecode with low X coordinate and consumes 3 bytes after opcode" {
     const instruction = try expectParse(parse, &BytecodeExamples.low_x, 3);
@@ -89,13 +96,28 @@ test "parse parses bytecode with high X coordinate and consumes 3 bytes after op
     testing.expectEqual(199, instruction.point.y);
 }
 
-// TODO: flesh these tests out once we have sound playback implemented in the VM
-test "execute runs on machine without errors" {
+test "execute calls drawPolygon with correct parameters" {
     const instruction = Instance{
         .address = 0xDEAD,
         .point = .{ .x = 320, .y = 200 },
     };
 
-    var machine = Machine.new();
-    try instruction.execute(&machine);
+    const Stubs = struct {
+        var call_count: usize = 0;
+
+        pub fn drawPolygon(source: Video.PolygonSource, address: Video.PolygonAddress, point: Point.Instance, scale: ?Video.PolygonScale) void {
+            call_count += 1;
+            testing.expectEqual(.polygons, source);
+            testing.expectEqual(0xDEAD, address);
+            testing.expectEqual(320, point.x);
+            testing.expectEqual(200, point.y);
+            testing.expectEqual(null, scale);
+        }
+    };
+
+    var machine = MockMachine.new(Stubs);
+
+    try instruction._execute(&machine);
+
+    testing.expectEqual(1, Stubs.call_count);
 }
