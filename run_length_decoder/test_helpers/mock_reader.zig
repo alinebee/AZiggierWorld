@@ -3,7 +3,7 @@ const assert = std.debug.assert;
 const trait = std.meta.trait;
 const introspection = @import("../../utils/introspection.zig");
 
-const ReaderInterface = @import("../reader_interface.zig");
+const ReaderMethods = @import("../reader_methods.zig");
 
 /// Returns a mock reader that reads every bit from a specified integer value
 /// in order from left to right (highest to lowest).
@@ -15,11 +15,10 @@ const ReaderInterface = @import("../reader_interface.zig");
 /// If `Integer` is wider than is needed to store `bits`,
 /// the bits will be left-padded with zeroes out to the full width.
 /// e.g. `intReader(u5, 0b110)` would return 0, 0, 1, 1, 0.
-pub fn new(comptime Integer: type, bits: Integer) ReaderInterface.Instance(Instance(Integer)) {
-    return ReaderInterface.new(Instance(Integer){ .bits = bits });
+pub fn new(comptime Integer: type, bits: Integer) Instance(Integer) {
+    return Instance(Integer){ .bits = bits };
 }
 
-/// The underlying bitwise reader. Intended to be wrapped in a `ReaderInterface` for decoding.
 fn Instance(comptime Integer: type) type {
     comptime assert(trait.isUnsignedInt(Integer));
 
@@ -54,6 +53,9 @@ fn Instance(comptime Integer: type) type {
                 return error.ChecksumNotReady;
             }
         }
+
+        // Add methods for reading bytes and whole integers
+        usingnamespace ReaderMethods.extend(Self);
     };
 }
 

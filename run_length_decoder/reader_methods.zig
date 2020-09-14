@@ -4,26 +4,19 @@ const trait = std.meta.trait;
 
 const introspection = @import("../utils/introspection.zig");
 
-/// Wraps a bitwise reader in an interface that adds methods to read integers of arbitrary sizes.
-/// The underlying reader is expected to implement `readBit() !u8` and `validateChecksum() !error`.
-pub fn new(underlying_reader: anytype) Instance(@TypeOf(underlying_reader)) {
-    return Instance(@TypeOf(underlying_reader)){ .underlying_reader = underlying_reader };
-}
-
-pub fn Instance(comptime Wrapped: type) type {
-    const ReadBitError = introspection.errorType(Wrapped.readBit);
-    const ValidationError = introspection.errorType(Wrapped.validateChecksum);
+/// Returns a struct of methods that can be imported onto the specified type.
+/// Intended usage:
+/// ```
+/// const ReaderMethods = @import("reader_methods.zig");
+/// const TypeToExtend = struct {
+///     ...
+///     usingnamespace ReaderMethods.extend(@This());`
+/// }
+/// ```
+pub fn extend(comptime Self: type) type {
+    const ReadError = introspection.errorType(Self.readBit);
 
     return struct {
-        const Self = @This();
-
-        underlying_reader: Wrapped,
-
-        /// Read a single bit from the underlying reader.
-        pub fn readBit(self: *Self) ReadBitError!u1 {
-            return self.underlying_reader.readBit();
-        }
-
         /// Returns a raw byte constructed by consuming 8 bits from the underlying reader.
         /// Returns an error if the required bits could not be read.
         pub fn readByte(self: *Self) ReadBitError!u8 {
@@ -33,7 +26,7 @@ pub fn Instance(comptime Wrapped: type) type {
         /// Returns an unsigned integer constructed by consuming bits from the underlying reader
         /// up to the integer's width: e.g. readInt(u7) will consume 7 bits.
         /// Returns an error if the required bits could not be read.
-        pub fn readInt(self: *Self, comptime Integer: type) ReadBitError!Integer {
+        pub fn readInt(self: *Self, comptime Integer: type) ReadError!Integer {
             comptime assert(trait.isUnsignedInt(Integer));
 
             var value: Integer = 0;
@@ -41,24 +34,9 @@ pub fn Instance(comptime Wrapped: type) type {
             var bits_remaining: usize = introspection.bitCount(Integer);
             while (bits_remaining > 0) : (bits_remaining -= 1) {
                 value = @shlExact(value, 1);
-                value |= try self.underlying_reader.readBit();
+                value |= try self.readBit();
             }
             return value;
-        }
-
-        /// The expected size of the data once uncompressed.
-        pub fn uncompressedSize(self: Self) usize {
-            return self.underlying_reader.uncompressed_size;
-        }
-
-        /// Whether the underlying reader has consumed all bits.
-        pub fn isAtEnd(self: Self) bool {
-            return self.underlying_reader.isAtEnd();
-        }
-
-        /// Call once decoding is complete to verify that the underlying reader decoded all its data successfully.
-        pub fn validateChecksum(self: Self) ValidationError!void {
-            return self.underlying_reader.validateChecksum();
         }
     };
 }
@@ -69,7 +47,7 @@ const testing = @import("../utils/testing.zig");
 const MockReader = @import("test_helpers/mock_reader.zig");
 
 test "readInt reads integers of the specified width" {
-    // MockReader.new returns a bitwise reader that's already wrapped in a `ReaderInterface`.
+    // MockReader.new returns a bitwise reader that already includes `ReaderMethods`.
     var parser = MockReader.new(u64, 0xDEAD_BEEF_8BAD_F00D);
 
     testing.expectEqual(0xDE, parser.readInt(u8));

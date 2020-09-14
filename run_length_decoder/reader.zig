@@ -1,16 +1,15 @@
 const std = @import("std");
 const mem = std.mem;
 
-const ReaderInterface = @import("reader_interface.zig");
+const ReaderMethods = @import("reader_methods.zig");
 
 /// Returns a new reader that consumes the specified source buffer.
 /// This reads chunks of 4 bytes starting from the end of the buffer and returns their individual bits,
 /// to be interpreted by the decoder as RLE instructions or raw data.
-pub fn new(source: []const u8) Error!ReaderInterface.Instance(Instance) {
-    return ReaderInterface.new(try Instance.init(source));
+pub fn new(source: []const u8) !Instance {
+    return try Instance.init(source);
 }
 
-/// The underlying bitwise reader. Intended to be wrapped in a `ReaderInterface` for decoding.
 const Instance = struct {
     /// The source buffer to read from.
     source: []const u8,
@@ -133,6 +132,9 @@ const Instance = struct {
 
         // If we got this far, the reader consumed all its bytes and had a valid checksum.
     }
+
+    // Add methods for reading bytes and whole integers
+    usingnamespace ReaderMethods.extend(Instance);
 };
 
 /// The possible errors from a reader instance.

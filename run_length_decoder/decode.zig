@@ -40,7 +40,7 @@ const Error = Reader.Error || Writer.Error || error{
 pub fn decode(source: []const u8, destination: []u8) Error!void {
     var reader = try Reader.new(source);
 
-    if (reader.uncompressedSize() != destination.len) {
+    if (reader.uncompressed_size != destination.len) {
         return error.UncompressedSizeMismatch;
     }
 
