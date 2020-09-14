@@ -3,6 +3,8 @@ const ResourceID = @import("../vm/types/resource_id.zig");
 const Filename = @import("filename.zig");
 const decode = @import("../run_length_decoder/decode.zig").decode;
 
+const introspection = @import("../utils/introspection.zig");
+
 const std = @import("std");
 const mem = std.mem;
 const fs = std.fs;
@@ -139,7 +141,8 @@ fn readResourceList(allocator: *mem.Allocator, reader: anytype, expected_count: 
 
 /// The type of errors that can be returned from a call to `bufReadResource`.
 fn ResourceError(comptime Reader: type) type {
-    const ReaderError = @TypeOf(Reader.readNoEof).ReturnType.ErrorSet;
+    const ReaderError = introspection.errorType(Reader.readNoEof);
+
     return ReaderError || error{
         /// Attempted to copy a resource's data into a buffer that was too small for it.
         InvalidResourceSize,

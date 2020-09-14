@@ -2,6 +2,8 @@ const std = @import("std");
 const assert = std.debug.assert;
 const trait = std.meta.trait;
 
+const introspection = @import("../utils/introspection.zig");
+
 /// Wraps a bitwise reader in an interface that adds methods to read integers of arbitrary sizes.
 /// The underlying reader is expected to implement `readBit() !u8` and `validateChecksum() !error`.
 pub fn new(underlying_reader: anytype) Instance(@TypeOf(underlying_reader)) {
@@ -9,8 +11,8 @@ pub fn new(underlying_reader: anytype) Instance(@TypeOf(underlying_reader)) {
 }
 
 pub fn Instance(comptime Wrapped: type) type {
-    const ReadBitError = @TypeOf(Wrapped.readBit).ReturnType.ErrorSet;
-    const ValidationError = @TypeOf(Wrapped.validateChecksum).ReturnType.ErrorSet;
+    const ReadBitError = introspection.errorType(Wrapped.readBit);
+    const ValidationError = introspection.errorType(Wrapped.validateChecksum);
 
     return struct {
         const Self = @This();
@@ -36,7 +38,7 @@ pub fn Instance(comptime Wrapped: type) type {
 
             var value: Integer = 0;
             // TODO: This could be an inline-while: benchmark this to see if that helps.
-            var bits_remaining: usize = Integer.bit_count;
+            var bits_remaining: usize = introspection.bitCount(Integer);
             while (bits_remaining > 0) : (bits_remaining -= 1) {
                 value = @shlExact(value, 1);
                 value |= try self.underlying_reader.readBit();

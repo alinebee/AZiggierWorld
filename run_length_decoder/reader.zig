@@ -100,7 +100,7 @@ const Instance = struct {
     /// backwards to the preceding chunk.
     /// Returns `error.SourceExhausted` if there are no more chunks remaining.
     fn popChunk(self: *Instance) Error!u32 {
-        comptime const chunk_size = @divExact(u32.bit_count, 8);
+        comptime const chunk_size = 4;
 
         const old_cursor = self.cursor;
         if (old_cursor < chunk_size) {

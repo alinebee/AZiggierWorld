@@ -6,8 +6,11 @@ const Program = @import("types/program.zig");
 pub const RegisterValue = i16;
 pub const RegisterID = u8;
 
-pub const Registers = [256]RegisterValue;
-pub const Threads = [64]Thread.Instance;
+pub const max_registers = 256;
+pub const Registers = [max_registers]RegisterValue;
+
+pub const max_threads = 64;
+pub const Threads = [max_threads]Thread.Instance;
 
 pub const Instance = struct {
     /// The current state of the VM's 64 threads.
@@ -31,8 +34,8 @@ const empty_program = [0]u8{};
 
 pub fn new() Instance {
     var machine = Instance{
-        .threads = [_]Thread.Instance{.{}} ** Threads.len,
-        .registers = [_]RegisterValue{0} ** Registers.len,
+        .threads = [_]Thread.Instance{.{}} ** max_threads,
+        .registers = [_]RegisterValue{0} ** max_registers,
         .program = Program.new(&empty_program),
     };
 

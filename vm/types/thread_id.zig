@@ -1,4 +1,4 @@
-const count = @import("../machine.zig").Threads.len;
+const count = @import("../machine.zig").max_threads;
 
 /// The ID of a thread as a value from 0-63. This is guaranteed to be valid.
 pub const Trusted = u6;

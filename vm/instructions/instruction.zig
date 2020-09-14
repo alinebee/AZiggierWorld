@@ -13,6 +13,8 @@ const ConditionalJump = @import("conditional_jump.zig");
 const DrawSpritePolygon = @import("draw_sprite_polygon.zig");
 const DrawBackgroundPolygon = @import("draw_background_polygon.zig");
 
+const introspection = @import("../../utils/introspection.zig");
+
 pub const Error =
     Opcode.Error ||
     Program.Error ||
@@ -95,8 +97,10 @@ pub fn executeNextInstruction(program: *Program.Instance, machine: *Machine.Inst
 
 inline fn execute(comptime Instruction: type, raw_opcode: Opcode.Raw, program: *Program.Instance, machine: *Machine.Instance) Error!void {
     const instruction = try Instruction.parse(raw_opcode, program);
+    const ReturnType = introspection.returnType(instruction.execute);
+
     // You'd think there'd be an easier way to express "try the function if necessary, otherwise just call it".
-    if (@typeInfo(@TypeOf(Instruction.Instance.execute).ReturnType) == .ErrorUnion) {
+    if (@typeInfo(ReturnType) == .ErrorUnion) {
         try instruction.execute(machine);
     } else {
         instruction.execute(machine);

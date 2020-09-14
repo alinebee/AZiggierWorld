@@ -1,6 +1,8 @@
 const ResourceType = @import("resource_type.zig");
 const Filename = @import("filename.zig");
 
+const introspection = @import("../utils/introspection.zig");
+
 //! Another World compresses hundreds of game resources (audio, bitmaps, bytecode polygon data)
 //! into a set of BANK01-BANK0D data files. To keep track of where each resource lives,
 //! the game defines _resource descriptors_ in a file named MEMLIST.BIN.
@@ -30,7 +32,7 @@ pub const Instance = struct {
 };
 
 pub fn Error(comptime Reader: type) type {
-    comptime const ReaderError = @TypeOf(Reader.readNoEof).ReturnType.ErrorSet;
+    comptime const ReaderError = introspection.errorType(Reader.readNoEof);
 
     return ReaderError || ResourceType.Error || error{
         /// A resource defined a compressed size that was larger than its uncompressed size.
@@ -170,9 +172,9 @@ pub const FileExamples = struct {
     pub const valid = (DescriptorExamples.valid_data ** 3) ++ DescriptorExamples.valid_end_of_file;
     pub const truncated = DescriptorExamples.valid_data ** 2;
 
-    pub const invalid_resource_type = 
-        DescriptorExamples.valid_data ++ 
-        DescriptorExamples.invalid_resource_type ++ 
+    pub const invalid_resource_type =
+        DescriptorExamples.valid_data ++
+        DescriptorExamples.invalid_resource_type ++
         DescriptorExamples.valid_end_of_file;
 };
 

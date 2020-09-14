@@ -11,9 +11,12 @@ test "ResourceDescriptor.parse parses MEMLIST.BIN without errors" {
     const expected_count = 146;
 
     var reader = fixedBufferStream(memlist).reader();
+    var iterator = ResourceDescriptor.iterator(reader);
 
-    const descriptors = try ResourceDescriptor.parse(testing.allocator, reader, expected_count);
-    defer testing.allocator.free(descriptors);
+    var parsed_count: usize = 0;
+    while (try iterator.next()) |_descriptor| {
+        parsed_count += 1;
+    }
 
-    testing.expectEqual(expected_count, descriptors.len);
+    testing.expectEqual(expected_count, parsed_count);
 }

@@ -3,9 +3,9 @@ const mem = std.mem;
 const io = std.io;
 
 const ArrayList = std.ArrayList;
-const Log2Int = std.math.Log2Int;
 const assert = std.debug.assert;
 const trait = std.meta.trait;
+const introspection = @import("../../utils/introspection.zig");
 
 pub fn new(allocator: *mem.Allocator) Instance {
     return Instance.init(allocator);
@@ -90,10 +90,10 @@ const Instance = struct {
     fn writeBits(self: *Instance, bits: anytype) !void {
         comptime const Integer = @TypeOf(bits);
         comptime assert(trait.isUnsignedInt(Integer));
+        comptime const bit_count = introspection.bitCount(Integer);
+        comptime const ShiftType = introspection.shiftType(Integer);
 
-        comptime const ShiftType = std.math.Log2Int(Integer);
-
-        var bits_remaining: usize = Integer.bit_count;
+        var bits_remaining: usize = bit_count;
         while (bits_remaining > 0) : (bits_remaining -= 1) {
             const shift = @intCast(ShiftType, bits_remaining - 1);
             const bit = @truncate(u1, bits >> shift);

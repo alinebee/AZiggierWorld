@@ -1,7 +1,7 @@
 const std = @import("std");
-const Log2Int = std.math.Log2Int;
 const assert = std.debug.assert;
 const trait = std.meta.trait;
+const introspection = @import("../../utils/introspection.zig");
 
 const ReaderInterface = @import("../reader_interface.zig");
 
@@ -23,8 +23,9 @@ pub fn new(comptime Integer: type, bits: Integer) ReaderInterface.Instance(Insta
 fn Instance(comptime Integer: type) type {
     comptime assert(trait.isUnsignedInt(Integer));
 
-    comptime const ShiftType = Log2Int(Integer);
-    comptime const max_shift = Integer.bit_count - 1;
+    comptime const ShiftType = introspection.shiftType(Integer);
+    comptime const bit_count = introspection.bitCount(Integer);
+    comptime const max_shift: ShiftType = bit_count - 1;
 
     return struct {
         const Self = @This();
@@ -45,7 +46,7 @@ fn Instance(comptime Integer: type) type {
         }
 
         pub fn isAtEnd(self: Self) bool {
-            return self.count >= Integer.bit_count;
+            return self.count >= bit_count;
         }
 
         pub fn validateChecksum(self: Self) Error!void {

@@ -1,4 +1,5 @@
 const readIntSliceBig = @import("std").mem.readIntSliceBig;
+const introspection = @import("../../utils/introspection.zig");
 
 pub const Error = error{
     /// The program was asked to seek to an address beyond the end of the program.
@@ -29,7 +30,7 @@ pub const Instance = struct {
     pub fn read(self: *Instance, comptime Integer: type) Error!Integer {
         // readIntSliceBig uses this construction internally.
         // @sizeOf would be nicer, but may include padding bytes.
-        comptime const byte_width = @divExact(Integer.bit_count, 8);
+        comptime const byte_width = @divExact(introspection.bitCount(Integer), 8);
 
         const upper_bound = self.counter + byte_width;
         if (upper_bound > self.bytecode.len) {

@@ -3,11 +3,14 @@
 const Opcode = @import("../../types/opcode.zig");
 const Program = @import("../../types/program.zig");
 
+const introspection = @import("../../../utils/introspection.zig");
+
 // -- Test helpers --
 
 fn returnType(comptime parseFn: anytype) type {
-    const return_type = @TypeOf(parseFn).ReturnType;
-    return (Error || return_type.ErrorSet)!return_type.Payload;
+    const error_type = introspection.errorType(parseFn);
+    const payload_type = introspection.payloadType(parseFn);
+    return (Error || error_type)!payload_type;
 }
 
 /// Try to parse a literal sequence of bytecode into a specific instruction;
