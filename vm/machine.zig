@@ -23,9 +23,9 @@ pub const Instance = struct {
     program: Program.Instance,
 
     // Import subsystem functions into the Instance namespace.
-    usingnamespace @import("video.zig");
-    usingnamespace @import("audio.zig");
-    usingnamespace @import("resources.zig");
+    usingnamespace @import("video.zig").Interface;
+    usingnamespace @import("audio.zig").Interface;
+    usingnamespace @import("resources.zig").Interface;
 };
 
 /// A placeholder program to keep tests happy until we flesh out the VM enough

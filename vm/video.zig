@@ -23,15 +23,18 @@ pub const PolygonScale = u8;
 
 const log_unimplemented = @import("../utils/logging.zig").log_unimplemented;
 
-/// Render a polygon from the specified source and address at the specified screen position and scale.
-/// If scale is `null`, the polygon will be drawn at its default scale.
-/// Returns an error if the specified polygon address was invalid.
-pub fn drawPolygon(self: *Machine.Instance, source: PolygonSource, address: PolygonAddress, point: Point.Instance, scale: ?PolygonScale) !void {
-    log_unimplemented("Video.drawPolygon: draw {}.{X} at x:{} y:{} scale:{}", .{
-        @tagName(source),
-        address,
-        point.x,
-        point.y,
-        scale,
-    });
-}
+/// Methods intended to be imported into Machine.Instance.
+pub const Interface = struct {
+    /// Render a polygon from the specified source and address at the specified screen position and scale.
+    /// If scale is `null`, the polygon will be drawn at its default scale.
+    /// Returns an error if the specified polygon address was invalid.
+    pub fn drawPolygon(self: *Machine.Instance, source: PolygonSource, address: PolygonAddress, point: Point.Instance, scale: ?PolygonScale) !void {
+        log_unimplemented("Video.drawPolygon: draw {}.{X} at x:{} y:{} scale:{}", .{
+            @tagName(source),
+            address,
+            point.x,
+            point.y,
+            scale,
+        });
+    }
+};
