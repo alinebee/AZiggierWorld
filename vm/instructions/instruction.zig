@@ -12,6 +12,7 @@ const ControlSound = @import("control_sound.zig");
 const ConditionalJump = @import("conditional_jump.zig");
 const DrawSpritePolygon = @import("draw_sprite_polygon.zig");
 const DrawBackgroundPolygon = @import("draw_background_polygon.zig");
+const DrawString = @import("draw_string.zig");
 
 const introspection = @import("../../utils/introspection.zig");
 
@@ -28,6 +29,7 @@ pub const Error =
     ConditionalJump.Error ||
     DrawSpritePolygon.Error ||
     DrawBackgroundPolygon.Error ||
+    DrawString.Error ||
     error{
     /// Bytecode contained an opcode that is not yet implemented.
     UnimplementedOpcode,
@@ -46,6 +48,7 @@ pub const Wrapped = union(enum) {
     ConditionalJump: ConditionalJump.Instance,
     DrawSpritePolygon: DrawSpritePolygon.Instance,
     DrawBackgroundPolygon: DrawBackgroundPolygon.Instance,
+    DrawString: DrawString.Instance,
 };
 
 /// Parse the next instruction from a bytecode program and wrap it in a Wrapped union type.
@@ -65,6 +68,7 @@ pub fn parseNextInstruction(program: *Program.Instance) Error!Wrapped {
         .ConditionalJump        => wrap("ConditionalJump", ConditionalJump, raw_opcode, program),
         .DrawSpritePolygon      => wrap("DrawSpritePolygon", DrawSpritePolygon, raw_opcode, program),
         .DrawBackgroundPolygon  => wrap("DrawBackgroundPolygon", DrawBackgroundPolygon, raw_opcode, program),
+        .DrawString             => wrap("DrawString", DrawString, raw_opcode, program),
         else => error.UnimplementedOpcode,
     };
 }
@@ -91,6 +95,7 @@ pub fn executeNextInstruction(program: *Program.Instance, machine: *Machine.Inst
         .ConditionalJump        => execute(ConditionalJump, raw_opcode, program, machine),
         .DrawSpritePolygon      => execute(DrawSpritePolygon, raw_opcode, program, machine),
         .DrawBackgroundPolygon  => execute(DrawBackgroundPolygon, raw_opcode, program, machine),
+        .DrawString             => execute(DrawString, raw_opcode, program, machine),
         else => error.UnimplementedOpcode,
     };
 }
@@ -173,6 +178,11 @@ test "parseNextInstruction returns DrawSpriteolygon instruction when given valid
 test "parseNextInstruction returns DrawBackgroundPolygon instruction when given valid bytecode" {
     const instruction = try expectParse(&DrawBackgroundPolygon.BytecodeExamples.low_x);
     expectWrappedType(.DrawBackgroundPolygon, instruction);
+}
+
+test "parseNextInstruction returns DrawString instruction when given valid bytecode" {
+    const instruction = try expectParse(&DrawString.BytecodeExamples.valid);
+    expectWrappedType(.DrawString, instruction);
 }
 
 test "parseNextInstruction returns error.InvalidOpcode error when it encounters an unknown opcode" {

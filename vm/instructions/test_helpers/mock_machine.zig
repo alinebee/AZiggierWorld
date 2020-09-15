@@ -6,6 +6,8 @@ const Point = @import("../../types/point.zig");
 const GamePart = @import("../../types/game_part.zig");
 const Channel = @import("../../types/channel.zig");
 const ResourceID = @import("../../types/resource_id.zig");
+const ColorID = @import("../../types/color_id.zig");
+const StringID = @import("../../types/string_id.zig");
 
 const zeroes = @import("std").mem.zeroes;
 
@@ -21,6 +23,7 @@ pub fn new(comptime Implementation: type) MockMachine(Implementation) {
 
 const CallCounts = struct {
     drawPolygon: usize,
+    drawString: usize,
     startGamePart: usize,
     loadResource: usize,
     unloadAllResources: usize,
@@ -42,6 +45,11 @@ fn MockMachine(comptime Implementation: type) type {
         pub fn drawPolygon(self: *Self, source: Video.PolygonSource, address: Video.PolygonAddress, point: Point.Instance, scale: ?Video.PolygonScale) !void {
             self.call_counts.drawPolygon += 1;
             try Implementation.drawPolygon(source, address, point, scale);
+        }
+
+        pub fn drawString(self: *Self, string_id: StringID.Raw, color_id: ColorID.Trusted, point: Point.Instance) !void {
+            self.call_counts.drawString += 1;
+            try Implementation.drawString(string_id, color_id, point);
         }
 
         pub fn startGamePart(self: *Self, game_part: GamePart.Enum) !void {
@@ -103,6 +111,20 @@ test "MockMachine calls drawPolygon correctly on stub implementation" {
 
     try mock.drawPolygon(.animations, 0xBEEF, .{ .x = 320, .y = 200 }, 128);
     testing.expectEqual(1, mock.call_counts.drawPolygon);
+}
+
+test "MockMachine calls drawString correctly on stub implementation" {
+    var mock = new(struct {
+        fn drawString(string_id: StringID.Raw, color_id: ColorID.Trusted, point: Point.Instance) !void {
+            testing.expectEqual(0xBEEF, string_id);
+            testing.expectEqual(2, color_id);
+            testing.expectEqual(320, point.x);
+            testing.expectEqual(200, point.y);
+        }
+    });
+
+    try mock.drawString(0xBEEF, 2, .{ .x = 320, .y = 200 });
+    testing.expectEqual(1, mock.call_counts.drawString);
 }
 
 test "MockMachine calls startGamePart correctly on stub implementation" {
