@@ -4,7 +4,8 @@ const Machine = @import("machine.zig");
 const Point = @import("types/point.zig");
 const ColorID = @import("types/color_id.zig");
 const StringID = @import("types/string_id.zig");
-const String = @import("types/string.zig");
+
+const english = @import("../assets/english.zig");
 
 /// Defines where to read polygon from for a polygon draw operation.
 /// Another World's polygons may be stored in one of two locations:
@@ -45,7 +46,7 @@ pub const Interface = struct {
     /// Returns an error if the string could not be found.
     pub fn drawString(self: *Machine.Instance, string_id: StringID.Raw, color_id: ColorID.Trusted, point: Point.Instance) !void {
         log_unimplemented("Video.drawString: draw #{} color:{} at x:{} y:{}", .{
-            try String.english.find(string_id),
+            try english.find(string_id),
             color_id,
             point.x,
             point.y,
