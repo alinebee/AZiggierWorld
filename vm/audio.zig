@@ -36,17 +36,17 @@ pub const Interface = struct {
 
     /// Play a sound effect from the specified resource on the specified channel.
     /// Returns an error if the resource does not exist or could not be loaded.
-    pub fn playSound(self: *Machine.Instance, resource_id: ResourceID.Raw, channel: Channel.Enum, volume: Volume, frequency: Frequency) !void {
+    pub fn playSound(self: *Machine.Instance, resource_id: ResourceID.Raw, channel: Channel.Trusted, volume: Volume, frequency: Frequency) !void {
         log_unimplemented("Audio.playSound: play #{X} on channel {} at volume {}, frequency {}", .{
             resource_id,
-            @tagName(channel),
+            channel,
             volume,
             frequency,
         });
     }
 
     /// Stop any sound effect playing on the specified channel.
-    pub fn stopChannel(self: *Machine.Instance, channel: Channel.Enum) void {
-        log_unimplemented("Audio.stopChannel: stop playing on channel {}", .{@tagName(channel)});
+    pub fn stopChannel(self: *Machine.Instance, channel: Channel.Trusted) void {
+        log_unimplemented("Audio.stopChannel: stop playing on channel {}", .{channel});
     }
 };

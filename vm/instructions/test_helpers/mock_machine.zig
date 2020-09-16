@@ -82,12 +82,12 @@ fn MockMachine(comptime Implementation: type) type {
             Implementation.stopMusic();
         }
 
-        pub fn playSound(self: *Self, resource_id: ResourceID.Raw, channel: Channel.Enum, volume: Audio.Volume, frequency: Audio.Frequency) !void {
+        pub fn playSound(self: *Self, resource_id: ResourceID.Raw, channel: Channel.Trusted, volume: Audio.Volume, frequency: Audio.Frequency) !void {
             self.call_counts.playSound += 1;
             try Implementation.playSound(resource_id, channel, volume, frequency);
         }
 
-        pub fn stopChannel(self: *Self, channel: Channel.Enum) void {
+        pub fn stopChannel(self: *Self, channel: Channel.Trusted) void {
             self.call_counts.stopChannel += 1;
             Implementation.stopChannel(channel);
         }
@@ -193,25 +193,25 @@ test "MockMachine calls stopMusic correctly on stub implementation" {
 
 test "MockMachine calls playSound correctly on stub implementation" {
     var mock = new(struct {
-        fn playSound(resource_id: ResourceID.Raw, channel: Channel.Enum, volume: Audio.Volume, frequency: Audio.Frequency) !void {
+        fn playSound(resource_id: ResourceID.Raw, channel: Channel.Trusted, volume: Audio.Volume, frequency: Audio.Frequency) !void {
             testing.expectEqual(0xBEEF, resource_id);
-            testing.expectEqual(.three, channel);
+            testing.expectEqual(2, channel);
             testing.expectEqual(64, volume);
             testing.expectEqual(128, frequency);
         }
     });
 
-    try mock.playSound(0xBEEF, .three, 64, 128);
+    try mock.playSound(0xBEEF, 2, 64, 128);
     testing.expectEqual(1, mock.call_counts.playSound);
 }
 
 test "MockMachine calls stopChannel correctly on stub implementation" {
     var mock = new(struct {
-        fn stopChannel(channel: Channel.Enum) void {
-            testing.expectEqual(.two, channel);
+        fn stopChannel(channel: Channel.Trusted) void {
+            testing.expectEqual(2, channel);
         }
     });
 
-    mock.stopChannel(.two);
+    mock.stopChannel(2);
     testing.expectEqual(1, mock.call_counts.stopChannel);
 }

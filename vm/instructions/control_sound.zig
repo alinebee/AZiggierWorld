@@ -12,7 +12,7 @@ pub const Instance = union(enum) {
         /// The ID of the sound to play.
         resource_id: ResourceID.Raw,
         /// The channel on which to play the sound.
-        channel: Channel.Enum,
+        channel: Channel.Trusted,
         /// The volume at which to play the sound.
         /// TODO: document default volume and observed range.
         volume: Audio.Volume,
@@ -20,7 +20,7 @@ pub const Instance = union(enum) {
         /// TODO: document default frequency and observed range.
         frequency: Audio.Frequency,
     },
-    stop: Channel.Enum,
+    stop: Channel.Trusted,
 
     // Public implementation is constrained to concrete type so that instruction.zig can infer errors.
     pub inline fn execute(self: Instance, machine: *Machine.Instance) !void {
@@ -83,7 +83,7 @@ test "parse parses play instruction and consumes 5 bytes" {
     const expected = Instance{
         .play = .{
             .resource_id = 0xDEAD,
-            .channel = .four,
+            .channel = 3,
             .volume = 0xEF,
             .frequency = 0xBE,
         },
@@ -93,7 +93,7 @@ test "parse parses play instruction and consumes 5 bytes" {
 
 test "parse parses stop instruction and consumes 5 bytes" {
     const instruction = try expectParse(parse, &BytecodeExamples.stop, 5);
-    const expected = Instance{ .stop = .two };
+    const expected = Instance{ .stop = 1 };
     testing.expectEqual(expected, instruction);
 }
 
@@ -108,21 +108,21 @@ test "execute with play instruction calls playSound with correct parameters" {
     const instruction = Instance{
         .play = .{
             .resource_id = 0xDEAD,
-            .channel = .one,
+            .channel = 0,
             .volume = 20,
             .frequency = 0,
         },
     };
 
     var machine = MockMachine.new(struct {
-        pub fn playSound(resource_id: ResourceID.Raw, channel: Channel.Enum, volume: Audio.Volume, frequency: Audio.Frequency) !void {
+        pub fn playSound(resource_id: ResourceID.Raw, channel: Channel.Trusted, volume: Audio.Volume, frequency: Audio.Frequency) !void {
             testing.expectEqual(0xDEAD, resource_id);
-            testing.expectEqual(.one, channel);
+            testing.expectEqual(0, channel);
             testing.expectEqual(20, volume);
             testing.expectEqual(0, frequency);
         }
 
-        pub fn stopChannel(channel: Channel.Enum) void {
+        pub fn stopChannel(channel: Channel.Trusted) void {
             unreachable;
         }
     });
@@ -132,15 +132,15 @@ test "execute with play instruction calls playSound with correct parameters" {
 }
 
 test "execute with stop instruction runs on machine without errors" {
-    const instruction = Instance{ .stop = .two };
+    const instruction = Instance{ .stop = 1 };
 
     var machine = MockMachine.new(struct {
-        pub fn playSound(resource_id: ResourceID.Raw, channel: Channel.Enum, volume: Audio.Volume, frequency: Audio.Frequency) !void {
+        pub fn playSound(resource_id: ResourceID.Raw, channel: Channel.Trusted, volume: Audio.Volume, frequency: Audio.Frequency) !void {
             unreachable;
         }
 
-        pub fn stopChannel(channel: Channel.Enum) void {
-            testing.expectEqual(.two, channel);
+        pub fn stopChannel(channel: Channel.Trusted) void {
+            testing.expectEqual(1, channel);
         }
     });
 

@@ -1,24 +1,20 @@
-/// A raw channel identifier as represented in Another World's bytecode.
-pub const Raw = u8;
+/// The identifier of an audio channel as a value from 0-3. This is guaranteed to be valid.
+pub const Trusted = u2;
 
-/// The channel on which to play a sound effect.
-pub const Enum = enum(Raw) {
-    one,
-    two,
-    three,
-    four,
-};
+/// A raw audio channel identifier as represented in Another World's bytecode.
+pub const Raw = u8;
 
 pub const Error = error{
     /// Bytecode specified an invalid channel ID.
     InvalidChannel,
 };
 
-pub fn parse(raw: Raw) Error!Enum {
-    if (raw > @enumToInt(Enum.four)) {
-        return error.InvalidChannel;
-    }
-    return @intToEnum(Enum, raw);
+/// The maximum legal value for a channel ID.
+const max = 0b11;
+
+pub fn parse(raw: Raw) Error!Trusted {
+    if (raw > max) return error.InvalidChannel;
+    return @truncate(Trusted, raw);
 }
 
 // -- Tests --
@@ -26,10 +22,10 @@ pub fn parse(raw: Raw) Error!Enum {
 const testing = @import("../../utils/testing.zig");
 
 test "parse returns expected enum cases" {
-    testing.expectEqual(.one,   parse(0));
-    testing.expectEqual(.two,   parse(1));
-    testing.expectEqual(.three, parse(2));
-    testing.expectEqual(.four,  parse(3));
+    testing.expectEqual(0, parse(0));
+    testing.expectEqual(1, parse(1));
+    testing.expectEqual(2, parse(2));
+    testing.expectEqual(3, parse(3));
 
     testing.expectError(error.InvalidChannel, parse(4));
 }
