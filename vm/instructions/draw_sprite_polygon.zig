@@ -49,8 +49,7 @@ pub const Instance = struct {
         };
         const scale = switch (self.scale) {
             .constant => |constant| constant,
-            // TODO: return an error for out-of-range scale values?
-            .register => |id| @truncate(Video.PolygonScale, @bitCast(u16, machine.registers[id])),
+            .register => |id| @bitCast(u16, machine.registers[id]),
             .default => null,
         };
 
@@ -126,7 +125,7 @@ pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instance 
         },
         0b10 => {
             self.source = .polygons;
-            self.scale = .{ .constant = try program.read(Video.PolygonScale) };
+            self.scale = .{ .constant = @as(Video.PolygonScale, try program.read(u8)) };
         },
         0b11 => {
             self.source = .animations;
@@ -287,20 +286,20 @@ test "execute with registers calls drawPolygon with correct parameters" {
             testing.expectEqual(0xDEAD, address);
             testing.expectEqual(-1234, point.x);
             testing.expectEqual(5678, point.y);
-            testing.expectEqual(128, scale);
+            testing.expectEqual(16384, scale);
         }
     });
 
     machine.registers[1] = -1234;
     machine.registers[2] = 5678;
-    machine.registers[3] = 128;
+    machine.registers[3] = 16384;
 
     try instruction._execute(&machine);
 
     testing.expectEqual(1, machine.call_counts.drawPolygon);
 }
 
-test "execute with register scale value truncates out-of-range scale" {
+test "execute with register scale value interprets value as unsigned" {
     const instruction = Instance{
         .source = .polygons,
         .address = 0xDEAD,
@@ -311,12 +310,12 @@ test "execute with register scale value truncates out-of-range scale" {
 
     var machine = MockMachine.new(struct {
         pub fn drawPolygon(_source: Video.PolygonSource, _address: Video.PolygonAddress, _point: Point.Instance, scale: ?Video.PolygonScale) !void {
-            testing.expectEqual(0b0010_1011, scale);
+            testing.expectEqual(46635, scale);
         }
     });
 
-    // -18901 = 0b1011_0110_0010_1011 in two's-complement;
-    // top 8 bits should get truncated
+    // 0b1011_0110_0010_1011 = -18901 in signed two's-complement;
+    // Should be interpreted as 46635 when unsigned
     machine.registers[1] = -18901;
 
     try instruction._execute(&machine);

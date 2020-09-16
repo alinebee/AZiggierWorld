@@ -23,7 +23,7 @@ pub const PolygonAddress = u16;
 
 /// The scale at which to render a polygon.
 /// TODO: document the observed ranges and default value for this.
-pub const PolygonScale = u8;
+pub const PolygonScale = u16;
 
 const log_unimplemented = @import("../utils/logging.zig").log_unimplemented;
 
