@@ -27,7 +27,7 @@ pub const Instance = struct {
 pub const Error = Program.Error;
 
 /// Parse the next instruction from a bytecode program.
-/// Consumes 3 bytes from the bytecode on success, not including the opcode itself.
+/// Consumes 4 bytes from the bytecode on success, including the opcode.
 /// Returns an error if the bytecode could not be read or contained an invalid instruction.
 pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instance {
     var self: Instance = undefined;
@@ -69,8 +69,8 @@ pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instance 
 // -- Bytecode examples --
 
 pub const BytecodeExamples = struct {
-    pub const low_x = [_]u8{ 0b1000_1111, 0b0000_1111, 30, 40 };
-    pub const high_x = [_]u8{ 0b1000_1111, 0b0000_1111, 255, 240 };
+    pub const low_x = [4]u8{ 0b1000_1111, 0b0000_1111, 30, 40 };
+    pub const high_x = [4]u8{ 0b1000_1111, 0b0000_1111, 255, 240 };
 };
 
 // -- Tests --
@@ -79,8 +79,8 @@ const testing = @import("../../utils/testing.zig");
 const expectParse = @import("test_helpers/parse.zig").expectParse;
 const MockMachine = @import("test_helpers/mock_machine.zig");
 
-test "parse parses bytecode with low X coordinate and consumes 3 bytes after opcode" {
-    const instruction = try expectParse(parse, &BytecodeExamples.low_x, 3);
+test "parse parses bytecode with low X coordinate and consumes 4 bytes" {
+    const instruction = try expectParse(parse, &BytecodeExamples.low_x, 4);
 
     // Address will be the first two bytes right-shifted by 1
     testing.expectEqual(0b0001_1110_0001_1110, instruction.address);
@@ -88,8 +88,8 @@ test "parse parses bytecode with low X coordinate and consumes 3 bytes after opc
     testing.expectEqual(40, instruction.point.y);
 }
 
-test "parse parses bytecode with high X coordinate and consumes 3 bytes after opcode" {
-    const instruction = try expectParse(parse, &BytecodeExamples.high_x, 3);
+test "parse parses bytecode with high X coordinate and consumes 4 bytes" {
+    const instruction = try expectParse(parse, &BytecodeExamples.high_x, 4);
 
     testing.expectEqual(0b0001_1110_0001_1110, instruction.address);
     testing.expectEqual(255 + (240 - 199), instruction.point.x);

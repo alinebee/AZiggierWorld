@@ -37,13 +37,17 @@ pub const Instance = struct {
 };
 
 /// Parse the next instruction from a bytecode program.
-/// Consumes 3 bytes from the bytecode on success.
+/// Consumes 4 bytes from the bytecode on success, including the opcode.
 /// Returns an error if the bytecode could not be read or contained an invalid instruction.
 pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instance {
+    const raw_start_thread = try program.read(ThreadID.Raw);
+    const raw_end_thread = try program.read(ThreadID.Raw);
+    const raw_operation = try program.read(Operation.Raw);
+
     const instruction = Instance{
-        .start_thread_id = try ThreadID.parse(try program.read(ThreadID.Raw)),
-        .end_thread_id = try ThreadID.parse(try program.read(ThreadID.Raw)),
-        .operation = try Operation.parse(try program.read(Operation.Raw)),
+        .start_thread_id = try ThreadID.parse(raw_start_thread),
+        .end_thread_id = try ThreadID.parse(raw_end_thread),
+        .operation = try Operation.parse(raw_operation),
     };
 
     if (instruction.start_thread_id > instruction.end_thread_id) {
@@ -59,13 +63,13 @@ pub const BytecodeExamples = struct {
     const raw_opcode = @enumToInt(Opcode.Enum.ControlThreads);
 
     /// Example bytecode that should produce a valid instruction.
-    pub const valid = [_]u8{ raw_opcode, 62, 63, 0x02 };
+    pub const valid = [4]u8{ raw_opcode, 62, 63, 0x02 };
 
     /// Example bytecode with an invalid starting thread ID that should produce an error.
-    const invalid_start_thread_id = [_]u8{ raw_opcode, 64, 64, 0x02 };
+    const invalid_start_thread_id = [4]u8{ raw_opcode, 64, 64, 0x02 };
 
     /// Example bytecode with an invalid ending thread ID that should produce an error.
-    const invalid_end_thread_id = [_]u8{ raw_opcode, 63, 64, 0x02 };
+    const invalid_end_thread_id = [4]u8{ raw_opcode, 63, 64, 0x02 };
 
     /// Example bytecode with a start thread ID higher than its end thread ID, which should produce an error.
     const transposed_thread_ids = [_]u8{ raw_opcode, 63, 62, 0x02 };
@@ -79,39 +83,32 @@ pub const BytecodeExamples = struct {
 const testing = @import("../../utils/testing.zig");
 const expectParse = @import("test_helpers/parse.zig").expectParse;
 
-test "parse parses valid bytecode and consumes 3 bytes" {
-    const instruction = try expectParse(parse, &BytecodeExamples.valid, 3);
+test "parse parses valid bytecode and consumes 4 bytes" {
+    const instruction = try expectParse(parse, &BytecodeExamples.valid, 4);
 
     testing.expectEqual(62, instruction.start_thread_id);
     testing.expectEqual(63, instruction.end_thread_id);
     testing.expectEqual(.Deactivate, instruction.operation);
 }
 
-test "parse returns Error.InvalidThreadID and consumes 1 byte when start thread ID is invalid" {
+test "parse returns Error.InvalidThreadID and consumes 4 bytes when start thread ID is invalid" {
     testing.expectError(
         Error.InvalidThreadID,
-        expectParse(parse, &BytecodeExamples.invalid_start_thread_id, 1),
+        expectParse(parse, &BytecodeExamples.invalid_start_thread_id, 4),
     );
 }
 
-test "parse returns Error.InvalidThreadID and consumes 2 bytes when end thread ID is invalid" {
+test "parse returns Error.InvalidThreadID and consumes 4 bytes when end thread ID is invalid" {
     testing.expectError(
         error.InvalidThreadID,
-        expectParse(parse, &BytecodeExamples.invalid_end_thread_id, 2),
+        expectParse(parse, &BytecodeExamples.invalid_end_thread_id, 4),
     );
 }
 
-test "parse returns Error.InvalidThreadRange and consumes 3 bytes when thread range is transposed" {
+test "parse returns Error.InvalidThreadRange and consumes 4 bytes when thread range is transposed" {
     testing.expectError(
         error.InvalidThreadRange,
-        expectParse(parse, &BytecodeExamples.transposed_thread_ids, 3),
-    );
-}
-
-test "parse fails to parse incomplete bytecode and consumes all available bytes" {
-    testing.expectError(
-        error.EndOfProgram,
-        expectParse(parse, BytecodeExamples.valid[0..3], 2),
+        expectParse(parse, &BytecodeExamples.transposed_thread_ids, 4),
     );
 }
 

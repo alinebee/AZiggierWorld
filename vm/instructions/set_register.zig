@@ -18,7 +18,7 @@ pub const Instance = struct {
 };
 
 /// Parse the next instruction from a bytecode program.
-/// Consumes 3 bytes from the bytecode on success.
+/// Consumes 4 bytes from the bytecode on success, including the opcode.
 /// Returns an error if the bytecode could not be read or contained an invalid instruction.
 pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instance {
     return Instance{
@@ -32,7 +32,7 @@ pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instance 
 pub const BytecodeExamples = struct {
     const raw_opcode = @enumToInt(Opcode.Enum.SetRegister);
 
-    pub const valid = [_]u8{ raw_opcode, 16, 0b1011_0110, 0b0010_1011 }; // -18901 in two's complement
+    pub const valid = [4]u8{ raw_opcode, 16, 0b1011_0110, 0b0010_1011 }; // -18901 in two's complement
 };
 
 // -- Tests --
@@ -40,18 +40,11 @@ pub const BytecodeExamples = struct {
 const testing = @import("../../utils/testing.zig");
 const expectParse = @import("test_helpers/parse.zig").expectParse;
 
-test "parse parses valid bytecode and consumes 3 bytes" {
-    const instruction = try expectParse(parse, &BytecodeExamples.valid, 3);
+test "parse parses valid bytecode and consumes 4 bytes" {
+    const instruction = try expectParse(parse, &BytecodeExamples.valid, 4);
 
     testing.expectEqual(16, instruction.destination);
     testing.expectEqual(-18901, instruction.value);
-}
-
-test "parse fails to parse incomplete bytecode and consumes all available bytes" {
-    testing.expectError(
-        error.EndOfProgram,
-        expectParse(parse, BytecodeExamples.valid[0..3], 2),
-    );
 }
 
 test "execute updates specified register with value" {

@@ -20,12 +20,17 @@ pub const Instance = struct {
 };
 
 /// Parse the next instruction from a bytecode program.
-/// Consumes 3 bytes from the bytecode on success.
+/// Consumes 4 bytes from the bytecode on success, including the opcode.
 /// Returns an error if the bytecode could not be read or contained an invalid instruction.
 pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instance {
+    const raw_thread_id = try program.read(ThreadID.Raw);
+    const address = try program.read(Program.Address);
+
+    // Do failable parsing *after* loading all the bytes that this instruction would normally consume;
+    // This way, tests that recover from failed parsing will parse the rest of the bytecode correctly.
     return Instance{
-        .thread_id = try ThreadID.parse(try program.read(ThreadID.Raw)),
-        .address = try program.read(Program.Address),
+        .thread_id = try ThreadID.parse(raw_thread_id),
+        .address = address,
     };
 }
 
@@ -35,10 +40,10 @@ pub const BytecodeExamples = struct {
     const raw_opcode = @enumToInt(Opcode.Enum.ActivateThread);
 
     /// Example bytecode that should produce a valid instruction.
-    pub const valid = [_]u8{ raw_opcode, 63, 0xDE, 0xAD };
+    pub const valid = [4]u8{ raw_opcode, 63, 0xDE, 0xAD };
 
     /// Example bytecode with an invalid thread ID that should produce an error.
-    const invalid_thread_id = [_]u8{ raw_opcode, 255, 0xDE, 0xAD };
+    const invalid_thread_id = [4]u8{ raw_opcode, 255, 0xDE, 0xAD };
 };
 
 // -- Tests --
@@ -46,24 +51,17 @@ pub const BytecodeExamples = struct {
 const testing = @import("../../utils/testing.zig");
 const expectParse = @import("test_helpers/parse.zig").expectParse;
 
-test "parse parses instruction from valid bytecode and consumes 3 bytes" {
-    const instruction = try expectParse(parse, &BytecodeExamples.valid, 3);
+test "parse parses instruction from valid bytecode and consumes 4 bytes" {
+    const instruction = try expectParse(parse, &BytecodeExamples.valid, 4);
 
     testing.expectEqual(63, instruction.thread_id);
     testing.expectEqual(0xDEAD, instruction.address);
 }
 
-test "parse returns error.InvalidThreadID and consumes 1 byte when thread ID is invalid" {
+test "parse returns error.InvalidThreadID and consumes 4 bytes when thread ID is invalid" {
     testing.expectError(
         error.InvalidThreadID,
-        expectParse(parse, &BytecodeExamples.invalid_thread_id, 1),
-    );
-}
-
-test "parse fails to parse incomplete bytecode and consumes all remaining bytes" {
-    testing.expectError(
-        error.EndOfProgram,
-        expectParse(parse, BytecodeExamples.valid[0..3], 2),
+        expectParse(parse, &BytecodeExamples.invalid_thread_id, 4),
     );
 }
 

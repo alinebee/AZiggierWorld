@@ -30,7 +30,7 @@ pub const Instance = struct {
 };
 
 /// Parse the next instruction from a bytecode program.
-/// Consumes 5 bytes from the bytecode on success.
+/// Consumes 6 bytes from the bytecode on success, including the opcode.
 /// Returns an error if the bytecode could not be read or contained an invalid instruction.
 pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instance {
     const string_id = try program.read(StringID.Raw);
@@ -53,8 +53,8 @@ pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instance 
 pub const BytecodeExamples = struct {
     const raw_opcode = @enumToInt(Opcode.Enum.DrawString);
 
-    pub const valid = [_]u8{ raw_opcode, 0xDE, 0xAD, 15, 160, 100 };
-    pub const invalid_color_id = [_]u8{ raw_opcode, 0xDE, 0xAD, 255, 160, 100 };
+    pub const valid = [6]u8{ raw_opcode, 0xDE, 0xAD, 15, 160, 100 };
+    pub const invalid_color_id = [6]u8{ raw_opcode, 0xDE, 0xAD, 255, 160, 100 };
 };
 
 // -- Tests --
@@ -63,8 +63,8 @@ const testing = @import("../../utils/testing.zig");
 const expectParse = @import("test_helpers/parse.zig").expectParse;
 const MockMachine = @import("test_helpers/mock_machine.zig");
 
-test "parse parses valid bytecode" {
-    const instruction = try expectParse(parse, &BytecodeExamples.valid, 5);
+test "parse parses valid bytecode and consumed 6 bytes" {
+    const instruction = try expectParse(parse, &BytecodeExamples.valid, 6);
 
     testing.expectEqual(0xDEAD, instruction.string_id);
     testing.expectEqual(15, instruction.color_id);
@@ -72,10 +72,10 @@ test "parse parses valid bytecode" {
     testing.expectEqual(100, instruction.point.y);
 }
 
-test "parse returns error.InvalidColorID on out of range color" {
+test "parse returns error.InvalidColorID on out of range color and consumes 6 bytes" {
     testing.expectError(
         error.InvalidColorID,
-        expectParse(parse, &BytecodeExamples.invalid_color_id, 5),
+        expectParse(parse, &BytecodeExamples.invalid_color_id, 6),
     );
 }
 

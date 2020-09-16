@@ -22,9 +22,7 @@ pub fn expectParse(comptime parseFn: anytype, bytecode: []const u8, expected_byt
     const instruction = parseFn(raw_opcode, &program);
 
     // Regardless of success or failure, check how many bytes were actually consumed.
-    // (Don't count the initial opcode byte, as it's not really "part of" the instruction
-    // and will have been read separately by the instruction's caller.)
-    const bytes_consumed = program.counter - 1;
+    const bytes_consumed = program.counter;
     if (bytes_consumed > expected_bytes_consumed) {
         return error.OverRead;
     } else if (bytes_consumed < expected_bytes_consumed) {
@@ -46,15 +44,10 @@ const Error = error{
 const EmptyInstruction = struct {};
 
 /// A fake instruction parse function that does nothing but consume 5 bytes
-/// from the passed-in program (not including the opcode byte).
-fn parse5Bytes(raw_opcode: Opcode.Raw, program: *Program.Instance) Program.Error!EmptyInstruction {
+/// from the passed-in program after the opcode byte.
+fn parse5MoreBytes(raw_opcode: Opcode.Raw, program: *Program.Instance) Program.Error!EmptyInstruction {
     try program.skip(5);
     return EmptyInstruction{};
-}
-
-/// Create a fake bytecode sequence of n bytes plus an opcode byte.
-fn fakeBytecode(comptime size: usize) [size + 1]u8 {
-    return [_]u8{0} ** (size + 1);
 }
 
 // -- Tests --
@@ -62,20 +55,20 @@ fn fakeBytecode(comptime size: usize) [size + 1]u8 {
 const testing = @import("../../../utils/testing.zig");
 
 test "expectParse returns parsed instruction if all bytes were parsed" {
-    const bytecode = fakeBytecode(5);
+    const bytecode = [_]u8{0} ** 6;
 
-    const instruction = try expectParse(parse5Bytes, &bytecode, 5);
+    const instruction = try expectParse(parse5MoreBytes, &bytecode, 6);
     testing.expectEqual(EmptyInstruction{}, instruction);
 }
 
 test "expectParse returns error.UnderRead if too few bytes were parsed" {
-    const bytecode = fakeBytecode(10);
+    const bytecode = [_]u8{0} ** 6;
 
-    testing.expectError(error.UnderRead, expectParse(parse5Bytes, &bytecode, 6));
+    testing.expectError(error.UnderRead, expectParse(parse5MoreBytes, &bytecode, 7));
 }
 
 test "expectParse returns error.OverRead if too many bytes were parsed" {
-    const bytecode = fakeBytecode(10);
+    const bytecode = [_]u8{0} ** 6;
 
-    testing.expectError(error.OverRead, expectParse(parse5Bytes, &bytecode, 3));
+    testing.expectError(error.OverRead, expectParse(parse5MoreBytes, &bytecode, 3));
 }

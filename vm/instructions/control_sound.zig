@@ -39,7 +39,7 @@ pub const Instance = union(enum) {
 pub const Error = Program.Error || Channel.Error;
 
 /// Parse the next instruction from a bytecode program.
-/// Consumes 5 bytes from the bytecode on success.
+/// Consumes 6 bytes from the bytecode on success, including the opcode.
 /// Returns an error if the bytecode could not be read or contained an invalid instruction.
 pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instance {
     const resource_id = try program.read(ResourceID.Raw);
@@ -66,10 +66,10 @@ pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instance 
 pub const BytecodeExamples = struct {
     const raw_opcode = @enumToInt(Opcode.Enum.ControlSound);
 
-    pub const play = [_]u8{ raw_opcode, 0xDE, 0xAD, 0xBE, 0xEF, 0x03 };
-    pub const stop = [_]u8{ raw_opcode, 0x00, 0x00, 0x00, 0x00, 0x01 };
+    pub const play = [6]u8{ raw_opcode, 0xDE, 0xAD, 0xBE, 0xEF, 0x03 };
+    pub const stop = [6]u8{ raw_opcode, 0x00, 0x00, 0x00, 0x00, 0x01 };
 
-    pub const invalid_channel = [_]u8{ raw_opcode, 0xDE, 0xAD, 0xFF, 0x80, 0x04 };
+    pub const invalid_channel = [6]u8{ raw_opcode, 0xDE, 0xAD, 0xFF, 0x80, 0x04 };
 };
 
 // -- Tests --
@@ -78,8 +78,8 @@ const testing = @import("../../utils/testing.zig");
 const expectParse = @import("test_helpers/parse.zig").expectParse;
 const MockMachine = @import("test_helpers/mock_machine.zig");
 
-test "parse parses play instruction and consumes 5 bytes" {
-    const instruction = try expectParse(parse, &BytecodeExamples.play, 5);
+test "parse parses play instruction and consumes 6 bytes" {
+    const instruction = try expectParse(parse, &BytecodeExamples.play, 6);
     const expected = Instance{
         .play = .{
             .resource_id = 0xDEAD,
@@ -91,8 +91,8 @@ test "parse parses play instruction and consumes 5 bytes" {
     testing.expectEqual(expected, instruction);
 }
 
-test "parse parses stop instruction and consumes 5 bytes" {
-    const instruction = try expectParse(parse, &BytecodeExamples.stop, 5);
+test "parse parses stop instruction and consumes 6 bytes" {
+    const instruction = try expectParse(parse, &BytecodeExamples.stop, 6);
     const expected = Instance{ .stop = 1 };
     testing.expectEqual(expected, instruction);
 }
@@ -100,7 +100,7 @@ test "parse parses stop instruction and consumes 5 bytes" {
 test "parse returns error.InvalidChannel when unknown channel is specified in bytecode" {
     testing.expectError(
         error.InvalidChannel,
-        expectParse(parse, &BytecodeExamples.invalid_channel, 5),
+        expectParse(parse, &BytecodeExamples.invalid_channel, 6),
     );
 }
 

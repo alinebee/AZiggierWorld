@@ -60,7 +60,7 @@ pub const Instance = struct {
 pub const Error = Program.Error;
 
 /// Parse the next instruction from a bytecode program.
-/// Consumes n bytes from the bytecode on success, not including the opcode itself.
+/// Consumes 5-8 bytes from the bytecode on success, including the opcode.
 /// Returns an error if the bytecode could not be read or contained an invalid instruction.
 pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instance {
     var self: Instance = undefined;
@@ -139,13 +139,13 @@ pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instance 
 // -- Bytecode examples --
 
 pub const BytecodeExamples = struct {
-    pub const registers = [_]u8{
+    pub const registers = [6]u8{
         0b01_01_01_01,              // opcode
         0b0000_1111, 0b0000_1111,   // address (will be right-shifted by 1)
         1, 2, 3,                    // register IDs for x, y and scale
     };
 
-    pub const wide_constants = [_]u8{
+    pub const wide_constants = [8]u8{
         0b01_00_00_10,              // opcode
         0b0000_1111, 0b0000_1111,   // address (will be right-shifted by 1)
         0b1011_0110, 0b0010_1011,   // x constant (-18901 in two's-complement)
@@ -153,27 +153,27 @@ pub const BytecodeExamples = struct {
         255,                        // scale
     };
 
-    pub const short_constants = [_]u8{
+    pub const short_constants = [6]u8{
         0b01_10_10_10,              // opcode
         0b0000_1111, 0b0000_1111,   // address (will be right-shifted by 1)
         160, 100,                   // constants for x and y
         255,                        // scale
     };
 
-    pub const short_boosted_x_constants = [_]u8{
+    pub const short_boosted_x_constants = [6]u8{
         0b01_11_10_10,              // opcode
         0b0000_1111, 0b0000_1111,   // address (will be right-shifted by 1)
         64, 200,                    // constants for x + 256 and y
         255,                        // scale
     };
 
-    pub const default_scale_from_polygons = [_]u8{
+    pub const default_scale_from_polygons = [5]u8{
         0b01_10_10_00,              // opcode
         0b0000_1111, 0b0000_1111,   // address (will be right-shifted by 1)
         160, 100,                   // constants for x and y
     };
 
-    pub const default_scale_from_animations = [_]u8{
+    pub const default_scale_from_animations = [5]u8{
         0b01_10_10_11,              // opcode
         0b0000_1111, 0b0000_1111,   // address (will be right-shifted by 1)
         160, 100,                   // constants for x and y
@@ -186,8 +186,8 @@ const testing = @import("../../utils/testing.zig");
 const expectParse = @import("test_helpers/parse.zig").expectParse;
 const MockMachine = @import("test_helpers/mock_machine.zig");
 
-test "parse parses all-registers instruction and consumes 5 extra bytes" {
-    const instruction = try expectParse(parse, &BytecodeExamples.registers, 5);
+test "parse parses all-registers instruction and consumes 6 bytes" {
+    const instruction = try expectParse(parse, &BytecodeExamples.registers, 6);
 
     testing.expectEqual(.polygons, instruction.source);
     // Address is right-shifted by 1
@@ -197,8 +197,8 @@ test "parse parses all-registers instruction and consumes 5 extra bytes" {
     testing.expectEqual(.{ .register = 3 }, instruction.scale);
 }
 
-test "parse parses instruction with full-width constants and consumes 7 extra bytes" {
-    const instruction = try expectParse(parse, &BytecodeExamples.wide_constants, 7);
+test "parse parses instruction with full-width constants and consumes 8 bytes" {
+    const instruction = try expectParse(parse, &BytecodeExamples.wide_constants, 8);
 
     testing.expectEqual(.polygons, instruction.source);
     testing.expectEqual(0b0001_1110_0001_1110, instruction.address);
@@ -207,8 +207,8 @@ test "parse parses instruction with full-width constants and consumes 7 extra by
     testing.expectEqual(.{ .constant = 255 }, instruction.scale);
 }
 
-test "parse parses instruction with short constants and consumes 5 extra bytes" {
-    const instruction = try expectParse(parse, &BytecodeExamples.short_constants, 5);
+test "parse parses instruction with short constants and consumes 6 bytes" {
+    const instruction = try expectParse(parse, &BytecodeExamples.short_constants, 6);
 
     testing.expectEqual(.polygons, instruction.source);
     testing.expectEqual(0b0001_1110_0001_1110, instruction.address);
@@ -217,8 +217,8 @@ test "parse parses instruction with short constants and consumes 5 extra bytes" 
     testing.expectEqual(.{ .constant = 255 }, instruction.scale);
 }
 
-test "parse parses instruction with short constants with boosted X and consumes 5 extra bytes" {
-    const instruction = try expectParse(parse, &BytecodeExamples.short_boosted_x_constants, 5);
+test "parse parses instruction with short constants with boosted X and consumes 6 bytes" {
+    const instruction = try expectParse(parse, &BytecodeExamples.short_boosted_x_constants, 6);
 
     testing.expectEqual(.polygons, instruction.source);
     testing.expectEqual(0b0001_1110_0001_1110, instruction.address);
@@ -227,8 +227,8 @@ test "parse parses instruction with short constants with boosted X and consumes 
     testing.expectEqual(.{ .constant = 255 }, instruction.scale);
 }
 
-test "parse parses instruction with default scale/polygon source and consumes 4 extra bytes" {
-    const instruction = try expectParse(parse, &BytecodeExamples.default_scale_from_polygons, 4);
+test "parse parses instruction with default scale/polygon source and consumes 5 bytes" {
+    const instruction = try expectParse(parse, &BytecodeExamples.default_scale_from_polygons, 5);
 
     testing.expectEqual(.polygons, instruction.source);
     testing.expectEqual(0b0001_1110_0001_1110, instruction.address);
@@ -237,8 +237,8 @@ test "parse parses instruction with default scale/polygon source and consumes 4 
     testing.expectEqual(.default, instruction.scale);
 }
 
-test "parse parses instruction with default scale/animation source and consumes 4 extra bytes" {
-    const instruction = try expectParse(parse, &BytecodeExamples.default_scale_from_animations, 4);
+test "parse parses instruction with default scale/animation source and consumes 5 bytes" {
+    const instruction = try expectParse(parse, &BytecodeExamples.default_scale_from_animations, 5);
 
     testing.expectEqual(.animations, instruction.source);
     testing.expectEqual(0b0001_1110_0001_1110, instruction.address);

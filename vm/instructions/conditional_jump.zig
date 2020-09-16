@@ -35,7 +35,7 @@ pub const Instance = struct {
 };
 
 /// Parse the next instruction from a bytecode program.
-/// Consumes 5 or 6 bytes from the bytecode on success, depending on the content of the instruction.
+/// Consumes 6 or 7 bytes from the bytecode on success, including the opcode.
 /// Returns an error if the bytecode could not be read or contained an invalid instruction.
 pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instance {
     var self: Instance = undefined;
@@ -71,7 +71,7 @@ pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instance 
 
     self.address = try program.read(Program.Address);
 
-    // Do failable comparison parsing *after* loading all the bytes that this instruction would normally consume;
+    // Do failable parsing *after* loading all the bytes that this instruction would normally consume;
     // This way, tests that recover from failed parsing will parse the rest of the bytecode correctly.
     self.comparison = try Comparison.parse(raw_comparison);
 
@@ -85,16 +85,16 @@ pub const Error = Program.Error || Comparison.Error;
 pub const BytecodeExamples = struct {
     const raw_opcode = @enumToInt(Opcode.Enum.ConditionalJump);
 
-    pub const equal_to_register     = [_]u8{ raw_opcode, 0b11_000_000, 0xFF, 0x00, 0xDE, 0xAD };
-    pub const equal_to_const16      = [_]u8{ raw_opcode, 0b01_000_000, 0xFF, 0x4B, 0x1D, 0xDE, 0xAD };
-    pub const equal_to_const8       = [_]u8{ raw_opcode, 0b00_000_000, 0xFF, 0xBE, 0xDE, 0xAD };
+    pub const equal_to_register     = [6]u8{ raw_opcode, 0b11_000_000, 0xFF, 0x00, 0xDE, 0xAD };
+    pub const equal_to_const16      = [7]u8{ raw_opcode, 0b01_000_000, 0xFF, 0x4B, 0x1D, 0xDE, 0xAD };
+    pub const equal_to_const8       = [6]u8{ raw_opcode, 0b00_000_000, 0xFF, 0xBE, 0xDE, 0xAD };
 
-    pub const not_equal                 = [_]u8{ raw_opcode, 0b11_000_001, 0xFF, 0x00, 0xDE, 0xAD };
-    pub const greater_than              = [_]u8{ raw_opcode, 0b11_000_010, 0xFF, 0x00, 0xDE, 0xAD };
-    pub const greater_than_or_equal_to  = [_]u8{ raw_opcode, 0b11_000_011, 0xFF, 0x00, 0xDE, 0xAD };
-    pub const less_than                 = [_]u8{ raw_opcode, 0b11_000_100, 0xFF, 0x00, 0xDE, 0xAD };
-    pub const less_than_or_equal_to     = [_]u8{ raw_opcode, 0b11_000_101, 0xFF, 0x00, 0xDE, 0xAD };
-    pub const invalid_comparison        = [_]u8{ raw_opcode, 0b11_000_110, 0xFF, 0x00, 0xDE, 0xAD };
+    pub const not_equal                 = [6]u8{ raw_opcode, 0b11_000_001, 0xFF, 0x00, 0xDE, 0xAD };
+    pub const greater_than              = [6]u8{ raw_opcode, 0b11_000_010, 0xFF, 0x00, 0xDE, 0xAD };
+    pub const greater_than_or_equal_to  = [6]u8{ raw_opcode, 0b11_000_011, 0xFF, 0x00, 0xDE, 0xAD };
+    pub const less_than                 = [6]u8{ raw_opcode, 0b11_000_100, 0xFF, 0x00, 0xDE, 0xAD };
+    pub const less_than_or_equal_to     = [6]u8{ raw_opcode, 0b11_000_101, 0xFF, 0x00, 0xDE, 0xAD };
+    pub const invalid_comparison        = [6]u8{ raw_opcode, 0b11_000_110, 0xFF, 0x00, 0xDE, 0xAD };
 };
 
 // -- Tests --
@@ -102,8 +102,8 @@ pub const BytecodeExamples = struct {
 const testing = @import("../../utils/testing.zig");
 const expectParse = @import("test_helpers/parse.zig").expectParse;
 
-test "parse parses equal_to_register instruction and consumes 5 bytes" {
-    const instruction = try expectParse(parse, &BytecodeExamples.equal_to_register, 5);
+test "parse parses equal_to_register instruction and consumes 6 bytes" {
+    const instruction = try expectParse(parse, &BytecodeExamples.equal_to_register, 6);
     const expected = Instance{
         .lhs = 0xFF,
         .rhs = .{ .register = 0x00 },
@@ -113,8 +113,8 @@ test "parse parses equal_to_register instruction and consumes 5 bytes" {
     testing.expectEqual(expected, instruction);
 }
 
-test "parse parses equal_to_const16 instruction and consumes 6 bytes" {
-    const instruction = try expectParse(parse, &BytecodeExamples.equal_to_const16, 6);
+test "parse parses equal_to_const16 instruction and consumes 7 bytes" {
+    const instruction = try expectParse(parse, &BytecodeExamples.equal_to_const16, 7);
     const expected = Instance{
         .lhs = 0xFF,
         .rhs = .{ .constant = 0x4B1D },
@@ -124,8 +124,8 @@ test "parse parses equal_to_const16 instruction and consumes 6 bytes" {
     testing.expectEqual(expected, instruction);
 }
 
-test "parse parses equal_to_const8 instruction and consumes 5 bytes" {
-    const instruction = try expectParse(parse, &BytecodeExamples.equal_to_const8, 5);
+test "parse parses equal_to_const8 instruction and consumes 6 bytes" {
+    const instruction = try expectParse(parse, &BytecodeExamples.equal_to_const8, 6);
     const expected = Instance{
         .lhs = 0xFF,
         .rhs = .{ .constant = 0xBE },
@@ -135,8 +135,8 @@ test "parse parses equal_to_const8 instruction and consumes 5 bytes" {
     testing.expectEqual(expected, instruction);
 }
 
-test "parse parses not_equal instruction and consumes 5 bytes" {
-    const instruction = try expectParse(parse, &BytecodeExamples.not_equal, 5);
+test "parse parses not_equal instruction and consumes 6 bytes" {
+    const instruction = try expectParse(parse, &BytecodeExamples.not_equal, 6);
     const expected = Instance{
         .lhs = 0xFF,
         .rhs = .{ .register = 0x00 },
@@ -146,8 +146,8 @@ test "parse parses not_equal instruction and consumes 5 bytes" {
     testing.expectEqual(expected, instruction);
 }
 
-test "parse parses greater_than instruction and consumes 5 bytes" {
-    const instruction = try expectParse(parse, &BytecodeExamples.greater_than, 5);
+test "parse parses greater_than instruction and consumes 6 bytes" {
+    const instruction = try expectParse(parse, &BytecodeExamples.greater_than, 6);
     const expected = Instance{
         .lhs = 0xFF,
         .rhs = .{ .register = 0x00 },
@@ -157,8 +157,8 @@ test "parse parses greater_than instruction and consumes 5 bytes" {
     testing.expectEqual(expected, instruction);
 }
 
-test "parse parses greater_than_or_equal_to instruction and consumes 5 bytes" {
-    const instruction = try expectParse(parse, &BytecodeExamples.greater_than_or_equal_to, 5);
+test "parse parses greater_than_or_equal_to instruction and consumes 6 bytes" {
+    const instruction = try expectParse(parse, &BytecodeExamples.greater_than_or_equal_to, 6);
     const expected = Instance{
         .lhs = 0xFF,
         .rhs = .{ .register = 0x00 },
@@ -168,8 +168,8 @@ test "parse parses greater_than_or_equal_to instruction and consumes 5 bytes" {
     testing.expectEqual(expected, instruction);
 }
 
-test "parse parses less_than instruction and consumes 5 bytes" {
-    const instruction = try expectParse(parse, &BytecodeExamples.less_than, 5);
+test "parse parses less_than instruction and consumes 6 bytes" {
+    const instruction = try expectParse(parse, &BytecodeExamples.less_than, 6);
     const expected = Instance{
         .lhs = 0xFF,
         .rhs = .{ .register = 0x00 },
@@ -179,8 +179,8 @@ test "parse parses less_than instruction and consumes 5 bytes" {
     testing.expectEqual(expected, instruction);
 }
 
-test "parse parses less_than_or_equal_to instruction and consumes 5 bytes" {
-    const instruction = try expectParse(parse, &BytecodeExamples.less_than_or_equal_to, 5);
+test "parse parses less_than_or_equal_to instruction and consumes 6 bytes" {
+    const instruction = try expectParse(parse, &BytecodeExamples.less_than_or_equal_to, 6);
     const expected = Instance{
         .lhs = 0xFF,
         .rhs = .{ .register = 0x00 },
@@ -193,7 +193,7 @@ test "parse parses less_than_or_equal_to instruction and consumes 5 bytes" {
 test "parse returns error.InvalidJumpComparison for instruction with invalid comparison" {
     testing.expectError(
         error.InvalidJumpComparison,
-        expectParse(parse, &BytecodeExamples.invalid_comparison, 5),
+        expectParse(parse, &BytecodeExamples.invalid_comparison, 6),
     );
 }
 
