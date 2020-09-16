@@ -19,7 +19,7 @@ pub fn extend(comptime Self: type) type {
     return struct {
         /// Returns a raw byte constructed by consuming 8 bits from the underlying reader.
         /// Returns an error if the required bits could not be read.
-        pub fn readByte(self: *Self) ReadBitError!u8 {
+        pub fn readByte(self: *Self) ReadError!u8 {
             return self.readInt(u8);
         }
 
