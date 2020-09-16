@@ -49,8 +49,8 @@ pub const Instance = struct {
         };
         const scale = switch (self.scale) {
             .constant => |constant| constant,
-            .register => |id| @bitCast(u16, machine.registers[id]),
-            .default => null,
+            .register => |id| @bitCast(Video.PolygonScale, machine.registers[id]),
+            .default  => Video.default_scale,
         };
 
         try machine.drawPolygon(self.source, self.address, .{ .x = x, .y = y }, scale);
@@ -257,12 +257,12 @@ test "execute with constants calls drawPolygon with correct parameters" {
     };
 
     var machine = MockMachine.new(struct {
-        pub fn drawPolygon(source: Video.PolygonSource, address: Video.PolygonAddress, point: Point.Instance, scale: ?Video.PolygonScale) !void {
+        pub fn drawPolygon(source: Video.PolygonSource, address: Video.PolygonAddress, point: Point.Instance, scale: Video.PolygonScale) !void {
             testing.expectEqual(.animations, source);
             testing.expectEqual(0xDEAD, address);
             testing.expectEqual(320, point.x);
             testing.expectEqual(200, point.y);
-            testing.expectEqual(null, scale);
+            testing.expectEqual(Video.default_scale, scale);
         }
     });
 
@@ -281,7 +281,7 @@ test "execute with registers calls drawPolygon with correct parameters" {
     };
 
     var machine = MockMachine.new(struct {
-        pub fn drawPolygon(source: Video.PolygonSource, address: Video.PolygonAddress, point: Point.Instance, scale: ?Video.PolygonScale) !void {
+        pub fn drawPolygon(source: Video.PolygonSource, address: Video.PolygonAddress, point: Point.Instance, scale: Video.PolygonScale) !void {
             testing.expectEqual(.polygons, source);
             testing.expectEqual(0xDEAD, address);
             testing.expectEqual(-1234, point.x);
@@ -309,7 +309,7 @@ test "execute with register scale value interprets value as unsigned" {
     };
 
     var machine = MockMachine.new(struct {
-        pub fn drawPolygon(_source: Video.PolygonSource, _address: Video.PolygonAddress, _point: Point.Instance, scale: ?Video.PolygonScale) !void {
+        pub fn drawPolygon(_source: Video.PolygonSource, _address: Video.PolygonAddress, _point: Point.Instance, scale: Video.PolygonScale) !void {
             testing.expectEqual(46635, scale);
         }
     });

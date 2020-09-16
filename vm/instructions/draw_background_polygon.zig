@@ -20,7 +20,7 @@ pub const Instance = struct {
 
     // Private implementation is generic to allow tests to use mocks.
     fn _execute(self: Instance, machine: anytype) !void {
-        try machine.drawPolygon(.polygons, self.address, self.point, null);
+        try machine.drawPolygon(.polygons, self.address, self.point, Video.default_scale);
     }
 };
 
@@ -108,7 +108,7 @@ test "execute calls drawPolygon with correct parameters" {
             testing.expectEqual(0xDEAD, address);
             testing.expectEqual(320, point.x);
             testing.expectEqual(200, point.y);
-            testing.expectEqual(null, scale);
+            testing.expectEqual(Video.default_scale, scale);
         }
     });
 

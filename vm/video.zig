@@ -22,8 +22,13 @@ pub const PolygonSource = enum {
 pub const PolygonAddress = u16;
 
 /// The scale at which to render a polygon.
-/// TODO: document the observed ranges and default value for this.
+/// This is a raw value that will be divided by 64 to determine the actual scale:
+/// e.g. 64 is 1x, 32 is 0.5x, 96 is 1.5x, 256 is 4x etc.
 pub const PolygonScale = u16;
+
+/// The default scale for polygon draw operations.
+/// This renders polygons at their native size.
+pub const default_scale: PolygonScale = 64;
 
 const log_unimplemented = @import("../utils/logging.zig").log_unimplemented;
 
@@ -32,7 +37,7 @@ pub const Interface = struct {
     /// Render a polygon from the specified source and address at the specified screen position and scale.
     /// If scale is `null`, the polygon will be drawn at its default scale.
     /// Returns an error if the specified polygon address was invalid.
-    pub fn drawPolygon(self: *Machine.Instance, source: PolygonSource, address: PolygonAddress, point: Point.Instance, scale: ?PolygonScale) !void {
+    pub fn drawPolygon(self: *Machine.Instance, source: PolygonSource, address: PolygonAddress, point: Point.Instance, scale: PolygonScale) !void {
         log_unimplemented("Video.drawPolygon: draw {}.{X} at x:{} y:{} scale:{}", .{
             @tagName(source),
             address,
