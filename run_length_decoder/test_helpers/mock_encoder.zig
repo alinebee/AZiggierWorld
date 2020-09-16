@@ -20,15 +20,12 @@ const Instance = struct {
 
     /// Create a new empty encoder.
     /// Caller owns the returned encoder and must free it by calling `deinit`.
-    pub fn init(allocator: *mem.Allocator) Instance {
-        var self: Instance = undefined;
-
-        self.payload = ArrayList(u8).init(allocator);
-        errdefer self.deinit();
-
-        self.bits_written = 0;
-        self.uncompressed_size = 0;
-        return self;
+    fn init(allocator: *mem.Allocator) Instance {
+        return .{
+            .payload = ArrayList(u8).init(allocator),
+            .bits_written = 0,
+            .uncompressed_size = 0,
+        };
     }
 
     /// Free the memory used by the encoder itself.

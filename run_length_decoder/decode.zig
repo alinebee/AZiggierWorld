@@ -73,7 +73,7 @@ test "decode decodes valid payload" {
     try decode(source, destination);
 }
 
-test "decode returns error.UncompressedSizeMismatch when passed a destination that doesn't matchthe reported uncompressed size" {
+test "decode returns error.UncompressedSizeMismatch when passed a destination that doesn't match the reported uncompressed size" {
     var encoder = Encoder.new(testing.allocator);
     defer encoder.deinit();
 
