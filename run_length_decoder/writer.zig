@@ -58,7 +58,7 @@ pub const Instance = struct {
         self.destination[self.cursor] = byte;
     }
 
-    pub inline fn isAtEnd(self: Instance) bool {
+    pub fn isAtEnd(self: Instance) bool {
         return self.cursor == 0;
     }
 };

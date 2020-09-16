@@ -14,7 +14,7 @@ pub const Instance = struct {
     point: Point.Instance,
 
     // Public implementation is constrained to concrete type so that instruction.zig can infer errors.
-    pub inline fn execute(self: Instance, machine: *Machine.Instance) !void {
+    pub fn execute(self: Instance, machine: *Machine.Instance) !void {
         return self._execute(machine);
     }
 

@@ -75,7 +75,7 @@ pub fn parseNextInstruction(program: *Program.Instance) Error!Wrapped {
 
 /// Parse an instruction of the specified type from the program,
 /// and wrap it in a Wrapped union type initialized to the appropriate field.
-inline fn wrap(comptime field_name: []const u8, comptime Instruction: type, raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Wrapped {
+fn wrap(comptime field_name: []const u8, comptime Instruction: type, raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Wrapped {
     return @unionInit(Wrapped, field_name, try Instruction.parse(raw_opcode, program));
 }
 
@@ -100,7 +100,7 @@ pub fn executeNextInstruction(program: *Program.Instance, machine: *Machine.Inst
     };
 }
 
-inline fn execute(comptime Instruction: type, raw_opcode: Opcode.Raw, program: *Program.Instance, machine: *Machine.Instance) Error!void {
+fn execute(comptime Instruction: type, raw_opcode: Opcode.Raw, program: *Program.Instance, machine: *Machine.Instance) Error!void {
     const instruction = try Instruction.parse(raw_opcode, program);
     const ReturnType = introspection.returnType(instruction.execute);
 
