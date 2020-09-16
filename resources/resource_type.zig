@@ -1,3 +1,5 @@
+const intToEnum = @import("../utils/introspection.zig").intToEnum;
+
 /// The possible types for an Another World resource.
 pub const Enum = enum(u8) {
     /// The resource contains sound effect data.
@@ -37,15 +39,9 @@ pub const Error = error{
 /// A raw ResourceType enum as it is represented in bytecode as a single byte.
 pub const Raw = u8;
 
-/// The maximum legal value for a raw ResourceType byte.
-const max: Raw = 6;
-
 /// Parse a valid resource type from a raw bytecode value
 pub fn parse(raw: Raw) Error!Enum {
-    if (raw > max) {
-        return error.InvalidResourceType;
-    }
-    return @intToEnum(Enum, raw);
+    return intToEnum(Enum, raw) catch error.InvalidResourceType;
 }
 
 // -- Tests --

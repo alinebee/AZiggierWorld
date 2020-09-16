@@ -1,5 +1,7 @@
 const ResourceID = @import("resource_id.zig");
 
+const intToEnum = @import("../../utils/introspection.zig").intToEnum;
+
 /// Defines the parts in an Another World game, which can represent either chapters of gameplay,
 /// cinematics, or menu screens. The VM can have a single game part loaded and running at a time.
 pub const Enum = enum(Raw) {
@@ -53,18 +55,10 @@ pub const ResourceIDs = struct {
 /// A raw game part identifier as represented in Another World's bytecode.
 pub const Raw = u16;
 
-const raw_min = @enumToInt(Enum.copy_protection);
-const raw_max = @enumToInt(Enum.password_entry);
-
 /// Given a raw value parsed from Another World bytecode, returns the appropriate game part.
 /// Returns error.invalidGamePart if the raw value was out of range.
 pub fn parse(raw: Raw) Error!Enum {
-    // Oh for a version of @intToEnum that returned an error instead of panicking.
-    if (raw < raw_min or raw > raw_max) {
-        return error.InvalidGamePart;
-    }
-
-    return @intToEnum(Enum, raw);
+    return intToEnum(Enum, raw) catch error.InvalidGamePart;
 }
 
 pub const Error = error{
@@ -87,6 +81,8 @@ test "parse returns expected enum cases" {
     testing.expectEqual(.gameplay5,         parse(0x3E87));
     testing.expectEqual(.password_entry,    parse(0x3E88));
 
-    testing.expectError(error.InvalidGamePart, parse(raw_min - 1));
-    testing.expectError(error.InvalidGamePart, parse(raw_max + 1));
+    testing.expectError(error.InvalidGamePart, parse(0x0000));
+    testing.expectError(error.InvalidGamePart, parse(0x3E79));
+    testing.expectError(error.InvalidGamePart, parse(0x3E89));
+    testing.expectError(error.InvalidGamePart, parse(0xFFFF));
 }

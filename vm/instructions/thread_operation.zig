@@ -1,14 +1,16 @@
+const intToEnum = @import("../../utils/introspection.zig").intToEnum;
+
 /// A raw ControlThreads operation as it is represented in bytecode.
 pub const Raw = u8;
 
 /// The possible operations for a ControlThreads instruction.
-pub const Enum = enum {
+pub const Enum = enum(Raw) {
     /// Resume a previously paused thread.
-    Resume,
+    Resume = 0,
     /// Mark the threads as paused, but maintain their current state.
-    Suspend,
+    Suspend = 1,
     /// Mark the threads as deactivated.
-    Deactivate,
+    Deactivate = 2,
 };
 
 pub const Error = error{
@@ -19,13 +21,7 @@ pub const Error = error{
 /// Parse a valid operation type from a raw bytecode value.
 /// Returns error.InvalidThreadOperation if the value could not be parsed.
 pub fn parse(raw: Raw) Error!Enum {
-    // It would be nicer to use @intToEnum, but that has undefined behaviour when the value is out of range.
-    return switch (raw) {
-        0 => .Resume,
-        1 => .Suspend,
-        2 => .Deactivate,
-        else => error.InvalidThreadOperation,
-    };
+    return intToEnum(Enum, raw) catch error.InvalidThreadOperation;
 }
 
 // -- Tests --

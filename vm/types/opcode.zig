@@ -1,3 +1,5 @@
+const intToEnum = @import("../../utils/introspection.zig").intToEnum;
+
 //! Types and operations dealing with built-in opcodes in Another World bytecode.
 //! See instruction.zig for how these are mapped to implementations of those opcodes.
 
@@ -42,7 +44,7 @@ pub const Enum = enum(Raw) {
     // respectively, because these instructions treat the lower 6/7 bits of the opcode as part of the
     // instruction itself.
     // They need bitmasking to identity: the values here are their bitmasks rather than discrete values.
-    // As a result `@intToEnum` should never be used to construct instances of this enum type:
+    // As a result `intToEnum` should never be used to construct instances of this enum type directly:
     // instead, always construct the enum using `parse`.
     DrawSpritePolygon = 0b0100_0000,
     DrawBackgroundPolygon = 0b1000_0000,
@@ -53,16 +55,13 @@ pub const Error = error{
     InvalidOpcode,
 };
 
-pub fn parse(raw_opcode: Raw) !Enum {
+pub fn parse(raw_opcode: Raw) Error!Enum {
     if (raw_opcode & @enumToInt(Enum.DrawBackgroundPolygon) != 0) {
         return .DrawBackgroundPolygon;
     } else if (raw_opcode & @enumToInt(Enum.DrawSpritePolygon) != 0) {
         return .DrawSpritePolygon;
-    } else if (raw_opcode <= @enumToInt(Enum.ControlMusic)) {
-        return @intToEnum(Enum, raw_opcode);
     } else {
-        // The range from 27 to 63 is invalid
-        return error.InvalidOpcode;
+        return intToEnum(Enum, raw_opcode) catch error.InvalidOpcode;
     }
 }
 

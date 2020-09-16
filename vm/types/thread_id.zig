@@ -1,5 +1,3 @@
-const count = @import("../machine.zig").max_threads;
-
 /// The ID of a thread as a value from 0-63. This is guaranteed to be valid.
 pub const Trusted = u6;
 
@@ -8,7 +6,7 @@ pub const Trusted = u6;
 pub const Raw = u8;
 
 /// The maximum legal value for a thread ID.
-pub const max: Trusted = count - 1;
+pub const max: Trusted = 0b111111;
 
 /// Thread ID 0 is treated as the main thread: program execution will begin on that thread.
 pub const main: Trusted = 0;
@@ -22,7 +20,7 @@ pub const Error = error{
 /// Returns InvalidThreadID error if the value is out of range.
 pub fn parse(raw_id: Raw) Error!Trusted {
     if (raw_id > max) return error.InvalidThreadID;
-    return @intCast(Trusted, raw_id);
+    return @truncate(Trusted, raw_id);
 }
 
 // -- Tests --

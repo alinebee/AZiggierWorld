@@ -17,7 +17,7 @@ pub const Error = error{
 /// Returns InvalidColorID error if the value is out of range.
 pub fn parse(raw_id: Raw) Error!Trusted {
     if (raw_id > max) return error.InvalidColorID;
-    return @intCast(Trusted, raw_id);
+    return @truncate(Trusted, raw_id);
 }
 
 // -- Tests --

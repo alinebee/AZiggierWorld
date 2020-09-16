@@ -1,17 +1,15 @@
-//! Tools to make type introspection less painful and wordy
-const Log2Int = @import("std").math.Log2Int;
+//! Tools to make type introspection less painful and wordy.
+
+const std = @import("std");
+
+/// A version of @intToEnum that returns error.IntToEnumError on failure.
+pub const intToEnum = std.meta.intToEnum;
 
 /// Given an integer type, returns the number of bits in that integer.
-pub fn bitCount(comptime Integer: type) comptime_int {
-    const type_info = @typeInfo(Integer);
-    return switch (type_info) {
-        .Int => |info| info.bits,
-        else => @compileError("Parameter was not an integer"),
-    };
-}
+pub const bitCount = std.meta.bitCount;
 
-/// Given an integer type, returns the type used for left/right-shift operations.
-pub const shiftType = Log2Int;
+/// Given an integer type, returns the type used for legal left/right-shift operations.
+pub const shiftType = std.math.Log2Int;
 
 /// Given a function reference, introspects the return type of that function.
 pub fn returnType(comptime function: anytype) type {

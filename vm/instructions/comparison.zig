@@ -1,5 +1,7 @@
 const RegisterValue = @import("../machine.zig").RegisterValue;
 
+const intToEnum = @import("../../utils/introspection.zig").intToEnum;
+
 /// A raw ConditionalJump comparison as it is represented in bytecode.
 pub const Raw = u3;
 
@@ -32,10 +34,7 @@ pub const Error = error{
 /// Parse a valid comparison type from a raw bytecode value.
 /// Returns error.InvalidJumpComparison if the value could not be parsed.
 pub fn parse(raw: Raw) Error!Enum {
-    if (raw > @enumToInt(Enum.less_than_or_equal_to)) {
-        return error.InvalidJumpComparison;
-    }
-    return @intToEnum(Enum, raw);
+    return intToEnum(Enum, raw) catch error.InvalidJumpComparison;
 }
 
 // -- Tests --
