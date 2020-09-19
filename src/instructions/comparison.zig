@@ -2,10 +2,10 @@ const RegisterValue = @import("../machine/machine.zig").RegisterValue;
 
 const intToEnum = @import("../utils/introspection.zig").intToEnum;
 
-/// A raw ConditionalJump comparison as it is represented in bytecode.
+/// A raw JumpConditional comparison as it is represented in bytecode.
 pub const Raw = u3;
 
-/// The supported comparisons for a ConditionalJump instruction.
+/// The supported comparisons for a JumpConditional instruction.
 pub const Enum = enum(Raw) {
     equal,
     not_equal,
@@ -27,7 +27,7 @@ pub const Enum = enum(Raw) {
 };
 
 pub const Error = error{
-    /// The bytecode specified an unknown ConditionalJump comparison.
+    /// The bytecode specified an unknown JumpConditional comparison.
     InvalidJumpComparison,
 };
 

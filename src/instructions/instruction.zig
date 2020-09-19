@@ -11,7 +11,8 @@ const Return = @import("return.zig");
 const ControlResources = @import("control_resources.zig");
 const ControlMusic = @import("control_music.zig");
 const ControlSound = @import("control_sound.zig");
-const ConditionalJump = @import("conditional_jump.zig");
+const Jump = @import("jump.zig");
+const JumpConditional = @import("jump_conditional.zig");
 const DrawSpritePolygon = @import("draw_sprite_polygon.zig");
 const DrawBackgroundPolygon = @import("draw_background_polygon.zig");
 const DrawString = @import("draw_string.zig");
@@ -29,7 +30,8 @@ pub const Error = Opcode.Error ||
     ControlResources.Error ||
     ControlMusic.Error ||
     ControlSound.Error ||
-    ConditionalJump.Error ||
+    Jump.Error ||
+    JumpConditional.Error ||
     DrawSpritePolygon.Error ||
     DrawBackgroundPolygon.Error ||
     DrawString.Error ||
@@ -50,7 +52,8 @@ pub const Wrapped = union(enum) {
     ControlResources: ControlResources.Instance,
     ControlMusic: ControlMusic.Instance,
     ControlSound: ControlSound.Instance,
-    ConditionalJump: ConditionalJump.Instance,
+    Jump: Jump.Instance,
+    JumpConditional: JumpConditional.Instance,
     DrawSpritePolygon: DrawSpritePolygon.Instance,
     DrawBackgroundPolygon: DrawBackgroundPolygon.Instance,
     DrawString: DrawString.Instance,
@@ -72,7 +75,8 @@ pub fn parseNextInstruction(program: *Program.Instance) Error!Wrapped {
         .ControlResources => wrap("ControlResources", ControlResources, raw_opcode, program),
         .ControlMusic => wrap("ControlMusic", ControlMusic, raw_opcode, program),
         .ControlSound => wrap("ControlSound", ControlSound, raw_opcode, program),
-        .ConditionalJump => wrap("ConditionalJump", ConditionalJump, raw_opcode, program),
+        .Jump => wrap("Jump", Jump, raw_opcode, program),
+        .JumpConditional => wrap("JumpConditional", JumpConditional, raw_opcode, program),
         .DrawSpritePolygon => wrap("DrawSpritePolygon", DrawSpritePolygon, raw_opcode, program),
         .DrawBackgroundPolygon => wrap("DrawBackgroundPolygon", DrawBackgroundPolygon, raw_opcode, program),
         .DrawString => wrap("DrawString", DrawString, raw_opcode, program),
@@ -101,7 +105,8 @@ pub fn executeNextInstruction(program: *Program.Instance, machine: *Machine.Inst
         .ControlResources => execute(ControlResources, raw_opcode, program, machine),
         .ControlMusic => execute(ControlMusic, raw_opcode, program, machine),
         .ControlSound => execute(ControlSound, raw_opcode, program, machine),
-        .ConditionalJump => execute(ConditionalJump, raw_opcode, program, machine),
+        .Jump => execute(Jump, raw_opcode, program, machine),
+        .JumpConditional => execute(JumpConditional, raw_opcode, program, machine),
         .DrawSpritePolygon => execute(DrawSpritePolygon, raw_opcode, program, machine),
         .DrawBackgroundPolygon => execute(DrawBackgroundPolygon, raw_opcode, program, machine),
         .DrawString => execute(DrawString, raw_opcode, program, machine),
@@ -184,9 +189,14 @@ test "parseNextInstruction returns ControlSound instruction when given valid byt
     expectWrappedType(.ControlSound, instruction);
 }
 
-test "parseNextInstruction returns ConditionalJump instruction when given valid bytecode" {
-    const instruction = try expectParse(&ConditionalJump.BytecodeExamples.equal_to_register);
-    expectWrappedType(.ConditionalJump, instruction);
+test "parseNextInstruction returns Jump instruction when given valid bytecode" {
+    const instruction = try expectParse(&Jump.BytecodeExamples.valid);
+    expectWrappedType(.Jump, instruction);
+}
+
+test "parseNextInstruction returns JumpConditional instruction when given valid bytecode" {
+    const instruction = try expectParse(&JumpConditional.BytecodeExamples.equal_to_register);
+    expectWrappedType(.JumpConditional, instruction);
 }
 
 test "parseNextInstruction returns DrawSpriteolygon instruction when given valid bytecode" {

@@ -85,7 +85,7 @@ pub const Error = Program.Error || Comparison.Error;
 
 // zig fmt: off
 pub const BytecodeExamples = struct {
-    const raw_opcode = @enumToInt(Opcode.Enum.ConditionalJump);
+    const raw_opcode = @enumToInt(Opcode.Enum.JumpConditional);
 
     pub const equal_to_register = [6]u8{ raw_opcode, 0b11_000_000, 0xFF, 0x00, 0xDE, 0xAD };
     pub const equal_to_const16  = [7]u8{ raw_opcode, 0b01_000_000, 0xFF, 0x4B, 0x1D, 0xDE, 0xAD };

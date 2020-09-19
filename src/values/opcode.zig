@@ -21,7 +21,7 @@ pub const Enum = enum(Raw) {
     Jump,
     ActivateThread,
     JumpIfNotZero,
-    ConditionalJump,
+    JumpConditional,
     SetPalette,
     ControlThreads,
     SelectVideoBuffer,
@@ -80,7 +80,7 @@ test "parse returns expected values" {
     testing.expectEqual(.Jump, parse(7));
     testing.expectEqual(.ActivateThread, parse(8));
     testing.expectEqual(.JumpIfNotZero, parse(9));
-    testing.expectEqual(.ConditionalJump, parse(10));
+    testing.expectEqual(.JumpConditional, parse(10));
     testing.expectEqual(.SetPalette, parse(11));
     testing.expectEqual(.ControlThreads, parse(12));
     testing.expectEqual(.SelectVideoBuffer, parse(13));
