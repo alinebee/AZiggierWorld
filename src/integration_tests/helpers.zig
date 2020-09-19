@@ -6,8 +6,6 @@ const log = std.log;
 // Relative to the base project folder, not to the location of this source file.
 pub const relative_fixture_path = "fixtures/dos/";
 
-const Error = error{FixtureNotPresent};
-
 /// Validates that game files have been added to the fixture directory and returns the path to them.
 /// If game files are missing, returns an error.
 ///
@@ -30,8 +28,10 @@ pub fn validFixturePath(allocator: *mem.Allocator) ![]const u8 {
 
 // -- Tests --
 
-test "Integrstion test fixture directory has been populated with game data" {
-    const game_path = validFixturePath(std.testing.allocator) catch |err| {
+const testing = std.testing;
+
+test "Integration test fixture directory has been populated with game data" {
+    const game_path = validFixturePath(testing.allocator) catch |err| {
         if (err == error.FileNotFound) {
             log.warn("\nTo run integration tests, place the MEMLIST.BIN and BANK01-BANK0D files from an MS-DOS version of Another World into the {} directory in the project root.\n", .{relative_fixture_path});
             return;
@@ -39,5 +39,5 @@ test "Integrstion test fixture directory has been populated with game data" {
             return err;
         }
     };
-    std.testing.allocator.free(game_path);
+    testing.allocator.free(game_path);
 }
