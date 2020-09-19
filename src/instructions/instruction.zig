@@ -7,6 +7,7 @@ const ControlThreads = @import("control_threads.zig");
 const SetRegister = @import("set_register.zig");
 const CopyRegister = @import("copy_register.zig");
 const Call = @import("call.zig");
+const Return = @import("return.zig");
 const ControlResources = @import("control_resources.zig");
 const ControlMusic = @import("control_music.zig");
 const ControlSound = @import("control_sound.zig");
@@ -24,6 +25,7 @@ pub const Error = Opcode.Error ||
     SetRegister.Error ||
     CopyRegister.Error ||
     Call.Error ||
+    Return.Error ||
     ControlResources.Error ||
     ControlMusic.Error ||
     ControlSound.Error ||
@@ -44,6 +46,7 @@ pub const Wrapped = union(enum) {
     SetRegister: SetRegister.Instance,
     CopyRegister: CopyRegister.Instance,
     Call: Call.Instance,
+    Return: Return.Instance,
     ControlResources: ControlResources.Instance,
     ControlMusic: ControlMusic.Instance,
     ControlSound: ControlSound.Instance,
@@ -65,6 +68,7 @@ pub fn parseNextInstruction(program: *Program.Instance) Error!Wrapped {
         .SetRegister => wrap("SetRegister", SetRegister, raw_opcode, program),
         .CopyRegister => wrap("CopyRegister", CopyRegister, raw_opcode, program),
         .Call => wrap("Call", Call, raw_opcode, program),
+        .Return => wrap("Return", Return, raw_opcode, program),
         .ControlResources => wrap("ControlResources", ControlResources, raw_opcode, program),
         .ControlMusic => wrap("ControlMusic", ControlMusic, raw_opcode, program),
         .ControlSound => wrap("ControlSound", ControlSound, raw_opcode, program),
@@ -93,6 +97,7 @@ pub fn executeNextInstruction(program: *Program.Instance, machine: *Machine.Inst
         .SetRegister => execute(SetRegister, raw_opcode, program, machine),
         .CopyRegister => execute(CopyRegister, raw_opcode, program, machine),
         .Call => execute(Call, raw_opcode, program, machine),
+        .Return => execute(Return, raw_opcode, program, machine),
         .ControlResources => execute(ControlResources, raw_opcode, program, machine),
         .ControlMusic => execute(ControlMusic, raw_opcode, program, machine),
         .ControlSound => execute(ControlSound, raw_opcode, program, machine),
@@ -157,6 +162,11 @@ test "parseNextInstruction returns CopyRegister instruction when given valid byt
 test "parseNextInstruction returns Call instruction when given valid bytecode" {
     const instruction = try expectParse(&Call.BytecodeExamples.valid);
     expectWrappedType(.Call, instruction);
+}
+
+test "parseNextInstruction returns Return instruction when given valid bytecode" {
+    const instruction = try expectParse(&Return.BytecodeExamples.valid);
+    expectWrappedType(.Return, instruction);
 }
 
 test "parseNextInstruction returns ControlResources instruction when given valid bytecode" {
