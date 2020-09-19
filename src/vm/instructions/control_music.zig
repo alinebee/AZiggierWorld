@@ -30,9 +30,9 @@ pub const Instance = union(enum) {
     // Private implementation is generic to allow tests to use mocks.
     fn _execute(self: Instance, machine: anytype) !void {
         switch (self) {
-            .play       => |operation| try machine.playMusic(operation.resource_id, operation.offset, operation.delay),
-            .set_delay  => |delay| machine.setMusicDelay(delay),
-            .stop       => machine.stopMusic(),
+            .play => |operation| try machine.playMusic(operation.resource_id, operation.offset, operation.delay),
+            .set_delay => |delay| machine.setMusicDelay(delay),
+            .stop => machine.stopMusic(),
         }
     }
 };
@@ -64,6 +64,7 @@ pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instance 
 
 // -- Bytecode examples --
 
+// zig fmt: off
 pub const BytecodeExamples = struct {
     const raw_opcode = @enumToInt(Opcode.Enum.ControlMusic);
 
@@ -71,6 +72,7 @@ pub const BytecodeExamples = struct {
     pub const set_delay = [6]u8{ raw_opcode, 0x00, 0x00, 0xBE, 0xEF, 0xFF };
     pub const stop      = [6]u8{ raw_opcode, 0x00, 0x00, 0x00, 0x00, 0xFF };
 };
+// zig fmt: on
 
 // -- Tests --
 

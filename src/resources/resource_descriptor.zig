@@ -87,7 +87,6 @@ fn Iterator(comptime Reader: type) type {
             // 14	u16	packed size		The compressed size of the resource in bytes.
             // 16	u16	<unknown>		Unknown, apparently unused.
             // 18	u16	unpacked size	The final uncompressed size of the resource in bytes.
-
             const end_of_file_flag = try self.reader.readByte();
 
             if (end_of_file_flag == end_of_file_marker) {
@@ -127,6 +126,7 @@ const end_of_file_marker: u8 = 0xFF;
 
 // -- Example data --
 
+// zig fmt: off
 pub const DescriptorExamples = struct {
     pub const valid_data = [_]u8{
         // See documentation in `parse` for the expected byte layout.
@@ -177,6 +177,7 @@ pub const FileExamples = struct {
         DescriptorExamples.invalid_resource_type ++
         DescriptorExamples.valid_end_of_file;
 };
+// zig fmt: on
 
 // -- Tests --
 

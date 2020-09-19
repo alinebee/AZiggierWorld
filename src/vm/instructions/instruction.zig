@@ -16,8 +16,7 @@ const DrawString = @import("draw_string.zig");
 
 const introspection = @import("../../utils/introspection.zig");
 
-pub const Error =
-    Opcode.Error ||
+pub const Error = Opcode.Error ||
     Program.Error ||
     ActivateThread.Error ||
     ControlThreads.Error ||
@@ -58,17 +57,17 @@ pub fn parseNextInstruction(program: *Program.Instance) Error!Wrapped {
     const opcode = try Opcode.parse(raw_opcode);
 
     return switch (opcode) {
-        .ActivateThread         => wrap("ActivateThread", ActivateThread, raw_opcode, program),
-        .ControlThreads         => wrap("ControlThreads", ControlThreads, raw_opcode, program),
-        .SetRegister            => wrap("SetRegister", SetRegister, raw_opcode, program),
-        .CopyRegister           => wrap("CopyRegister", CopyRegister, raw_opcode, program),
-        .ControlResources       => wrap("ControlResources", ControlResources, raw_opcode, program),
-        .ControlMusic           => wrap("ControlMusic", ControlMusic, raw_opcode, program),
-        .ControlSound           => wrap("ControlSound", ControlSound, raw_opcode, program),
-        .ConditionalJump        => wrap("ConditionalJump", ConditionalJump, raw_opcode, program),
-        .DrawSpritePolygon      => wrap("DrawSpritePolygon", DrawSpritePolygon, raw_opcode, program),
-        .DrawBackgroundPolygon  => wrap("DrawBackgroundPolygon", DrawBackgroundPolygon, raw_opcode, program),
-        .DrawString             => wrap("DrawString", DrawString, raw_opcode, program),
+        .ActivateThread => wrap("ActivateThread", ActivateThread, raw_opcode, program),
+        .ControlThreads => wrap("ControlThreads", ControlThreads, raw_opcode, program),
+        .SetRegister => wrap("SetRegister", SetRegister, raw_opcode, program),
+        .CopyRegister => wrap("CopyRegister", CopyRegister, raw_opcode, program),
+        .ControlResources => wrap("ControlResources", ControlResources, raw_opcode, program),
+        .ControlMusic => wrap("ControlMusic", ControlMusic, raw_opcode, program),
+        .ControlSound => wrap("ControlSound", ControlSound, raw_opcode, program),
+        .ConditionalJump => wrap("ConditionalJump", ConditionalJump, raw_opcode, program),
+        .DrawSpritePolygon => wrap("DrawSpritePolygon", DrawSpritePolygon, raw_opcode, program),
+        .DrawBackgroundPolygon => wrap("DrawBackgroundPolygon", DrawBackgroundPolygon, raw_opcode, program),
+        .DrawString => wrap("DrawString", DrawString, raw_opcode, program),
         else => error.UnimplementedOpcode,
     };
 }
@@ -85,17 +84,17 @@ pub fn executeNextInstruction(program: *Program.Instance, machine: *Machine.Inst
     const opcode = try Opcode.parse(raw_opcode);
 
     try switch (opcode) {
-        .ActivateThread         => execute(ActivateThread, raw_opcode, program, machine),
-        .ControlThreads         => execute(ControlThreads, raw_opcode, program, machine),
-        .SetRegister            => execute(SetRegister, raw_opcode, program, machine),
-        .CopyRegister           => execute(CopyRegister, raw_opcode, program, machine),
-        .ControlResources       => execute(ControlResources, raw_opcode, program, machine),
-        .ControlMusic           => execute(ControlMusic, raw_opcode, program, machine),
-        .ControlSound           => execute(ControlSound, raw_opcode, program, machine),
-        .ConditionalJump        => execute(ConditionalJump, raw_opcode, program, machine),
-        .DrawSpritePolygon      => execute(DrawSpritePolygon, raw_opcode, program, machine),
-        .DrawBackgroundPolygon  => execute(DrawBackgroundPolygon, raw_opcode, program, machine),
-        .DrawString             => execute(DrawString, raw_opcode, program, machine),
+        .ActivateThread => execute(ActivateThread, raw_opcode, program, machine),
+        .ControlThreads => execute(ControlThreads, raw_opcode, program, machine),
+        .SetRegister => execute(SetRegister, raw_opcode, program, machine),
+        .CopyRegister => execute(CopyRegister, raw_opcode, program, machine),
+        .ControlResources => execute(ControlResources, raw_opcode, program, machine),
+        .ControlMusic => execute(ControlMusic, raw_opcode, program, machine),
+        .ControlSound => execute(ControlSound, raw_opcode, program, machine),
+        .ConditionalJump => execute(ConditionalJump, raw_opcode, program, machine),
+        .DrawSpritePolygon => execute(DrawSpritePolygon, raw_opcode, program, machine),
+        .DrawBackgroundPolygon => execute(DrawBackgroundPolygon, raw_opcode, program, machine),
+        .DrawString => execute(DrawString, raw_opcode, program, machine),
         else => error.UnimplementedOpcode,
     };
 }

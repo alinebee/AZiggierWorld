@@ -2,6 +2,8 @@ const ResourceID = @import("resource_id.zig");
 
 const intToEnum = @import("../../utils/introspection.zig").intToEnum;
 
+// zig fmt: off
+
 /// Defines the parts in an Another World game, which can represent either chapters of gameplay,
 /// cinematics, or menu screens. The VM can have a single game part loaded and running at a time.
 pub const Enum = enum(Raw) {
@@ -36,6 +38,7 @@ pub const Enum = enum(Raw) {
         };
     }
 };
+// zig fmt: on
 
 /// Defines the resources needed for a specific part of the game.
 pub const ResourceIDs = struct {
@@ -71,15 +74,15 @@ pub const Error = error{
 const testing = @import("../../utils/testing.zig");
 
 test "parse returns expected enum cases" {
-    testing.expectEqual(.copy_protection,   parse(0x3E80));
-    testing.expectEqual(.intro_cinematic,   parse(0x3E81));
-    testing.expectEqual(.gameplay1,         parse(0x3E82));
-    testing.expectEqual(.gameplay2,         parse(0x3E83));
-    testing.expectEqual(.gameplay3,         parse(0x3E84));
-    testing.expectEqual(.arena_cinematic,   parse(0x3E85));
-    testing.expectEqual(.gameplay4,         parse(0x3E86));
-    testing.expectEqual(.gameplay5,         parse(0x3E87));
-    testing.expectEqual(.password_entry,    parse(0x3E88));
+    testing.expectEqual(.copy_protection, parse(0x3E80));
+    testing.expectEqual(.intro_cinematic, parse(0x3E81));
+    testing.expectEqual(.gameplay1, parse(0x3E82));
+    testing.expectEqual(.gameplay2, parse(0x3E83));
+    testing.expectEqual(.gameplay3, parse(0x3E84));
+    testing.expectEqual(.arena_cinematic, parse(0x3E85));
+    testing.expectEqual(.gameplay4, parse(0x3E86));
+    testing.expectEqual(.gameplay5, parse(0x3E87));
+    testing.expectEqual(.password_entry, parse(0x3E88));
 
     testing.expectError(error.InvalidGamePart, parse(0x0000));
     testing.expectError(error.InvalidGamePart, parse(0x3E79));

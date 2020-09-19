@@ -111,8 +111,8 @@ test "read(u16) returns error.EndOfProgram and leaves program counter at end of 
 }
 
 test "read(i16) returns big-endian i16 at current program counter and advances program counter by 2" {
-    const int1: i16 = -18901;   // 0b1011_0110_0010_1011 in two's complement
-    const int2: i16 = 3470;     // 0b0000_1101_1000_1110 in two's complement
+    const int1: i16 = -18901; // 0b1011_0110_0010_1011 in two's complement
+    const int2: i16 = 3470; // 0b0000_1101_1000_1110 in two's complement
     const bytecode = [_]u8{
         0b1011_0110, 0b0010_1011,
         0b0000_1101, 0b1000_1110,

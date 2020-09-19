@@ -1172,6 +1172,7 @@ const @"~" = Glyph{
 
 const testing = @import("../utils/testing.zig");
 
+// zig fmt: off
 test "glyph returns correct glyphs for supported characters" {
     testing.expectEqual(@" ",   glyph(' '));
     testing.expectEqual(@"!",   glyph('!'));
@@ -1269,6 +1270,7 @@ test "glyph returns correct glyphs for supported characters" {
     testing.expectEqual(@"}",   glyph('}'));
     testing.expectEqual(@"~",   glyph('~'));
 }
+// zig fmt: on
 
 test "glyph returns error.InvalidCharacter for out-of-range characters" {
     testing.expectError(error.InvalidCharacter, glyph(0x00));

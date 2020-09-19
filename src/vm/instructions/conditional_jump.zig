@@ -64,9 +64,9 @@ pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instance 
     self.lhs = try program.read(Machine.RegisterID);
     self.rhs = switch (raw_source) {
         // Even though 16-bit constants are signed, the reference implementation treats 8-bit constants as unsigned.
-        0b00        => .{ .constant = try program.read(u8) },
-        0b01        => .{ .constant = try program.read(Machine.RegisterValue) },
-        0b10, 0b11  => .{ .register = try program.read(Machine.RegisterID) },
+        0b00 => .{ .constant = try program.read(u8) },
+        0b01 => .{ .constant = try program.read(Machine.RegisterValue) },
+        0b10, 0b11 => .{ .register = try program.read(Machine.RegisterID) },
     };
 
     self.address = try program.read(Program.Address);
@@ -82,12 +82,13 @@ pub const Error = Program.Error || Comparison.Error;
 
 // -- Bytecode examples --
 
+// zig fmt: off
 pub const BytecodeExamples = struct {
     const raw_opcode = @enumToInt(Opcode.Enum.ConditionalJump);
 
-    pub const equal_to_register     = [6]u8{ raw_opcode, 0b11_000_000, 0xFF, 0x00, 0xDE, 0xAD };
-    pub const equal_to_const16      = [7]u8{ raw_opcode, 0b01_000_000, 0xFF, 0x4B, 0x1D, 0xDE, 0xAD };
-    pub const equal_to_const8       = [6]u8{ raw_opcode, 0b00_000_000, 0xFF, 0xBE, 0xDE, 0xAD };
+    pub const equal_to_register = [6]u8{ raw_opcode, 0b11_000_000, 0xFF, 0x00, 0xDE, 0xAD };
+    pub const equal_to_const16  = [7]u8{ raw_opcode, 0b01_000_000, 0xFF, 0x4B, 0x1D, 0xDE, 0xAD };
+    pub const equal_to_const8   = [6]u8{ raw_opcode, 0b00_000_000, 0xFF, 0xBE, 0xDE, 0xAD };
 
     pub const not_equal                 = [6]u8{ raw_opcode, 0b11_000_001, 0xFF, 0x00, 0xDE, 0xAD };
     pub const greater_than              = [6]u8{ raw_opcode, 0b11_000_010, 0xFF, 0x00, 0xDE, 0xAD };
@@ -96,6 +97,7 @@ pub const BytecodeExamples = struct {
     pub const less_than_or_equal_to     = [6]u8{ raw_opcode, 0b11_000_101, 0xFF, 0x00, 0xDE, 0xAD };
     pub const invalid_comparison        = [6]u8{ raw_opcode, 0b11_000_110, 0xFF, 0x00, 0xDE, 0xAD };
 };
+// zig fmt: on
 
 // -- Tests --
 

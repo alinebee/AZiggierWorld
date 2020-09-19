@@ -50,7 +50,7 @@ pub const Instance = struct {
         const scale = switch (self.scale) {
             .constant => |constant| constant,
             .register => |id| @bitCast(Video.PolygonScale, machine.registers[id]),
-            .default  => Video.default_scale,
+            .default => Video.default_scale,
         };
 
         try machine.drawPolygon(self.source, self.address, .{ .x = x, .y = y }, scale);
@@ -97,8 +97,8 @@ pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instance 
     //   - 10: use `.polygons` region, read next byte as unsigned 8-bit constant
     //   - 11: use `.animations` region, set default scale
 
-    const raw_x     = @truncate(u2, raw_opcode >> 4);
-    const raw_y     = @truncate(u2, raw_opcode >> 2);
+    const raw_x = @truncate(u2, raw_opcode >> 4);
+    const raw_y = @truncate(u2, raw_opcode >> 2);
     const raw_scale = @truncate(u2, raw_opcode);
 
     self.x = switch (raw_x) {
@@ -138,6 +138,7 @@ pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instance 
 
 // -- Bytecode examples --
 
+// zig fmt: off
 pub const BytecodeExamples = struct {
     pub const registers = [6]u8{
         0b01_01_01_01,              // opcode
@@ -179,6 +180,7 @@ pub const BytecodeExamples = struct {
         160, 100,                   // constants for x and y
     };
 };
+// zig fmt: on
 
 // -- Tests --
 

@@ -16,12 +16,12 @@ pub const Enum = enum(Raw) {
 
     pub fn compare(self: Enum, lhs: RegisterValue, rhs: RegisterValue) bool {
         return switch (self) {
-            .equal                      => lhs == rhs,
-            .not_equal                  => lhs != rhs,
-            .greater_than               => lhs > rhs,
-            .greater_than_or_equal_to   => lhs >= rhs,
-            .less_than                  => lhs < rhs,
-            .less_than_or_equal_to      => lhs <= rhs,
+            .equal => lhs == rhs,
+            .not_equal => lhs != rhs,
+            .greater_than => lhs > rhs,
+            .greater_than_or_equal_to => lhs >= rhs,
+            .less_than => lhs < rhs,
+            .less_than_or_equal_to => lhs <= rhs,
         };
     }
 };
@@ -42,12 +42,12 @@ pub fn parse(raw: Raw) Error!Enum {
 const testing = @import("../../utils/testing.zig");
 
 test "parse parses raw comparison values correctly" {
-    testing.expectEqual(.equal,                     parse(0b000));
-    testing.expectEqual(.not_equal,                 parse(0b001));
-    testing.expectEqual(.greater_than,              parse(0b010));
-    testing.expectEqual(.greater_than_or_equal_to,  parse(0b011));
-    testing.expectEqual(.less_than,                 parse(0b100));
-    testing.expectEqual(.less_than_or_equal_to,     parse(0b101));
+    testing.expectEqual(.equal, parse(0b000));
+    testing.expectEqual(.not_equal, parse(0b001));
+    testing.expectEqual(.greater_than, parse(0b010));
+    testing.expectEqual(.greater_than_or_equal_to, parse(0b011));
+    testing.expectEqual(.less_than, parse(0b100));
+    testing.expectEqual(.less_than_or_equal_to, parse(0b101));
 
     testing.expectError(error.InvalidJumpComparison, parse(0b110));
     testing.expectError(error.InvalidJumpComparison, parse(0b111));

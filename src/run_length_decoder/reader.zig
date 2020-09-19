@@ -151,6 +151,7 @@ pub const Error = error{
 
 // -- Test helpers --
 
+// zig fmt: off
 const DataExamples = struct {
     const valid = [_]u8{
         // A couple of chunks of raw data that will be returned by readBit.
@@ -174,6 +175,7 @@ const DataExamples = struct {
         0x8B, 0xAD, 0xF0, 0x0D,
     };
 };
+// zig fmt: on
 
 // -- Tests --
 
