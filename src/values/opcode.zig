@@ -28,7 +28,7 @@ pub const Enum = enum(Raw) {
     FillVideoBuffer,
     CopyVideoBuffer,
     RenderVideoBuffer,
-    KillThread,
+    Kill,
     DrawString,
     SubstractFromRegister,
     AndRegister,
@@ -87,7 +87,7 @@ test "parse returns expected values" {
     testing.expectEqual(.FillVideoBuffer, parse(14));
     testing.expectEqual(.CopyVideoBuffer, parse(15));
     testing.expectEqual(.RenderVideoBuffer, parse(16));
-    testing.expectEqual(.KillThread, parse(17));
+    testing.expectEqual(.Kill, parse(17));
     testing.expectEqual(.DrawString, parse(18));
     testing.expectEqual(.SubstractFromRegister, parse(19));
     testing.expectEqual(.AndRegister, parse(20));

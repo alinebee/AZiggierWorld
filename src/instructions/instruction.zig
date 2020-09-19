@@ -1,6 +1,7 @@
 const Program = @import("../machine/program.zig");
 const Opcode = @import("../values/opcode.zig");
 const Machine = @import("../machine/machine.zig");
+const Action = @import("action.zig");
 
 const ActivateThread = @import("activate_thread.zig");
 const ControlThreads = @import("control_threads.zig");
@@ -17,6 +18,7 @@ const JumpIfNotZero = @import("jump_if_not_zero.zig");
 const DrawSpritePolygon = @import("draw_sprite_polygon.zig");
 const DrawBackgroundPolygon = @import("draw_background_polygon.zig");
 const DrawString = @import("draw_string.zig");
+const Kill = @import("kill.zig");
 
 const introspection = @import("../utils/introspection.zig");
 
@@ -37,6 +39,7 @@ pub const Error = Opcode.Error ||
     DrawSpritePolygon.Error ||
     DrawBackgroundPolygon.Error ||
     DrawString.Error ||
+    Kill.Error ||
     error{
     /// Bytecode contained an opcode that is not yet implemented.
     UnimplementedOpcode,
@@ -60,6 +63,7 @@ pub const Wrapped = union(enum) {
     DrawSpritePolygon: DrawSpritePolygon.Instance,
     DrawBackgroundPolygon: DrawBackgroundPolygon.Instance,
     DrawString: DrawString.Instance,
+    Kill: Kill.Instance,
 };
 
 /// Parse the next instruction from a bytecode program and wrap it in a Wrapped union type.
@@ -84,6 +88,7 @@ pub fn parseNextInstruction(program: *Program.Instance) Error!Wrapped {
         .DrawSpritePolygon => wrap("DrawSpritePolygon", DrawSpritePolygon, raw_opcode, program),
         .DrawBackgroundPolygon => wrap("DrawBackgroundPolygon", DrawBackgroundPolygon, raw_opcode, program),
         .DrawString => wrap("DrawString", DrawString, raw_opcode, program),
+        .Kill => wrap("Kill", Kill, raw_opcode, program),
         else => error.UnimplementedOpcode,
     };
 }
@@ -95,11 +100,11 @@ fn wrap(comptime field_name: []const u8, comptime Instruction: type, raw_opcode:
 }
 
 /// Parse and execute the next instruction from a bytecode program on the specified virtual machine.
-pub fn executeNextInstruction(program: *Program.Instance, machine: *Machine.Instance) Error!void {
+pub fn executeNextInstruction(program: *Program.Instance, machine: *Machine.Instance) Error!Action.Enum {
     const raw_opcode = try program.read(Opcode.Raw);
     const opcode = try Opcode.parse(raw_opcode);
 
-    try switch (opcode) {
+    return switch (opcode) {
         .ActivateThread => execute(ActivateThread, raw_opcode, program, machine),
         .ControlThreads => execute(ControlThreads, raw_opcode, program, machine),
         .SetRegister => execute(SetRegister, raw_opcode, program, machine),
@@ -115,19 +120,28 @@ pub fn executeNextInstruction(program: *Program.Instance, machine: *Machine.Inst
         .DrawSpritePolygon => execute(DrawSpritePolygon, raw_opcode, program, machine),
         .DrawBackgroundPolygon => execute(DrawBackgroundPolygon, raw_opcode, program, machine),
         .DrawString => execute(DrawString, raw_opcode, program, machine),
+        .Kill => execute(Kill, raw_opcode, program, machine),
         else => error.UnimplementedOpcode,
     };
 }
 
-fn execute(comptime Instruction: type, raw_opcode: Opcode.Raw, program: *Program.Instance, machine: *Machine.Instance) Error!void {
+fn execute(comptime Instruction: type, raw_opcode: Opcode.Raw, program: *Program.Instance, machine: *Machine.Instance) Error!Action.Enum {
     const instruction = try Instruction.parse(raw_opcode, program);
     const ReturnType = introspection.returnType(instruction.execute);
+    const returns_error = @typeInfo(ReturnType) == .ErrorUnion;
 
     // You'd think there'd be an easier way to express "try the function if necessary, otherwise just call it".
-    if (@typeInfo(ReturnType) == .ErrorUnion) {
-        try instruction.execute(machine);
-    } else {
+    const payload = if (returns_error)
+        try instruction.execute(machine)
+    else
         instruction.execute(machine);
+
+    // Check whether this instruction returned a specific thread action to take after executing.
+    // Most instructions just return void; assume their action will be .Continue.
+    if (@TypeOf(payload) == Action.Enum) {
+        return payload;
+    } else {
+        return .Continue;
     }
 }
 
@@ -165,6 +179,7 @@ test "parseNextInstruction returns expected instruction type when given valid by
     expectWrappedType(.DrawSpritePolygon, try expectParse(&DrawSpritePolygon.BytecodeExamples.registers));
     expectWrappedType(.DrawBackgroundPolygon, try expectParse(&DrawBackgroundPolygon.BytecodeExamples.low_x));
     expectWrappedType(.DrawString, try expectParse(&DrawString.BytecodeExamples.valid));
+    expectWrappedType(.Kill, try expectParse(&Kill.BytecodeExamples.valid));
 }
 
 test "parseNextInstruction returns error.InvalidOpcode error when it encounters an unknown opcode" {
@@ -181,7 +196,16 @@ test "executeNextInstruction executes arbitrary instruction on machine when give
     var program = Program.new(&SetRegister.BytecodeExamples.valid);
     var machine = Machine.new();
 
-    try executeNextInstruction(&program, &machine);
+    const action = try executeNextInstruction(&program, &machine);
 
+    testing.expectEqual(.Continue, action);
     testing.expectEqual(-18901, machine.registers[16]);
+}
+
+test "executeNextInstruction returns action if specified" {
+    var program = Program.new(&Kill.BytecodeExamples.valid);
+    var machine = Machine.new();
+
+    const action = try executeNextInstruction(&program, &machine);
+    testing.expectEqual(.DeactivateThread, action);
 }
