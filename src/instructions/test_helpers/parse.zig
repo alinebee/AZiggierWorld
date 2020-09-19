@@ -7,12 +7,6 @@ const introspection = @import("../../utils/introspection.zig");
 
 // -- Test helpers --
 
-fn returnType(comptime parseFn: anytype) type {
-    const error_type = introspection.errorType(parseFn);
-    const payload_type = introspection.payloadType(parseFn);
-    return (Error || error_type)!payload_type;
-}
-
 /// Try to parse a literal sequence of bytecode into a specific instruction;
 /// on success or failure, check that the expected number of bytes were consumed.
 pub fn expectParse(comptime parseFn: anytype, bytecode: []const u8, expected_bytes_consumed: usize) returnType(parseFn) {
@@ -32,12 +26,20 @@ pub fn expectParse(comptime parseFn: anytype, bytecode: []const u8, expected_byt
     return instruction;
 }
 
-const Error = error{
+pub const Error = error{
     /// The instruction consumed too few bytes from the program.
     UnderRead,
     /// The instruction consumed too many bytes from the program.
     OverRead,
 };
+
+/// Calculates the return type of the expectParse generic function by combining
+/// the original parse function's return type with expectParse's error set.
+fn returnType(comptime parseFn: anytype) type {
+    const error_type = introspection.errorType(parseFn);
+    const payload_type = introspection.payloadType(parseFn);
+    return (Error || error_type)!payload_type;
+}
 
 // -- Test helpers --
 
@@ -48,6 +50,14 @@ const EmptyInstruction = struct {};
 fn parse5MoreBytes(raw_opcode: Opcode.Raw, program: *Program.Instance) Program.Error!EmptyInstruction {
     try program.skip(5);
     return EmptyInstruction{};
+}
+
+const ParseError = error{ParsingFailed};
+/// A fake instruction parse function that parses an expected number of bytes
+/// but returns an error instead of an instruction.
+fn parse5MoreBytesAndFail(raw_opcode: Opcode.Raw, program: *Program.Instance) !EmptyInstruction {
+    try program.skip(5);
+    return error.ParsingFailed;
 }
 
 // -- Tests --
@@ -61,14 +71,16 @@ test "expectParse returns parsed instruction if all bytes were parsed" {
     testing.expectEqual(EmptyInstruction{}, instruction);
 }
 
-test "expectParse returns error.UnderRead if too few bytes were parsed" {
+test "expectParse returns error.UnderRead if too few bytes were parsed, even if parse returned a different error" {
     const bytecode = [_]u8{0} ** 6;
 
     testing.expectError(error.UnderRead, expectParse(parse5MoreBytes, &bytecode, 7));
+    testing.expectError(error.UnderRead, expectParse(parse5MoreBytesAndFail, &bytecode, 7));
 }
 
-test "expectParse returns error.OverRead if too many bytes were parsed" {
+test "expectParse returns error.OverRead if too many bytes were parsed, even if parse returned a different error" {
     const bytecode = [_]u8{0} ** 6;
 
     testing.expectError(error.OverRead, expectParse(parse5MoreBytes, &bytecode, 3));
+    testing.expectError(error.OverRead, expectParse(parse5MoreBytesAndFail, &bytecode, 3));
 }
