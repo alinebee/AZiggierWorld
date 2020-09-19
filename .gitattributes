@@ -1,2 +1,6 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# Zig mandates Unix-style line endings:
+# https://ziglang.org/documentation/master/#Source-Encoding
+*.zig text eol=lf
