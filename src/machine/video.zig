@@ -4,6 +4,7 @@ const Machine = @import("machine.zig");
 const Point = @import("../values/point.zig");
 const ColorID = @import("../values/color_id.zig");
 const StringID = @import("../values/string_id.zig");
+const BufferID = @import("../values/buffer_id.zig");
 
 const english = @import("../assets/english.zig");
 
@@ -56,5 +57,9 @@ pub const Interface = struct {
             point.x,
             point.y,
         });
+    }
+
+    pub fn selectVideoBuffer(self: *Machine.Instance, buffer_id: BufferID.Enum) void {
+        log_unimplemented("Video.selectVideoBuffer: {}", .{buffer_id});
     }
 };

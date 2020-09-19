@@ -18,6 +18,7 @@ const JumpIfNotZero = @import("jump_if_not_zero.zig");
 const DrawSpritePolygon = @import("draw_sprite_polygon.zig");
 const DrawBackgroundPolygon = @import("draw_background_polygon.zig");
 const DrawString = @import("draw_string.zig");
+const SelectVideoBuffer = @import("select_video_buffer.zig");
 const Kill = @import("kill.zig");
 const Yield = @import("yield.zig");
 
@@ -40,6 +41,7 @@ pub const Error = Opcode.Error ||
     DrawSpritePolygon.Error ||
     DrawBackgroundPolygon.Error ||
     DrawString.Error ||
+    SelectVideoBuffer.Error ||
     Kill.Error ||
     Yield.Error ||
     error{
@@ -65,6 +67,7 @@ pub const Wrapped = union(enum) {
     DrawSpritePolygon: DrawSpritePolygon.Instance,
     DrawBackgroundPolygon: DrawBackgroundPolygon.Instance,
     DrawString: DrawString.Instance,
+    SelectVideoBuffer: SelectVideoBuffer.Instance,
     Kill: Kill.Instance,
     Yield: Yield.Instance,
 };
@@ -91,6 +94,7 @@ pub fn parseNextInstruction(program: *Program.Instance) Error!Wrapped {
         .DrawSpritePolygon => wrap("DrawSpritePolygon", DrawSpritePolygon, raw_opcode, program),
         .DrawBackgroundPolygon => wrap("DrawBackgroundPolygon", DrawBackgroundPolygon, raw_opcode, program),
         .DrawString => wrap("DrawString", DrawString, raw_opcode, program),
+        .SelectVideoBuffer => wrap("SelectVideoBuffer", SelectVideoBuffer, raw_opcode, program),
         .Kill => wrap("Kill", Kill, raw_opcode, program),
         .Yield => wrap("Yield", Yield, raw_opcode, program),
         else => error.UnimplementedOpcode,
@@ -124,6 +128,7 @@ pub fn executeNextInstruction(program: *Program.Instance, machine: *Machine.Inst
         .DrawSpritePolygon => execute(DrawSpritePolygon, raw_opcode, program, machine),
         .DrawBackgroundPolygon => execute(DrawBackgroundPolygon, raw_opcode, program, machine),
         .DrawString => execute(DrawString, raw_opcode, program, machine),
+        .SelectVideoBuffer => execute(SelectVideoBuffer, raw_opcode, program, machine),
         .Kill => execute(Kill, raw_opcode, program, machine),
         .Yield => execute(Yield, raw_opcode, program, machine),
         else => error.UnimplementedOpcode,
@@ -184,6 +189,7 @@ test "parseNextInstruction returns expected instruction type when given valid by
     expectWrappedType(.DrawSpritePolygon, try expectParse(&DrawSpritePolygon.BytecodeExamples.registers));
     expectWrappedType(.DrawBackgroundPolygon, try expectParse(&DrawBackgroundPolygon.BytecodeExamples.low_x));
     expectWrappedType(.DrawString, try expectParse(&DrawString.BytecodeExamples.valid));
+    expectWrappedType(.SelectVideoBuffer, try expectParse(&SelectVideoBuffer.BytecodeExamples.valid));
     expectWrappedType(.Kill, try expectParse(&Kill.BytecodeExamples.valid));
     expectWrappedType(.Yield, try expectParse(&Yield.BytecodeExamples.valid));
 }

@@ -8,6 +8,7 @@ const Channel = @import("../../values/channel.zig");
 const ResourceID = @import("../../values/resource_id.zig");
 const ColorID = @import("../../values/color_id.zig");
 const StringID = @import("../../values/string_id.zig");
+const BufferID = @import("../../values/buffer_id.zig");
 
 const zeroes = @import("std").mem.zeroes;
 
@@ -24,6 +25,7 @@ pub fn new(comptime Implementation: type) MockMachine(Implementation) {
 const CallCounts = struct {
     drawPolygon: usize,
     drawString: usize,
+    selectVideoBuffer: usize,
     startGamePart: usize,
     loadResource: usize,
     unloadAllResources: usize,
@@ -50,6 +52,11 @@ fn MockMachine(comptime Implementation: type) type {
         pub fn drawString(self: *Self, string_id: StringID.Raw, color_id: ColorID.Trusted, point: Point.Instance) !void {
             self.call_counts.drawString += 1;
             try Implementation.drawString(string_id, color_id, point);
+        }
+
+        pub fn selectVideoBuffer(self: *Self, buffer_id: BufferID.Enum) void {
+            self.call_counts.selectVideoBuffer += 1;
+            Implementation.selectVideoBuffer(buffer_id);
         }
 
         pub fn startGamePart(self: *Self, game_part: GamePart.Enum) !void {
@@ -125,6 +132,17 @@ test "MockMachine calls drawString correctly on stub implementation" {
 
     try mock.drawString(0xBEEF, 2, .{ .x = 320, .y = 200 });
     testing.expectEqual(1, mock.call_counts.drawString);
+}
+
+test "MockMachine calls selectVideoBuffer correctly on stub implementation" {
+    var mock = new(struct {
+        fn selectVideoBuffer(buffer_id: BufferID.Enum) void {
+            testing.expectEqual(.front_buffer, buffer_id);
+        }
+    });
+
+    mock.selectVideoBuffer(.front_buffer);
+    testing.expectEqual(1, mock.call_counts.selectVideoBuffer);
 }
 
 test "MockMachine calls startGamePart correctly on stub implementation" {
