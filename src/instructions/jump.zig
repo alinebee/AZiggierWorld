@@ -1,10 +1,9 @@
 const Opcode = @import("../values/opcode.zig");
 const Program = @import("../machine/program.zig");
 const Machine = @import("../machine/machine.zig");
-const Stack = @import("../machine/stack.zig");
 const Address = @import("../values/address.zig");
 
-pub const Error = Program.Error || Stack.Error;
+pub const Error = Program.Error;
 
 /// Unconditionally jump to a new address.
 /// Unlike Call, this does not increment the stack with a return address.
