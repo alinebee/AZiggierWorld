@@ -1,17 +1,14 @@
-//! Tests that MEMLIST.BIN files from the original Another World are parsed correctly.
-//! Requires a `dos_fixture` folder containing Another World DOS game files.
+//! Tests that ResourceLoader correctly parses real game files from the original Another World.
+//! Requires that the `fixtures/dos` folder contains Another World DOS game files.
 
 const ResourceLoader = @import("../resources/resource_loader.zig");
 const ResourceID = @import("../vm/types/resource_id.zig");
 
 const testing = @import("../utils/testing.zig");
-const std = @import("std");
-
-// Relative to the base project folder, not to the location of this source file.
-const relative_fixture_path = "fixtures/dos/";
+const validFixturePath = @import("helpers.zig").validFixturePath;
 
 test "ResourceLoader loads all game resources" {
-    const game_path = try std.fs.realpathAlloc(testing.allocator, relative_fixture_path);
+    const game_path = validFixturePath(testing.allocator) catch return;
     defer testing.allocator.free(game_path);
 
     const loader = try ResourceLoader.new(testing.allocator, game_path);
@@ -30,7 +27,7 @@ test "ResourceLoader loads all game resources" {
 }
 
 test "Instance.readResource returns error.OutOfMemory if it runs out of memory when loading a non-empty resource" {
-    const game_path = try std.fs.realpathAlloc(testing.allocator, relative_fixture_path);
+    const game_path = validFixturePath(testing.allocator) catch return;
     defer testing.allocator.free(game_path);
 
     const loader = try ResourceLoader.new(testing.allocator, game_path);
@@ -52,7 +49,7 @@ test "Instance.readResource returns error.OutOfMemory if it runs out of memory w
 }
 
 test "Instance.readResourceByID returns error.InvalidResourceID when given a resource ID that is out of range" {
-    const game_path = try std.fs.realpathAlloc(testing.allocator, relative_fixture_path);
+    const game_path = validFixturePath(testing.allocator) catch return;
     defer testing.allocator.free(game_path);
 
     const loader = try ResourceLoader.new(testing.allocator, game_path);
