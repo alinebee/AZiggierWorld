@@ -19,6 +19,7 @@ const DrawSpritePolygon = @import("draw_sprite_polygon.zig");
 const DrawBackgroundPolygon = @import("draw_background_polygon.zig");
 const DrawString = @import("draw_string.zig");
 const Kill = @import("kill.zig");
+const Yield = @import("yield.zig");
 
 const introspection = @import("../utils/introspection.zig");
 
@@ -40,6 +41,7 @@ pub const Error = Opcode.Error ||
     DrawBackgroundPolygon.Error ||
     DrawString.Error ||
     Kill.Error ||
+    Yield.Error ||
     error{
     /// Bytecode contained an opcode that is not yet implemented.
     UnimplementedOpcode,
@@ -64,6 +66,7 @@ pub const Wrapped = union(enum) {
     DrawBackgroundPolygon: DrawBackgroundPolygon.Instance,
     DrawString: DrawString.Instance,
     Kill: Kill.Instance,
+    Yield: Yield.Instance,
 };
 
 /// Parse the next instruction from a bytecode program and wrap it in a Wrapped union type.
@@ -89,6 +92,7 @@ pub fn parseNextInstruction(program: *Program.Instance) Error!Wrapped {
         .DrawBackgroundPolygon => wrap("DrawBackgroundPolygon", DrawBackgroundPolygon, raw_opcode, program),
         .DrawString => wrap("DrawString", DrawString, raw_opcode, program),
         .Kill => wrap("Kill", Kill, raw_opcode, program),
+        .Yield => wrap("Yield", Yield, raw_opcode, program),
         else => error.UnimplementedOpcode,
     };
 }
@@ -121,6 +125,7 @@ pub fn executeNextInstruction(program: *Program.Instance, machine: *Machine.Inst
         .DrawBackgroundPolygon => execute(DrawBackgroundPolygon, raw_opcode, program, machine),
         .DrawString => execute(DrawString, raw_opcode, program, machine),
         .Kill => execute(Kill, raw_opcode, program, machine),
+        .Yield => execute(Yield, raw_opcode, program, machine),
         else => error.UnimplementedOpcode,
     };
 }
@@ -180,6 +185,7 @@ test "parseNextInstruction returns expected instruction type when given valid by
     expectWrappedType(.DrawBackgroundPolygon, try expectParse(&DrawBackgroundPolygon.BytecodeExamples.low_x));
     expectWrappedType(.DrawString, try expectParse(&DrawString.BytecodeExamples.valid));
     expectWrappedType(.Kill, try expectParse(&Kill.BytecodeExamples.valid));
+    expectWrappedType(.Yield, try expectParse(&Yield.BytecodeExamples.valid));
 }
 
 test "parseNextInstruction returns error.InvalidOpcode error when it encounters an unknown opcode" {
@@ -188,7 +194,7 @@ test "parseNextInstruction returns error.InvalidOpcode error when it encounters 
 }
 
 test "parseNextInstruction returns error.UnimplementedOpcode error when it encounters a not-yet-implemented opcode" {
-    const bytecode = [_]u8{@enumToInt(Opcode.Enum.Yield)};
+    const bytecode = [_]u8{@enumToInt(Opcode.Enum.RenderVideoBuffer)};
     testing.expectError(error.UnimplementedOpcode, expectParse(&bytecode));
 }
 
@@ -202,10 +208,18 @@ test "executeNextInstruction executes arbitrary instruction on machine when give
     testing.expectEqual(-18901, machine.registers[16]);
 }
 
-test "executeNextInstruction returns action if specified" {
+test "executeNextInstruction returns DeactivateThread action if specified" {
     var program = Program.new(&Kill.BytecodeExamples.valid);
     var machine = Machine.new();
 
     const action = try executeNextInstruction(&program, &machine);
     testing.expectEqual(.DeactivateThread, action);
+}
+
+test "executeNextInstruction returns YieldToNextThread action if specified" {
+    var program = Program.new(&Yield.BytecodeExamples.valid);
+    var machine = Machine.new();
+
+    const action = try executeNextInstruction(&program, &machine);
+    testing.expectEqual(.YieldToNextThread, action);
 }
