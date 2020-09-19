@@ -1,0 +1,22 @@
+/// A raw register identifier as represented in Another World's bytecode.
+pub const Raw = u8;
+
+// -- Known register ID constants --
+
+/// Set at VM start for use in random calculations.
+pub const random_seed: Raw = 0x3C;
+
+/// Read when copying a buffer to the screen.
+pub const scroll_y_position: Raw = 0xF9;
+
+// These placeholder names are copypasta from the reference implementation:
+// https://github.com/fabiensanglard/Another-World-Bytecode-Interpreter/blob/master/src/vm.h#L30
+pub const hero_action = 0xFA;
+pub const hero_pos_jump_down = 0xFB;
+pub const hero_pos_left_right = 0xFC;
+pub const hero_pos_mask = 0xFD;
+pub const hero_action_pos_mask = 0xFE;
+
+/// How long to leave the current frame on-screen before rendering the next frame.
+/// Read when drawing a buffer to the screen.
+pub const frame_duration = 0xFF;

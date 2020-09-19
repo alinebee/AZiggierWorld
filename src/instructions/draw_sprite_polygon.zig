@@ -3,6 +3,7 @@ const Program = @import("../machine/program.zig");
 const Machine = @import("../machine/machine.zig");
 const Video = @import("../machine/video.zig");
 const Point = @import("../values/point.zig");
+const RegisterID = @import("../values/register_id.zig");
 
 /// Draw a polygon at a location and zoom level that are either hardcoded constants
 /// or dynamic values read from registers.
@@ -16,20 +17,20 @@ pub const Instance = struct {
     /// The source for the X offset at which to draw the polygon.
     x: union(enum) {
         constant: Point.Coordinate,
-        register: Machine.RegisterID,
+        register: RegisterID.Raw,
     },
 
     /// The source for the Y offset at which to draw the polygon.
     y: union(enum) {
         constant: Point.Coordinate,
-        register: Machine.RegisterID,
+        register: RegisterID.Raw,
     },
 
     /// The source for the scale at which to draw the polygon.
     scale: union(enum) {
         default,
         constant: Video.PolygonScale,
-        register: Machine.RegisterID,
+        register: RegisterID.Raw,
     },
 
     // Public implementation is constrained to concrete type so that instruction.zig can infer errors.
@@ -103,14 +104,14 @@ pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instance 
 
     self.x = switch (raw_x) {
         0b00 => .{ .constant = try program.read(Point.Coordinate) },
-        0b01 => .{ .register = try program.read(Machine.RegisterID) },
+        0b01 => .{ .register = try program.read(RegisterID.Raw) },
         0b10 => .{ .constant = @as(Point.Coordinate, try program.read(u8)) },
         0b11 => .{ .constant = @as(Point.Coordinate, try program.read(u8)) + 256 },
     };
 
     self.y = switch (raw_y) {
         0b00 => .{ .constant = try program.read(Point.Coordinate) },
-        0b01 => .{ .register = try program.read(Machine.RegisterID) },
+        0b01 => .{ .register = try program.read(RegisterID.Raw) },
         0b10, 0b11 => .{ .constant = @as(Point.Coordinate, try program.read(u8)) },
     };
 
@@ -121,7 +122,7 @@ pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instance 
         },
         0b01 => {
             self.source = .polygons;
-            self.scale = .{ .register = try program.read(Machine.RegisterID) };
+            self.scale = .{ .register = try program.read(RegisterID.Raw) };
         },
         0b10 => {
             self.source = .polygons;

@@ -3,17 +3,18 @@ const Program = @import("../machine/program.zig");
 const Machine = @import("../machine/machine.zig");
 const Comparison = @import("comparison.zig");
 const Address = @import("../values/address.zig");
+const RegisterID = @import("../values/register_id.zig");
 
 /// Compares the value in a register against another register or constant
 /// and jumps to a new address in the program if the comparison succeeds.
 pub const Instance = struct {
     /// The register to use for the left-hand side of the condition.
-    lhs: Machine.RegisterID,
+    lhs: RegisterID.Raw,
 
     /// The register or constant to use for the right-hand side of the condition.
     rhs: union(enum) {
         constant: Machine.RegisterValue,
-        register: Machine.RegisterID,
+        register: RegisterID.Raw,
     },
 
     /// How to compare the two sides of the condition.
@@ -62,12 +63,12 @@ pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instance 
     const raw_source = @truncate(u2, control_code >> 6);
     const raw_comparison = @truncate(Comparison.Raw, control_code);
 
-    self.lhs = try program.read(Machine.RegisterID);
+    self.lhs = try program.read(RegisterID.Raw);
     self.rhs = switch (raw_source) {
         // Even though 16-bit constants are signed, the reference implementation treats 8-bit constants as unsigned.
         0b00 => .{ .constant = try program.read(u8) },
         0b01 => .{ .constant = try program.read(Machine.RegisterValue) },
-        0b10, 0b11 => .{ .register = try program.read(Machine.RegisterID) },
+        0b10, 0b11 => .{ .register = try program.read(RegisterID.Raw) },
     };
 
     self.address = try program.read(Address.Raw);

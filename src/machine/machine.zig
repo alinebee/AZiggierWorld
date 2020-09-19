@@ -5,7 +5,6 @@ const Program = @import("program.zig");
 
 /// Register values are interpreted as signed 16-bit integers.
 pub const RegisterValue = i16;
-pub const RegisterID = u8;
 
 pub const register_count = 256;
 pub const Registers = [register_count]RegisterValue;

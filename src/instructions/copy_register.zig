@@ -1,16 +1,17 @@
 const Opcode = @import("../values/opcode.zig");
 const Program = @import("../machine/program.zig");
 const Machine = @import("../machine/machine.zig");
+const RegisterID = @import("../values/register_id.zig");
 
 pub const Error = Program.Error;
 
 /// Copy the value of one register to another.
 pub const Instance = struct {
     /// The ID of the register to copy into.
-    destination: Machine.RegisterID,
+    destination: RegisterID.Raw,
 
     /// The ID of the register to copy from.
-    source: Machine.RegisterID,
+    source: RegisterID.Raw,
 
     pub fn execute(self: Instance, machine: *Machine.Instance) void {
         machine.registers[self.destination] = machine.registers[self.source];
@@ -22,8 +23,8 @@ pub const Instance = struct {
 /// Returns an error if the bytecode could not be read or contained an invalid instruction.
 pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instance {
     return Instance{
-        .destination = try program.read(Machine.RegisterID),
-        .source = try program.read(Machine.RegisterID),
+        .destination = try program.read(RegisterID.Raw),
+        .source = try program.read(RegisterID.Raw),
     };
 }
 

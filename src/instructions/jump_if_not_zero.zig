@@ -2,6 +2,7 @@ const Opcode = @import("../values/opcode.zig");
 const Program = @import("../machine/program.zig");
 const Machine = @import("../machine/machine.zig");
 const Address = @import("../values/address.zig");
+const RegisterID = @import("../values/register_id.zig");
 
 pub const Error = Program.Error;
 
@@ -9,7 +10,7 @@ pub const Error = Program.Error;
 /// if the value in that register is not yet zero. Likely used for loop counters.
 pub const Instance = struct {
     /// The register storing the counter to decrement.
-    register: Machine.RegisterID,
+    register: RegisterID.Raw,
     /// The address to jump to if the register value is non-zero.
     address: Address.Raw,
 
@@ -32,7 +33,7 @@ pub const Instance = struct {
 /// Returns an error if the bytecode could not be read or contained an invalid instruction.
 pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instance {
     return Instance{
-        .register = try program.read(Machine.RegisterID),
+        .register = try program.read(RegisterID.Raw),
         .address = try program.read(Address.Raw),
     };
 }

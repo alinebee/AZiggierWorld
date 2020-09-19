@@ -1,13 +1,14 @@
 const Opcode = @import("../values/opcode.zig");
 const Program = @import("../machine/program.zig");
 const Machine = @import("../machine/machine.zig");
+const RegisterID = @import("../values/register_id.zig");
 
 pub const Error = Program.Error;
 
 /// Set a specific register to a constant value.
 pub const Instance = struct {
     /// The ID of the register to set.
-    destination: Machine.RegisterID,
+    destination: RegisterID.Raw,
 
     /// The constant value to set the register to.
     value: Machine.RegisterValue,
@@ -22,7 +23,7 @@ pub const Instance = struct {
 /// Returns an error if the bytecode could not be read or contained an invalid instruction.
 pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instance {
     return Instance{
-        .destination = try program.read(Machine.RegisterID),
+        .destination = try program.read(RegisterID.Raw),
         .value = try program.read(Machine.RegisterValue),
     };
 }
