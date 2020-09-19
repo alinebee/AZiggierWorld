@@ -144,74 +144,21 @@ fn expectWrappedType(expected: @TagType(Wrapped), actual: @TagType(Wrapped)) voi
 
 const testing = @import("../utils/testing.zig");
 
-test "parseNextInstruction returns ActivateThread instruction when given valid bytecode" {
-    const instruction = try expectParse(&ActivateThread.BytecodeExamples.valid);
-    expectWrappedType(.ActivateThread, instruction);
-}
-
-test "parseNextInstruction returns ControlThreads instruction when given valid bytecode" {
-    const instruction = try expectParse(&ControlThreads.BytecodeExamples.valid);
-    expectWrappedType(.ControlThreads, instruction);
-}
-
-test "parseNextInstruction returns SetRegister instruction when given valid bytecode" {
-    const instruction = try expectParse(&SetRegister.BytecodeExamples.valid);
-    expectWrappedType(.SetRegister, instruction);
-}
-
-test "parseNextInstruction returns CopyRegister instruction when given valid bytecode" {
-    const instruction = try expectParse(&CopyRegister.BytecodeExamples.valid);
-    expectWrappedType(.CopyRegister, instruction);
-}
-
-test "parseNextInstruction returns Call instruction when given valid bytecode" {
-    const instruction = try expectParse(&Call.BytecodeExamples.valid);
-    expectWrappedType(.Call, instruction);
-}
-
-test "parseNextInstruction returns Return instruction when given valid bytecode" {
-    const instruction = try expectParse(&Return.BytecodeExamples.valid);
-    expectWrappedType(.Return, instruction);
-}
-
-test "parseNextInstruction returns ControlResources instruction when given valid bytecode" {
-    const instruction = try expectParse(&ControlResources.BytecodeExamples.unload_all);
-    expectWrappedType(.ControlResources, instruction);
-}
-
-test "parseNextInstruction returns ControlMusic instruction when given valid bytecode" {
-    const instruction = try expectParse(&ControlMusic.BytecodeExamples.play);
-    expectWrappedType(.ControlMusic, instruction);
-}
-
-test "parseNextInstruction returns ControlSound instruction when given valid bytecode" {
-    const instruction = try expectParse(&ControlSound.BytecodeExamples.play);
-    expectWrappedType(.ControlSound, instruction);
-}
-
-test "parseNextInstruction returns Jump instruction when given valid bytecode" {
-    const instruction = try expectParse(&Jump.BytecodeExamples.valid);
-    expectWrappedType(.Jump, instruction);
-}
-
-test "parseNextInstruction returns JumpConditional instruction when given valid bytecode" {
-    const instruction = try expectParse(&JumpConditional.BytecodeExamples.equal_to_register);
-    expectWrappedType(.JumpConditional, instruction);
-}
-
-test "parseNextInstruction returns DrawSpriteolygon instruction when given valid bytecode" {
-    const instruction = try expectParse(&DrawSpritePolygon.BytecodeExamples.registers);
-    expectWrappedType(.DrawSpritePolygon, instruction);
-}
-
-test "parseNextInstruction returns DrawBackgroundPolygon instruction when given valid bytecode" {
-    const instruction = try expectParse(&DrawBackgroundPolygon.BytecodeExamples.low_x);
-    expectWrappedType(.DrawBackgroundPolygon, instruction);
-}
-
-test "parseNextInstruction returns DrawString instruction when given valid bytecode" {
-    const instruction = try expectParse(&DrawString.BytecodeExamples.valid);
-    expectWrappedType(.DrawString, instruction);
+test "parseNextInstruction returns expected instruction type when given valid bytecode" {
+    expectWrappedType(.ActivateThread, try expectParse(&ActivateThread.BytecodeExamples.valid));
+    expectWrappedType(.ControlThreads, try expectParse(&ControlThreads.BytecodeExamples.valid));
+    expectWrappedType(.SetRegister, try expectParse(&SetRegister.BytecodeExamples.valid));
+    expectWrappedType(.CopyRegister, try expectParse(&CopyRegister.BytecodeExamples.valid));
+    expectWrappedType(.Call, try expectParse(&Call.BytecodeExamples.valid));
+    expectWrappedType(.Return, try expectParse(&Return.BytecodeExamples.valid));
+    expectWrappedType(.ControlResources, try expectParse(&ControlResources.BytecodeExamples.unload_all));
+    expectWrappedType(.ControlMusic, try expectParse(&ControlMusic.BytecodeExamples.play));
+    expectWrappedType(.ControlSound, try expectParse(&ControlSound.BytecodeExamples.play));
+    expectWrappedType(.Jump, try expectParse(&Jump.BytecodeExamples.valid));
+    expectWrappedType(.JumpConditional, try expectParse(&JumpConditional.BytecodeExamples.equal_to_register));
+    expectWrappedType(.DrawSpritePolygon, try expectParse(&DrawSpritePolygon.BytecodeExamples.registers));
+    expectWrappedType(.DrawBackgroundPolygon, try expectParse(&DrawBackgroundPolygon.BytecodeExamples.low_x));
+    expectWrappedType(.DrawString, try expectParse(&DrawString.BytecodeExamples.valid));
 }
 
 test "parseNextInstruction returns error.InvalidOpcode error when it encounters an unknown opcode" {
