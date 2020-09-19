@@ -140,6 +140,9 @@ pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instance 
 
 // zig fmt: off
 pub const BytecodeExamples = struct {
+    /// Example bytecode that should produce a valid instruction.
+    pub const valid = wide_constants;
+
     pub const registers = [6]u8{
         0b01_01_01_01,              // opcode
         0b0000_1111, 0b0000_1111,   // address (will be right-shifted by 1)

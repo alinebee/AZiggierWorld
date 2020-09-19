@@ -43,7 +43,9 @@ pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instance 
 pub const BytecodeExamples = struct {
     const raw_opcode = @enumToInt(Opcode.Enum.FillVideoBuffer);
 
+    /// Example bytecode that should produce a valid instruction.
     pub const valid = [3]u8{ raw_opcode, 0x00, 0x01 };
+
     pub const invalid_buffer_id = [3]u8{ raw_opcode, 0x8B, 0x01 };
     pub const invalid_color_id = [3]u8{ raw_opcode, 0x00, 0xFF };
 };

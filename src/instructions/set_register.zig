@@ -32,6 +32,7 @@ pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instance 
 pub const BytecodeExamples = struct {
     const raw_opcode = @enumToInt(Opcode.Enum.SetRegister);
 
+    /// Example bytecode that should produce a valid instruction.
     pub const valid = [4]u8{ raw_opcode, 16, 0b1011_0110, 0b0010_1011 }; // -18901 in two's complement
 };
 

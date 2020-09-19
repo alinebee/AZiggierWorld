@@ -54,6 +54,9 @@ pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instance 
 pub const BytecodeExamples = struct {
     const raw_opcode = @enumToInt(Opcode.Enum.ControlResources);
 
+    /// Example bytecode that should produce a valid instruction.
+    pub const valid = start_game_part;
+
     pub const unload_all = [3]u8{ raw_opcode, 0x0, 0x0 };
     pub const start_game_part = [3]u8{ raw_opcode, 0x3E, 0x85 }; // GamePart.Enum.arena_cinematic
     pub const load_resource = [3]u8{ raw_opcode, 0xDE, 0xAD };
