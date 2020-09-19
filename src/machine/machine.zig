@@ -1,5 +1,6 @@
 const Thread = @import("thread.zig");
 const ThreadID = @import("../values/thread_id.zig");
+const Stack = @import("stack.zig");
 const Program = @import("program.zig");
 
 /// Register values are interpreted as signed 16-bit integers.
@@ -19,6 +20,9 @@ pub const Instance = struct {
     /// The current state of the VM's 256 registers.
     registers: Registers,
 
+    /// The current program execution stack.
+    stack: Stack.Instance,
+
     /// The currently-running program.
     program: Program.Instance,
 
@@ -36,6 +40,7 @@ pub fn new() Instance {
     var machine = Instance{
         .threads = [_]Thread.Instance{.{}} ** thread_count,
         .registers = [_]RegisterValue{0} ** register_count,
+        .stack = Stack.Instance{},
         .program = Program.new(&empty_program),
     };
 
