@@ -1,9 +1,9 @@
-const Opcode = @import("../types/opcode.zig");
-const Program = @import("../types/program.zig");
-const Machine = @import("../machine.zig");
-const ResourceID = @import("../types/resource_id.zig");
-const GamePart = @import("../types/game_part.zig");
-const Resources = @import("../types/resources.zig");
+const Opcode = @import("../values/opcode.zig");
+const Program = @import("../machine/program.zig");
+const Machine = @import("../machine/machine.zig");
+const Resources = @import("../machine/resources.zig");
+const ResourceID = @import("../values/resource_id.zig");
+const GamePart = @import("../values/game_part.zig");
 
 /// Loads individual resources or entire game parts into memory.
 pub const Instance = union(enum) {
@@ -61,7 +61,7 @@ pub const BytecodeExamples = struct {
 
 // -- Tests --
 
-const testing = @import("../../utils/testing.zig");
+const testing = @import("../utils/testing.zig");
 const expectParse = @import("test_helpers/parse.zig").expectParse;
 const MockMachine = @import("test_helpers/mock_machine.zig");
 

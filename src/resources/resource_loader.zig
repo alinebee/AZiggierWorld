@@ -1,5 +1,5 @@
 const ResourceDescriptor = @import("resource_descriptor.zig");
-const ResourceID = @import("../vm/types/resource_id.zig");
+const ResourceID = @import("../values/resource_id.zig");
 const Filename = @import("filename.zig");
 const decode = @import("../run_length_decoder/decode.zig").decode;
 

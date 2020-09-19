@@ -1,9 +1,9 @@
 //! Functions and types used when testing virtual machine instructions.
 
-const Opcode = @import("../../types/opcode.zig");
-const Program = @import("../../types/program.zig");
+const Opcode = @import("../../values/opcode.zig");
+const Program = @import("../../machine/program.zig");
 
-const introspection = @import("../../../utils/introspection.zig");
+const introspection = @import("../../utils/introspection.zig");
 
 // -- Test helpers --
 
@@ -52,7 +52,7 @@ fn parse5MoreBytes(raw_opcode: Opcode.Raw, program: *Program.Instance) Program.E
 
 // -- Tests --
 
-const testing = @import("../../../utils/testing.zig");
+const testing = @import("../../utils/testing.zig");
 
 test "expectParse returns parsed instruction if all bytes were parsed" {
     const bytecode = [_]u8{0} ** 6;

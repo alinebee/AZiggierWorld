@@ -1,6 +1,6 @@
-const RegisterValue = @import("../machine.zig").RegisterValue;
+const RegisterValue = @import("../machine/machine.zig").RegisterValue;
 
-const intToEnum = @import("../../utils/introspection.zig").intToEnum;
+const intToEnum = @import("../utils/introspection.zig").intToEnum;
 
 /// A raw ConditionalJump comparison as it is represented in bytecode.
 pub const Raw = u3;
@@ -39,7 +39,7 @@ pub fn parse(raw: Raw) Error!Enum {
 
 // -- Tests --
 
-const testing = @import("../../utils/testing.zig");
+const testing = @import("../utils/testing.zig");
 
 test "parse parses raw comparison values correctly" {
     testing.expectEqual(.equal, parse(0b000));

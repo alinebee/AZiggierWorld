@@ -1,6 +1,6 @@
-const Opcode = @import("../types/opcode.zig");
-const Program = @import("../types/program.zig");
-const Machine = @import("../machine.zig");
+const Opcode = @import("../values/opcode.zig");
+const Program = @import("../machine/program.zig");
+const Machine = @import("../machine/machine.zig");
 
 pub const Error = Program.Error;
 
@@ -37,7 +37,7 @@ pub const BytecodeExamples = struct {
 
 // -- Tests --
 
-const testing = @import("../../utils/testing.zig");
+const testing = @import("../utils/testing.zig");
 const expectParse = @import("test_helpers/parse.zig").expectParse;
 
 test "parse parses valid bytecode and consumes 3 bytes" {

@@ -1,6 +1,6 @@
-const Thread = @import("types/thread.zig");
-const ThreadID = @import("types/thread_id.zig");
-const Program = @import("types/program.zig");
+const Thread = @import("thread.zig");
+const ThreadID = @import("../values/thread_id.zig");
+const Program = @import("program.zig");
 
 /// Register values are interpreted as signed 16-bit integers.
 pub const RegisterValue = i16;

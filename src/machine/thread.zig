@@ -91,7 +91,7 @@ pub const Instance = struct {
 
 // -- Tests --
 
-const testing = @import("../../utils/testing.zig");
+const testing = @import("../utils/testing.zig");
 
 test "scheduleJump schedules activation with specified program counter for next tic" {
     var thread = Instance{};

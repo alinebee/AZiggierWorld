@@ -25,7 +25,7 @@ pub fn parse(raw_id: Raw) Error!Trusted {
 
 // -- Tests --
 
-const testing = @import("../../utils/testing.zig");
+const testing = @import("../utils/testing.zig");
 
 test "parse succeeds with in-bounds integer" {
     testing.expectEqual(0x3F, parse(0x3F));

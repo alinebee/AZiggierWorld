@@ -1,4 +1,4 @@
-const intToEnum = @import("../../utils/introspection.zig").intToEnum;
+const intToEnum = @import("../utils/introspection.zig").intToEnum;
 
 /// A raw ControlThreads operation as it is represented in bytecode.
 pub const Raw = u8;
@@ -26,7 +26,7 @@ pub fn parse(raw: Raw) Error!Enum {
 
 // -- Tests --
 
-const testing = @import("../../utils/testing.zig");
+const testing = @import("../utils/testing.zig");
 
 test "parse parses raw operation bytes correctly" {
     testing.expectEqual(.Resume, parse(0));

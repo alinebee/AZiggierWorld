@@ -1,8 +1,8 @@
-const Opcode = @import("../types/opcode.zig");
-const Program = @import("../types/program.zig");
-const Machine = @import("../machine.zig");
-const Audio = @import("../audio.zig");
-const ResourceID = @import("../types/resource_id.zig");
+const Opcode = @import("../values/opcode.zig");
+const Program = @import("../machine/program.zig");
+const Machine = @import("../machine/machine.zig");
+const Audio = @import("../machine/audio.zig");
+const ResourceID = @import("../values/resource_id.zig");
 
 /// Starts, stops or delays the current music track.
 pub const Instance = union(enum) {
@@ -76,7 +76,7 @@ pub const BytecodeExamples = struct {
 
 // -- Tests --
 
-const testing = @import("../../utils/testing.zig");
+const testing = @import("../utils/testing.zig");
 const expectParse = @import("test_helpers/parse.zig").expectParse;
 const MockMachine = @import("test_helpers/mock_machine.zig");
 

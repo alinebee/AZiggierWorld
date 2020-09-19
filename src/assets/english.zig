@@ -1,6 +1,6 @@
 //! Defines the UI strings from the full DOS English release of the game.
 
-const StringID = @import("../vm/types/string_id.zig");
+const StringID = @import("../values/string_id.zig");
 
 pub const Error = StringID.Error;
 

@@ -1,10 +1,10 @@
-const Opcode = @import("../types/opcode.zig");
-const Program = @import("../types/program.zig");
-const Machine = @import("../machine.zig");
-const Audio = @import("../audio.zig");
+const Opcode = @import("../values/opcode.zig");
+const Program = @import("../machine/program.zig");
+const Machine = @import("../machine/machine.zig");
+const Audio = @import("../machine/audio.zig");
 
-const ResourceID = @import("../types/resource_id.zig");
-const Channel = @import("../types/channel.zig");
+const ResourceID = @import("../values/resource_id.zig");
+const Channel = @import("../values/channel.zig");
 
 /// Play a sound on a channel, or stop a channel from playing.
 pub const Instance = union(enum) {
@@ -74,7 +74,7 @@ pub const BytecodeExamples = struct {
 
 // -- Tests --
 
-const testing = @import("../../utils/testing.zig");
+const testing = @import("../utils/testing.zig");
 const expectParse = @import("test_helpers/parse.zig").expectParse;
 const MockMachine = @import("test_helpers/mock_machine.zig");
 

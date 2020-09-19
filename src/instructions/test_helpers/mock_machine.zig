@@ -1,13 +1,13 @@
-const Machine = @import("../../machine.zig");
-const Video = @import("../../video.zig");
-const Audio = @import("../../audio.zig");
+const Machine = @import("../../machine/machine.zig");
+const Video = @import("../../machine/video.zig");
+const Audio = @import("../../machine/audio.zig");
 
-const Point = @import("../../types/point.zig");
-const GamePart = @import("../../types/game_part.zig");
-const Channel = @import("../../types/channel.zig");
-const ResourceID = @import("../../types/resource_id.zig");
-const ColorID = @import("../../types/color_id.zig");
-const StringID = @import("../../types/string_id.zig");
+const Point = @import("../../values/point.zig");
+const GamePart = @import("../../values/game_part.zig");
+const Channel = @import("../../values/channel.zig");
+const ResourceID = @import("../../values/resource_id.zig");
+const ColorID = @import("../../values/color_id.zig");
+const StringID = @import("../../values/string_id.zig");
 
 const zeroes = @import("std").mem.zeroes;
 
@@ -96,7 +96,7 @@ fn MockMachine(comptime Implementation: type) type {
 
 // -- Tests --
 
-const testing = @import("../../../utils/testing.zig");
+const testing = @import("../../utils/testing.zig");
 
 test "MockMachine calls drawPolygon correctly on stub implementation" {
     var mock = new(struct {

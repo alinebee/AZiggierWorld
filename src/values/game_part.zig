@@ -1,6 +1,6 @@
 const ResourceID = @import("resource_id.zig");
 
-const intToEnum = @import("../../utils/introspection.zig").intToEnum;
+const intToEnum = @import("../utils/introspection.zig").intToEnum;
 
 // zig fmt: off
 
@@ -71,7 +71,7 @@ pub const Error = error{
 
 // -- Tests --
 
-const testing = @import("../../utils/testing.zig");
+const testing = @import("../utils/testing.zig");
 
 test "parse returns expected enum cases" {
     testing.expectEqual(.copy_protection, parse(0x3E80));

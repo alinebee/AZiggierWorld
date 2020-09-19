@@ -1,6 +1,6 @@
-const Program = @import("../types/program.zig");
-const Opcode = @import("../types/opcode.zig");
-const Machine = @import("../machine.zig");
+const Program = @import("../machine/program.zig");
+const Opcode = @import("../values/opcode.zig");
+const Machine = @import("../machine/machine.zig");
 
 const ActivateThread = @import("activate_thread.zig");
 const ControlThreads = @import("control_threads.zig");
@@ -14,7 +14,7 @@ const DrawSpritePolygon = @import("draw_sprite_polygon.zig");
 const DrawBackgroundPolygon = @import("draw_background_polygon.zig");
 const DrawString = @import("draw_string.zig");
 
-const introspection = @import("../../utils/introspection.zig");
+const introspection = @import("../utils/introspection.zig");
 
 pub const Error = Opcode.Error ||
     Program.Error ||
@@ -127,7 +127,7 @@ fn expectWrappedType(expected: @TagType(Wrapped), actual: @TagType(Wrapped)) voi
 
 // -- Tests --
 
-const testing = @import("../../utils/testing.zig");
+const testing = @import("../utils/testing.zig");
 
 test "parseNextInstruction returns ActivateThread instruction when given valid bytecode" {
     const instruction = try expectParse(&ActivateThread.BytecodeExamples.valid);

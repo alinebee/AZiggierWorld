@@ -1,8 +1,8 @@
-const Opcode = @import("../types/opcode.zig");
-const Program = @import("../types/program.zig");
-const Machine = @import("../machine.zig");
-const Video = @import("../video.zig");
-const Point = @import("../types/point.zig");
+const Opcode = @import("../values/opcode.zig");
+const Program = @import("../machine/program.zig");
+const Machine = @import("../machine/machine.zig");
+const Video = @import("../machine/video.zig");
+const Point = @import("../values/point.zig");
 
 /// Draw a polygon at the default zoom level and a constant position hardcoded in the bytecode.
 /// Unlike DrawSpritePolygon this is likely intended for drawing backgrounds,
@@ -37,7 +37,7 @@ pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instance 
     // of the opcode with the next 8 bits from the rest of the bytecode.
     // The combined value is then right-shifted to knock off the highest bit, which is always 1
     // (since that bit indicated this was a DrawBackgroundPolygon operation in the first place:
-    // see types/opcode.zig).
+    // see values/opcode.zig).
     // Since the lowest bit will always be zero as a result, polygons must therefore start
     // on even address boundaries within Another World's polygon resources.
     const high_byte: Video.PolygonAddress = raw_opcode;
@@ -75,7 +75,7 @@ pub const BytecodeExamples = struct {
 
 // -- Tests --
 
-const testing = @import("../../utils/testing.zig");
+const testing = @import("../utils/testing.zig");
 const expectParse = @import("test_helpers/parse.zig").expectParse;
 const MockMachine = @import("test_helpers/mock_machine.zig");
 

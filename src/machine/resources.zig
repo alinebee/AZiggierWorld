@@ -1,7 +1,7 @@
 //! Extends Machine.Instance with methods for loading resources and game parts.
 
-const ResourceID = @import("types/resource_id.zig");
-const GamePart = @import("types/game_part.zig");
+const ResourceID = @import("../values/resource_id.zig");
+const GamePart = @import("../values/game_part.zig");
 const Machine = @import("machine.zig");
 
 const log_unimplemented = @import("../utils/logging.zig").log_unimplemented;

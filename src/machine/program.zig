@@ -1,5 +1,5 @@
 const readIntSliceBig = @import("std").mem.readIntSliceBig;
-const introspection = @import("../../utils/introspection.zig");
+const introspection = @import("../utils/introspection.zig");
 
 pub const Error = error{
     /// The program was asked to seek to an address beyond the end of the program.
@@ -75,7 +75,7 @@ pub fn new(bytecode: []const u8) Instance {
 }
 
 /// -- Tests --
-const testing = @import("../../utils/testing.zig");
+const testing = @import("../utils/testing.zig");
 
 test "read(u8) returns byte at current program counter and advances program counter" {
     const bytecode = [_]u8{ 0xDE, 0xAD };

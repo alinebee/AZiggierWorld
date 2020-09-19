@@ -1,11 +1,11 @@
-const Opcode = @import("../types/opcode.zig");
-const Program = @import("../types/program.zig");
-const Machine = @import("../machine.zig");
-const Video = @import("../video.zig");
+const Opcode = @import("../values/opcode.zig");
+const Program = @import("../machine/program.zig");
+const Machine = @import("../machine/machine.zig");
+const Video = @import("../machine/video.zig");
 
-const Point = @import("../types/point.zig");
-const StringID = @import("../types/string_id.zig");
-const ColorID = @import("../types/color_id.zig");
+const Point = @import("../values/point.zig");
+const StringID = @import("../values/string_id.zig");
+const ColorID = @import("../values/color_id.zig");
 
 pub const Error = Program.Error || StringID.Error || ColorID.Error;
 
@@ -59,7 +59,7 @@ pub const BytecodeExamples = struct {
 
 // -- Tests --
 
-const testing = @import("../../utils/testing.zig");
+const testing = @import("../utils/testing.zig");
 const expectParse = @import("test_helpers/parse.zig").expectParse;
 const MockMachine = @import("test_helpers/mock_machine.zig");
 

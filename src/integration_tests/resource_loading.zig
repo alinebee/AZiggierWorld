@@ -2,7 +2,7 @@
 //! Requires that the `fixtures/dos` folder contains Another World DOS game files.
 
 const ResourceLoader = @import("../resources/resource_loader.zig");
-const ResourceID = @import("../vm/types/resource_id.zig");
+const ResourceID = @import("../values/resource_id.zig");
 
 const testing = @import("../utils/testing.zig");
 const validFixturePath = @import("helpers.zig").validFixturePath;

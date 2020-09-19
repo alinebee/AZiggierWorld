@@ -1,9 +1,9 @@
 //! Extends Machine.Instance with methods for rendering to the virtual screen.
 
 const Machine = @import("machine.zig");
-const Point = @import("types/point.zig");
-const ColorID = @import("types/color_id.zig");
-const StringID = @import("types/string_id.zig");
+const Point = @import("../values/point.zig");
+const ColorID = @import("../values/color_id.zig");
+const StringID = @import("../values/string_id.zig");
 
 const english = @import("../assets/english.zig");
 

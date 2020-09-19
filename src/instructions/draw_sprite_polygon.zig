@@ -1,8 +1,8 @@
-const Opcode = @import("../types/opcode.zig");
-const Program = @import("../types/program.zig");
-const Machine = @import("../machine.zig");
-const Video = @import("../video.zig");
-const Point = @import("../types/point.zig");
+const Opcode = @import("../values/opcode.zig");
+const Program = @import("../machine/program.zig");
+const Machine = @import("../machine/machine.zig");
+const Video = @import("../machine/video.zig");
+const Point = @import("../values/point.zig");
 
 /// Draw a polygon at a location and zoom level that are either hardcoded constants
 /// or dynamic values read from registers.
@@ -184,7 +184,7 @@ pub const BytecodeExamples = struct {
 
 // -- Tests --
 
-const testing = @import("../../utils/testing.zig");
+const testing = @import("../utils/testing.zig");
 const expectParse = @import("test_helpers/parse.zig").expectParse;
 const MockMachine = @import("test_helpers/mock_machine.zig");
 

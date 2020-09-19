@@ -19,7 +19,7 @@ pub fn parse(raw: Raw) Error!Trusted {
 
 // -- Tests --
 
-const testing = @import("../../utils/testing.zig");
+const testing = @import("../utils/testing.zig");
 
 test "parse returns expected enum cases" {
     testing.expectEqual(0, parse(0));

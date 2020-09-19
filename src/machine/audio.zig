@@ -1,8 +1,8 @@
 //! Extends Machine.Instance with methods for sound and music playback.
 
 const Machine = @import("machine.zig");
-const ResourceID = @import("types/resource_id.zig");
-const Channel = @import("types/channel.zig");
+const ResourceID = @import("../values/resource_id.zig");
+const Channel = @import("../values/channel.zig");
 
 pub const Delay = u16;
 pub const Offset = u8;

@@ -1,4 +1,4 @@
-const intToEnum = @import("../../utils/introspection.zig").intToEnum;
+const intToEnum = @import("../utils/introspection.zig").intToEnum;
 
 //! Types and operations dealing with built-in opcodes in Another World bytecode.
 //! See instruction.zig for how these are mapped to implementations of those opcodes.
@@ -67,7 +67,7 @@ pub fn parse(raw_opcode: Raw) Error!Enum {
 
 // -- Tests --
 
-const testing = @import("../../utils/testing.zig");
+const testing = @import("../utils/testing.zig");
 
 test "parse returns expected values" {
     testing.expectEqual(.SetRegister, parse(0));
