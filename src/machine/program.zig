@@ -1,15 +1,14 @@
 const readIntSliceBig = @import("std").mem.readIntSliceBig;
 const introspection = @import("../utils/introspection.zig");
 
+const Address = @import("../values/address.zig");
+
 pub const Error = error{
     /// The program was asked to seek to an address beyond the end of the program.
     InvalidAddress,
     /// A read operation unexpectedly encountered the end of the program.
     EndOfProgram,
 };
-
-/// An address within a program, stored in bytecode as a 16-bit unsigned integer.
-pub const Address = u16;
 
 /// An Another World bytecode program, which maintains a counter to the next instruction to execute.
 pub const Instance = struct {
@@ -21,7 +20,7 @@ pub const Instance = struct {
 
     /// The address of the next instruction that will be read.
     /// Invariant: this is less than or equal to bytecode.len.
-    counter: usize = 0,
+    counter: Address.Native = 0,
 
     /// Reads an integer of the specified type from the current program counter
     /// and advances the counter by the byte width of the integer.
@@ -60,7 +59,7 @@ pub const Instance = struct {
     /// Move the program counter to the specified address,
     /// so that program execution continues from that point.
     /// Returns error.InvalidAddress if the address is beyond the end of the program.
-    pub fn jump(self: *Instance, address: Address) Error!void {
+    pub fn jump(self: *Instance, address: Address.Native) Error!void {
         if (address >= self.bytecode.len) {
             return error.InvalidAddress;
         }

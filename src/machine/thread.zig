@@ -1,8 +1,8 @@
-const Address = @import("program.zig").Address;
+const Address = @import("../values/address.zig");
 
 pub const ExecutionState = union(enum) {
     /// The thread is active and will continue execution from the specified address when it is next run.
-    active: Address,
+    active: Address.Native,
 
     /// The thread is inactive and cannot run, regardless of whether it is running or suspended.
     inactive,
@@ -53,7 +53,7 @@ pub const Instance = struct {
 
     /// On the next game tic, activate this thread and jump to the specified address.
     /// If the thread is currently inactive, then it will remain so for the rest of the current tic.
-    pub fn scheduleJump(self: *Instance, address: Address) void {
+    pub fn scheduleJump(self: *Instance, address: Address.Native) void {
         self.scheduled_execution_state = .{ .active = address };
     }
 

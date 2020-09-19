@@ -2,6 +2,7 @@ const Opcode = @import("../values/opcode.zig");
 const Program = @import("../machine/program.zig");
 const Machine = @import("../machine/machine.zig");
 const Comparison = @import("comparison.zig");
+const Address = @import("../values/address.zig");
 
 /// Compares the value in a register against another register or constant
 /// and jumps to a new address in the program if the comparison succeeds.
@@ -19,7 +20,7 @@ pub const Instance = struct {
     comparison: Comparison.Enum,
 
     /// The program address to jump to if the condition succeeds.
-    address: Program.Address,
+    address: Address.Raw,
 
     pub fn execute(self: Instance, machine: *Machine.Instance) !void {
         const lhs = machine.registers[self.lhs];
@@ -69,7 +70,7 @@ pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instance 
         0b10, 0b11 => .{ .register = try program.read(Machine.RegisterID) },
     };
 
-    self.address = try program.read(Program.Address);
+    self.address = try program.read(Address.Raw);
 
     // Do failable parsing *after* loading all the bytes that this instruction would normally consume;
     // This way, tests that recover from failed parsing will parse the rest of the bytecode correctly.

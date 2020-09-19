@@ -2,6 +2,7 @@ const Opcode = @import("../values/opcode.zig");
 const ThreadID = @import("../values/thread_id.zig");
 const Program = @import("../machine/program.zig");
 const Machine = @import("../machine/machine.zig");
+const Address = @import("../values/address.zig");
 
 pub const Error = Program.Error || ThreadID.Error;
 
@@ -12,7 +13,7 @@ pub const Instance = struct {
     thread_id: ThreadID.Trusted,
 
     /// The program address that the thread should jump to when activated.
-    address: Program.Address,
+    address: Address.Raw,
 
     pub fn execute(self: Instance, machine: *Machine.Instance) void {
         machine.threads[self.thread_id].scheduleJump(self.address);
@@ -24,7 +25,7 @@ pub const Instance = struct {
 /// Returns an error if the bytecode could not be read or contained an invalid instruction.
 pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instance {
     const raw_thread_id = try program.read(ThreadID.Raw);
-    const address = try program.read(Program.Address);
+    const address = try program.read(Address.Raw);
 
     // Do failable parsing *after* loading all the bytes that this instruction would normally consume;
     // This way, tests that recover from failed parsing will parse the rest of the bytecode correctly.
