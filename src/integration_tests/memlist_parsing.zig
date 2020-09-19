@@ -7,7 +7,7 @@ const testing = @import("../utils/testing.zig");
 const fixedBufferStream = @import("std").io.fixedBufferStream;
 
 test "ResourceDescriptor.parse parses MEMLIST.BIN without errors" {
-    const memlist = @embedFile("fixtures/dos/MEMLIST.BIN");
+    const memlist = @embedFile("../../fixtures/dos/MEMLIST.BIN");
     const expected_count = 146;
 
     var reader = fixedBufferStream(memlist).reader();

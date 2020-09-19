@@ -8,7 +8,7 @@ const testing = @import("../utils/testing.zig");
 const std = @import("std");
 
 // Relative to the base project folder, not to the location of this source file.
-const relative_fixture_path = "integration_tests/fixtures/dos/";
+const relative_fixture_path = "fixtures/dos/";
 
 test "ResourceLoader loads all game resources" {
     const game_path = try std.fs.realpathAlloc(testing.allocator, relative_fixture_path);

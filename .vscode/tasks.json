@@ -11,7 +11,7 @@
             "build-exe",
             "${file}",
             "--main-pkg-path",
-            "${workspaceFolder}"
+            "${workspaceFolder}/src"
         ],
         "group": "build",
         "presentation": {
@@ -28,7 +28,7 @@
             "run",
             "${file}",
             "--main-pkg-path",
-            "${workspaceFolder}"
+            "${workspaceFolder}/src"
         ],
         "group": {
             "kind": "build",
@@ -47,7 +47,7 @@
             "test",
             "${file}",
             "--main-pkg-path",
-            "${workspaceFolder}"
+            "${workspaceFolder}/src"
         ],
         "group": {
             "kind": "test",

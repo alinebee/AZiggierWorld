@@ -77,7 +77,7 @@ test "returnType gets return type of bound function" {
         fn boundExample(self: Self) void {}
     };
 
-    const foo = Struct {};
+    const foo = Struct{};
     testing.expectEqual(void, returnType(foo.boundExample));
 }
 
@@ -117,7 +117,7 @@ test "payloadType gets return type of function that returns an error union" {
 }
 
 test "errorType gets return type of function that returns an error union" {
-    const CustomError = error {FlagrantViolation};
+    const CustomError = error{FlagrantViolation};
     const Namespace = struct {
         fn example() CustomError!u32 {
             return 255;
