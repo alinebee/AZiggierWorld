@@ -36,7 +36,6 @@ const log_unimplemented = @import("../utils/logging.zig").log_unimplemented;
 /// Methods intended to be imported into Machine.Instance.
 pub const Interface = struct {
     /// Render a polygon from the specified source and address at the specified screen position and scale.
-    /// If scale is `null`, the polygon will be drawn at its default scale.
     /// Returns an error if the specified polygon address was invalid.
     pub fn drawPolygon(self: *Machine.Instance, source: PolygonSource, address: PolygonAddress, point: Point.Instance, scale: PolygonScale) !void {
         log_unimplemented("Video.drawPolygon: draw {}.{X} at x:{} y:{} scale:{}", .{
@@ -59,7 +58,13 @@ pub const Interface = struct {
         });
     }
 
+    /// Select the video buffer that subsequent drawPolygon and drawString operations will draw into.
     pub fn selectVideoBuffer(self: *Machine.Instance, buffer_id: BufferID.Enum) void {
         log_unimplemented("Video.selectVideoBuffer: {}", .{buffer_id});
+    }
+
+    /// Fill a specified video buffer with a single color.
+    pub fn fillVideoBuffer(self: *Machine.Instance, buffer_id: BufferID.Enum, color_id: ColorID.Trusted) void {
+        log_unimplemented("Video.fillVideoBuffer: {} color:{}", .{ buffer_id, color_id });
     }
 };

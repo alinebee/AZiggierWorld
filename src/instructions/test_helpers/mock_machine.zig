@@ -26,6 +26,7 @@ const CallCounts = struct {
     drawPolygon: usize,
     drawString: usize,
     selectVideoBuffer: usize,
+    fillVideoBuffer: usize,
     startGamePart: usize,
     loadResource: usize,
     unloadAllResources: usize,
@@ -57,6 +58,11 @@ fn MockMachine(comptime Implementation: type) type {
         pub fn selectVideoBuffer(self: *Self, buffer_id: BufferID.Enum) void {
             self.call_counts.selectVideoBuffer += 1;
             Implementation.selectVideoBuffer(buffer_id);
+        }
+
+        pub fn fillVideoBuffer(self: *Self, buffer_id: BufferID.Enum, color_id: ColorID.Trusted) void {
+            self.call_counts.fillVideoBuffer += 1;
+            Implementation.fillVideoBuffer(buffer_id, color_id);
         }
 
         pub fn startGamePart(self: *Self, game_part: GamePart.Enum) !void {
@@ -143,6 +149,18 @@ test "MockMachine calls selectVideoBuffer correctly on stub implementation" {
 
     mock.selectVideoBuffer(.front_buffer);
     testing.expectEqual(1, mock.call_counts.selectVideoBuffer);
+}
+
+test "MockMachine calls fillVideoBuffer correctly on stub implementation" {
+    var mock = new(struct {
+        fn fillVideoBuffer(buffer_id: BufferID.Enum, color_id: ColorID.Trusted) void {
+            testing.expectEqual(.front_buffer, buffer_id);
+            testing.expectEqual(15, color_id);
+        }
+    });
+
+    mock.fillVideoBuffer(.front_buffer, 15);
+    testing.expectEqual(1, mock.call_counts.fillVideoBuffer);
 }
 
 test "MockMachine calls startGamePart correctly on stub implementation" {
