@@ -91,16 +91,16 @@ pub const BytecodeExamples = struct {
     /// Example bytecode that should produce a valid instruction.
     pub const valid = equal_to_const16;
 
-    pub const equal_to_register = [6]u8{ raw_opcode, 0b11_000_000, 0xFF, 0x00, 0xDE, 0xAD };
-    pub const equal_to_const16  = [7]u8{ raw_opcode, 0b01_000_000, 0xFF, 0x4B, 0x1D, 0xDE, 0xAD };
-    pub const equal_to_const8   = [6]u8{ raw_opcode, 0b00_000_000, 0xFF, 0xBE, 0xDE, 0xAD };
+    const equal_to_register = [6]u8{ raw_opcode, 0b11_000_000, 0xFF, 0x00, 0xDE, 0xAD };
+    const equal_to_const16  = [7]u8{ raw_opcode, 0b01_000_000, 0xFF, 0x4B, 0x1D, 0xDE, 0xAD };
+    const equal_to_const8   = [6]u8{ raw_opcode, 0b00_000_000, 0xFF, 0xBE, 0xDE, 0xAD };
 
-    pub const not_equal                 = [6]u8{ raw_opcode, 0b11_000_001, 0xFF, 0x00, 0xDE, 0xAD };
-    pub const greater_than              = [6]u8{ raw_opcode, 0b11_000_010, 0xFF, 0x00, 0xDE, 0xAD };
-    pub const greater_than_or_equal_to  = [6]u8{ raw_opcode, 0b11_000_011, 0xFF, 0x00, 0xDE, 0xAD };
-    pub const less_than                 = [6]u8{ raw_opcode, 0b11_000_100, 0xFF, 0x00, 0xDE, 0xAD };
-    pub const less_than_or_equal_to     = [6]u8{ raw_opcode, 0b11_000_101, 0xFF, 0x00, 0xDE, 0xAD };
-    pub const invalid_comparison        = [6]u8{ raw_opcode, 0b11_000_110, 0xFF, 0x00, 0xDE, 0xAD };
+    const not_equal                 = [6]u8{ raw_opcode, 0b11_000_001, 0xFF, 0x00, 0xDE, 0xAD };
+    const greater_than              = [6]u8{ raw_opcode, 0b11_000_010, 0xFF, 0x00, 0xDE, 0xAD };
+    const greater_than_or_equal_to  = [6]u8{ raw_opcode, 0b11_000_011, 0xFF, 0x00, 0xDE, 0xAD };
+    const less_than                 = [6]u8{ raw_opcode, 0b11_000_100, 0xFF, 0x00, 0xDE, 0xAD };
+    const less_than_or_equal_to     = [6]u8{ raw_opcode, 0b11_000_101, 0xFF, 0x00, 0xDE, 0xAD };
+    const invalid_comparison        = [6]u8{ raw_opcode, 0b11_000_110, 0xFF, 0x00, 0xDE, 0xAD };
 };
 // zig fmt: on
 

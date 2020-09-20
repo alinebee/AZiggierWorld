@@ -144,13 +144,13 @@ pub const BytecodeExamples = struct {
     /// Example bytecode that should produce a valid instruction.
     pub const valid = wide_constants;
 
-    pub const registers = [6]u8{
+    const registers = [6]u8{
         0b01_01_01_01,              // opcode
         0b0000_1111, 0b0000_1111,   // address (will be right-shifted by 1)
         1, 2, 3,                    // register IDs for x, y and scale
     };
 
-    pub const wide_constants = [8]u8{
+    const wide_constants = [8]u8{
         0b01_00_00_10,              // opcode
         0b0000_1111, 0b0000_1111,   // address (will be right-shifted by 1)
         0b1011_0110, 0b0010_1011,   // x constant (-18901 in two's-complement)
@@ -158,27 +158,27 @@ pub const BytecodeExamples = struct {
         255,                        // scale
     };
 
-    pub const short_constants = [6]u8{
+    const short_constants = [6]u8{
         0b01_10_10_10,              // opcode
         0b0000_1111, 0b0000_1111,   // address (will be right-shifted by 1)
         160, 100,                   // constants for x and y
         255,                        // scale
     };
 
-    pub const short_boosted_x_constants = [6]u8{
+    const short_boosted_x_constants = [6]u8{
         0b01_11_10_10,              // opcode
         0b0000_1111, 0b0000_1111,   // address (will be right-shifted by 1)
         64, 200,                    // constants for x + 256 and y
         255,                        // scale
     };
 
-    pub const default_scale_from_polygons = [5]u8{
+    const default_scale_from_polygons = [5]u8{
         0b01_10_10_00,              // opcode
         0b0000_1111, 0b0000_1111,   // address (will be right-shifted by 1)
         160, 100,                   // constants for x and y
     };
 
-    pub const default_scale_from_animations = [5]u8{
+    const default_scale_from_animations = [5]u8{
         0b01_10_10_11,              // opcode
         0b0000_1111, 0b0000_1111,   // address (will be right-shifted by 1)
         160, 100,                   // constants for x and y

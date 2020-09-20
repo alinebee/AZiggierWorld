@@ -69,10 +69,10 @@ pub const BytecodeExamples = struct {
     /// Example bytecode that should produce a valid instruction.
     pub const valid = play;
 
-    pub const play = [6]u8{ raw_opcode, 0xDE, 0xAD, 0xBE, 0xEF, 0x03 };
-    pub const stop = [6]u8{ raw_opcode, 0x00, 0x00, 0x00, 0x00, 0x01 };
+    const play = [6]u8{ raw_opcode, 0xDE, 0xAD, 0xBE, 0xEF, 0x03 };
+    const stop = [6]u8{ raw_opcode, 0x00, 0x00, 0x00, 0x00, 0x01 };
 
-    pub const invalid_channel = [6]u8{ raw_opcode, 0xDE, 0xAD, 0xFF, 0x80, 0x04 };
+    const invalid_channel = [6]u8{ raw_opcode, 0xDE, 0xAD, 0xFF, 0x80, 0x04 };
 };
 
 // -- Tests --

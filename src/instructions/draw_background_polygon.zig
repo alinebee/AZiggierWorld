@@ -72,8 +72,8 @@ pub const BytecodeExamples = struct {
     /// Example bytecode that should produce a valid instruction.
     pub const valid = low_x;
 
-    pub const low_x = [4]u8{ 0b1000_1111, 0b0000_1111, 30, 40 };
-    pub const high_x = [4]u8{ 0b1000_1111, 0b0000_1111, 255, 240 };
+    const low_x = [4]u8{ 0b1000_1111, 0b0000_1111, 30, 40 };
+    const high_x = [4]u8{ 0b1000_1111, 0b0000_1111, 255, 240 };
 };
 
 // -- Tests --

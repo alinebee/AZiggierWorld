@@ -71,9 +71,9 @@ pub const BytecodeExamples = struct {
     /// Example bytecode that should produce a valid instruction.
     pub const valid = play;
 
-    pub const play      = [6]u8{ raw_opcode, 0xDE, 0xAD, 0xBE, 0xEF, 0xFF };
-    pub const set_delay = [6]u8{ raw_opcode, 0x00, 0x00, 0xBE, 0xEF, 0xFF };
-    pub const stop      = [6]u8{ raw_opcode, 0x00, 0x00, 0x00, 0x00, 0xFF };
+    const play      = [6]u8{ raw_opcode, 0xDE, 0xAD, 0xBE, 0xEF, 0xFF };
+    const set_delay = [6]u8{ raw_opcode, 0x00, 0x00, 0xBE, 0xEF, 0xFF };
+    const stop      = [6]u8{ raw_opcode, 0x00, 0x00, 0x00, 0x00, 0xFF };
 };
 // zig fmt: on
 
