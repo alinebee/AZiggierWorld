@@ -64,7 +64,6 @@ pub const Interface = struct {
         log_unimplemented("Video.selectPalette: {}", .{palette_id});
     }
 
-
     /// Select the video buffer that subsequent drawPolygon and drawString operations will draw into.
     pub fn selectVideoBuffer(self: *Machine.Instance, buffer_id: BufferID.Enum) void {
         log_unimplemented("Video.selectVideoBuffer: {}", .{buffer_id});
