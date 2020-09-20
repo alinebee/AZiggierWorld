@@ -11,10 +11,10 @@ pub const Raw = u8;
 /// See https://github.com/fabiensanglard/Another-World-Bytecode-Interpreter for a list of opccodes
 /// (whose names do not match the ones I have chosen here).
 pub const Enum = enum(Raw) {
-    SetRegister,
-    CopyRegister,
-    AddToRegister,
-    AddConstantToRegister,
+    RegisterSet,
+    RegisterCopy,
+    RegisterAdd,
+    RegisterAddConstant,
     Call,
     Return,
     Yield,
@@ -30,11 +30,11 @@ pub const Enum = enum(Raw) {
     RenderVideoBuffer,
     Kill,
     DrawString,
-    SubstractFromRegister,
-    AndRegister,
-    OrRegister,
-    ShiftRegisterLeft,
-    ShiftRegisterRight,
+    RegisterSubtract,
+    RegisterAnd,
+    RegisterOr,
+    RegisterShiftLeft,
+    RegisterShiftRight,
     ControlSound,
     ControlResources,
     ControlMusic,
@@ -70,10 +70,10 @@ pub fn parse(raw_opcode: Raw) Error!Enum {
 const testing = @import("../utils/testing.zig");
 
 test "parse returns expected values" {
-    testing.expectEqual(.SetRegister, parse(0));
-    testing.expectEqual(.CopyRegister, parse(1));
-    testing.expectEqual(.AddToRegister, parse(2));
-    testing.expectEqual(.AddConstantToRegister, parse(3));
+    testing.expectEqual(.RegisterSet, parse(0));
+    testing.expectEqual(.RegisterCopy, parse(1));
+    testing.expectEqual(.RegisterAdd, parse(2));
+    testing.expectEqual(.RegisterAddConstant, parse(3));
     testing.expectEqual(.Call, parse(4));
     testing.expectEqual(.Return, parse(5));
     testing.expectEqual(.Yield, parse(6));
@@ -89,11 +89,11 @@ test "parse returns expected values" {
     testing.expectEqual(.RenderVideoBuffer, parse(16));
     testing.expectEqual(.Kill, parse(17));
     testing.expectEqual(.DrawString, parse(18));
-    testing.expectEqual(.SubstractFromRegister, parse(19));
-    testing.expectEqual(.AndRegister, parse(20));
-    testing.expectEqual(.OrRegister, parse(21));
-    testing.expectEqual(.ShiftRegisterLeft, parse(22));
-    testing.expectEqual(.ShiftRegisterRight, parse(23));
+    testing.expectEqual(.RegisterSubtract, parse(19));
+    testing.expectEqual(.RegisterAnd, parse(20));
+    testing.expectEqual(.RegisterOr, parse(21));
+    testing.expectEqual(.RegisterShiftLeft, parse(22));
+    testing.expectEqual(.RegisterShiftRight, parse(23));
     testing.expectEqual(.ControlSound, parse(24));
     testing.expectEqual(.ControlResources, parse(25));
     testing.expectEqual(.ControlMusic, parse(26));

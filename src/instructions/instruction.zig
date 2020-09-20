@@ -9,7 +9,6 @@ const ControlMusic = @import("control_music.zig");
 const ControlResources = @import("control_resources.zig");
 const ControlSound = @import("control_sound.zig");
 const ControlThreads = @import("control_threads.zig");
-const CopyRegister = @import("copy_register.zig");
 const CopyVideoBuffer = @import("copy_video_buffer.zig");
 const DrawBackgroundPolygon = @import("draw_background_polygon.zig");
 const DrawSpritePolygon = @import("draw_sprite_polygon.zig");
@@ -19,10 +18,11 @@ const Jump = @import("jump.zig");
 const JumpConditional = @import("jump_conditional.zig");
 const JumpIfNotZero = @import("jump_if_not_zero.zig");
 const Kill = @import("kill.zig");
+const RegisterCopy = @import("register_copy.zig");
+const RegisterSet = @import("register_set.zig");
 const Return = @import("return.zig");
 const SelectPalette = @import("select_palette.zig");
 const SelectVideoBuffer = @import("select_video_buffer.zig");
-const SetRegister = @import("set_register.zig");
 const Yield = @import("yield.zig");
 
 const introspection = @import("../utils/introspection.zig");
@@ -35,7 +35,6 @@ pub const Error =
     ControlResources.Error ||
     ControlSound.Error ||
     ControlThreads.Error ||
-    CopyRegister.Error ||
     CopyVideoBuffer.Error ||
     DrawBackgroundPolygon.Error ||
     DrawSpritePolygon.Error ||
@@ -45,10 +44,11 @@ pub const Error =
     JumpConditional.Error ||
     JumpIfNotZero.Error ||
     Kill.Error ||
+    RegisterCopy.Error ||
+    RegisterSet.Error ||
     Return.Error ||
     SelectPalette.Error ||
     SelectVideoBuffer.Error ||
-    SetRegister.Error ||
     Yield.Error ||
 
     Opcode.Error ||
@@ -69,7 +69,6 @@ pub const Wrapped = union(enum) {
     ControlResources: ControlResources.Instance,
     ControlSound: ControlSound.Instance,
     ControlThreads: ControlThreads.Instance,
-    CopyRegister: CopyRegister.Instance,
     CopyVideoBuffer: CopyVideoBuffer.Instance,
     DrawBackgroundPolygon: DrawBackgroundPolygon.Instance,
     DrawSpritePolygon: DrawSpritePolygon.Instance,
@@ -79,10 +78,11 @@ pub const Wrapped = union(enum) {
     JumpConditional: JumpConditional.Instance,
     JumpIfNotZero: JumpIfNotZero.Instance,
     Kill: Kill.Instance,
+    RegisterCopy: RegisterCopy.Instance,
+    RegisterSet: RegisterSet.Instance,
     Return: Return.Instance,
     SelectPalette: SelectPalette.Instance,
     SelectVideoBuffer: SelectVideoBuffer.Instance,
-    SetRegister: SetRegister.Instance,
     Yield: Yield.Instance,
 };
 
@@ -99,7 +99,6 @@ pub fn parseNextInstruction(program: *Program.Instance) Error!Wrapped {
         .ControlResources => wrap("ControlResources", ControlResources, raw_opcode, program),
         .ControlSound => wrap("ControlSound", ControlSound, raw_opcode, program),
         .ControlThreads => wrap("ControlThreads", ControlThreads, raw_opcode, program),
-        .CopyRegister => wrap("CopyRegister", CopyRegister, raw_opcode, program),
         .CopyVideoBuffer => wrap("CopyVideoBuffer", CopyVideoBuffer, raw_opcode, program),
         .DrawBackgroundPolygon => wrap("DrawBackgroundPolygon", DrawBackgroundPolygon, raw_opcode, program),
         .DrawSpritePolygon => wrap("DrawSpritePolygon", DrawSpritePolygon, raw_opcode, program),
@@ -109,10 +108,11 @@ pub fn parseNextInstruction(program: *Program.Instance) Error!Wrapped {
         .JumpConditional => wrap("JumpConditional", JumpConditional, raw_opcode, program),
         .JumpIfNotZero => wrap("JumpIfNotZero", JumpIfNotZero, raw_opcode, program),
         .Kill => wrap("Kill", Kill, raw_opcode, program),
+        .RegisterCopy => wrap("RegisterCopy", RegisterCopy, raw_opcode, program),
+        .RegisterSet => wrap("RegisterSet", RegisterSet, raw_opcode, program),
         .Return => wrap("Return", Return, raw_opcode, program),
         .SelectPalette => wrap("SelectPalette", SelectPalette, raw_opcode, program),
         .SelectVideoBuffer => wrap("SelectVideoBuffer", SelectVideoBuffer, raw_opcode, program),
-        .SetRegister => wrap("SetRegister", SetRegister, raw_opcode, program),
         .Yield => wrap("Yield", Yield, raw_opcode, program),
         else => error.UnimplementedOpcode,
     };
@@ -136,7 +136,6 @@ pub fn executeNextInstruction(program: *Program.Instance, machine: *Machine.Inst
         .ControlResources => execute(ControlResources, raw_opcode, program, machine),
         .ControlSound => execute(ControlSound, raw_opcode, program, machine),
         .ControlThreads => execute(ControlThreads, raw_opcode, program, machine),
-        .CopyRegister => execute(CopyRegister, raw_opcode, program, machine),
         .CopyVideoBuffer => execute(CopyVideoBuffer, raw_opcode, program, machine),
         .DrawBackgroundPolygon => execute(DrawBackgroundPolygon, raw_opcode, program, machine),
         .DrawSpritePolygon => execute(DrawSpritePolygon, raw_opcode, program, machine),
@@ -146,10 +145,11 @@ pub fn executeNextInstruction(program: *Program.Instance, machine: *Machine.Inst
         .JumpConditional => execute(JumpConditional, raw_opcode, program, machine),
         .JumpIfNotZero => execute(JumpIfNotZero, raw_opcode, program, machine),
         .Kill => execute(Kill, raw_opcode, program, machine),
+        .RegisterCopy => execute(RegisterCopy, raw_opcode, program, machine),
+        .RegisterSet => execute(RegisterSet, raw_opcode, program, machine),
         .Return => execute(Return, raw_opcode, program, machine),
         .SelectPalette => execute(SelectPalette, raw_opcode, program, machine),
         .SelectVideoBuffer => execute(SelectVideoBuffer, raw_opcode, program, machine),
-        .SetRegister => execute(SetRegister, raw_opcode, program, machine),
         .Yield => execute(Yield, raw_opcode, program, machine),
         else => error.UnimplementedOpcode,
     };
@@ -200,7 +200,6 @@ test "parseNextInstruction returns expected instruction type when given valid by
     expectWrappedType(.ControlResources, try expectParse(&ControlResources.BytecodeExamples.valid));
     expectWrappedType(.ControlSound, try expectParse(&ControlSound.BytecodeExamples.valid));
     expectWrappedType(.ControlThreads, try expectParse(&ControlThreads.BytecodeExamples.valid));
-    expectWrappedType(.CopyRegister, try expectParse(&CopyRegister.BytecodeExamples.valid));
     expectWrappedType(.DrawBackgroundPolygon, try expectParse(&DrawBackgroundPolygon.BytecodeExamples.valid));
     expectWrappedType(.DrawSpritePolygon, try expectParse(&DrawSpritePolygon.BytecodeExamples.valid));
     expectWrappedType(.DrawString, try expectParse(&DrawString.BytecodeExamples.valid));
@@ -209,10 +208,11 @@ test "parseNextInstruction returns expected instruction type when given valid by
     expectWrappedType(.JumpConditional, try expectParse(&JumpConditional.BytecodeExamples.valid));
     expectWrappedType(.JumpIfNotZero, try expectParse(&JumpIfNotZero.BytecodeExamples.valid));
     expectWrappedType(.Kill, try expectParse(&Kill.BytecodeExamples.valid));
+    expectWrappedType(.RegisterCopy, try expectParse(&RegisterCopy.BytecodeExamples.valid));
+    expectWrappedType(.RegisterSet, try expectParse(&RegisterSet.BytecodeExamples.valid));
     expectWrappedType(.Return, try expectParse(&Return.BytecodeExamples.valid));
     expectWrappedType(.SelectPalette, try expectParse(&SelectPalette.BytecodeExamples.valid));
     expectWrappedType(.SelectVideoBuffer, try expectParse(&SelectVideoBuffer.BytecodeExamples.valid));
-    expectWrappedType(.SetRegister, try expectParse(&SetRegister.BytecodeExamples.valid));
     expectWrappedType(.Yield, try expectParse(&Yield.BytecodeExamples.valid));
 }
 
@@ -227,7 +227,7 @@ test "parseNextInstruction returns error.UnimplementedOpcode error when it encou
 }
 
 test "executeNextInstruction executes arbitrary instruction on machine when given valid bytecode" {
-    var program = Program.new(&SetRegister.BytecodeExamples.valid);
+    var program = Program.new(&RegisterSet.BytecodeExamples.valid);
     var machine = Machine.new();
 
     const action = try executeNextInstruction(&program, &machine);

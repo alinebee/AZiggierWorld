@@ -5,36 +5,36 @@ const RegisterID = @import("../values/register_id.zig");
 
 pub const Error = Program.Error;
 
-/// Copy the value of one register to another.
+/// Set a specific register to a constant value.
 pub const Instance = struct {
-    /// The ID of the register to copy into.
+    /// The ID of the register to set.
     destination: RegisterID.Raw,
 
-    /// The ID of the register to copy from.
-    source: RegisterID.Raw,
+    /// The constant value to set the register to.
+    value: Machine.RegisterValue,
 
     pub fn execute(self: Instance, machine: *Machine.Instance) void {
-        machine.registers[self.destination] = machine.registers[self.source];
+        machine.registers[self.destination] = self.value;
     }
 };
 
 /// Parse the next instruction from a bytecode program.
-/// Consumes 3 bytes from the bytecode on success, including the opcode.
+/// Consumes 4 bytes from the bytecode on success, including the opcode.
 /// Returns an error if the bytecode could not be read or contained an invalid instruction.
 pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instance {
     return Instance{
         .destination = try program.read(RegisterID.Raw),
-        .source = try program.read(RegisterID.Raw),
+        .value = try program.read(Machine.RegisterValue),
     };
 }
 
 // -- Bytecode examples --
 
 pub const BytecodeExamples = struct {
-    const raw_opcode = @enumToInt(Opcode.Enum.CopyRegister);
+    const raw_opcode = @enumToInt(Opcode.Enum.RegisterSet);
 
     /// Example bytecode that should produce a valid instruction.
-    pub const valid = [3]u8{ raw_opcode, 16, 17 };
+    pub const valid = [4]u8{ raw_opcode, 16, 0b1011_0110, 0b0010_1011 }; // -18901 in two's complement
 };
 
 // -- Tests --
@@ -42,24 +42,21 @@ pub const BytecodeExamples = struct {
 const testing = @import("../utils/testing.zig");
 const expectParse = @import("test_helpers/parse.zig").expectParse;
 
-test "parse parses valid bytecode and consumes 3 bytes" {
-    const instruction = try expectParse(parse, &BytecodeExamples.valid, 3);
+test "parse parses valid bytecode and consumes 4 bytes" {
+    const instruction = try expectParse(parse, &BytecodeExamples.valid, 4);
 
     testing.expectEqual(16, instruction.destination);
-    testing.expectEqual(17, instruction.source);
+    testing.expectEqual(-18901, instruction.value);
 }
 
 test "execute updates specified register with value" {
     const instruction = Instance{
         .destination = 16,
-        .source = 17,
+        .value = -1234,
     };
 
     var machine = Machine.new();
-    machine.registers[17] = -900;
-
     instruction.execute(&machine);
 
-    testing.expectEqual(-900, machine.registers[16]);
-    testing.expectEqual(-900, machine.registers[17]);
+    testing.expectEqual(-1234, machine.registers[16]);
 }
