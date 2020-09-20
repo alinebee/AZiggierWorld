@@ -21,6 +21,7 @@ const Kill = @import("kill.zig");
 const RegisterAdd = @import("register_add.zig");
 const RegisterCopy = @import("register_copy.zig");
 const RegisterSet = @import("register_set.zig");
+const RegisterSubtract = @import("register_subtract.zig");
 const Return = @import("return.zig");
 const SelectPalette = @import("select_palette.zig");
 const SelectVideoBuffer = @import("select_video_buffer.zig");
@@ -48,6 +49,7 @@ pub const Error =
     RegisterAdd.Error ||
     RegisterCopy.Error ||
     RegisterSet.Error ||
+    RegisterSubtract.Error ||
     Return.Error ||
     SelectPalette.Error ||
     SelectVideoBuffer.Error ||
@@ -83,6 +85,7 @@ pub const Wrapped = union(enum) {
     RegisterAdd: RegisterAdd.Instance,
     RegisterCopy: RegisterCopy.Instance,
     RegisterSet: RegisterSet.Instance,
+    RegisterSubtract: RegisterSubtract.Instance,
     Return: Return.Instance,
     SelectPalette: SelectPalette.Instance,
     SelectVideoBuffer: SelectVideoBuffer.Instance,
@@ -114,6 +117,7 @@ pub fn parseNextInstruction(program: *Program.Instance) Error!Wrapped {
         .RegisterAdd => wrap("RegisterAdd", RegisterAdd, raw_opcode, program),
         .RegisterCopy => wrap("RegisterCopy", RegisterCopy, raw_opcode, program),
         .RegisterSet => wrap("RegisterSet", RegisterSet, raw_opcode, program),
+        .RegisterSubtract => wrap("RegisterSubtract", RegisterSubtract, raw_opcode, program),
         .Return => wrap("Return", Return, raw_opcode, program),
         .SelectPalette => wrap("SelectPalette", SelectPalette, raw_opcode, program),
         .SelectVideoBuffer => wrap("SelectVideoBuffer", SelectVideoBuffer, raw_opcode, program),
@@ -152,6 +156,7 @@ pub fn executeNextInstruction(program: *Program.Instance, machine: *Machine.Inst
         .RegisterAdd => execute(RegisterAdd, raw_opcode, program, machine),
         .RegisterCopy => execute(RegisterCopy, raw_opcode, program, machine),
         .RegisterSet => execute(RegisterSet, raw_opcode, program, machine),
+        .RegisterSubtract => execute(RegisterSubtract, raw_opcode, program, machine),
         .Return => execute(Return, raw_opcode, program, machine),
         .SelectPalette => execute(SelectPalette, raw_opcode, program, machine),
         .SelectVideoBuffer => execute(SelectVideoBuffer, raw_opcode, program, machine),
@@ -216,6 +221,7 @@ test "parseNextInstruction returns expected instruction type when given valid by
     expectWrappedType(.RegisterAdd, try expectParse(&RegisterAdd.BytecodeExamples.valid));
     expectWrappedType(.RegisterCopy, try expectParse(&RegisterCopy.BytecodeExamples.valid));
     expectWrappedType(.RegisterSet, try expectParse(&RegisterSet.BytecodeExamples.valid));
+    expectWrappedType(.RegisterSubtract, try expectParse(&RegisterSubtract.BytecodeExamples.valid));
     expectWrappedType(.Return, try expectParse(&Return.BytecodeExamples.valid));
     expectWrappedType(.SelectPalette, try expectParse(&SelectPalette.BytecodeExamples.valid));
     expectWrappedType(.SelectVideoBuffer, try expectParse(&SelectVideoBuffer.BytecodeExamples.valid));
