@@ -7,6 +7,7 @@ const GamePart = @import("../../values/game_part.zig");
 const Channel = @import("../../values/channel.zig");
 const ResourceID = @import("../../values/resource_id.zig");
 const ColorID = @import("../../values/color_id.zig");
+const PaletteID = @import("../../values/palette_id.zig");
 const StringID = @import("../../values/string_id.zig");
 const BufferID = @import("../../values/buffer_id.zig");
 
@@ -25,6 +26,7 @@ pub fn new(comptime Implementation: type) MockMachine(Implementation) {
 const CallCounts = struct {
     drawPolygon: usize,
     drawString: usize,
+    selectPalette: usize,
     selectVideoBuffer: usize,
     fillVideoBuffer: usize,
     copyVideoBuffer: usize,
@@ -54,6 +56,11 @@ fn MockMachine(comptime Implementation: type) type {
         pub fn drawString(self: *Self, string_id: StringID.Raw, color_id: ColorID.Trusted, point: Point.Instance) !void {
             self.call_counts.drawString += 1;
             try Implementation.drawString(string_id, color_id, point);
+        }
+
+        pub fn selectPalette(self: *Self, palette_id: PaletteID.Trusted) void {
+            self.call_counts.selectPalette += 1;
+            Implementation.selectPalette(palette_id);
         }
 
         pub fn selectVideoBuffer(self: *Self, buffer_id: BufferID.Enum) void {
@@ -144,6 +151,17 @@ test "MockMachine calls drawString correctly on stub implementation" {
 
     try mock.drawString(0xBEEF, 2, .{ .x = 320, .y = 200 });
     testing.expectEqual(1, mock.call_counts.drawString);
+}
+
+test "MockMachine calls selectPalette correctly on stub implementation" {
+    var mock = new(struct {
+        fn selectPalette(palette_id: PaletteID.Trusted) void {
+            testing.expectEqual(16, palette_id);
+        }
+    });
+
+    mock.selectPalette(16);
+    testing.expectEqual(1, mock.call_counts.selectPalette);
 }
 
 test "MockMachine calls selectVideoBuffer correctly on stub implementation" {

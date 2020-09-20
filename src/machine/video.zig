@@ -5,6 +5,7 @@ const Point = @import("../values/point.zig");
 const ColorID = @import("../values/color_id.zig");
 const StringID = @import("../values/string_id.zig");
 const BufferID = @import("../values/buffer_id.zig");
+const PaletteID = @import("../values/palette_id.zig");
 
 const english = @import("../assets/english.zig");
 
@@ -57,6 +58,12 @@ pub const Interface = struct {
             point.y,
         });
     }
+
+    /// Select the active palette to render the video buffer in.
+    pub fn selectPalette(self: *Machine.Instance, palette_id: PaletteID.Trusted) void {
+        log_unimplemented("Video.selectPalette: {}", .{palette_id});
+    }
+
 
     /// Select the video buffer that subsequent drawPolygon and drawString operations will draw into.
     pub fn selectVideoBuffer(self: *Machine.Instance, buffer_id: BufferID.Enum) void {

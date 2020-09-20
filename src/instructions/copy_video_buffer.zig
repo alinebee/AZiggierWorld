@@ -1,7 +1,6 @@
 const Opcode = @import("../values/opcode.zig");
 const Program = @import("../machine/program.zig");
 const Machine = @import("../machine/machine.zig");
-const Video = @import("../machine/video.zig");
 const Point = @import("../values/point.zig");
 const BufferID = @import("../values/buffer_id.zig");
 const RegisterID = @import("../values/register_id.zig");
@@ -26,7 +25,6 @@ pub const Instance = struct {
     fn _execute(self: Instance, machine: anytype) void {
         if (self.use_vertical_offset) {
             const offset = machine.registers[RegisterID.scroll_y_position];
-            // TODO: return an error if the offset is < -199 or > 199?
             machine.copyVideoBuffer(self.source, self.destination, offset);
         } else {
             machine.copyVideoBuffer(self.source, self.destination, 0);

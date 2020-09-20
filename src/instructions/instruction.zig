@@ -20,6 +20,7 @@ const JumpConditional = @import("jump_conditional.zig");
 const JumpIfNotZero = @import("jump_if_not_zero.zig");
 const Kill = @import("kill.zig");
 const Return = @import("return.zig");
+const SelectPalette = @import("select_palette.zig");
 const SelectVideoBuffer = @import("select_video_buffer.zig");
 const SetRegister = @import("set_register.zig");
 const Yield = @import("yield.zig");
@@ -45,6 +46,7 @@ pub const Error =
     JumpIfNotZero.Error ||
     Kill.Error ||
     Return.Error ||
+    SelectPalette.Error ||
     SelectVideoBuffer.Error ||
     SetRegister.Error ||
     Yield.Error ||
@@ -78,6 +80,7 @@ pub const Wrapped = union(enum) {
     JumpIfNotZero: JumpIfNotZero.Instance,
     Kill: Kill.Instance,
     Return: Return.Instance,
+    SelectPalette: SelectPalette.Instance,
     SelectVideoBuffer: SelectVideoBuffer.Instance,
     SetRegister: SetRegister.Instance,
     Yield: Yield.Instance,
@@ -107,6 +110,7 @@ pub fn parseNextInstruction(program: *Program.Instance) Error!Wrapped {
         .JumpIfNotZero => wrap("JumpIfNotZero", JumpIfNotZero, raw_opcode, program),
         .Kill => wrap("Kill", Kill, raw_opcode, program),
         .Return => wrap("Return", Return, raw_opcode, program),
+        .SelectPalette => wrap("SelectPalette", SelectPalette, raw_opcode, program),
         .SelectVideoBuffer => wrap("SelectVideoBuffer", SelectVideoBuffer, raw_opcode, program),
         .SetRegister => wrap("SetRegister", SetRegister, raw_opcode, program),
         .Yield => wrap("Yield", Yield, raw_opcode, program),
@@ -143,6 +147,7 @@ pub fn executeNextInstruction(program: *Program.Instance, machine: *Machine.Inst
         .JumpIfNotZero => execute(JumpIfNotZero, raw_opcode, program, machine),
         .Kill => execute(Kill, raw_opcode, program, machine),
         .Return => execute(Return, raw_opcode, program, machine),
+        .SelectPalette => execute(SelectPalette, raw_opcode, program, machine),
         .SelectVideoBuffer => execute(SelectVideoBuffer, raw_opcode, program, machine),
         .SetRegister => execute(SetRegister, raw_opcode, program, machine),
         .Yield => execute(Yield, raw_opcode, program, machine),
@@ -205,6 +210,7 @@ test "parseNextInstruction returns expected instruction type when given valid by
     expectWrappedType(.JumpIfNotZero, try expectParse(&JumpIfNotZero.BytecodeExamples.valid));
     expectWrappedType(.Kill, try expectParse(&Kill.BytecodeExamples.valid));
     expectWrappedType(.Return, try expectParse(&Return.BytecodeExamples.valid));
+    expectWrappedType(.SelectPalette, try expectParse(&SelectPalette.BytecodeExamples.valid));
     expectWrappedType(.SelectVideoBuffer, try expectParse(&SelectVideoBuffer.BytecodeExamples.valid));
     expectWrappedType(.SetRegister, try expectParse(&SetRegister.BytecodeExamples.valid));
     expectWrappedType(.Yield, try expectParse(&Yield.BytecodeExamples.valid));
