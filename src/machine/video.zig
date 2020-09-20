@@ -28,6 +28,12 @@ pub const PolygonAddress = u16;
 /// e.g. 64 is 1x, 32 is 0.5x, 96 is 1.5x, 256 is 4x etc.
 pub const PolygonScale = u16;
 
+/// The length of time to leave on screen.
+/// FIXME: Determine the range of this value in actual bytecode.
+/// This is read from a register, but the type should be more constrained than that
+/// (e.g. negative values are likely illegal.)
+pub const FrameDelay = Machine.RegisterValue;
+
 /// The default scale for polygon draw operations.
 /// This renders polygons at their native size.
 pub const default_scale: PolygonScale = 64;
@@ -80,6 +86,14 @@ pub const Interface = struct {
             source,
             destination,
             vertical_offset,
+        });
+    }
+
+    /// Render the contents of the specified buffer to the host screen after the specified delay.
+    pub fn renderVideoBuffer(self: *Machine.Instance, buffer_id: BufferID.Enum, delay: FrameDelay) void {
+        log_unimplemented("Video.renderVideoBuffer: {} delay:{}", .{
+            buffer_id,
+            delay,
         });
     }
 };

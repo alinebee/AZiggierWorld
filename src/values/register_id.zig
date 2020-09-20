@@ -20,3 +20,6 @@ pub const hero_action_pos_mask = 0xFE;
 /// How long to leave the current frame on-screen before rendering the next frame.
 /// Read when drawing a buffer to the screen.
 pub const frame_duration = 0xFF;
+
+/// UNKNOWN: Reset to 0 by render_video_buffer right before a new frame is rendered.
+pub const render_video_buffer_UNKNOWN: Raw = 0xF7;

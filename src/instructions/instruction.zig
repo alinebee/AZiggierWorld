@@ -27,6 +27,7 @@ const RegisterSet = @import("register_set.zig");
 const RegisterShiftLeft = @import("register_shift_left.zig");
 const RegisterShiftRight = @import("register_shift_right.zig");
 const RegisterSubtract = @import("register_subtract.zig");
+const RenderVideoBuffer = @import("render_video_buffer.zig");
 const Return = @import("return.zig");
 const SelectPalette = @import("select_palette.zig");
 const SelectVideoBuffer = @import("select_video_buffer.zig");
@@ -64,19 +65,12 @@ pub const Error =
     SelectPalette.Error ||
     SelectVideoBuffer.Error ||
     Yield.Error ||
-
     Opcode.Error ||
-    Program.Error ||
-
-    error{
-    /// Bytecode contained an opcode that is not yet implemented.
-    UnimplementedOpcode,
-};
+    Program.Error;
 // zig fmt: on
 
 /// A union type that wraps all possible bytecode instructions.
-pub const Wrapped = union(enum) {
-    // TODO: once all instructions are implemented, this union can use Opcode.Enum as its enum type.
+pub const Wrapped = union(Opcode.Enum) {
     ActivateThread: ActivateThread.Instance,
     Call: Call.Instance,
     ControlMusic: ControlMusic.Instance,
@@ -101,6 +95,7 @@ pub const Wrapped = union(enum) {
     RegisterShiftLeft: RegisterShiftLeft.Instance,
     RegisterShiftRight: RegisterShiftRight.Instance,
     RegisterSubtract: RegisterSubtract.Instance,
+    RenderVideoBuffer: RenderVideoBuffer.Instance,
     Return: Return.Instance,
     SelectPalette: SelectPalette.Instance,
     SelectVideoBuffer: SelectVideoBuffer.Instance,
@@ -138,11 +133,11 @@ pub fn parseNextInstruction(program: *Program.Instance) Error!Wrapped {
         .RegisterShiftLeft => wrap("RegisterShiftLeft", RegisterShiftLeft, raw_opcode, program),
         .RegisterShiftRight => wrap("RegisterShiftRight", RegisterShiftRight, raw_opcode, program),
         .RegisterSubtract => wrap("RegisterSubtract", RegisterSubtract, raw_opcode, program),
+        .RenderVideoBuffer => wrap("RenderVideoBuffer", RenderVideoBuffer, raw_opcode, program),
         .Return => wrap("Return", Return, raw_opcode, program),
         .SelectPalette => wrap("SelectPalette", SelectPalette, raw_opcode, program),
         .SelectVideoBuffer => wrap("SelectVideoBuffer", SelectVideoBuffer, raw_opcode, program),
         .Yield => wrap("Yield", Yield, raw_opcode, program),
-        else => error.UnimplementedOpcode,
     };
 }
 
@@ -182,11 +177,11 @@ pub fn executeNextInstruction(program: *Program.Instance, machine: *Machine.Inst
         .RegisterShiftLeft => execute(RegisterShiftLeft, raw_opcode, program, machine),
         .RegisterShiftRight => execute(RegisterShiftRight, raw_opcode, program, machine),
         .RegisterSubtract => execute(RegisterSubtract, raw_opcode, program, machine),
+        .RenderVideoBuffer => execute(RenderVideoBuffer, raw_opcode, program, machine),
         .Return => execute(Return, raw_opcode, program, machine),
         .SelectPalette => execute(SelectPalette, raw_opcode, program, machine),
         .SelectVideoBuffer => execute(SelectVideoBuffer, raw_opcode, program, machine),
         .Yield => execute(Yield, raw_opcode, program, machine),
-        else => error.UnimplementedOpcode,
     };
 }
 
@@ -251,6 +246,7 @@ test "parseNextInstruction returns expected instruction type when given valid by
     expectWrappedType(.RegisterSet, try expectParse(&RegisterSet.BytecodeExamples.valid));
     expectWrappedType(.RegisterShiftLeft, try expectParse(&RegisterShiftLeft.BytecodeExamples.valid));
     expectWrappedType(.RegisterSubtract, try expectParse(&RegisterSubtract.BytecodeExamples.valid));
+    expectWrappedType(.RenderVideoBuffer, try expectParse(&RenderVideoBuffer.BytecodeExamples.valid));
     expectWrappedType(.Return, try expectParse(&Return.BytecodeExamples.valid));
     expectWrappedType(.SelectPalette, try expectParse(&SelectPalette.BytecodeExamples.valid));
     expectWrappedType(.SelectVideoBuffer, try expectParse(&SelectVideoBuffer.BytecodeExamples.valid));
@@ -260,11 +256,6 @@ test "parseNextInstruction returns expected instruction type when given valid by
 test "parseNextInstruction returns error.InvalidOpcode error when it encounters an unknown opcode" {
     const bytecode = [_]u8{63}; // Not a valid opcode
     testing.expectError(error.InvalidOpcode, expectParse(&bytecode));
-}
-
-test "parseNextInstruction returns error.UnimplementedOpcode error when it encounters a not-yet-implemented opcode" {
-    const bytecode = [_]u8{@enumToInt(Opcode.Enum.RenderVideoBuffer)};
-    testing.expectError(error.UnimplementedOpcode, expectParse(&bytecode));
 }
 
 test "executeNextInstruction executes arbitrary instruction on machine when given valid bytecode" {

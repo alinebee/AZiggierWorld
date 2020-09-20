@@ -32,8 +32,6 @@ pub const Instance = struct {
     }
 };
 
-pub const Error = Program.Error || BufferID.Error;
-
 /// Parse the next instruction from a bytecode program.
 /// Consumes 3 bytes from the bytecode on success, including the opcode.
 /// Returns an error if the bytecode could not be read or contained an invalid instruction.
@@ -64,6 +62,8 @@ pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instance 
         .use_vertical_offset = use_vertical_offset,
     };
 }
+
+pub const Error = Program.Error || BufferID.Error;
 
 // -- Bytecode examples --
 
