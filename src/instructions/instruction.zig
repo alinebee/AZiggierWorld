@@ -25,6 +25,7 @@ const RegisterCopy = @import("register_copy.zig");
 const RegisterOr = @import("register_or.zig");
 const RegisterSet = @import("register_set.zig");
 const RegisterShiftLeft = @import("register_shift_left.zig");
+const RegisterShiftRight = @import("register_shift_right.zig");
 const RegisterSubtract = @import("register_subtract.zig");
 const Return = @import("return.zig");
 const SelectPalette = @import("select_palette.zig");
@@ -57,6 +58,7 @@ pub const Error =
     RegisterOr.Error ||
     RegisterSet.Error ||
     RegisterShiftLeft.Error ||
+    RegisterShiftRight.Error ||
     RegisterSubtract.Error ||
     Return.Error ||
     SelectPalette.Error ||
@@ -97,6 +99,7 @@ pub const Wrapped = union(enum) {
     RegisterOr: RegisterOr.Instance,
     RegisterSet: RegisterSet.Instance,
     RegisterShiftLeft: RegisterShiftLeft.Instance,
+    RegisterShiftRight: RegisterShiftRight.Instance,
     RegisterSubtract: RegisterSubtract.Instance,
     Return: Return.Instance,
     SelectPalette: SelectPalette.Instance,
@@ -133,6 +136,7 @@ pub fn parseNextInstruction(program: *Program.Instance) Error!Wrapped {
         .RegisterOr => wrap("RegisterOr", RegisterOr, raw_opcode, program),
         .RegisterSet => wrap("RegisterSet", RegisterSet, raw_opcode, program),
         .RegisterShiftLeft => wrap("RegisterShiftLeft", RegisterShiftLeft, raw_opcode, program),
+        .RegisterShiftRight => wrap("RegisterShiftRight", RegisterShiftRight, raw_opcode, program),
         .RegisterSubtract => wrap("RegisterSubtract", RegisterSubtract, raw_opcode, program),
         .Return => wrap("Return", Return, raw_opcode, program),
         .SelectPalette => wrap("SelectPalette", SelectPalette, raw_opcode, program),
@@ -176,6 +180,7 @@ pub fn executeNextInstruction(program: *Program.Instance, machine: *Machine.Inst
         .RegisterOr => execute(RegisterOr, raw_opcode, program, machine),
         .RegisterSet => execute(RegisterSet, raw_opcode, program, machine),
         .RegisterShiftLeft => execute(RegisterShiftLeft, raw_opcode, program, machine),
+        .RegisterShiftRight => execute(RegisterShiftRight, raw_opcode, program, machine),
         .RegisterSubtract => execute(RegisterSubtract, raw_opcode, program, machine),
         .Return => execute(Return, raw_opcode, program, machine),
         .SelectPalette => execute(SelectPalette, raw_opcode, program, machine),
