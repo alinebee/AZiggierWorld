@@ -22,10 +22,14 @@ pub const Instance = struct {
 pub const Error = Program.Error || PaletteID.Error;
 
 /// Parse the next instruction from a bytecode program.
-/// Consumes 2 bytes from the bytecode on success, including the opcode.
+/// Consumes 3 bytes from the bytecode on success, including the opcode.
 /// Returns an error if the bytecode could not be read or contained an invalid instruction.
 pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instance {
     const raw_id = try program.read(PaletteID.Raw);
+    // The reference implementation consumes 16 bits but only uses the top 8 for the palette ID,
+    // ignoring the bottom 8. It's unclear why two bytes were used in the original bytecode.
+    // https://github.com/fabiensanglard/Another-World-Bytecode-Interpreter/blob/8afc0f7d7d47f7700ad2e7d1cad33200ad29b17f/src/vm.cpp#L211-L215
+    try program.skip(1);
 
     return Instance{
         .palette_id = try PaletteID.parse(raw_id),
@@ -38,9 +42,9 @@ pub const BytecodeExamples = struct {
     const raw_opcode = @enumToInt(Opcode.Enum.SelectPalette);
 
     /// Example bytecode that should produce a valid instruction.
-    pub const valid = [2]u8{ raw_opcode, 31 };
+    pub const valid = [3]u8{ raw_opcode, 31, 0 };
 
-    const invalid_palette_id = [2]u8{ raw_opcode, 32 };
+    const invalid_palette_id = [3]u8{ raw_opcode, 32, 0 };
 };
 
 // -- Tests --
@@ -50,7 +54,7 @@ const expectParse = @import("test_helpers/parse.zig").expectParse;
 const MockMachine = @import("test_helpers/mock_machine.zig");
 
 test "parse parses valid bytecode and consumes 2 bytes" {
-    const instruction = try expectParse(parse, &BytecodeExamples.valid, 2);
+    const instruction = try expectParse(parse, &BytecodeExamples.valid, 3);
 
     testing.expectEqual(31, instruction.palette_id);
 }
@@ -58,7 +62,7 @@ test "parse parses valid bytecode and consumes 2 bytes" {
 test "parse returns error.InvalidPaletteID on unknown palette identifier and consumes 2 bytes" {
     testing.expectError(
         error.InvalidPaletteID,
-        expectParse(parse, &BytecodeExamples.invalid_palette_id, 2),
+        expectParse(parse, &BytecodeExamples.invalid_palette_id, 3),
     );
 }
 
