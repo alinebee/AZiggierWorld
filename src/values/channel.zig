@@ -1,3 +1,5 @@
+const intCast = @import("../utils/introspection.zig").intCast;
+
 /// The identifier of an audio channel as a value from 0-3. This is guaranteed to be valid.
 pub const Trusted = u2;
 
@@ -9,12 +11,8 @@ pub const Error = error{
     InvalidChannel,
 };
 
-/// The maximum legal value for a channel ID.
-const max = 0b11;
-
 pub fn parse(raw: Raw) Error!Trusted {
-    if (raw > max) return error.InvalidChannel;
-    return @truncate(Trusted, raw);
+    return intCast(Trusted, raw) catch error.InvalidChannel;
 }
 
 // -- Tests --

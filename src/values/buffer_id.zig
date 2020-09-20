@@ -1,7 +1,7 @@
 /// A raw video buffer identifier as represented in Another World's bytecode.
 pub const Raw = u8;
 
-/// A specific buffer ID from 0 to 3.
+/// A specific buffer ID from 0 to 3. This is guaranteed to be valid.
 pub const Specific = u2;
 
 pub const front_buffer: Raw = 0xFE;
