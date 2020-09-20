@@ -3,16 +3,16 @@ const Program = @import("../machine/program.zig");
 const Machine = @import("../machine/machine.zig");
 const RegisterID = @import("../values/register_id.zig");
 
-/// Copy the value of one register to another.
+/// Add the value from one register to another, wrapping on overflow.
 pub const Instance = struct {
-    /// The ID of the register to copy into.
+    /// The ID of the register to add to.
     destination: RegisterID.Raw,
 
-    /// The ID of the register to copy from.
+    /// The ID of the register containing the value to add.
     source: RegisterID.Raw,
 
     pub fn execute(self: Instance, machine: *Machine.Instance) void {
-        machine.registers[self.destination] = machine.registers[self.source];
+        machine.registers[self.destination] +%= machine.registers[self.source];
     }
 };
 
@@ -31,7 +31,7 @@ pub const Error = Program.Error;
 // -- Bytecode examples --
 
 pub const BytecodeExamples = struct {
-    const raw_opcode = @enumToInt(Opcode.Enum.RegisterCopy);
+    const raw_opcode = @enumToInt(Opcode.Enum.RegisterAdd);
 
     /// Example bytecode that should produce a valid instruction.
     pub const valid = [3]u8{ raw_opcode, 16, 17 };
@@ -49,7 +49,23 @@ test "parse parses valid bytecode and consumes 3 bytes" {
     testing.expectEqual(17, instruction.source);
 }
 
-test "execute updates specified register with value" {
+test "execute adds to destination register and leaves source register alone" {
+    const instruction = Instance{
+        .destination = 16,
+        .source = 17,
+    };
+
+    var machine = Machine.new();
+    machine.registers[16] = 125;
+    machine.registers[17] = -50;
+
+    instruction.execute(&machine);
+
+    testing.expectEqual(75, machine.registers[16]);
+    testing.expectEqual(-50, machine.registers[17]);
+}
+
+test "execute wraps on overflow" {
     const instruction = Instance{
         .destination = 16,
         .source = 17,
@@ -57,10 +73,24 @@ test "execute updates specified register with value" {
 
     var machine = Machine.new();
     machine.registers[16] = 32767;
-    machine.registers[17] = -900;
+    machine.registers[17] = 1;
 
     instruction.execute(&machine);
 
-    testing.expectEqual(-900, machine.registers[16]);
-    testing.expectEqual(-900, machine.registers[17]);
+    testing.expectEqual(-32768, machine.registers[16]);
+}
+
+test "execute wraps on underflow" {
+    const instruction = Instance{
+        .destination = 16,
+        .source = 17,
+    };
+
+    var machine = Machine.new();
+    machine.registers[16] = -32768;
+    machine.registers[17] = -1;
+
+    instruction.execute(&machine);
+
+    testing.expectEqual(32767, machine.registers[16]);
 }

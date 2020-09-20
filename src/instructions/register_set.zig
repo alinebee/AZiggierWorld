@@ -3,8 +3,6 @@ const Program = @import("../machine/program.zig");
 const Machine = @import("../machine/machine.zig");
 const RegisterID = @import("../values/register_id.zig");
 
-pub const Error = Program.Error;
-
 /// Set a specific register to a constant value.
 pub const Instance = struct {
     /// The ID of the register to set.
@@ -27,6 +25,8 @@ pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instance 
         .value = try program.read(Machine.RegisterValue),
     };
 }
+
+pub const Error = Program.Error;
 
 // -- Bytecode examples --
 

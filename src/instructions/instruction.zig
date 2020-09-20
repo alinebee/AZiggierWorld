@@ -18,6 +18,7 @@ const Jump = @import("jump.zig");
 const JumpConditional = @import("jump_conditional.zig");
 const JumpIfNotZero = @import("jump_if_not_zero.zig");
 const Kill = @import("kill.zig");
+const RegisterAdd = @import("register_add.zig");
 const RegisterCopy = @import("register_copy.zig");
 const RegisterSet = @import("register_set.zig");
 const Return = @import("return.zig");
@@ -44,6 +45,7 @@ pub const Error =
     JumpConditional.Error ||
     JumpIfNotZero.Error ||
     Kill.Error ||
+    RegisterAdd.Error ||
     RegisterCopy.Error ||
     RegisterSet.Error ||
     Return.Error ||
@@ -78,6 +80,7 @@ pub const Wrapped = union(enum) {
     JumpConditional: JumpConditional.Instance,
     JumpIfNotZero: JumpIfNotZero.Instance,
     Kill: Kill.Instance,
+    RegisterAdd: RegisterAdd.Instance,
     RegisterCopy: RegisterCopy.Instance,
     RegisterSet: RegisterSet.Instance,
     Return: Return.Instance,
@@ -108,6 +111,7 @@ pub fn parseNextInstruction(program: *Program.Instance) Error!Wrapped {
         .JumpConditional => wrap("JumpConditional", JumpConditional, raw_opcode, program),
         .JumpIfNotZero => wrap("JumpIfNotZero", JumpIfNotZero, raw_opcode, program),
         .Kill => wrap("Kill", Kill, raw_opcode, program),
+        .RegisterAdd => wrap("RegisterAdd", RegisterAdd, raw_opcode, program),
         .RegisterCopy => wrap("RegisterCopy", RegisterCopy, raw_opcode, program),
         .RegisterSet => wrap("RegisterSet", RegisterSet, raw_opcode, program),
         .Return => wrap("Return", Return, raw_opcode, program),
@@ -145,6 +149,7 @@ pub fn executeNextInstruction(program: *Program.Instance, machine: *Machine.Inst
         .JumpConditional => execute(JumpConditional, raw_opcode, program, machine),
         .JumpIfNotZero => execute(JumpIfNotZero, raw_opcode, program, machine),
         .Kill => execute(Kill, raw_opcode, program, machine),
+        .RegisterAdd => execute(RegisterAdd, raw_opcode, program, machine),
         .RegisterCopy => execute(RegisterCopy, raw_opcode, program, machine),
         .RegisterSet => execute(RegisterSet, raw_opcode, program, machine),
         .Return => execute(Return, raw_opcode, program, machine),
@@ -208,6 +213,7 @@ test "parseNextInstruction returns expected instruction type when given valid by
     expectWrappedType(.JumpConditional, try expectParse(&JumpConditional.BytecodeExamples.valid));
     expectWrappedType(.JumpIfNotZero, try expectParse(&JumpIfNotZero.BytecodeExamples.valid));
     expectWrappedType(.Kill, try expectParse(&Kill.BytecodeExamples.valid));
+    expectWrappedType(.RegisterAdd, try expectParse(&RegisterAdd.BytecodeExamples.valid));
     expectWrappedType(.RegisterCopy, try expectParse(&RegisterCopy.BytecodeExamples.valid));
     expectWrappedType(.RegisterSet, try expectParse(&RegisterSet.BytecodeExamples.valid));
     expectWrappedType(.Return, try expectParse(&Return.BytecodeExamples.valid));
