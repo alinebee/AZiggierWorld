@@ -11,6 +11,9 @@ pub const bitCount = std.meta.bitCount;
 /// Given an integer type, returns the type used for legal left/right-shift operations.
 pub const shiftType = std.math.Log2Int;
 
+/// Casts an integer type to another, returning an error on overflow (instead of trapping like @intCast).
+pub const intCast = std.math.cast;
+
 /// Given a function reference, introspects the return type of that function.
 pub fn returnType(comptime function: anytype) type {
     const type_info = @typeInfo(@TypeOf(function));

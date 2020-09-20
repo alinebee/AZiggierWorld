@@ -24,6 +24,7 @@ const RegisterAnd = @import("register_and.zig");
 const RegisterCopy = @import("register_copy.zig");
 const RegisterOr = @import("register_or.zig");
 const RegisterSet = @import("register_set.zig");
+const RegisterShiftLeft = @import("register_shift_left.zig");
 const RegisterSubtract = @import("register_subtract.zig");
 const Return = @import("return.zig");
 const SelectPalette = @import("select_palette.zig");
@@ -55,6 +56,7 @@ pub const Error =
     RegisterCopy.Error ||
     RegisterOr.Error ||
     RegisterSet.Error ||
+    RegisterShiftLeft.Error ||
     RegisterSubtract.Error ||
     Return.Error ||
     SelectPalette.Error ||
@@ -94,6 +96,7 @@ pub const Wrapped = union(enum) {
     RegisterCopy: RegisterCopy.Instance,
     RegisterOr: RegisterOr.Instance,
     RegisterSet: RegisterSet.Instance,
+    RegisterShiftLeft: RegisterShiftLeft.Instance,
     RegisterSubtract: RegisterSubtract.Instance,
     Return: Return.Instance,
     SelectPalette: SelectPalette.Instance,
@@ -129,6 +132,7 @@ pub fn parseNextInstruction(program: *Program.Instance) Error!Wrapped {
         .RegisterCopy => wrap("RegisterCopy", RegisterCopy, raw_opcode, program),
         .RegisterOr => wrap("RegisterOr", RegisterOr, raw_opcode, program),
         .RegisterSet => wrap("RegisterSet", RegisterSet, raw_opcode, program),
+        .RegisterShiftLeft => wrap("RegisterShiftLeft", RegisterShiftLeft, raw_opcode, program),
         .RegisterSubtract => wrap("RegisterSubtract", RegisterSubtract, raw_opcode, program),
         .Return => wrap("Return", Return, raw_opcode, program),
         .SelectPalette => wrap("SelectPalette", SelectPalette, raw_opcode, program),
@@ -171,6 +175,7 @@ pub fn executeNextInstruction(program: *Program.Instance, machine: *Machine.Inst
         .RegisterCopy => execute(RegisterCopy, raw_opcode, program, machine),
         .RegisterOr => execute(RegisterOr, raw_opcode, program, machine),
         .RegisterSet => execute(RegisterSet, raw_opcode, program, machine),
+        .RegisterShiftLeft => execute(RegisterShiftLeft, raw_opcode, program, machine),
         .RegisterSubtract => execute(RegisterSubtract, raw_opcode, program, machine),
         .Return => execute(Return, raw_opcode, program, machine),
         .SelectPalette => execute(SelectPalette, raw_opcode, program, machine),
@@ -239,6 +244,7 @@ test "parseNextInstruction returns expected instruction type when given valid by
     expectWrappedType(.RegisterCopy, try expectParse(&RegisterCopy.BytecodeExamples.valid));
     expectWrappedType(.RegisterOr, try expectParse(&RegisterOr.BytecodeExamples.valid));
     expectWrappedType(.RegisterSet, try expectParse(&RegisterSet.BytecodeExamples.valid));
+    expectWrappedType(.RegisterShiftLeft, try expectParse(&RegisterShiftLeft.BytecodeExamples.valid));
     expectWrappedType(.RegisterSubtract, try expectParse(&RegisterSubtract.BytecodeExamples.valid));
     expectWrappedType(.Return, try expectParse(&Return.BytecodeExamples.valid));
     expectWrappedType(.SelectPalette, try expectParse(&SelectPalette.BytecodeExamples.valid));
