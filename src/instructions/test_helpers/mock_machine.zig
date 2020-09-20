@@ -27,6 +27,7 @@ const CallCounts = struct {
     drawString: usize,
     selectVideoBuffer: usize,
     fillVideoBuffer: usize,
+    copyVideoBuffer: usize,
     startGamePart: usize,
     loadResource: usize,
     unloadAllResources: usize,
@@ -63,6 +64,11 @@ fn MockMachine(comptime Implementation: type) type {
         pub fn fillVideoBuffer(self: *Self, buffer_id: BufferID.Enum, color_id: ColorID.Trusted) void {
             self.call_counts.fillVideoBuffer += 1;
             Implementation.fillVideoBuffer(buffer_id, color_id);
+        }
+
+        pub fn copyVideoBuffer(self: *Self, source: BufferID.Enum, destination: BufferID.Enum, vertical_offset: Point.Coordinate) void {
+            self.call_counts.copyVideoBuffer += 1;
+            Implementation.copyVideoBuffer(source, destination, vertical_offset);
         }
 
         pub fn startGamePart(self: *Self, game_part: GamePart.Enum) !void {
@@ -161,6 +167,19 @@ test "MockMachine calls fillVideoBuffer correctly on stub implementation" {
 
     mock.fillVideoBuffer(.front_buffer, 15);
     testing.expectEqual(1, mock.call_counts.fillVideoBuffer);
+}
+
+test "MockMachine calls copyVideoBuffer correctly on stub implementation" {
+    var mock = new(struct {
+        fn copyVideoBuffer(source: BufferID.Enum, destination: BufferID.Enum, vertical_offset: Point.Coordinate) void {
+            testing.expectEqual(.{ .specific = 1 }, source);
+            testing.expectEqual(.back_buffer, destination);
+            testing.expectEqual(176, vertical_offset);
+        }
+    });
+
+    mock.copyVideoBuffer(.{ .specific = 1 }, .back_buffer, 176);
+    testing.expectEqual(1, mock.call_counts.copyVideoBuffer);
 }
 
 test "MockMachine calls startGamePart correctly on stub implementation" {

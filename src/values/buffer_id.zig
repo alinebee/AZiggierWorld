@@ -4,6 +4,9 @@ pub const Raw = u8;
 /// A specific buffer ID from 0 to 3.
 pub const Specific = u2;
 
+pub const front_buffer: Raw = 0xFE;
+pub const back_buffer: Raw = 0xFF;
+
 // TODO: confirm the order and meaning of front and back buffers.
 pub const Enum = union(enum(Raw)) {
     /// Target a specific buffer from 0 to 3.
@@ -22,8 +25,8 @@ pub const Error = error{
 pub fn parse(raw: Raw) Error!Enum {
     return switch (raw) {
         0, 1, 2, 3 => .{ .specific = @truncate(Specific, raw) },
-        0xFE => .front_buffer,
-        0xFF => .back_buffer,
+        front_buffer => .front_buffer,
+        back_buffer => .back_buffer,
         else => error.InvalidBufferID,
     };
 }

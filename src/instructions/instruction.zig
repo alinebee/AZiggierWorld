@@ -10,6 +10,7 @@ const ControlResources = @import("control_resources.zig");
 const ControlSound = @import("control_sound.zig");
 const ControlThreads = @import("control_threads.zig");
 const CopyRegister = @import("copy_register.zig");
+const CopyVideoBuffer = @import("copy_video_buffer.zig");
 const DrawBackgroundPolygon = @import("draw_background_polygon.zig");
 const DrawSpritePolygon = @import("draw_sprite_polygon.zig");
 const DrawString = @import("draw_string.zig");
@@ -34,6 +35,7 @@ pub const Error =
     ControlSound.Error ||
     ControlThreads.Error ||
     CopyRegister.Error ||
+    CopyVideoBuffer.Error ||
     DrawBackgroundPolygon.Error ||
     DrawSpritePolygon.Error ||
     DrawString.Error ||
@@ -66,6 +68,7 @@ pub const Wrapped = union(enum) {
     ControlSound: ControlSound.Instance,
     ControlThreads: ControlThreads.Instance,
     CopyRegister: CopyRegister.Instance,
+    CopyVideoBuffer: CopyVideoBuffer.Instance,
     DrawBackgroundPolygon: DrawBackgroundPolygon.Instance,
     DrawSpritePolygon: DrawSpritePolygon.Instance,
     DrawString: DrawString.Instance,
@@ -94,6 +97,7 @@ pub fn parseNextInstruction(program: *Program.Instance) Error!Wrapped {
         .ControlSound => wrap("ControlSound", ControlSound, raw_opcode, program),
         .ControlThreads => wrap("ControlThreads", ControlThreads, raw_opcode, program),
         .CopyRegister => wrap("CopyRegister", CopyRegister, raw_opcode, program),
+        .CopyVideoBuffer => wrap("CopyVideoBuffer", CopyVideoBuffer, raw_opcode, program),
         .DrawBackgroundPolygon => wrap("DrawBackgroundPolygon", DrawBackgroundPolygon, raw_opcode, program),
         .DrawSpritePolygon => wrap("DrawSpritePolygon", DrawSpritePolygon, raw_opcode, program),
         .DrawString => wrap("DrawString", DrawString, raw_opcode, program),
@@ -129,6 +133,7 @@ pub fn executeNextInstruction(program: *Program.Instance, machine: *Machine.Inst
         .ControlSound => execute(ControlSound, raw_opcode, program, machine),
         .ControlThreads => execute(ControlThreads, raw_opcode, program, machine),
         .CopyRegister => execute(CopyRegister, raw_opcode, program, machine),
+        .CopyVideoBuffer => execute(CopyVideoBuffer, raw_opcode, program, machine),
         .DrawBackgroundPolygon => execute(DrawBackgroundPolygon, raw_opcode, program, machine),
         .DrawSpritePolygon => execute(DrawSpritePolygon, raw_opcode, program, machine),
         .DrawString => execute(DrawString, raw_opcode, program, machine),

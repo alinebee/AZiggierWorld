@@ -67,4 +67,13 @@ pub const Interface = struct {
     pub fn fillVideoBuffer(self: *Machine.Instance, buffer_id: BufferID.Enum, color_id: ColorID.Trusted) void {
         log_unimplemented("Video.fillVideoBuffer: {} color:{}", .{ buffer_id, color_id });
     }
+
+    /// Copy the contents of one video buffer into another at the specified vertical offset.
+    pub fn copyVideoBuffer(self: *Machine.Instance, source: BufferID.Enum, destination: BufferID.Enum, vertical_offset: Point.Coordinate) void {
+        log_unimplemented("Video.copyVideoBuffer: source:{} destination:{} vertical_offset:{}", .{
+            source,
+            destination,
+            vertical_offset,
+        });
+    }
 };
