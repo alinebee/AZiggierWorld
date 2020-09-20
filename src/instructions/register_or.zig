@@ -5,7 +5,7 @@ const RegisterID = @import("../values/register_id.zig");
 
 const RegisterMask = u16;
 
-/// Applies a bitwise-AND mask to the value in a register.
+/// Applies a bitwise-OR mask to the value in a register.
 pub const Instance = struct {
     /// The ID of the register to apply the mask to.
     destination: RegisterID.Raw,
@@ -16,7 +16,7 @@ pub const Instance = struct {
     pub fn execute(self: Instance, machine: *Machine.Instance) void {
         // Register values are signed 16-bit values, but must be treated as unsigned in order to mask them.
         const original_value = machine.registers[self.destination];
-        const masked_value = @bitCast(RegisterMask, original_value) & self.value;
+        const masked_value = @bitCast(RegisterMask, original_value) | self.value;
         machine.registers[self.destination] = @bitCast(Machine.RegisterValue, masked_value);
     }
 };
@@ -36,7 +36,7 @@ pub const Error = Program.Error;
 // -- Bytecode examples --
 
 pub const BytecodeExamples = struct {
-    const raw_opcode = @enumToInt(Opcode.Enum.RegisterAnd);
+    const raw_opcode = @enumToInt(Opcode.Enum.RegisterOr);
 
     /// Example bytecode that should produce a valid instruction.
     pub const valid = [4]u8{ raw_opcode, 16, 0b1100_0011, 0b1111_0000 };
@@ -58,7 +58,7 @@ test "parse parses valid bytecode and consumes 3 bytes" {
 test "execute masks destination register" {
     const original_value: RegisterMask  = 0b1010_0101_1010_0101;
     const mask: RegisterMask            = 0b1100_0011_1111_0000;
-    const expected_value: RegisterMask  = 0b1000_0001_1010_0000;
+    const expected_value: RegisterMask  = 0b1110_0111_1111_0101;
 
     const instruction = Instance{
         .destination = 16,
