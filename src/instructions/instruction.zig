@@ -187,10 +187,10 @@ pub fn executeNextInstruction(program: *Program.Instance, machine: *Machine.Inst
 
 fn execute(comptime Instruction: type, raw_opcode: Opcode.Raw, program: *Program.Instance, machine: *Machine.Instance) Error!Action.Enum {
     const instruction = try Instruction.parse(raw_opcode, program);
-    const ReturnType = introspection.returnType(instruction.execute);
-    const returns_error = @typeInfo(ReturnType) == .ErrorUnion;
 
     // You'd think there'd be an easier way to express "try the function if necessary, otherwise just call it".
+    comptime const ReturnType = introspection.returnType(instruction.execute);
+    comptime const returns_error = @typeInfo(ReturnType) == .ErrorUnion;
     const payload = if (returns_error)
         try instruction.execute(machine)
     else
@@ -198,7 +198,8 @@ fn execute(comptime Instruction: type, raw_opcode: Opcode.Raw, program: *Program
 
     // Check whether this instruction returned a specific thread action to take after executing.
     // Most instructions just return void; assume their action will be .Continue.
-    if (@TypeOf(payload) == Action.Enum) {
+    comptime const returns_action = @TypeOf(payload) == Action.Enum;
+    if (returns_action) {
         return payload;
     } else {
         return .Continue;
