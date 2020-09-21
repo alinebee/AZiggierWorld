@@ -1,6 +1,8 @@
 const Address = @import("../values/address.zig");
+const Machine = @import("machine.zig");
+const execute_next_instruction = @import("instruction.zig");
 
-pub const ExecutionState = union(enum) {
+const ExecutionState = union(enum) {
     /// The thread is active and will continue execution from the specified address when it is next run.
     active: Address.Native,
 
@@ -8,7 +10,7 @@ pub const ExecutionState = union(enum) {
     inactive,
 };
 
-pub const SuspendState = enum {
+const SuspendState = enum {
     /// The thread is not suspended: it will run if it is also active (see `ExecutionState`).
     running,
 
@@ -19,26 +21,29 @@ pub const SuspendState = enum {
 /// The maximum number of program instructions that can be executed on a single thread in a single tic
 /// before it will abort with an error.
 /// Exceeding this number of instructions likely indicates an infinite loop.
-const max_executions_per_tic = 10_000;
+const max_instructions_per_tic = 10_000;
 
 /// One of the program execution threads within the Another World virtual machine.
 /// A thread maintains its own paused/running state and its current program counter.
 /// Each tic, the virtual machine runs each active thread: the thread resumes executing the current program
-/// starting from the thread's last program counter, and will run until the thread yields to the next thread
-/// or deactivates itself.
+/// starting from the thread's previous program counter, and will run until the thread yields to the next
+/// thread or deactivates itself.
 pub const Instance = struct {
     // Theoretically, a thread can only be in three functional states:
     // 1. Running at program counter X
     // 2. Suspended at program counter X
     // 3. Inactive
     //
-    // However, Another World represents these 3 states with two booleans that can be modified independently of each other.
+    // However, Another World represents these 3 states with two booleans that can be modified
+    // independently of each other.
     // So there are actually 4 logical states:
     // 1. Running at program counter X and not suspended
     // 2. Running at program counter X and suspended
     // 3. Inactive and not suspended
     // 4. Inactive and suspended
-    // States 3 and 4 have the same effect; but we cannot rule out that a program will suspend an inactive thread, then start running the thread *but expect it to remain suspended*. To allow that, we must track each variable independently.
+    // States 3 and 4 have the same effect; but we cannot rule out that a program will suspend
+    // an inactive thread, then start running the thread *but expect it to remain suspended*.
+    // To allow that, we must track each variable independently.
     /// The active/inactive execution state of this thread during the current game tic.
     execution_state: ExecutionState = .inactive,
     /// The scheduled active/inactive execution state of this thread for the next game tic.
@@ -87,6 +92,63 @@ pub const Instance = struct {
             self.scheduled_suspend_state = null;
         }
     }
+
+    /// Execute the machine's current program on this thread, running until the thread yields
+    /// or deactivates, or an error occurs, or the execution limit is exceeded.
+    pub fn run(self: *Instance, machine: *Machine) Error!void {
+        // Skip the thread if it's currently paused.
+        if (self.suspend_state == .paused) {
+            return;
+        }
+
+        // If this thread is active, move the shared program counter to the last address for this thread;
+        // Otherwise, skip the thread.
+        switch (self.execution_state) {
+            .active => |address| try machine.program.jump(address),
+            .inactive => return,
+        }
+
+        // Empty the stack before running each thread.
+        machine.stack.clear();
+
+        var instructions_remaining: usize = max_instructions_per_tic;
+        while (instructions_remaining > 0) : (instructions_remaining -= 1) {
+            const action = try executeNextInstruction(machine.program, machine);
+            switch (action) {
+                .Continue => continue,
+                .Yield => {
+                    // Yielding with a non-empty stack would cause the return address
+                    // for the current function to be lost after the shared stack gets cleared.
+                    // Once the thread resumes executing the function next tic, any Return
+                    // instruction within that function would then result in error.StackUnderflow.
+                    if (machine.stack.depth > 0) {
+                        return error.InvalidYield;
+                    }
+
+                    // Record the final position of the program counter so we can resume from there next tic.
+                    self.execution_state = .{ .active = machine.program.counter };
+                    return;
+                },
+                .Deactivate => {
+                    self.execution_state = .inactive;
+                    return;
+                },
+            }
+        } else {
+            // If we reach here without returning before now, it means the program got stuck in an infinite loop.
+            return error.InstructionLimitExceeded;
+        }
+    }
+};
+
+pub const Error = error{
+    /// Bytecode attempted to yield within a function call, which would lose stack information
+    // and cause a stack underflow upon resuming and returning from the function.
+    InvalidYield,
+
+    /// The thread reached its execution limit without yielding or deactivating.
+    /// This would indicate a bytecode bug like an infinite loop.
+    InstructionLimitExceeded,
 };
 
 // -- Tests --
