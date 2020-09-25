@@ -45,19 +45,23 @@ pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instance 
     // This is derived from some squirrely masking logic in the reference implementation:
     // https://github.com/fabiensanglard/Another-World-Bytecode-Interpreter/blob/30b29209214cbf3d3d179b85a7f2bc47ba4a8730/src/video.cpp#L498
 
-    var masked_source: BufferID.Raw = undefined;
+    var sanitised_source: BufferID.Raw = undefined;
     var use_vertical_offset: bool = undefined;
 
     if (raw_source == BufferID.front_buffer or raw_source == BufferID.back_buffer) {
-        masked_source = raw_source;
+        sanitised_source = raw_source;
         use_vertical_offset = false;
     } else {
-        masked_source = raw_source & 0b0111_1111;
+        // Remove the top flag bit(s) from the source to get a sanitised buffer constant.
+        // Some instructions in the original bytecode also set the second-highest bit;
+        // The meaning of that bit is unknown, and the reference implementation always
+        // ignores it and masks it off.
+        sanitised_source = raw_source & 0b0011_1111;
         use_vertical_offset = (raw_source & 0b1000_0000) != 0;
     }
 
     return Instance{
-        .source = try BufferID.parse(masked_source),
+        .source = try BufferID.parse(sanitised_source),
         .destination = try BufferID.parse(raw_destination),
         .use_vertical_offset = use_vertical_offset,
     };
@@ -73,8 +77,8 @@ pub const BytecodeExamples = struct {
     /// Example bytecode that should produce a valid instruction.
     pub const valid = specific_buffer_ignore_offset;
 
-    const specific_buffer_ignore_offset = [3]u8{ raw_opcode, 0b0000_0011, 0x01 };
-    const specific_buffer_respect_offset = [3]u8{ raw_opcode, 0b1000_0011, 0x01 };
+    const specific_buffer_ignore_offset = [3]u8{ raw_opcode, 0b0100_0011, 0x01 };
+    const specific_buffer_respect_offset = [3]u8{ raw_opcode, 0b1100_0011, 0x01 };
     const front_buffer = [3]u8{ raw_opcode, 0xFE, 0x01 };
     const back_buffer = [3]u8{ raw_opcode, 0xFF, 0x01 };
 
