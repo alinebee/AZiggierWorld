@@ -33,9 +33,13 @@ pub const Instance = struct {
 /// Returns an error if the bytecode could not be read or contained an invalid instruction.
 pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instance {
     const string_id = try program.read(StringID.Raw);
-    const raw_color_id = try program.read(ColorID.Raw);
+
+    // X position only goes from 0...255:
+    // apparently the game never draws strings far enough right to need a wider value?
     const raw_x = try program.read(u8);
     const raw_y = try program.read(u8);
+
+    const raw_color_id = try program.read(ColorID.Raw);
 
     return Instance{
         .string_id = string_id,
@@ -53,9 +57,9 @@ pub const BytecodeExamples = struct {
     const raw_opcode = @enumToInt(Opcode.Enum.DrawString);
 
     /// Example bytecode that should produce a valid instruction.
-    pub const valid = [6]u8{ raw_opcode, 0xDE, 0xAD, 15, 160, 100 };
+    pub const valid = [6]u8{ raw_opcode, 0xDE, 0xAD, 160, 100, 15 };
 
-    const invalid_color_id = [6]u8{ raw_opcode, 0xDE, 0xAD, 255, 160, 100 };
+    const invalid_color_id = [6]u8{ raw_opcode, 0xDE, 0xAD, 160, 100, 255 };
 };
 
 // -- Tests --
