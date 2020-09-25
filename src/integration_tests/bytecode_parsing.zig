@@ -18,6 +18,20 @@ const ParseFailure = struct {
     parsed_count: usize,
     err: Instruction.Error,
 
+    fn init(resource_id: usize, program: *Program.Instance, offset: usize, err: Instruction.Error) ParseFailure {
+        const parsed_bytes = program.bytecode[offset..program.counter];
+
+        var self = ParseFailure{
+            .resource_id = resource_id,
+            .offset = offset,
+            .parsed_bytes = undefined,
+            .parsed_count = parsed_bytes.len,
+            .err = err,
+        };
+        std.mem.copy(u8, &self.parsed_bytes, parsed_bytes);
+        return self;
+    }
+
     fn opcodeName(self: ParseFailure) []const u8 {
         if (instrospection.intToEnum(Opcode.Enum, self.parsed_bytes[0])) |value| {
             return @tagName(value);
@@ -61,22 +75,20 @@ test "parseNextInstruction parses all programs in fixture bytecode" {
                 // Instruction parsing succeeded, hooray!
             } else |err| {
                 // Log and continue parsing after encountering a failure
-                var failure = try failures.addOne();
-                var parsed_bytes = program.bytecode[last_valid_address..program.counter];
-
-                failure.resource_id = index;
-                failure.err = err;
-                failure.offset = last_valid_address;
-                std.mem.copy(u8, &failure.parsed_bytes, parsed_bytes);
-                failure.parsed_count = parsed_bytes.len;
+                try failures.append(ParseFailure.init(
+                    index,
+                    &program,
+                    last_valid_address,
+                    err,
+                ));
             }
         }
     }
 
     if (failures.items.len > 0) {
-        std.debug.print("\n{} instruction(s) failed to parse:\n", .{ failures.items.len });
+        std.debug.print("\n{} instruction(s) failed to parse:\n", .{failures.items.len});
         for (failures.items) |failure| {
-            std.debug.print("\n{}\n\n", .{ failure });
+            std.debug.print("\n{}\n\n", .{failure});
         }
     }
 
