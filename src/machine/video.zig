@@ -6,6 +6,7 @@ const ColorID = @import("../values/color_id.zig");
 const StringID = @import("../values/string_id.zig");
 const BufferID = @import("../values/buffer_id.zig");
 const PaletteID = @import("../values/palette_id.zig");
+const PolygonScale = @import("../values/polygon_scale.zig");
 
 const english = @import("../assets/english.zig");
 
@@ -23,20 +24,11 @@ pub const PolygonSource = enum {
 /// The offset within a polygon or animation resource from which to read polygon data.
 pub const PolygonAddress = u16;
 
-/// The scale at which to render a polygon.
-/// This is a raw value that will be divided by 64 to determine the actual scale:
-/// e.g. 64 is 1x, 32 is 0.5x, 96 is 1.5x, 256 is 4x etc.
-pub const PolygonScale = u16;
-
 /// The length of time to leave on screen.
 /// FIXME: Determine the range of this value in actual bytecode.
 /// This is read from a register, but the type should be more constrained than that
 /// (e.g. negative values are likely illegal.)
 pub const FrameDelay = Machine.RegisterValue;
-
-/// The default scale for polygon draw operations.
-/// This renders polygons at their native size.
-pub const default_scale: PolygonScale = 64;
 
 const log_unimplemented = @import("../utils/logging.zig").log_unimplemented;
 
@@ -44,7 +36,7 @@ const log_unimplemented = @import("../utils/logging.zig").log_unimplemented;
 pub const Interface = struct {
     /// Render a polygon from the specified source and address at the specified screen position and scale.
     /// Returns an error if the specified polygon address was invalid.
-    pub fn drawPolygon(self: *Machine.Instance, source: PolygonSource, address: PolygonAddress, point: Point.Instance, scale: PolygonScale) !void {
+    pub fn drawPolygon(self: *Machine.Instance, source: PolygonSource, address: PolygonAddress, point: Point.Instance, scale: PolygonScale.Raw) !void {
         log_unimplemented("Video.drawPolygon: draw {}.{X} at x:{} y:{} scale:{}", .{
             @tagName(source),
             address,

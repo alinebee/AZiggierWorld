@@ -4,6 +4,7 @@ const Machine = @import("../machine/machine.zig");
 const Video = @import("../machine/video.zig");
 const Point = @import("../values/point.zig");
 const RegisterID = @import("../values/register_id.zig");
+const PolygonScale = @import("../values/polygon_scale.zig");
 
 /// Draw a polygon at a location and zoom level that are either hardcoded constants
 /// or dynamic values read from registers.
@@ -29,7 +30,7 @@ pub const Instance = struct {
     /// The source for the scale at which to draw the polygon.
     scale: union(enum) {
         default,
-        constant: Video.PolygonScale,
+        constant: PolygonScale.Raw,
         register: RegisterID.Raw,
     },
 
@@ -50,8 +51,8 @@ pub const Instance = struct {
         };
         const scale = switch (self.scale) {
             .constant => |constant| constant,
-            .register => |id| @bitCast(Video.PolygonScale, machine.registers[id]),
-            .default => Video.default_scale,
+            .register => |id| @bitCast(PolygonScale.Raw, machine.registers[id]),
+            .default => PolygonScale.default,
         };
 
         try machine.drawPolygon(self.source, self.address, .{ .x = x, .y = y }, scale);
@@ -126,7 +127,7 @@ pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instance 
         },
         0b10 => {
             self.source = .polygons;
-            self.scale = .{ .constant = @as(Video.PolygonScale, try program.read(u8)) };
+            self.scale = .{ .constant = @as(PolygonScale.Raw, try program.read(u8)) };
         },
         0b11 => {
             self.source = .animations;
@@ -263,12 +264,12 @@ test "execute with constants calls drawPolygon with correct parameters" {
     };
 
     var machine = MockMachine.new(struct {
-        pub fn drawPolygon(source: Video.PolygonSource, address: Video.PolygonAddress, point: Point.Instance, scale: Video.PolygonScale) !void {
+        pub fn drawPolygon(source: Video.PolygonSource, address: Video.PolygonAddress, point: Point.Instance, scale: PolygonScale.Raw) !void {
             testing.expectEqual(.animations, source);
             testing.expectEqual(0xDEAD, address);
             testing.expectEqual(320, point.x);
             testing.expectEqual(200, point.y);
-            testing.expectEqual(Video.default_scale, scale);
+            testing.expectEqual(PolygonScale.default, scale);
         }
     });
 
@@ -287,7 +288,7 @@ test "execute with registers calls drawPolygon with correct parameters" {
     };
 
     var machine = MockMachine.new(struct {
-        pub fn drawPolygon(source: Video.PolygonSource, address: Video.PolygonAddress, point: Point.Instance, scale: Video.PolygonScale) !void {
+        pub fn drawPolygon(source: Video.PolygonSource, address: Video.PolygonAddress, point: Point.Instance, scale: PolygonScale.Raw) !void {
             testing.expectEqual(.polygons, source);
             testing.expectEqual(0xDEAD, address);
             testing.expectEqual(-1234, point.x);
@@ -315,7 +316,7 @@ test "execute with register scale value interprets value as unsigned" {
     };
 
     var machine = MockMachine.new(struct {
-        pub fn drawPolygon(_source: Video.PolygonSource, _address: Video.PolygonAddress, _point: Point.Instance, scale: Video.PolygonScale) !void {
+        pub fn drawPolygon(_source: Video.PolygonSource, _address: Video.PolygonAddress, _point: Point.Instance, scale: PolygonScale.Raw) !void {
             testing.expectEqual(46635, scale);
         }
     });
