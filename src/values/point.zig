@@ -8,3 +8,5 @@ pub const Instance = struct {
     /// The Y position in virtual 320x200 pixels, starting from the top edge of the screen.
     y: Coordinate,
 };
+
+pub const zero = Instance { .x = 0, .y = 0 };

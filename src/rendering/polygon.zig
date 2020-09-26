@@ -111,6 +111,10 @@ const DataExamples = struct {
         0, 4,  // 5
         5, 0,  // 6
     };
+
+    const vertex_count_too_low = [_]u8 { 0, 1, 2 };
+    const vertex_count_too_high = [_]u8 { 0, 1, 52 };
+    const vertex_count_uneven = [_]u8 { 0, 1, 5 };
 };
 // zig fmt: on
 
@@ -120,8 +124,7 @@ const testing = @import("../utils/testing.zig");
 const fixedBufferStream = @import("std").io.fixedBufferStream;
 
 test "parse correctly parses 4-vertex dot polygon" {
-    var stream = fixedBufferStream(&DataExamples.valid_dot);
-    const reader = stream.reader();
+    const reader = fixedBufferStream(&DataExamples.valid_dot).reader();
 
     const center = Point.Instance{ .x = 320, .y = 200 };
     const polygon = try parse(reader, center, PolygonScale.default, .translucent);
@@ -142,10 +145,9 @@ test "parse correctly parses 4-vertex dot polygon" {
 
 // zig fmt: off
 test "parse correctly parses and scales pentagon" {
-    var stream = fixedBufferStream(&DataExamples.valid_pentagon);
-    const reader = stream.reader();
+    const reader = fixedBufferStream(&DataExamples.valid_pentagon).reader();
 
-    const center = Point.Instance{ .x = 0, .y = 0 };
+    const center = Point.zero;
     const polygon = try parse(reader, center, PolygonScale.default * 2, .translucent);
 
     testing.expectEqual(-10, polygon.bounds.minX);
@@ -164,3 +166,18 @@ test "parse correctly parses and scales pentagon" {
     testing.expectEqual(.{ .x = 0,      .y = -10 }, polygon.vertices[5]);
 }
 // zig fmt: on
+
+test "parse returns error.InvalidVertexCount when count is too low" {
+    const reader = fixedBufferStream(&DataExamples.vertex_count_too_low).reader();
+    testing.expectError(error.InvalidVertexCount, parse(reader, Point.zero, PolygonScale.default, .translucent));
+}
+
+test "parse returns error.InvalidVertexCount when count is too high" {
+    const reader = fixedBufferStream(&DataExamples.vertex_count_too_high).reader();
+    testing.expectError(error.InvalidVertexCount, parse(reader, Point.zero, PolygonScale.default, .translucent));
+}
+
+test "parse returns error.InvalidVertexCount when count is uneven" {
+    const reader = fixedBufferStream(&DataExamples.vertex_count_uneven).reader();
+    testing.expectError(error.InvalidVertexCount, parse(reader, Point.zero, PolygonScale.default, .translucent));
+}
