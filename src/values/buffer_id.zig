@@ -24,7 +24,7 @@ pub const Error = error{
 
 pub fn parse(raw: Raw) Error!Enum {
     return switch (raw) {
-        0, 1, 2, 3 => .{ .specific = @truncate(Specific, raw) },
+        0...3 => .{ .specific = @truncate(Specific, raw) },
         front_buffer => .front_buffer,
         back_buffer => .back_buffer,
         else => error.InvalidBufferID,
