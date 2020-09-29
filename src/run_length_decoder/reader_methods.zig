@@ -6,13 +6,12 @@ const introspection = @import("../utils/introspection.zig");
 
 /// Returns a struct of methods that can be imported onto the specified type.
 /// Intended usage:
-/// ```
-/// const ReaderMethods = @import("reader_methods.zig");
-/// const TypeToExtend = struct {
-///     ...
-///     usingnamespace ReaderMethods.extend(@This());`
-/// }
-/// ```
+///   const ReaderMethods = @import("reader_methods.zig");
+///
+///   const TypeToExtend = struct {
+///       usingnamespace ReaderMethods.extend(@This());
+///   }
+///
 pub fn extend(comptime Self: type) type {
     const ReadError = introspection.errorType(Self.readBit);
 
