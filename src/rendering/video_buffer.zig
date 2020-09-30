@@ -15,7 +15,7 @@ pub fn new(comptime Storage: anytype, comptime width: usize, comptime height: us
     return .{};
 }
 
-pub fn Instance(comptime StorageFactory: StorageFactoryFn, comptime width: usize, comptime height: usize) type {
+pub fn Instance(comptime Storage: anytype, comptime width: usize, comptime height: usize) type {
     return struct {
         /// The backing storage for this video buffer, responsible for low-level pixel operations.
         storage: Storage(width, height) = .{},

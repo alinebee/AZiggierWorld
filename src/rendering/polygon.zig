@@ -44,8 +44,8 @@ pub fn parse(reader: anytype, center: Point.Instance, scale: PolygonScale.Raw, d
     while (index < self.count) : (index += 1) {
         self.vertices[index] = .{
             // TODO: add tests for wrap-on-overflow
-            .x = PolygonScale.apply(Point.Coordinate, try reader.readByte(), scale) +% self.bounds.minX,
-            .y = PolygonScale.apply(Point.Coordinate, try reader.readByte(), scale) +% self.bounds.minY,
+            .x = PolygonScale.apply(Point.Coordinate, try reader.readByte(), scale) +% self.bounds.min_x,
+            .y = PolygonScale.apply(Point.Coordinate, try reader.readByte(), scale) +% self.bounds.min_y,
         };
     }
 
@@ -205,10 +205,10 @@ test "parse correctly parses 4-vertex dot polygon" {
     const center = Point.Instance{ .x = 320, .y = 200 };
     const polygon = try parse(reader, center, PolygonScale.default, .translucent);
 
-    testing.expectEqual(320, polygon.bounds.minX);
-    testing.expectEqual(200, polygon.bounds.minY);
-    testing.expectEqual(320, polygon.bounds.maxX);
-    testing.expectEqual(201, polygon.bounds.maxY);
+    testing.expectEqual(320, polygon.bounds.min_x);
+    testing.expectEqual(200, polygon.bounds.min_y);
+    testing.expectEqual(320, polygon.bounds.max_x);
+    testing.expectEqual(201, polygon.bounds.max_y);
 
     testing.expectEqual(4, polygon.count);
     testing.expectEqual(true, polygon.isDot());
@@ -226,10 +226,10 @@ test "parse correctly parses and scales pentagon" {
     const center = Point.zero;
     const polygon = try parse(reader, center, PolygonScale.default * 2, .translucent);
 
-    testing.expectEqual(-10, polygon.bounds.minX);
-    testing.expectEqual(-10, polygon.bounds.minY);
-    testing.expectEqual(10, polygon.bounds.maxX);
-    testing.expectEqual(10, polygon.bounds.maxY);
+    testing.expectEqual(-10, polygon.bounds.min_x);
+    testing.expectEqual(-10, polygon.bounds.min_y);
+    testing.expectEqual(10, polygon.bounds.max_x);
+    testing.expectEqual(10, polygon.bounds.max_y);
 
     testing.expectEqual(6, polygon.count);
     testing.expectEqual(false, polygon.isDot());

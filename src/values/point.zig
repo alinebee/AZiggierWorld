@@ -9,4 +9,4 @@ pub const Instance = struct {
     y: Coordinate,
 };
 
-pub const zero = Instance { .x = 0, .y = 0 };
+pub const zero = Instance{ .x = 0, .y = 0 };
