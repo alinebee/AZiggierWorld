@@ -32,7 +32,7 @@ pub fn Instance(comptime Storage: anytype, comptime width: usize, comptime heigh
 
         /// Return the color at the specified point in this buffer.
         /// Returns error.PointOutOfBounds if the point does not lie within the buffer's bounds.
-        pub fn get(self: *Self, point: Point.Instance) Error!ColorID.Trusted {
+        pub fn get(self: Self, point: Point.Instance) Error!ColorID.Trusted {
             if (Self.bounds.contains(point) == false) {
                 return error.PointOutOfBounds;
             }
@@ -50,9 +50,14 @@ pub fn Instance(comptime Storage: anytype, comptime width: usize, comptime heigh
             self.storage.set(point, color);
         }
 
+        /// Fill every pixel in the buffer with the specified color.
+        pub fn fill(self: *Self, color: ColorID.Trusted) void {
+            self.storage.fill(color);
+        }
+
         /// Draws a 1px dot at the specified point in this buffer, deciding its color according to the draw mode.
         /// Returns error.PointOutOfBounds if the point does not lie within the buffer's bounds.
-        pub fn drawDot(self: *Self, point: Point.Instance, draw_mode: PolygonDrawMode.Enum, mask_buffer: anytype) Error!void {
+        pub fn drawDot(self: *Self, point: Point.Instance, draw_mode: PolygonDrawMode.Enum, mask_buffer: *const Self) Error!void {
             if (Self.bounds.contains(point) == false) {
                 return error.PointOutOfBounds;
             }
@@ -68,12 +73,7 @@ pub fn Instance(comptime Storage: anytype, comptime width: usize, comptime heigh
         /// - `mask`: replace the color at that point with the color at the same point in another buffer,
         ///    to achieve mask effects.
         /// This does not do bounds-checking: accessing an out-of-bounds point is undefined behaviour.
-        fn resolveColor(self: *Self, point: Point.Instance, draw_mode: PolygonDrawMode.Enum, mask_buffer: anytype) ColorID.Trusted {
-            // Enforce that the mask buffer must have the same dimensions as this one,
-            // since we access values at the same coordinate in both buffers.
-            comptime const MaskType = @TypeOf(mask_buffer.*);
-            comptime assert(eql(Self.bounds, MaskType.bounds));
-
+        fn resolveColor(self: *Self, point: Point.Instance, draw_mode: PolygonDrawMode.Enum, mask_buffer: *const Self) ColorID.Trusted {
             return switch (draw_mode) {
                 .color_id => |color_id| color_id,
                 .translucent => ColorID.ramp(self.storage.get(point)),
@@ -89,11 +89,10 @@ pub const Error = error{PointOutOfBounds};
 // -- Testing --
 
 const testing = @import("../utils/testing.zig");
-const MockStorage = @import("storage/mock_storage.zig");
+const AlignedStorage = @import("storage/aligned_storage.zig");
 
 test "Instance calculates expected bounding box" {
-    const Storage = MockStorage.new(struct {});
-    const Buffer = @TypeOf(new(Storage.new, 320, 200));
+    const Buffer = @TypeOf(new(AlignedStorage.Instance, 320, 200));
 
     testing.expectEqual(0, Buffer.bounds.min_x);
     testing.expectEqual(0, Buffer.bounds.min_y);
@@ -101,156 +100,134 @@ test "Instance calculates expected bounding box" {
     testing.expectEqual(199, Buffer.bounds.max_y);
 }
 
-test "new passes width and height to storage type" {
-    const Storage = MockStorage.new(struct {});
+test "get retrieves pixel at specified point" {
+    var buffer = new(AlignedStorage.Instance, 4, 4);
+    buffer.storage.data = .{
+        .{ 0, 0, 0, 0 },
+        .{ 0, 0, 5, 0 },
+        .{ 0, 0, 0, 0 },
+        .{ 0, 0, 0, 0 },
+    };
 
-    var buffer = new(Storage.new, 320, 200);
-
-    testing.expectEqual(320, @TypeOf(buffer.storage).width);
-    testing.expectEqual(200, @TypeOf(buffer.storage).height);
-}
-
-test "get defers to storage implementation" {
-    const Storage = MockStorage.new(struct {
-        pub fn get(point: Point.Instance) ColorID.Trusted {
-            testing.expectEqual(.{ .x = 0, .y = 0 }, point);
-            return 15;
-        }
-    });
-
-    var buffer = new(Storage.new, 320, 200);
-
-    testing.expectEqual(15, buffer.get(.{ .x = 0, .y = 0 }));
-    testing.expectEqual(1, buffer.storage.call_counts.get);
+    testing.expectEqual(5, buffer.get(.{ .x = 2, .y = 1 }));
 }
 
 test "get returns error.pointOutOfBounds when point is not within buffer region" {
-    const Storage = MockStorage.new(struct {
-        pub fn get(point: Point.Instance) ColorID.Trusted {
-            unreachable;
-        }
-    });
+    const buffer = new(AlignedStorage.Instance, 4, 4);
 
-    var buffer = new(Storage.new, 320, 200);
-
-    testing.expectError(error.PointOutOfBounds, buffer.get(.{ .x = 0, .y = 200 }));
+    testing.expectError(error.PointOutOfBounds, buffer.get(.{ .x = 0, .y = 4 }));
     testing.expectError(error.PointOutOfBounds, buffer.get(.{ .x = -1, .y = 0 }));
 }
 
-test "set defers to storage implementation" {
-    const Storage = MockStorage.new(struct {
-        pub fn set(point: Point.Instance, color_id: ColorID.Trusted) void {
-            testing.expectEqual(.{ .x = 0, .y = 0 }, point);
-            testing.expectEqual(7, color_id);
-        }
-    });
+test "set sets pixel at specified point" {
+    var buffer = new(AlignedStorage.Instance, 4, 4);
 
-    var buffer = new(Storage.new, 320, 200);
+    const expected_data = @TypeOf(buffer.storage.data){
+        .{ 0, 0, 0, 0 },
+        .{ 0, 0, 0, 0 },
+        .{ 0, 0, 0, 0 },
+        .{ 0, 7, 0, 0 },
+    };
 
-    try buffer.set(.{ .x = 0, .y = 0 }, 7);
-    testing.expectEqual(1, buffer.storage.call_counts.set);
+    try buffer.set(.{ .x = 1, .y = 3 }, 7);
+    testing.expectEqual(expected_data, buffer.storage.data);
 }
 
 test "set returns error.pointOutOfBounds when point is not within buffer region" {
-    const Storage = MockStorage.new(struct {
-        pub fn set(point: Point.Instance, color_id: ColorID.Trusted) void {
-            unreachable;
-        }
-    });
+    var buffer = new(AlignedStorage.Instance, 4, 4);
 
-    var buffer = new(Storage.new, 320, 200);
-
-    testing.expectError(error.PointOutOfBounds, buffer.set(.{ .x = 0, .y = 200 }, 0));
+    testing.expectError(error.PointOutOfBounds, buffer.set(.{ .x = 0, .y = 4 }, 0));
     testing.expectError(error.PointOutOfBounds, buffer.set(.{ .x = -1, .y = 0 }, 0));
 }
 
-test "drawDot draws fixed color at point" {
-    const fixed_color = 2;
+test "fill fills buffer with specified color" {
+    var buffer = new(AlignedStorage.Instance, 4, 4);
+    buffer.storage.data = .{
+        .{ 00, 01, 02, 03 },
+        .{ 04, 05, 06, 07 },
+        .{ 08, 09, 10, 11 },
+        .{ 12, 13, 14, 15 },
+    };
 
-    const Storage = MockStorage.new(struct {
-        pub fn get(point: Point.Instance) ColorID.Trusted {
-            unreachable;
-        }
+    buffer.fill(15);
 
-        pub fn set(point: Point.Instance, color_id: ColorID.Trusted) void {
-            testing.expectEqual(.{ .x = 0, .y = 0 }, point);
-            testing.expectEqual(fixed_color, color_id);
-        }
-    });
+    const expected_data = @TypeOf(buffer.storage.data){
+        .{ 15, 15, 15, 15 },
+        .{ 15, 15, 15, 15 },
+        .{ 15, 15, 15, 15 },
+        .{ 15, 15, 15, 15 },
+    };
 
-    const MaskStorage = MockStorage.new(struct {
-        pub fn get(point: Point.Instance) ColorID.Trusted {
-            unreachable;
-        }
-    });
-
-    var buffer = new(Storage.new, 320, 200);
-    var mask_buffer = new(MaskStorage.new, 320, 200);
-
-    try buffer.drawDot(.{ .x = 0, .y = 0 }, .{ .color_id = fixed_color }, &mask_buffer);
-
-    testing.expectEqual(1, buffer.storage.call_counts.set);
-    testing.expectEqual(0, buffer.storage.call_counts.get);
-    testing.expectEqual(0, mask_buffer.storage.call_counts.get);
+    testing.expectEqual(expected_data, buffer.storage.data);
 }
 
-test "drawDot ramps translucent color at point" {
-    const source_color: ColorID.Trusted = 0b0011;
-    const ramped_color: ColorID.Trusted = 0b1011;
+test "drawDot draws fixed color at point and ignores mask buffer" {
+    var buffer = new(AlignedStorage.Instance, 4, 4);
+    var mask_buffer = new(AlignedStorage.Instance, 4, 4);
+    mask_buffer.fill(15);
 
-    const Storage = MockStorage.new(struct {
-        pub fn get(point: Point.Instance) ColorID.Trusted {
-            testing.expectEqual(.{ .x = 0, .y = 0 }, point);
-            return source_color;
-        }
+    const expected_data = @TypeOf(buffer.storage.data){
+        .{ 0, 0, 0, 0 },
+        .{ 0, 0, 0, 0 },
+        .{ 0, 0, 0, 9 },
+        .{ 0, 0, 0, 0 },
+    };
 
-        pub fn set(point: Point.Instance, color_id: ColorID.Trusted) void {
-            testing.expectEqual(.{ .x = 0, .y = 0 }, point);
-            testing.expectEqual(ramped_color, color_id);
-        }
-    });
+    try buffer.drawDot(.{ .x = 3, .y = 2 }, .{ .color_id = 9 }, &mask_buffer);
 
-    const MaskStorage = MockStorage.new(struct {
-        pub fn get(point: Point.Instance) ColorID.Trusted {
-            unreachable;
-        }
-    });
+    testing.expectEqual(expected_data, buffer.storage.data);
+}
 
-    var buffer = new(Storage.new, 320, 200);
-    var mask_buffer = new(MaskStorage.new, 320, 200);
+test "drawDot ramps translucent color at point and ignores mask buffer" {
+    var buffer = new(AlignedStorage.Instance, 4, 4);
+    var mask_buffer = new(AlignedStorage.Instance, 4, 4);
+    mask_buffer.fill(15);
 
-    try buffer.drawDot(.{ .x = 0, .y = 0 }, .translucent, &mask_buffer);
+    buffer.storage.data = .{
+        .{ 0, 0, 0, 0 },
+        .{ 0, 0, 0, 0b0011 },
+        .{ 0, 0, 0, 0 },
+        .{ 0, 0, 0, 0 },
+    };
 
-    testing.expectEqual(1, buffer.storage.call_counts.set);
-    testing.expectEqual(1, buffer.storage.call_counts.get);
+    const expected_data = @TypeOf(buffer.storage.data){
+        .{ 0, 0, 0, 0 },
+        .{ 0, 0, 0, 0b1011 },
+        .{ 0, 0, 0, 0 },
+        .{ 0, 0, 0, 0 },
+    };
+
+    try buffer.drawDot(.{ .x = 3, .y = 1 }, .translucent, &mask_buffer);
+
+    testing.expectEqual(expected_data, buffer.storage.data);
 }
 
 test "drawDot renders color from mask at point" {
-    const source_color: ColorID.Trusted = 8;
+    var buffer = new(AlignedStorage.Instance, 4, 4);
+    var mask_buffer = new(AlignedStorage.Instance, 4, 4);
 
-    const Storage = MockStorage.new(struct {
-        pub fn get(point: Point.Instance) ColorID.Trusted {
-            unreachable;
-        }
+    buffer.storage.data = .{
+        .{ 00, 00, 00, 00 },
+        .{ 00, 00, 00, 00 },
+        .{ 00, 00, 00, 00 },
+        .{ 00, 00, 00, 00 },
+    };
 
-        pub fn set(point: Point.Instance, color_id: ColorID.Trusted) void {
-            testing.expectEqual(.{ .x = 0, .y = 0 }, point);
-            testing.expectEqual(source_color, color_id);
-        }
-    });
+    mask_buffer.storage.data = .{
+        .{ 00, 01, 02, 03 },
+        .{ 04, 05, 06, 07 },
+        .{ 08, 09, 10, 11 },
+        .{ 12, 13, 14, 15 },
+    };
 
-    const MaskStorage = MockStorage.new(struct {
-        pub fn get(point: Point.Instance) ColorID.Trusted {
-            testing.expectEqual(.{ .x = 0, .y = 0 }, point);
-            return source_color;
-        }
-    });
+    const expected_data = @TypeOf(buffer.storage.data){
+        .{ 00, 00, 00, 00 },
+        .{ 00, 00, 06, 00 },
+        .{ 00, 00, 00, 00 },
+        .{ 00, 00, 00, 00 },
+    };
 
-    var buffer = new(Storage.new, 320, 200);
-    var mask_buffer = new(MaskStorage.new, 320, 200);
+    try buffer.drawDot(.{ .x = 2, .y = 1 }, .mask, &mask_buffer);
 
-    try buffer.drawDot(.{ .x = 0, .y = 0 }, .mask, &mask_buffer);
-
-    testing.expectEqual(1, buffer.storage.call_counts.set);
-    testing.expectEqual(1, mask_buffer.storage.call_counts.get);
+    testing.expectEqual(expected_data, buffer.storage.data);
 }
