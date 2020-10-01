@@ -1,5 +1,7 @@
-/// An 8x8 pixel bitmap representing a single character in the font,
-/// where each "on"-bit represents a pixel that will be drawn in the current color.
+/// An 8x8 pixel bitmap representing a single character in the font.
+/// Glyphs are stored as arrays of 8 bytes, where each byte is a row along the Y axis
+/// and each bit is a column along the X axis.
+/// An "on" bit indicates to draw a pixel at that X, Y position.
 pub const Glyph = [8]u8;
 
 /// Given a UTF-8 character, returns the glyph bitmap associated with that character.

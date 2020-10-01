@@ -6,6 +6,7 @@ const ColorID = @import("../values/color_id.zig");
 const Point = @import("../values/point.zig");
 const BoundingBox = @import("../values/bounding_box.zig");
 const PolygonDrawMode = @import("../values/polygon_draw_mode.zig");
+const Font = @import("../assets/font.zig");
 
 const assert = @import("std").debug.assert;
 const eql = @import("std").meta.eql;
@@ -64,6 +65,30 @@ pub fn Instance(comptime Storage: anytype, comptime width: usize, comptime heigh
 
             const color = self.resolveColor(point, draw_mode, mask_buffer);
             self.storage.set(point, color);
+        }
+
+        /// Draws the specified 8x8 glyph, positioning its top left corner at the specified point.
+        /// Any pixels of the glyph that lie outside the buffer will not be drawn.
+        pub fn drawGlyph(self: *Self, glyph: Font.Glyph, origin: Point.Instance, color: ColorID.Trusted) void {
+            var cursor = origin;
+            for (glyph) |row| {
+                var remaining_pixels = row;
+                // While there are still any bits left to draw in this row of the glyph,
+                // pop the topmost bit of the row: if it's 1, draw a pixel at the next X cursor.
+                // Stop drawing once all bits have been consumed or all remaining bits are 0.
+                while (remaining_pixels != 0) {
+                    if (remaining_pixels & 0b1000_0000 != 0) {
+                        // Ignore out-of-bounds errors; the glyph may be drawn wholly or partially out of bounds.
+                        self.set(cursor, color) catch {};
+                    }
+                    remaining_pixels <<= 1;
+                    cursor.x += 1;
+                }
+
+                // Once we've consumed all bits in the row, move down to the next one.
+                cursor.x = origin.x;
+                cursor.y += 1;
+            }
         }
 
         /// Determines the color to draw for the specified point based on a draw mode:
@@ -228,6 +253,70 @@ test "drawDot renders color from mask at point" {
     };
 
     try buffer.drawDot(.{ .x = 2, .y = 1 }, .mask, &mask_buffer);
+
+    testing.expectEqual(expected_data, buffer.storage.data);
+}
+
+test "drawGlyph renders pixels of glyph at specified position in buffer" {
+    var buffer = new(AlignedStorage.Instance, 10, 10);
+
+    const glyph = try Font.glyph('A');
+    buffer.drawGlyph(glyph, .{ .x = 1, .y = 1 }, 15);
+
+    // 'A' glyph:
+    // 0b01111000,
+    // 0b10000100,
+    // 0b10000100,
+    // 0b11111100,
+    // 0b10000100,
+    // 0b10000100,
+    // 0b10000100,
+    // 0b00000000,
+
+    const expected_data = @TypeOf(buffer.storage.data){
+        .{ 00, 00, 00, 00, 00, 00, 00, 00, 00, 00 },
+        .{ 00, 00, 15, 15, 15, 15, 00, 00, 00, 00 },
+        .{ 00, 15, 00, 00, 00, 00, 15, 00, 00, 00 },
+        .{ 00, 15, 00, 00, 00, 00, 15, 00, 00, 00 },
+        .{ 00, 15, 15, 15, 15, 15, 15, 00, 00, 00 },
+        .{ 00, 15, 00, 00, 00, 00, 15, 00, 00, 00 },
+        .{ 00, 15, 00, 00, 00, 00, 15, 00, 00, 00 },
+        .{ 00, 15, 00, 00, 00, 00, 15, 00, 00, 00 },
+        .{ 00, 00, 00, 00, 00, 00, 00, 00, 00, 00 },
+        .{ 00, 00, 00, 00, 00, 00, 00, 00, 00, 00 },
+    };
+
+    testing.expectEqual(expected_data, buffer.storage.data);
+}
+
+test "drawGlyph clips glyphs that are drawn partially outside the buffer" {
+    var buffer = new(AlignedStorage.Instance, 10, 10);
+
+    const glyph = try Font.glyph('K');
+    buffer.drawGlyph(glyph, .{ .x = -1, .y = -2 }, 11);
+
+    // 'K' glyph:
+    // 0b10001100,
+    // 0b10010000,
+    // 0b10100000,
+    // 0b11100000,
+    // 0b10010000,
+    // 0b10001000,
+    // 0b10000100,
+    // 0b00000000,
+
+    const expected_data = @TypeOf(buffer.storage.data){
+        .{ 00, 11, 00, 00, 00, 00, 00, 00, 00, 00 },
+        .{ 11, 11, 00, 00, 00, 00, 00, 00, 00, 00 },
+        .{ 00, 00, 11, 00, 00, 00, 00, 00, 00, 00 },
+        .{ 00, 00, 00, 11, 00, 00, 00, 00, 00, 00 },
+        .{ 00, 00, 00, 00, 11, 00, 00, 00, 00, 00 },
+        .{ 00, 00, 00, 00, 00, 00, 00, 00, 00, 00 },
+        .{ 00, 00, 00, 00, 00, 00, 00, 00, 00, 00 },
+        .{ 00, 00, 00, 00, 00, 00, 00, 00, 00, 00 },
+        .{ 00, 00, 00, 00, 00, 00, 00, 00, 00, 00 },
+        .{ 00, 00, 00, 00, 00, 00, 00, 00, 00, 00 },
+    };
 
     testing.expectEqual(expected_data, buffer.storage.data);
 }
