@@ -34,8 +34,6 @@ pub const Instance = struct {
 pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instance {
     const string_id = try program.read(StringID.Raw);
 
-    // X position only goes from 0...255:
-    // apparently the game never draws strings far enough right to need a wider value?
     const raw_x = try program.read(u8);
     const raw_y = try program.read(u8);
 
@@ -45,11 +43,17 @@ pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instance 
         .string_id = string_id,
         .color_id = try ColorID.parse(raw_color_id),
         .point = .{
-            .x = @as(Point.Coordinate, raw_x),
+            // The raw X coordinate of a DrawString instruction goes from 0...39,
+            // dividing the 320x200 screen into 8-pixel-wide columns.
+            // Multiply it back out to get the location in pixels.
+            .x = @as(Point.Coordinate, raw_x) * column_width,
             .y = @as(Point.Coordinate, raw_y),
         },
     };
 }
+
+/// The width in pixels of each column of glyphs.
+const column_width = 8;
 
 // -- Bytecode examples --
 
@@ -57,9 +61,9 @@ pub const BytecodeExamples = struct {
     const raw_opcode = @enumToInt(Opcode.Enum.DrawString);
 
     /// Example bytecode that should produce a valid instruction.
-    pub const valid = [6]u8{ raw_opcode, 0xDE, 0xAD, 160, 100, 15 };
+    pub const valid = [6]u8{ raw_opcode, 0xDE, 0xAD, 20, 100, 15 };
 
-    const invalid_color_id = [6]u8{ raw_opcode, 0xDE, 0xAD, 160, 100, 255 };
+    const invalid_color_id = [6]u8{ raw_opcode, 0xDE, 0xAD, 20, 100, 255 };
 };
 
 // -- Tests --
