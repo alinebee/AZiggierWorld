@@ -17,29 +17,25 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
         /// Return the color at the specified point in the buffer.
         /// This is not bounds-checked: specifying an point outside the buffer results in undefined behaviour.
         pub fn get(self: Self, point: Point.Instance) ColorID.Trusted {
-            const offset = self.address(point);
-            const byte = self.data[offset];
+            const index = self.indexOf(point);
+            const byte = self.data[index.offset];
 
-            if (@rem(point.x, 2) == 0) {
-                return @truncate(ColorID.Trusted, byte >> 4);
-            } else {
-                return @truncate(ColorID.Trusted, byte);
-            }
+            return @truncate(ColorID.Trusted, switch (index.hand) {
+                .left => byte >> 4,
+                .right => byte,
+            });
         }
 
         /// Set the color at the specified point in the buffer.
         /// This is not bounds-checked: specifying an point outside the buffer results in undefined behaviour.
         pub fn set(self: *Self, point: Point.Instance, color: ColorID.Trusted) void {
-            const offset = self.address(point);
-            const byte = &self.data[offset];
+            const index = self.indexOf(point);
+            const byte = &self.data[index.offset];
 
-            if (@rem(point.x, 2) == 0) {
-                // Replace the left pixel while preserving the right
-                byte.* = (byte.* & 0b0000_1111) | (@as(u8, color) << 4);
-            } else {
-                // Replace the right pixel while preserving the left
-                byte.* = (byte.* & 0b1111_0000) | color;
-            }
+            byte.* = switch (index.hand) {
+                .left => (byte.* & 0b0000_1111) | (@as(u8, color) << 4),
+                .right => (byte.* & 0b1111_0000) | color,
+            };
         }
 
         /// Fill the entire buffer with the specified color.
@@ -48,21 +44,31 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
             mem.set(u8, &self.data, color_byte);
         }
 
-        /// Given an X,Y point, returns the address within `data` containing that point's pixel.
-        /// This is not bounds-checked: specifying an point outside the buffer results in undefined behaviour.
-        fn address(self: Self, point: Point.Instance) usize {
+        /// Given an X,Y point, returns the index of the byte within `data` containing that point's pixel,
+        /// and whether the point is the left or right pixel in the byte.
+        /// This is not bounds-checked: specifying a point outside the buffer results in undefined behaviour.
+        fn indexOf(self: Self, point: Point.Instance) Index {
             comptime const signed_width = @intCast(isize, width);
-
             const signed_address = @divFloor(point.x + (point.y * signed_width), 2);
 
-            if (signed_address >= self.data.len) {
-                unreachable;
-            }
-
-            return @intCast(usize, signed_address);
+            return .{
+                .offset = @intCast(usize, signed_address),
+                .hand = if (@rem(point.x, 2) == 0) .left else .right,
+            };
         }
     };
 }
+
+/// The storage index for a pixel at a given point.
+const Index = struct {
+    /// The offset of the byte containing the pixel.
+    offset: usize,
+    /// Whether this pixel is the "left" (top 4 bits) or "right" (bottom 4 bits) of the byte.
+    hand: enum(u1) {
+        left,
+        right,
+    },
+};
 
 // -- Tests --
 
@@ -78,18 +84,18 @@ test "Instance produces storage of the expected size filled with zeroes." {
     testing.expectEqual(expected_data, storage.data);
 }
 
-test "address returns expected address" {
+test "indexOf returns expected offset and handedness" {
     const storage = Instance(320, 200){};
 
-    testing.expectEqual(0, storage.address(.{ .x = 0, .y = 0 }));
-    testing.expectEqual(0, storage.address(.{ .x = 1, .y = 0 }));
-    testing.expectEqual(1, storage.address(.{ .x = 2, .y = 0 }));
-    testing.expectEqual(159, storage.address(.{ .x = 319, .y = 0 }));
-    testing.expectEqual(160, storage.address(.{ .x = 0, .y = 1 }));
+    testing.expectEqual(.{ .offset = 0, .hand = .left }, storage.indexOf(.{ .x = 0, .y = 0 }));
+    testing.expectEqual(.{ .offset = 0, .hand = .right }, storage.indexOf(.{ .x = 1, .y = 0 }));
+    testing.expectEqual(.{ .offset = 1, .hand = .left }, storage.indexOf(.{ .x = 2, .y = 0 }));
+    testing.expectEqual(.{ .offset = 159, .hand = .right }, storage.indexOf(.{ .x = 319, .y = 0 }));
+    testing.expectEqual(.{ .offset = 160, .hand = .left }, storage.indexOf(.{ .x = 0, .y = 1 }));
 
-    testing.expectEqual(16_080, storage.address(.{ .x = 160, .y = 100 }));
-    testing.expectEqual(31_840, storage.address(.{ .x = 0, .y = 199 }));
-    testing.expectEqual(31_999, storage.address(.{ .x = 319, .y = 199 }));
+    testing.expectEqual(.{ .offset = 16_080, .hand = .left }, storage.indexOf(.{ .x = 160, .y = 100 }));
+    testing.expectEqual(.{ .offset = 31_840, .hand = .left }, storage.indexOf(.{ .x = 0, .y = 199 }));
+    testing.expectEqual(.{ .offset = 31_999, .hand = .right }, storage.indexOf(.{ .x = 319, .y = 199 }));
 
     // Uncomment to trigger runtime errors in test builds
     // _ = storage.address(.{ .x = 0, .y = 200 });
