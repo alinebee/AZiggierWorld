@@ -24,6 +24,15 @@ pub const Instance = struct {
             self.max_y >= other.min_y;
     }
 
+    /// Whether this bounding box completely encloses another.
+    pub fn encloses(self: Instance, other: Instance) bool {
+        return
+            self.min_x <= other.min_x and
+            self.min_y <= other.min_y and
+            self.max_x >= other.max_x and
+            self.max_y >= other.max_y;
+    }
+
     /// Whether this bounding box contains the specified point.
     pub fn contains(self: Instance, point: Point.Instance) bool {
         return
@@ -105,6 +114,24 @@ test "intersects returns true for overlapping rectangles" {
     expectIntersects(true, reference, touching_bottom_edge);
     expectIntersects(true, reference, completely_enclosed);
     expectIntersects(true, reference, completely_encloses);
+}
+
+test "encloses returns true for completely enclosed rectangles and false for others" {
+    const reference = Instance{ .min_x = 0, .min_y = 0, .max_x = 319, .max_y = 199 };
+
+    const completely_enclosed = Instance{ .min_x = 160, .min_y = 100, .max_x = 200, .max_y = 120 };
+    const equal = reference;
+
+    const overlapping = Instance{ .min_x = -4, .min_y = 4, .max_x = 240, .max_y = 10 };
+    const completely_encloses = Instance{ .min_x = -200, .min_y = -200, .max_x = 400, .max_y = 400 };
+    const completely_disjoint = Instance{ .min_x = -5000, .min_y = -5000, .max_x = -4000, .max_y = -4000 };
+
+    testing.expectEqual(true, reference.encloses(completely_enclosed));
+    testing.expectEqual(true, reference.encloses(equal));
+
+    testing.expectEqual(false, reference.encloses(overlapping));
+    testing.expectEqual(false, reference.encloses(completely_disjoint));
+    testing.expectEqual(false, reference.encloses(completely_encloses));
 }
 
 test "intersects returns false for disjoint rectangles" {

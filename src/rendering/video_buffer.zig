@@ -68,8 +68,19 @@ pub fn Instance(comptime Storage: anytype, comptime width: usize, comptime heigh
         }
 
         /// Draws the specified 8x8 glyph, positioning its top left corner at the specified point.
-        /// Any pixels of the glyph that lie outside the buffer will not be drawn.
-        pub fn drawGlyph(self: *Self, glyph: Font.Glyph, origin: Point.Instance, color: ColorID.Trusted) void {
+        /// Returns error.PointOutOfBounds if the glyph's bounds do not lie fully inside the buffer.
+        pub fn drawGlyph(self: *Self, glyph: Font.Glyph, origin: Point.Instance, color: ColorID.Trusted) Error!void {
+            const glyph_bounds = BoundingBox.Instance{
+                .min_x = origin.x,
+                .min_y = origin.y,
+                .max_x = origin.x + 8,
+                .max_y = origin.y + 8
+            };
+
+            if (Self.bounds.encloses(glyph_bounds) == false) {
+                return error.PointOutOfBounds;
+            }
+
             var cursor = origin;
             for (glyph) |row| {
                 var remaining_pixels = row;
@@ -78,8 +89,7 @@ pub fn Instance(comptime Storage: anytype, comptime width: usize, comptime heigh
                 // Stop drawing once all bits have been consumed or all remaining bits are 0.
                 while (remaining_pixels != 0) {
                     if (remaining_pixels & 0b1000_0000 != 0) {
-                        // Ignore out-of-bounds errors; the glyph may be drawn wholly or partially out of bounds.
-                        self.set(cursor, color) catch {};
+                        self.storage.set(cursor, color);
                     }
                     remaining_pixels <<= 1;
                     cursor.x += 1;
@@ -261,7 +271,7 @@ test "drawGlyph renders pixels of glyph at specified position in buffer" {
     var buffer = new(AlignedStorage.Instance, 10, 10);
 
     const glyph = try Font.glyph('A');
-    buffer.drawGlyph(glyph, .{ .x = 1, .y = 1 }, 15);
+    try buffer.drawGlyph(glyph, .{ .x = 1, .y = 1 }, 15);
 
     // 'A' glyph:
     // 0b01111000,
@@ -289,34 +299,11 @@ test "drawGlyph renders pixels of glyph at specified position in buffer" {
     testing.expectEqual(expected_data, buffer.storage.data);
 }
 
-test "drawGlyph clips glyphs that are drawn partially outside the buffer" {
+test "drawGlyph returns error.OutOfBounds for glyphs that are not fully inside the buffer" {
     var buffer = new(AlignedStorage.Instance, 10, 10);
 
     const glyph = try Font.glyph('K');
-    buffer.drawGlyph(glyph, .{ .x = -1, .y = -2 }, 11);
 
-    // 'K' glyph:
-    // 0b10001100,
-    // 0b10010000,
-    // 0b10100000,
-    // 0b11100000,
-    // 0b10010000,
-    // 0b10001000,
-    // 0b10000100,
-    // 0b00000000,
-
-    const expected_data = @TypeOf(buffer.storage.data){
-        .{ 00, 11, 00, 00, 00, 00, 00, 00, 00, 00 },
-        .{ 11, 11, 00, 00, 00, 00, 00, 00, 00, 00 },
-        .{ 00, 00, 11, 00, 00, 00, 00, 00, 00, 00 },
-        .{ 00, 00, 00, 11, 00, 00, 00, 00, 00, 00 },
-        .{ 00, 00, 00, 00, 11, 00, 00, 00, 00, 00 },
-        .{ 00, 00, 00, 00, 00, 00, 00, 00, 00, 00 },
-        .{ 00, 00, 00, 00, 00, 00, 00, 00, 00, 00 },
-        .{ 00, 00, 00, 00, 00, 00, 00, 00, 00, 00 },
-        .{ 00, 00, 00, 00, 00, 00, 00, 00, 00, 00 },
-        .{ 00, 00, 00, 00, 00, 00, 00, 00, 00, 00 },
-    };
-
-    testing.expectEqual(expected_data, buffer.storage.data);
+    testing.expectError(error.PointOutOfBounds, buffer.drawGlyph(glyph, .{ .x = -1, .y = -2 }, 11));
+    testing.expectError(error.PointOutOfBounds, buffer.drawGlyph(glyph, .{ .x = 312, .y = 192 }, 11));
 }
