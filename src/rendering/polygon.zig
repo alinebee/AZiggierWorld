@@ -33,7 +33,7 @@ pub fn parse(reader: anytype, center: Point.Instance, scale: PolygonScale.Raw, d
 
     var self = Instance{
         .draw_mode = draw_mode,
-        .bounds = BoundingBox.new(center, scaled_width, scaled_height),
+        .bounds = BoundingBox.centeredOn(center, scaled_width, scaled_height),
         .count = try reader.readByte(),
         .vertices = undefined,
     };
@@ -44,8 +44,8 @@ pub fn parse(reader: anytype, center: Point.Instance, scale: PolygonScale.Raw, d
     while (index < self.count) : (index += 1) {
         self.vertices[index] = .{
             // TODO: add tests for wrap-on-overflow
-            .x = PolygonScale.apply(Point.Coordinate, try reader.readByte(), scale) +% self.bounds.min_x,
-            .y = PolygonScale.apply(Point.Coordinate, try reader.readByte(), scale) +% self.bounds.min_y,
+            .x = PolygonScale.apply(Point.Coordinate, try reader.readByte(), scale) +% self.bounds.x.min,
+            .y = PolygonScale.apply(Point.Coordinate, try reader.readByte(), scale) +% self.bounds.y.min,
         };
     }
 
@@ -205,10 +205,10 @@ test "parse correctly parses 4-vertex dot polygon" {
     const center = Point.Instance{ .x = 320, .y = 200 };
     const polygon = try parse(reader, center, PolygonScale.default, .translucent);
 
-    testing.expectEqual(320, polygon.bounds.min_x);
-    testing.expectEqual(200, polygon.bounds.min_y);
-    testing.expectEqual(320, polygon.bounds.max_x);
-    testing.expectEqual(201, polygon.bounds.max_y);
+    testing.expectEqual(320, polygon.bounds.x.min);
+    testing.expectEqual(200, polygon.bounds.y.min);
+    testing.expectEqual(320, polygon.bounds.x.max);
+    testing.expectEqual(201, polygon.bounds.y.max);
 
     testing.expectEqual(4, polygon.count);
     testing.expectEqual(true, polygon.isDot());
@@ -226,10 +226,10 @@ test "parse correctly parses and scales pentagon" {
     const center = Point.zero;
     const polygon = try parse(reader, center, PolygonScale.default * 2, .translucent);
 
-    testing.expectEqual(-10, polygon.bounds.min_x);
-    testing.expectEqual(-10, polygon.bounds.min_y);
-    testing.expectEqual(10, polygon.bounds.max_x);
-    testing.expectEqual(10, polygon.bounds.max_y);
+    testing.expectEqual(-10, polygon.bounds.x.min);
+    testing.expectEqual(-10, polygon.bounds.y.min);
+    testing.expectEqual(10, polygon.bounds.x.max);
+    testing.expectEqual(10, polygon.bounds.y.max);
 
     testing.expectEqual(6, polygon.count);
     testing.expectEqual(false, polygon.isDot());

@@ -1,66 +1,62 @@
-const Point = @import("../values/point.zig");
+const Point = @import("point.zig");
+const Range = @import("range.zig");
 
 pub const Dimension = u16;
 
 // zig fmt: off
 /// A rectangular area in screen coordinates.
 pub const Instance = struct {
-    min_x: Point.Coordinate,
-    max_x: Point.Coordinate,
-    min_y: Point.Coordinate,
-    max_y: Point.Coordinate,
+    x: Range.Instance(Point.Coordinate),
+    y: Range.Instance(Point.Coordinate),
 
     /// The top left corner of the bounding box.
     pub fn origin(self: Instance) Point.Instance {
-        return .{ .x = self.min_x, .y = self.min_y };
+        return .{ .x = self.x.min, .y = self.y.min };
     }
 
     /// Whether this bounding box overlaps with another.
     pub fn intersects(self: Instance, other: Instance) bool {
-        return
-            self.min_x <= other.max_x and
-            self.min_y <= other.max_y and
-            self.max_x >= other.min_x and
-            self.max_y >= other.min_y;
+        return self.x.intersects(other.x) and self.y.intersects(other.y);
     }
 
     /// Whether this bounding box completely encloses another.
     pub fn encloses(self: Instance, other: Instance) bool {
-        return
-            self.min_x <= other.min_x and
-            self.min_y <= other.min_y and
-            self.max_x >= other.max_x and
-            self.max_y >= other.max_y;
+        return self.x.encloses(other.x) and self.y.encloses(other.y);
     }
 
     /// Whether this bounding box contains the specified point.
     pub fn contains(self: Instance, point: Point.Instance) bool {
-        return
-            point.x >= self.min_x and
-            point.y >= self.min_y and
-            point.x <= self.max_x and
-            point.y <= self.max_y;
+        return self.x.contains(point.x) and self.y.contains(point.y);
     }
 
+    /// Whether this bounding box represents a unit square in Another World's rendering algorithm.
     pub fn isUnit(self: Instance) bool {
-        // Horizontal coordinates are undercounted in Another World's polygon data.
+        // Horizontal coordinates are undercounted in Another World's polygon data,
+        // so a unit square has a width of 0 and a height of 1.
         return
-            self.max_x - self.min_x == 0 and
-            self.max_y - self.min_y == 1;
+            self.x.max - self.x.min == 0 and
+            self.y.max - self.y.min == 1;
     }
 };
 // zig fmt: on
 
-/// Creates a new bounding box of the specified width and height, centered on the specified location.
-pub fn new(center: Point.Instance, width: Dimension, height: Dimension) Instance {
+pub fn new(min_x: Point.Coordinate, min_y: Point.Coordinate, max_x: Point.Coordinate, max_y: Point.Coordinate) Instance {
+    return .{
+        .x = .{ .min = min_x, .max = max_x },
+        .y = .{ .min = min_y, .max = max_y },
+    };
+}
+
+/// Creates a new bounding box of the specified width and height centered on the specified location.
+pub fn centeredOn(center: Point.Instance, width: Dimension, height: Dimension) Instance {
     var self: Instance = undefined;
 
     // TODO: add tests for wrap-on-overflow
-    self.min_x = center.x -% @intCast(Point.Coordinate, width / 2);
-    self.min_y = center.y -% @intCast(Point.Coordinate, height / 2);
+    self.x.min = center.x -% @intCast(Point.Coordinate, width / 2);
+    self.y.min = center.y -% @intCast(Point.Coordinate, height / 2);
 
-    self.max_x = self.min_x +% @intCast(Point.Coordinate, width);
-    self.max_y = self.min_y +% @intCast(Point.Coordinate, height);
+    self.x.max = self.x.min +% @intCast(Point.Coordinate, width);
+    self.y.max = self.y.min +% @intCast(Point.Coordinate, height);
 
     return self;
 }
@@ -78,33 +74,36 @@ fn expectContains(expectation: bool, bb: Instance, point: Point.Instance) void {
     testing.expectEqual(expectation, bb.contains(point));
 }
 
-test "new creates correct bounding box" {
-    const bb = new(.{ .x = 80, .y = 40 }, 320, 200);
+test "centeredOn creates correct bounding box" {
+    const bb = centeredOn(.{ .x = 80, .y = 40 }, 320, 200);
 
-    testing.expectEqual(-80, bb.min_x);
-    testing.expectEqual(-60, bb.min_y);
-    testing.expectEqual(240, bb.max_x);
-    testing.expectEqual(140, bb.max_y);
+    testing.expectEqual(-80, bb.x.min);
+    testing.expectEqual(-60, bb.y.min);
+    testing.expectEqual(240, bb.x.max);
+    testing.expectEqual(140, bb.y.max);
 }
 
 test "origin returns expected origin" {
-    const bb = Instance{ .min_x = 160, .min_y = 100, .max_x = 320, .max_y = 200 };
+    const bb = Instance{
+        .x = .{ .min = 160, .max = 320 },
+        .y = .{ .min = 100, .max = 200 }
+    };
     testing.expectEqual(.{ .x = 160, .y = 100 }, bb.origin());
 }
 
 test "intersects returns true for overlapping rectangles" {
-    const reference = Instance{ .min_x = 0, .min_y = 0, .max_x = 319, .max_y = 199 };
+    const reference = new(0, 0, 319, 199);
 
-    const touching_top_left = Instance{ .min_x = -4, .min_y = -4, .max_x = 0, .max_y = 0 };
-    const touching_bottom_right = Instance{ .min_x = 319, .min_y = 199, .max_x = 320, .max_y = 200 };
+    const touching_top_left = new(-4, -4, 0, 0);
+    const touching_bottom_right = new(319, 199, 320, 200);
 
-    const touching_left_edge = Instance{ .min_x = -4, .min_y = 0, .max_x = 0, .max_y = 199 };
-    const touching_right_edge = Instance{ .min_x = 319, .min_y = 0, .max_x = 324, .max_y = 199 };
-    const touching_top_edge = Instance{ .min_x = 0, .min_y = -4, .max_x = 319, .max_y = 0 };
-    const touching_bottom_edge = Instance{ .min_x = 0, .min_y = 199, .max_x = 319, .max_y = 204 };
+    const touching_left_edge = new(-4, 0, 0, 199);
+    const touching_right_edge = new(319, 0, 324, 199);
+    const touching_top_edge = new(0, -4, 319, 0);
+    const touching_bottom_edge = new(0, 199, 319, 204);
 
-    const completely_enclosed = Instance{ .min_x = 160, .min_y = 100, .max_x = 200, .max_y = 120 };
-    const completely_encloses = Instance{ .min_x = -200, .min_y = -200, .max_x = 400, .max_y = 400 };
+    const completely_enclosed = new(160, 100, 200, 120);
+    const completely_encloses = new(-200, -200, 400, 400);
 
     expectIntersects(true, reference, touching_top_left);
     expectIntersects(true, reference, touching_bottom_right);
@@ -117,14 +116,14 @@ test "intersects returns true for overlapping rectangles" {
 }
 
 test "encloses returns true for completely enclosed rectangles and false for others" {
-    const reference = Instance{ .min_x = 0, .min_y = 0, .max_x = 319, .max_y = 199 };
+    const reference = new(0, 0, 319, 199);
 
-    const completely_enclosed = Instance{ .min_x = 160, .min_y = 100, .max_x = 200, .max_y = 120 };
+    const completely_enclosed = new(160, 100, 200, 120);
     const equal = reference;
 
-    const overlapping = Instance{ .min_x = -4, .min_y = 4, .max_x = 240, .max_y = 10 };
-    const completely_encloses = Instance{ .min_x = -200, .min_y = -200, .max_x = 400, .max_y = 400 };
-    const completely_disjoint = Instance{ .min_x = -5000, .min_y = -5000, .max_x = -4000, .max_y = -4000 };
+    const overlapping = new(-4, 4, 240, 10);
+    const completely_encloses = new(-200, -200, 400, 400);
+    const completely_disjoint = new(-5000, -5000, -4000, -4000);
 
     testing.expectEqual(true, reference.encloses(completely_enclosed));
     testing.expectEqual(true, reference.encloses(equal));
@@ -135,17 +134,17 @@ test "encloses returns true for completely enclosed rectangles and false for oth
 }
 
 test "intersects returns false for disjoint rectangles" {
-    const reference = Instance{ .min_x = 0, .min_y = 0, .max_x = 319, .max_y = 199 };
+    const reference = new(0, 0, 319, 199);
 
-    const not_quite_touching_top_left = Instance{ .min_x = -4, .min_y = -4, .max_x = -1, .max_y = -1 };
-    const not_quite_touching_bottom_left = Instance{ .min_x = 320, .min_y = 200, .max_x = 324, .max_y = 204 };
+    const not_quite_touching_top_left = new(-4, -4, -1, -1);
+    const not_quite_touching_bottom_left = new(320, 200, 324, 204);
 
-    const not_quite_touching_left_edge = Instance{ .min_x = -4, .min_y = 0, .max_x = -1, .max_y = 199 };
-    const not_quite_touching_right_edge = Instance{ .min_x = 320, .min_y = 0, .max_x = 324, .max_y = 199 };
-    const not_quite_touching_top_edge = Instance{ .min_x = 0, .min_y = -4, .max_x = 319, .max_y = -1 };
-    const not_quite_touching_bottom_edge = Instance{ .min_x = 0, .min_y = 200, .max_x = 319, .max_y = 204 };
+    const not_quite_touching_left_edge = new(-4, 0, -1, 199);
+    const not_quite_touching_right_edge = new(320, 0, 324, 199);
+    const not_quite_touching_top_edge = new(0, -4, 319, -1);
+    const not_quite_touching_bottom_edge = new(0, 200, 319, 204);
 
-    const completely_disjoint = Instance{ .min_x = -5000, .min_y = -5000, .max_x = -4000, .max_y = -4000 };
+    const completely_disjoint = new(-5000, -5000, -4000, -4000);
 
     expectIntersects(false, reference, not_quite_touching_top_left);
     expectIntersects(false, reference, not_quite_touching_bottom_left);
@@ -157,7 +156,7 @@ test "intersects returns false for disjoint rectangles" {
 }
 
 test "contains returns true for points within bounds" {
-    const reference = Instance{ .min_x = 0, .min_y = 0, .max_x = 319, .max_y = 199 };
+    const reference = new(0, 0, 319, 199);
 
     const top_left_corner = Point.Instance{ .x = 0, .y = 0 };
     const bottom_right_corner = Point.Instance{ .x = 319, .y = 199 };
@@ -177,7 +176,7 @@ test "contains returns true for points within bounds" {
 }
 
 test "contains returns false for points out of bounds" {
-    const reference = Instance{ .min_x = 0, .min_y = 0, .max_x = 319, .max_y = 199 };
+    const reference = new(0, 0, 319, 199);
 
     const not_quite_top_left_corner = Point.Instance{ .x = -1, .y = -1 };
     const not_quite_bottom_rightcorner = Point.Instance{ .x = 320, .y = 200 };
@@ -197,16 +196,16 @@ test "contains returns false for points out of bounds" {
 }
 
 test "isUnit returns true for 0-width, 1-height bounding box" {
-    const bb = Instance{ .min_x = 160, .min_y = 100, .max_x = 160, .max_y = 101 };
+    const bb = new(160, 100, 160, 101);
     testing.expectEqual(true, bb.isUnit());
 }
 
 test "isUnit returns false for 1-width, 1-height bounding box" {
-    const bb = Instance{ .min_x = 160, .min_y = 100, .max_x = 161, .max_y = 101 };
+    const bb = new(160, 100, 161, 101);
     testing.expectEqual(false, bb.isUnit());
 }
 
 test "isUnit returns false for 0-width, 0-height bounding box" {
-    const bb = Instance{ .min_x = 160, .min_y = 100, .max_x = 160, .max_y = 100 };
+    const bb = new(160, 100, 160, 100);
     testing.expectEqual(false, bb.isUnit());
 }

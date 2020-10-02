@@ -22,12 +22,7 @@ pub fn Instance(comptime Storage: anytype, comptime width: usize, comptime heigh
         storage: Storage(width, height) = .{},
 
         /// The bounding box that encompasses all legal points within this buffer.
-        pub const bounds = BoundingBox.Instance{
-            .min_x = 0,
-            .min_y = 0,
-            .max_x = width - 1,
-            .max_y = height - 1,
-        };
+        pub const bounds = BoundingBox.new(0, 0, width - 1, height - 1);
 
         const Self = @This();
 
@@ -70,12 +65,7 @@ pub fn Instance(comptime Storage: anytype, comptime width: usize, comptime heigh
         /// Draws the specified 8x8 glyph, positioning its top left corner at the specified point.
         /// Returns error.PointOutOfBounds if the glyph's bounds do not lie fully inside the buffer.
         pub fn drawGlyph(self: *Self, glyph: Font.Glyph, origin: Point.Instance, color: ColorID.Trusted) Error!void {
-            const glyph_bounds = BoundingBox.Instance{
-                .min_x = origin.x,
-                .min_y = origin.y,
-                .max_x = origin.x + 8,
-                .max_y = origin.y + 8
-            };
+            const glyph_bounds = BoundingBox.new(origin.x, origin.y, origin.x + 8, origin.y + 8);
 
             if (Self.bounds.encloses(glyph_bounds) == false) {
                 return error.PointOutOfBounds;
@@ -129,10 +119,10 @@ const AlignedStorage = @import("storage/aligned_storage.zig");
 test "Instance calculates expected bounding box" {
     const Buffer = @TypeOf(new(AlignedStorage.Instance, 320, 200));
 
-    testing.expectEqual(0, Buffer.bounds.min_x);
-    testing.expectEqual(0, Buffer.bounds.min_y);
-    testing.expectEqual(319, Buffer.bounds.max_x);
-    testing.expectEqual(199, Buffer.bounds.max_y);
+    testing.expectEqual(0, Buffer.bounds.x.min);
+    testing.expectEqual(0, Buffer.bounds.y.min);
+    testing.expectEqual(319, Buffer.bounds.x.max);
+    testing.expectEqual(199, Buffer.bounds.y.max);
 }
 
 test "get retrieves pixel at specified point" {
