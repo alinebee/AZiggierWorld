@@ -86,7 +86,7 @@ test "centeredOn creates correct bounding box" {
 test "origin returns expected origin" {
     const bb = Instance{
         .x = .{ .min = 160, .max = 320 },
-        .y = .{ .min = 100, .max = 200 }
+        .y = .{ .min = 100, .max = 200 },
     };
     testing.expectEqual(.{ .x = 160, .y = 100 }, bb.origin());
 }

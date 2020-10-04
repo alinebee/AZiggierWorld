@@ -4,6 +4,7 @@
 
 const ColorID = @import("../values/color_id.zig");
 const Point = @import("../values/point.zig");
+const Range = @import("../values/range.zig");
 const BoundingBox = @import("../values/bounding_box.zig");
 const PolygonDrawMode = @import("../values/polygon_draw_mode.zig");
 const Font = @import("../assets/font.zig");
@@ -60,6 +61,25 @@ pub fn Instance(comptime Storage: anytype, comptime width: usize, comptime heigh
 
             const color = self.resolveColor(point, draw_mode, mask_buffer);
             self.storage.set(point, color);
+        }
+
+        /// Draw a 1-pixel-wide horizontal line filling the specified range,
+        /// deciding its color according to the draw mode.
+        /// Portions of the line that are out of bounds will not be drawn.
+        pub fn drawSpan(self: *Self, x: Range.Instance(Point.Coordinate), y: Point.Coordinate, draw_mode: PolygonDrawMode.Enum, mask_buffer: *const Self) void {
+            if (Self.bounds.x.contains(y) == false) {
+                return;
+            }
+
+            // Clamp the x coordinates for the line to fit within the video buffer,
+            // and bail out if it's entirely out of bounds.
+            const in_bounds_x = Self.bounds.x.intersection(x) orelse return;
+
+            var cursor = Point.Instance{ .x = in_bounds_x.min, .y = y };
+            while (cursor.x <= in_bounds_x.max) : (cursor.x += 1) {
+                const color = self.resolveColor(cursor, draw_mode, mask_buffer);
+                self.storage.set(cursor, color);
+            }
         }
 
         /// Draws the specified 8x8 glyph, positioning its top left corner at the specified point.
@@ -253,6 +273,101 @@ test "drawDot renders color from mask at point" {
     };
 
     try buffer.drawDot(.{ .x = 2, .y = 1 }, .mask, &mask_buffer);
+
+    testing.expectEqual(expected_data, buffer.storage.data);
+}
+
+test "drawSpan draws a horizontal line in a fixed color and ignores mask buffer, clamping line to fit within bounds" {
+    var buffer = new(AlignedStorage.Instance, 4, 4);
+    var mask_buffer = new(AlignedStorage.Instance, 4, 4);
+    mask_buffer.fill(15);
+
+    buffer.storage.data = .{
+        .{ 00, 00, 00, 00 },
+        .{ 00, 00, 00, 00 },
+        .{ 00, 00, 00, 00 },
+        .{ 00, 00, 00, 00 },
+    };
+
+    const expected_data = @TypeOf(buffer.storage.data){
+        .{ 00, 00, 00, 00 },
+        .{ 09, 09, 09, 00 },
+        .{ 00, 00, 00, 00 },
+        .{ 00, 00, 00, 00 },
+    };
+
+    buffer.drawSpan(.{ .min = -2, .max = 2 }, 1, .{ .color_id = 9 }, &mask_buffer);
+
+    testing.expectEqual(expected_data, buffer.storage.data);
+}
+
+test "drawSpan ramps existing colors in a horizontal line and ignores mask buffer, clamping line to fit within bounds" {
+    var buffer = new(AlignedStorage.Instance, 4, 4);
+    var mask_buffer = new(AlignedStorage.Instance, 4, 4);
+    mask_buffer.fill(15);
+
+    buffer.storage.data = .{
+        .{ 0, 0, 0, 0 },
+        .{ 0b0001, 0b0010, 0b0011, 0b0100 },
+        .{ 0, 0, 0, 0 },
+        .{ 0, 0, 0, 0 },
+    };
+
+    const expected_data = @TypeOf(buffer.storage.data){
+        .{ 0, 0, 0, 0 },
+        .{ 0b1001, 0b1010, 0b1011, 0b0100 },
+        .{ 0, 0, 0, 0 },
+        .{ 0, 0, 0, 0 },
+    };
+
+    buffer.drawSpan(.{ .min = -2, .max = 2 }, 1, .translucent, &mask_buffer);
+
+    testing.expectEqual(expected_data, buffer.storage.data);
+}
+
+test "drawSpan renders horizontal line from mask pixels, clamping line to fit within bounds" {
+    var buffer = new(AlignedStorage.Instance, 4, 4);
+    var mask_buffer = new(AlignedStorage.Instance, 4, 4);
+
+    buffer.storage.data = .{
+        .{ 00, 00, 00, 00 },
+        .{ 00, 00, 00, 00 },
+        .{ 00, 00, 00, 00 },
+        .{ 00, 00, 00, 00 },
+    };
+
+    mask_buffer.storage.data = .{
+        .{ 00, 01, 02, 03 },
+        .{ 04, 05, 06, 07 },
+        .{ 08, 09, 10, 11 },
+        .{ 12, 13, 14, 15 },
+    };
+
+    const expected_data = @TypeOf(buffer.storage.data){
+        .{ 00, 00, 00, 00 },
+        .{ 04, 05, 06, 00 },
+        .{ 00, 00, 00, 00 },
+        .{ 00, 00, 00, 00 },
+    };
+
+    buffer.drawSpan(.{ .min = -2, .max = 2 }, 1, .mask, &mask_buffer);
+
+    testing.expectEqual(expected_data, buffer.storage.data);
+}
+
+test "drawSpan draws no pixels when line is completely out of bounds" {
+    var buffer = new(AlignedStorage.Instance, 4, 4);
+    var mask_buffer = new(AlignedStorage.Instance, 4, 4);
+    mask_buffer.fill(15);
+
+    const expected_data = @TypeOf(buffer.storage.data){
+        .{ 0, 0, 0, 0 },
+        .{ 0, 0, 0, 0 },
+        .{ 0, 0, 0, 0 },
+        .{ 0, 0, 0, 0 },
+    };
+
+    buffer.drawSpan(.{ .min = -2, .max = 2 }, 4, .{ .color_id = 9 }, &mask_buffer);
 
     testing.expectEqual(expected_data, buffer.storage.data);
 }

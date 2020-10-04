@@ -98,7 +98,6 @@ test "intersects returns true for ranges that intersect and false for ranges tha
     expectIntersects(false, Examples.reference, Examples.disjoint);
 }
 
-
 test "intersects returns true for ranges that completely enclose another and false otherwise" {
     const range = new(isize, -10, 10);
 
