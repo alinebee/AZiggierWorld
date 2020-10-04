@@ -5,14 +5,14 @@ pub const Raw = u8;
 
 /// The possible modes in which a polygon can be rendered.
 pub const Enum = union(enum(Raw)) {
-    /// Render the polygon in a flat opaque color using the specified color index.
-    color_id: ColorID.Trusted,
+    /// Render the polygon in a solid opaque color using the specified color index.
+    solid_color: ColorID.Trusted,
 
-    /// Treat the polygon as translucent: ramp the colors underneath the polygon
-    /// into their "brightened" versions. This is used for special effects like
-    /// the ferrari headlights and the particle accelerator in the intro.
+    /// Remap the colors within the area of the polygon into their "highlighted" versions.
+    /// This is used for translucency and lighting effects, like the ferrari headlights
+    /// and particle accelerator flashes in the intro.
     /// See https://fabiensanglard.net/another_world_polygons/index.html for visual examples.
-    translucent,
+    highlight,
 
     /// Treat the polygon as a mask: fill it with pixels read from the corresponding
     /// location in another video buffer.
@@ -23,8 +23,8 @@ pub const Enum = union(enum(Raw)) {
 
 pub fn parse(raw: Raw) Enum {
     return switch (raw) {
-        0...15 => |color_id| .{ .color_id = @intCast(ColorID.Trusted, color_id) },
-        16 => .translucent,
+        0...15 => |color_id| .{ .solid_color = @intCast(ColorID.Trusted, color_id) },
+        16 => .highlight,
         // TODO: check if there's a specific constant the game always uses for mask.
         else => .mask,
     };
@@ -38,10 +38,10 @@ test "parse correctly parses raw draw mode" {
     var raw: u8 = 0;
     while (raw < 16) : (raw += 1) {
         const color_id = @intCast(ColorID.Trusted, raw);
-        testing.expectEqual(.{ .color_id = color_id }, parse(raw));
+        testing.expectEqual(.{ .solid_color = color_id }, parse(raw));
     }
 
-    testing.expectEqual(.translucent, parse(16));
+    testing.expectEqual(.highlight, parse(16));
     testing.expectEqual(.mask, parse(17));
     testing.expectEqual(.mask, parse(255));
 }

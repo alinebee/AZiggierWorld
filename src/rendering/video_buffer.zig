@@ -120,8 +120,8 @@ pub fn Instance(comptime Storage: anytype, comptime width: usize, comptime heigh
         /// This does not do bounds-checking: accessing an out-of-bounds point is undefined behaviour.
         fn resolveColor(self: *Self, point: Point.Instance, draw_mode: PolygonDrawMode.Enum, mask_buffer: *const Self) ColorID.Trusted {
             return switch (draw_mode) {
-                .color_id => |color_id| color_id,
-                .translucent => ColorID.ramp(self.storage.uncheckedGet(point)),
+                .solid_color => |color_id| color_id,
+                .highlight => ColorID.ramp(self.storage.uncheckedGet(point)),
                 .mask => mask_buffer.storage.uncheckedGet(point),
             };
         }
@@ -218,7 +218,7 @@ test "drawDot draws fixed color at point and ignores mask buffer" {
         .{ 0, 0, 0, 0 },
     };
 
-    try buffer.drawDot(.{ .x = 3, .y = 2 }, .{ .color_id = 9 }, &mask_buffer);
+    try buffer.drawDot(.{ .x = 3, .y = 2 }, .{ .solid_color = 9 }, &mask_buffer);
 
     testing.expectEqual(expected_data, buffer.storage.data);
 }
@@ -242,7 +242,7 @@ test "drawDot ramps translucent color at point and ignores mask buffer" {
         .{ 0, 0, 0, 0 },
     };
 
-    try buffer.drawDot(.{ .x = 3, .y = 1 }, .translucent, &mask_buffer);
+    try buffer.drawDot(.{ .x = 3, .y = 1 }, .highlight, &mask_buffer);
 
     testing.expectEqual(expected_data, buffer.storage.data);
 }
@@ -296,7 +296,7 @@ test "drawSpan draws a horizontal line in a fixed color and ignores mask buffer,
         .{ 00, 00, 00, 00 },
     };
 
-    buffer.drawSpan(.{ .min = -2, .max = 2 }, 1, .{ .color_id = 9 }, &mask_buffer);
+    buffer.drawSpan(.{ .min = -2, .max = 2 }, 1, .{ .solid_color = 9 }, &mask_buffer);
 
     testing.expectEqual(expected_data, buffer.storage.data);
 }
@@ -320,7 +320,7 @@ test "drawSpan ramps existing colors in a horizontal line and ignores mask buffe
         .{ 0, 0, 0, 0 },
     };
 
-    buffer.drawSpan(.{ .min = -2, .max = 2 }, 1, .translucent, &mask_buffer);
+    buffer.drawSpan(.{ .min = -2, .max = 2 }, 1, .highlight, &mask_buffer);
 
     testing.expectEqual(expected_data, buffer.storage.data);
 }
@@ -367,7 +367,7 @@ test "drawSpan draws no pixels when line is completely out of bounds" {
         .{ 0, 0, 0, 0 },
     };
 
-    buffer.drawSpan(.{ .min = -2, .max = 2 }, 4, .{ .color_id = 9 }, &mask_buffer);
+    buffer.drawSpan(.{ .min = -2, .max = 2 }, 4, .{ .solid_color = 9 }, &mask_buffer);
 
     testing.expectEqual(expected_data, buffer.storage.data);
 }
