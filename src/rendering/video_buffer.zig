@@ -27,26 +27,6 @@ pub fn Instance(comptime Storage: anytype, comptime width: usize, comptime heigh
 
         const Self = @This();
 
-        /// Return the color at the specified point in this buffer.
-        /// Returns error.PointOutOfBounds if the point does not lie within the buffer's bounds.
-        pub fn get(self: Self, point: Point.Instance) Error!ColorID.Trusted {
-            if (Self.bounds.contains(point) == false) {
-                return error.PointOutOfBounds;
-            }
-
-            return self.storage.uncheckedGet(point);
-        }
-
-        /// Set the color at the specified point in this buffer.
-        /// Returns error.PointOutOfBounds if the point does not lie within the buffer's bounds.
-        pub fn set(self: *Self, point: Point.Instance, color: ColorID.Trusted) Error!void {
-            if (Self.bounds.contains(point) == false) {
-                return error.PointOutOfBounds;
-            }
-
-            self.storage.uncheckedSet(point, color);
-        }
-
         /// Fill every pixel in the buffer with the specified color.
         pub fn fill(self: *Self, color: ColorID.Trusted) void {
             self.storage.fill(color);
@@ -121,7 +101,7 @@ pub fn Instance(comptime Storage: anytype, comptime width: usize, comptime heigh
         fn resolveColor(self: *Self, point: Point.Instance, draw_mode: PolygonDrawMode.Enum, mask_buffer: *const Self) ColorID.Trusted {
             return switch (draw_mode) {
                 .solid_color => |color_id| color_id,
-                .highlight => ColorID.ramp(self.storage.uncheckedGet(point)),
+                .highlight => ColorID.highlight(self.storage.uncheckedGet(point)),
                 .mask => mask_buffer.storage.uncheckedGet(point),
             };
         }
@@ -143,46 +123,6 @@ test "Instance calculates expected bounding box" {
     testing.expectEqual(0, Buffer.bounds.y.min);
     testing.expectEqual(319, Buffer.bounds.x.max);
     testing.expectEqual(199, Buffer.bounds.y.max);
-}
-
-test "get retrieves pixel at specified point" {
-    var buffer = new(AlignedStorage.Instance, 4, 4);
-    buffer.storage.data = .{
-        .{ 0, 0, 0, 0 },
-        .{ 0, 0, 5, 0 },
-        .{ 0, 0, 0, 0 },
-        .{ 0, 0, 0, 0 },
-    };
-
-    testing.expectEqual(5, buffer.get(.{ .x = 2, .y = 1 }));
-}
-
-test "get returns error.pointOutOfBounds when point is not within buffer region" {
-    const buffer = new(AlignedStorage.Instance, 4, 4);
-
-    testing.expectError(error.PointOutOfBounds, buffer.get(.{ .x = 0, .y = 4 }));
-    testing.expectError(error.PointOutOfBounds, buffer.get(.{ .x = -1, .y = 0 }));
-}
-
-test "set sets pixel at specified point" {
-    var buffer = new(AlignedStorage.Instance, 4, 4);
-
-    const expected_data = @TypeOf(buffer.storage.data){
-        .{ 0, 0, 0, 0 },
-        .{ 0, 0, 0, 0 },
-        .{ 0, 0, 0, 0 },
-        .{ 0, 7, 0, 0 },
-    };
-
-    try buffer.set(.{ .x = 1, .y = 3 }, 7);
-    testing.expectEqual(expected_data, buffer.storage.data);
-}
-
-test "set returns error.pointOutOfBounds when point is not within buffer region" {
-    var buffer = new(AlignedStorage.Instance, 4, 4);
-
-    testing.expectError(error.PointOutOfBounds, buffer.set(.{ .x = 0, .y = 4 }, 0));
-    testing.expectError(error.PointOutOfBounds, buffer.set(.{ .x = -1, .y = 0 }, 0));
 }
 
 test "fill fills buffer with specified color" {
