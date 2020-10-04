@@ -1,13 +1,15 @@
 const ColorID = @import("../../values/color_id.zig");
 const Point = @import("../../values/point.zig");
 
-const mem = @import("std").mem;
+const std = @import("std");
+const mem = std.mem;
+const math = std.math;
 const introspection = @import("introspection.zig");
 
 /// Returns a video buffer storage that packs 2 pixels into a single byte,
 /// like the original Another World's buffers did.
 pub fn Instance(comptime width: usize, comptime height: usize) type {
-    comptime const bytes_required = @divTrunc(width * height, 2) + @rem(width, 2);
+    comptime const bytes_required = try math.divCeil(usize, width * height, 2);
 
     return struct {
         data: [bytes_required]u8 = [_]u8{0} ** bytes_required,
@@ -77,11 +79,27 @@ const testing = @import("../../utils/testing.zig");
 test "Instance produces storage of the expected size filled with zeroes." {
     const storage = Instance(320, 200){};
 
-    testing.expectEqual((320 * 200) / 2, storage.data.len);
+    testing.expectEqual(32_000, storage.data.len);
 
     const expected_data = [_]u8{0} ** storage.data.len;
 
     testing.expectEqual(expected_data, storage.data);
+}
+
+test "Instance rounds up storage size for uneven pixel counts." {
+    const storage = Instance(319, 199){};
+    testing.expectEqual(31_741, storage.data.len);
+}
+
+test "Instance handles 0 width or height gracefully" {
+    const zero_height = Instance(320, 0){};
+    testing.expectEqual(0, zero_height.data.len);
+
+    const zero_width = Instance(0, 200){};
+    testing.expectEqual(0, zero_width.data.len);
+
+    const zero_dimensions = Instance(0, 0){};
+    testing.expectEqual(0, zero_dimensions.data.len);
 }
 
 test "uncheckedIndexOf returns expected offset and handedness" {

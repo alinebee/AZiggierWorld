@@ -52,6 +52,17 @@ test "Instance produces storage of the expected size filled with zeroes." {
     testing.expectEqual(expected_data, storage.data);
 }
 
+test "Instance handles 0 width or height gracefully" {
+    const zero_height = Instance(320, 0){};
+    testing.expectEqual([0][320]ColorID.Trusted, @TypeOf(zero_height.data));
+
+    const zero_width = Instance(0, 200){};
+    testing.expectEqual([200][0]ColorID.Trusted, @TypeOf(zero_width.data));
+
+    const zero_dimensions = Instance(0, 0){};
+    testing.expectEqual([0][0]ColorID.Trusted, @TypeOf(zero_dimensions.data));
+}
+
 test "fill replaces all bytes in buffer with specified color" {
     var storage = Instance(4, 4){};
 
