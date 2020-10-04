@@ -16,8 +16,8 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
 
         /// Return the color at the specified point in the buffer.
         /// This is not bounds-checked: specifying an point outside the buffer results in undefined behaviour.
-        pub fn get(self: Self, point: Point.Instance) ColorID.Trusted {
-            const index = self.indexOf(point);
+        pub fn uncheckedGet(self: Self, point: Point.Instance) ColorID.Trusted {
+            const index = self.uncheckedIndexOf(point);
             const byte = self.data[index.offset];
 
             return @truncate(ColorID.Trusted, switch (index.hand) {
@@ -28,8 +28,8 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
 
         /// Set the color at the specified point in the buffer.
         /// This is not bounds-checked: specifying an point outside the buffer results in undefined behaviour.
-        pub fn set(self: *Self, point: Point.Instance, color: ColorID.Trusted) void {
-            const index = self.indexOf(point);
+        pub fn uncheckedSet(self: *Self, point: Point.Instance, color: ColorID.Trusted) void {
+            const index = self.uncheckedIndexOf(point);
             const byte = &self.data[index.offset];
 
             byte.* = switch (index.hand) {
@@ -47,7 +47,7 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
         /// Given an X,Y point, returns the index of the byte within `data` containing that point's pixel,
         /// and whether the point is the left or right pixel in the byte.
         /// This is not bounds-checked: specifying a point outside the buffer results in undefined behaviour.
-        fn indexOf(self: Self, point: Point.Instance) Index {
+        fn uncheckedIndexOf(self: Self, point: Point.Instance) Index {
             comptime const signed_width = @intCast(isize, width);
             const signed_address = @divFloor(point.x + (point.y * signed_width), 2);
 
@@ -84,38 +84,38 @@ test "Instance produces storage of the expected size filled with zeroes." {
     testing.expectEqual(expected_data, storage.data);
 }
 
-test "indexOf returns expected offset and handedness" {
+test "uncheckedIndexOf returns expected offset and handedness" {
     const storage = Instance(320, 200){};
 
-    testing.expectEqual(.{ .offset = 0, .hand = .left }, storage.indexOf(.{ .x = 0, .y = 0 }));
-    testing.expectEqual(.{ .offset = 0, .hand = .right }, storage.indexOf(.{ .x = 1, .y = 0 }));
-    testing.expectEqual(.{ .offset = 1, .hand = .left }, storage.indexOf(.{ .x = 2, .y = 0 }));
-    testing.expectEqual(.{ .offset = 159, .hand = .right }, storage.indexOf(.{ .x = 319, .y = 0 }));
-    testing.expectEqual(.{ .offset = 160, .hand = .left }, storage.indexOf(.{ .x = 0, .y = 1 }));
+    testing.expectEqual(.{ .offset = 0, .hand = .left }, storage.uncheckedIndexOf(.{ .x = 0, .y = 0 }));
+    testing.expectEqual(.{ .offset = 0, .hand = .right }, storage.uncheckedIndexOf(.{ .x = 1, .y = 0 }));
+    testing.expectEqual(.{ .offset = 1, .hand = .left }, storage.uncheckedIndexOf(.{ .x = 2, .y = 0 }));
+    testing.expectEqual(.{ .offset = 159, .hand = .right }, storage.uncheckedIndexOf(.{ .x = 319, .y = 0 }));
+    testing.expectEqual(.{ .offset = 160, .hand = .left }, storage.uncheckedIndexOf(.{ .x = 0, .y = 1 }));
 
-    testing.expectEqual(.{ .offset = 16_080, .hand = .left }, storage.indexOf(.{ .x = 160, .y = 100 }));
-    testing.expectEqual(.{ .offset = 31_840, .hand = .left }, storage.indexOf(.{ .x = 0, .y = 199 }));
-    testing.expectEqual(.{ .offset = 31_999, .hand = .right }, storage.indexOf(.{ .x = 319, .y = 199 }));
+    testing.expectEqual(.{ .offset = 16_080, .hand = .left }, storage.uncheckedIndexOf(.{ .x = 160, .y = 100 }));
+    testing.expectEqual(.{ .offset = 31_840, .hand = .left }, storage.uncheckedIndexOf(.{ .x = 0, .y = 199 }));
+    testing.expectEqual(.{ .offset = 31_999, .hand = .right }, storage.uncheckedIndexOf(.{ .x = 319, .y = 199 }));
 
     // Uncomment to trigger runtime errors in test builds
-    // _ = storage.address(.{ .x = 0, .y = 200 });
-    // _ = storage.address(.{ .x = -1, .y = 0 });
+    // _ = storage.uncheckedIndexOf(.{ .x = 0, .y = 200 });
+    // _ = storage.uncheckedIndexOf(.{ .x = -1, .y = 0 });
 }
 
-test "get returns color at point" {
+test "uncheckedGet returns color at point" {
     var storage = Instance(320, 200){};
     storage.data[3] = 0b1010_0101;
 
-    testing.expectEqual(0b0000, storage.get(.{ .x = 5, .y = 0 }));
-    testing.expectEqual(0b1010, storage.get(.{ .x = 6, .y = 0 }));
-    testing.expectEqual(0b0101, storage.get(.{ .x = 7, .y = 0 }));
+    testing.expectEqual(0b0000, storage.uncheckedGet(.{ .x = 5, .y = 0 }));
+    testing.expectEqual(0b1010, storage.uncheckedGet(.{ .x = 6, .y = 0 }));
+    testing.expectEqual(0b0101, storage.uncheckedGet(.{ .x = 7, .y = 0 }));
 }
 
-test "set sets color at point" {
+test "uncheckedSet sets color at point" {
     var storage = Instance(320, 200){};
 
-    storage.set(.{ .x = 6, .y = 0 }, 0b1010);
-    storage.set(.{ .x = 7, .y = 0 }, 0b0101);
+    storage.uncheckedSet(.{ .x = 6, .y = 0 }, 0b1010);
+    storage.uncheckedSet(.{ .x = 7, .y = 0 }, 0b0101);
 
     testing.expectEqual(0b1010_0101, storage.data[3]);
 }

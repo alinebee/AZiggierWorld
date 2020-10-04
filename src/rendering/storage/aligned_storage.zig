@@ -15,13 +15,13 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
 
         /// Return the color at the specified point in the buffer.
         /// This is not bounds-checked: specifying an point outside the buffer results in undefined behaviour.
-        pub fn get(self: Self, point: Point.Instance) ColorID.Trusted {
+        pub fn uncheckedGet(self: Self, point: Point.Instance) ColorID.Trusted {
             return self.data[@intCast(usize, point.y)][@intCast(usize, point.x)];
         }
 
         /// Set the color at the specified point in the buffer.
         /// This is not bounds-checked: specifying an point outside the buffer results in undefined behaviour.
-        pub fn set(self: *Self, point: Point.Instance, color: ColorID.Trusted) void {
+        pub fn uncheckedSet(self: *Self, point: Point.Instance, color: ColorID.Trusted) void {
             self.data[@intCast(usize, point.y)][@intCast(usize, point.x)] = color;
         }
 
@@ -76,23 +76,23 @@ test "fill replaces all bytes in buffer with specified color" {
     testing.expectEqual(after_fill, storage.data);
 }
 
-test "get returns color at point" {
+test "uncheckedGet returns color at point" {
     var storage = Instance(320, 200){};
     storage.data[0][0] = 15;
     storage.data[4][3] = 10;
     storage.data[199][319] = 1;
 
-    testing.expectEqual(15, storage.get(.{ .x = 0, .y = 0 }));
-    testing.expectEqual(10, storage.get(.{ .x = 3, .y = 4 }));
-    testing.expectEqual(1, storage.get(.{ .x = 319, .y = 199 }));
+    testing.expectEqual(15, storage.uncheckedGet(.{ .x = 0, .y = 0 }));
+    testing.expectEqual(10, storage.uncheckedGet(.{ .x = 3, .y = 4 }));
+    testing.expectEqual(1, storage.uncheckedGet(.{ .x = 319, .y = 199 }));
 }
 
-test "set sets color at point" {
+test "uncheckedSet sets color at point" {
     var storage = Instance(320, 200){};
 
-    storage.set(.{ .x = 0, .y = 0 }, 15);
-    storage.set(.{ .x = 3, .y = 4 }, 10);
-    storage.set(.{ .x = 319, .y = 199 }, 1);
+    storage.uncheckedSet(.{ .x = 0, .y = 0 }, 15);
+    storage.uncheckedSet(.{ .x = 3, .y = 4 }, 10);
+    storage.uncheckedSet(.{ .x = 319, .y = 199 }, 1);
 
     testing.expectEqual(15, storage.data[0][0]);
     testing.expectEqual(10, storage.data[4][3]);

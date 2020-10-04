@@ -34,7 +34,7 @@ pub fn Instance(comptime Storage: anytype, comptime width: usize, comptime heigh
                 return error.PointOutOfBounds;
             }
 
-            return self.storage.get(point);
+            return self.storage.uncheckedGet(point);
         }
 
         /// Set the color at the specified point in this buffer.
@@ -44,7 +44,7 @@ pub fn Instance(comptime Storage: anytype, comptime width: usize, comptime heigh
                 return error.PointOutOfBounds;
             }
 
-            self.storage.set(point, color);
+            self.storage.uncheckedSet(point, color);
         }
 
         /// Fill every pixel in the buffer with the specified color.
@@ -60,7 +60,7 @@ pub fn Instance(comptime Storage: anytype, comptime width: usize, comptime heigh
             }
 
             const color = self.resolveColor(point, draw_mode, mask_buffer);
-            self.storage.set(point, color);
+            self.storage.uncheckedSet(point, color);
         }
 
         /// Draw a 1-pixel-wide horizontal line filling the specified range,
@@ -78,7 +78,7 @@ pub fn Instance(comptime Storage: anytype, comptime width: usize, comptime heigh
             var cursor = Point.Instance{ .x = in_bounds_x.min, .y = y };
             while (cursor.x <= in_bounds_x.max) : (cursor.x += 1) {
                 const color = self.resolveColor(cursor, draw_mode, mask_buffer);
-                self.storage.set(cursor, color);
+                self.storage.uncheckedSet(cursor, color);
             }
         }
 
@@ -99,7 +99,7 @@ pub fn Instance(comptime Storage: anytype, comptime width: usize, comptime heigh
                 // Stop drawing once all bits have been consumed or all remaining bits are 0.
                 while (remaining_pixels != 0) {
                     if (remaining_pixels & 0b1000_0000 != 0) {
-                        self.storage.set(cursor, color);
+                        self.storage.uncheckedSet(cursor, color);
                     }
                     remaining_pixels <<= 1;
                     cursor.x += 1;
@@ -121,8 +121,8 @@ pub fn Instance(comptime Storage: anytype, comptime width: usize, comptime heigh
         fn resolveColor(self: *Self, point: Point.Instance, draw_mode: PolygonDrawMode.Enum, mask_buffer: *const Self) ColorID.Trusted {
             return switch (draw_mode) {
                 .color_id => |color_id| color_id,
-                .translucent => ColorID.ramp(self.storage.get(point)),
-                .mask => mask_buffer.storage.get(point),
+                .translucent => ColorID.ramp(self.storage.uncheckedGet(point)),
+                .mask => mask_buffer.storage.uncheckedGet(point),
             };
         }
     };
