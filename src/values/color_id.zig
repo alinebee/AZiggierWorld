@@ -28,6 +28,12 @@ pub fn highlight(color: Trusted) Trusted {
     return color | 0b1000;
 }
 
+/// Given a byte containing two 4-bit colors, remaps both colors from 0...7 to 8...15.
+/// Colors 8...15 will be left as they are. See `highlight` for more details.
+pub fn highlightByte(color_byte: u8) u8 {
+    return color_byte | 0b1000_1000;
+}
+
 // -- Tests --
 
 const testing = @import("../utils/testing.zig");
@@ -61,4 +67,26 @@ test "highlight leaves upper 8 colors as they were" {
     testing.expectEqual(0b1101, highlight(0b1101));
     testing.expectEqual(0b1110, highlight(0b1110));
     testing.expectEqual(0b1111, highlight(0b1111));
+}
+
+test "highlightByte remaps lower 8 colors to upper 8 colors" {
+    testing.expectEqual(0b1000_1000, highlightByte(0b0000_0000));
+    testing.expectEqual(0b1001_1001, highlightByte(0b0001_0001));
+    testing.expectEqual(0b1010_1010, highlightByte(0b0010_0010));
+    testing.expectEqual(0b1011_1011, highlightByte(0b0011_0011));
+    testing.expectEqual(0b1100_1100, highlightByte(0b0100_0100));
+    testing.expectEqual(0b1101_1101, highlightByte(0b0101_0101));
+    testing.expectEqual(0b1110_1110, highlightByte(0b0110_0110));
+    testing.expectEqual(0b1111_1111, highlightByte(0b0111_0111));
+}
+
+test "highlightByte leaves upper 8 colors as they were" {
+    testing.expectEqual(0b1000_1000, highlightByte(0b1000_1000));
+    testing.expectEqual(0b1001_1001, highlightByte(0b1001_1001));
+    testing.expectEqual(0b1010_1010, highlightByte(0b1010_1010));
+    testing.expectEqual(0b1011_1011, highlightByte(0b1011_1011));
+    testing.expectEqual(0b1100_1100, highlightByte(0b1100_1100));
+    testing.expectEqual(0b1101_1101, highlightByte(0b1101_1101));
+    testing.expectEqual(0b1110_1110, highlightByte(0b1110_1110));
+    testing.expectEqual(0b1111_1111, highlightByte(0b1111_1111));
 }
