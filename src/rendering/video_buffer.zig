@@ -13,14 +13,15 @@ const assert = @import("std").debug.assert;
 const eql = @import("std").meta.eql;
 
 /// Creates a new video buffer with a given width and height, using the specified type as backing storage.
-pub fn new(comptime Storage: anytype, comptime width: usize, comptime height: usize) Instance(Storage, width, height) {
+pub fn new(comptime StorageFn: anytype, comptime width: usize, comptime height: usize) Instance(StorageFn, width, height) {
     return .{};
 }
 
-pub fn Instance(comptime Storage: anytype, comptime width: usize, comptime height: usize) type {
+pub fn Instance(comptime StorageFn: anytype, comptime width: usize, comptime height: usize) type {
+    const Storage = StorageFn(width, height);
     return struct {
         /// The backing storage for this video buffer, responsible for low-level pixel operations.
-        storage: Storage(width, height) = .{},
+        storage: Storage = .{},
 
         /// The bounding box that encompasses all legal points within this buffer.
         pub const bounds = BoundingBox.new(0, 0, width - 1, height - 1);
@@ -39,15 +40,14 @@ pub fn Instance(comptime Storage: anytype, comptime width: usize, comptime heigh
                 return error.PointOutOfBounds;
             }
 
-            const color = self.resolveColor(point, draw_mode, mask_buffer);
-            self.storage.uncheckedSet(point, color);
+            self.storage.uncheckedDrawPixel(point, draw_mode, &mask_buffer.storage);
         }
 
         /// Draw a 1-pixel-wide horizontal line filling the specified range,
         /// deciding its color according to the draw mode.
         /// Portions of the line that are out of bounds will not be drawn.
         pub fn drawSpan(self: *Self, x: Range.Instance(Point.Coordinate), y: Point.Coordinate, draw_mode: PolygonDrawMode.Enum, mask_buffer: *const Self) void {
-            if (Self.bounds.x.contains(y) == false) {
+            if (Self.bounds.y.contains(y) == false) {
                 return;
             }
 
@@ -55,10 +55,10 @@ pub fn Instance(comptime Storage: anytype, comptime width: usize, comptime heigh
             // and bail out if it's entirely out of bounds.
             const in_bounds_x = Self.bounds.x.intersection(x) orelse return;
 
-            var cursor = Point.Instance{ .x = in_bounds_x.min, .y = y };
-            while (cursor.x <= in_bounds_x.max) : (cursor.x += 1) {
-                const color = self.resolveColor(cursor, draw_mode, mask_buffer);
-                self.storage.uncheckedSet(cursor, color);
+            if (in_bounds_x.min == in_bounds_x.max) {
+                self.storage.uncheckedDrawPixel(.{ .x = in_bounds_x.min, .y = y }, draw_mode, &mask_buffer.storage);
+            } else {
+                self.storage.uncheckedDrawSpan(in_bounds_x, y, draw_mode, &mask_buffer.storage);
             }
         }
 
@@ -71,15 +71,22 @@ pub fn Instance(comptime Storage: anytype, comptime width: usize, comptime heigh
                 return error.PointOutOfBounds;
             }
 
+            var native_color = Storage.nativeColor(color);
             var cursor = origin;
             for (glyph) |row| {
                 var remaining_pixels = row;
                 // While there are still any bits left to draw in this row of the glyph,
                 // pop the topmost bit of the row: if it's 1, draw a pixel at the next X cursor.
                 // Stop drawing once all bits have been consumed or all remaining bits are 0.
+                //
+                // CHECKME: drawing 1 bit at a time is less efficient for two-pixels-per-byte packed buffers,
+                // since we can end up doing 4 mask operations when replacing both pixels in a byte.
+                // If we read off two bits at a time, we could check if we're going to draw both pixels
+                // and just replace the whole byte; but the complexity of that check may end up slower
+                // than just doing the masks.
                 while (remaining_pixels != 0) {
                     if (remaining_pixels & 0b1000_0000 != 0) {
-                        self.storage.uncheckedSet(cursor, color);
+                        self.storage.uncheckedSetNativeColor(cursor, native_color);
                     }
                     remaining_pixels <<= 1;
                     cursor.x += 1;
@@ -89,21 +96,6 @@ pub fn Instance(comptime Storage: anytype, comptime width: usize, comptime heigh
                 cursor.x = origin.x;
                 cursor.y += 1;
             }
-        }
-
-        /// Determines the color to draw for the specified point based on a draw mode:
-        /// - `color_id`: Draw the specified fixed color.
-        /// - `translucent`: Remap the color at that point to the ramped version of the color,
-        ///    to achieve translucency effects.
-        /// - `mask`: replace the color at that point with the color at the same point in another buffer,
-        ///    to achieve mask effects.
-        /// This does not do bounds-checking: accessing an out-of-bounds point is undefined behaviour.
-        fn resolveColor(self: *Self, point: Point.Instance, draw_mode: PolygonDrawMode.Enum, mask_buffer: *const Self) ColorID.Trusted {
-            return switch (draw_mode) {
-                .solid_color => |color_id| color_id,
-                .highlight => ColorID.highlight(self.storage.uncheckedGet(point)),
-                .mask => mask_buffer.storage.uncheckedGet(point),
-            };
         }
     };
 }

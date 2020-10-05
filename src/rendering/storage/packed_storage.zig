@@ -1,10 +1,11 @@
 const ColorID = @import("../../values/color_id.zig");
 const Point = @import("../../values/point.zig");
+const Range = @import("../../values/range.zig");
+const PolygonDrawMode = @import("../../values/polygon_draw_mode.zig");
 
 const std = @import("std");
 const mem = std.mem;
 const math = std.math;
-const introspection = @import("introspection.zig");
 
 /// Returns a video buffer storage that packs 2 pixels into a single byte,
 /// like the original Another World's buffers did.
@@ -12,64 +13,160 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
     comptime const bytes_required = try math.divCeil(usize, width * height, 2);
 
     return struct {
-        data: [bytes_required]u8 = [_]u8{0} ** bytes_required,
-
         const Self = @This();
 
-        /// Return the color at the specified point in the buffer.
-        /// This is not bounds-checked: specifying an point outside the buffer results in undefined behaviour.
-        pub fn uncheckedGet(self: Self, point: Point.Instance) ColorID.Trusted {
-            const index = self.uncheckedIndexOf(point);
-            const byte = self.data[index.offset];
+        data: [bytes_required]NativeColor = [_]NativeColor{0} ** bytes_required,
 
-            return @truncate(ColorID.Trusted, switch (index.hand) {
-                .left => byte >> 4,
-                .right => byte,
-            });
+        // -- Type-level functions
+
+        /// Widens a 4-bit color into a byte representing two pixels of that color.
+        /// Intended to be passed to `uncheckedSetNativeColor` for more efficient drawing.
+        pub fn nativeColor(color: ColorID.Trusted) NativeColor {
+            return (@as(u8, color) << 4) | color;
         }
 
-        /// Set the color at the specified point in the buffer.
-        /// This is not bounds-checked: specifying an point outside the buffer results in undefined behaviour.
-        pub fn uncheckedSet(self: *Self, point: Point.Instance, color: ColorID.Trusted) void {
-            const index = self.uncheckedIndexOf(point);
-            const byte = &self.data[index.offset];
+        /// Given an X,Y point, returns the index of the byte within `data` containing that point's pixel.
+        /// This is not bounds-checked: specifying a point outside the buffer results in undefined behaviour.
+        fn uncheckedIndexOf(point: Point.Instance) Index {
+            comptime const signed_width = @intCast(isize, width);
+            const signed_offset = @divFloor(point.x + (point.y * signed_width), 2);
 
-            byte.* = switch (index.hand) {
-                .left => (byte.* & 0b0000_1111) | (@as(u8, color) << 4),
-                .right => (byte.* & 0b1111_0000) | color,
+            return .{
+                .offset = @intCast(usize, signed_offset),
+                .hand = Handedness.of(point.x),
             };
         }
+
+        // -- Public instance methods --
 
         /// Fill the entire buffer with the specified color.
         pub fn fill(self: *Self, color: ColorID.Trusted) void {
-            const color_byte = (@as(u8, color) << 4) | color;
-            mem.set(u8, &self.data, color_byte);
+            const native_color = nativeColor(color);
+            mem.set(NativeColor, &self.data, native_color);
         }
 
-        /// Given an X,Y point, returns the index of the byte within `data` containing that point's pixel,
-        /// and whether the point is the left or right pixel in the byte.
+        /// Draws a single pixel at the specified point, deriving its color from the specified draw mode.
+        /// Used for drawing single-pixel polygons.
         /// This is not bounds-checked: specifying a point outside the buffer results in undefined behaviour.
-        fn uncheckedIndexOf(self: Self, point: Point.Instance) Index {
-            comptime const signed_width = @intCast(isize, width);
-            const signed_address = @divFloor(point.x + (point.y * signed_width), 2);
+        pub fn uncheckedDrawPixel(self: *Self, point: Point.Instance, draw_mode: PolygonDrawMode.Enum, mask_source: *const Self) void {
+            const index = uncheckedIndexOf(point);
+            self.uncheckedDrawIndex(index, draw_mode, mask_source);
+        }
 
-            return .{
-                .offset = @intCast(usize, signed_address),
-                .hand = if (@rem(point.x, 2) == 0) .left else .right,
+        /// Sets a single pixel at the specified point to the specified color.
+        /// Used for drawing solid font glyphs, which don't need the extra complexity of `uncheckedDrawPixel`.
+        /// This is not bounds-checked: specifying a point outside the buffer results in undefined behaviour.
+        pub fn uncheckedSetNativeColor(self: *Self, point: Point.Instance, native_color: NativeColor) void {
+            const index = uncheckedIndexOf(point);
+            self.uncheckedSetIndex(index, native_color);
+        }
+
+        /// Fill a horizontal line with colors using the specified draw mode.
+        /// This is not bounds-checked: specifying a span outside the buffer, or with a negative length,
+        /// results in undefined behaviour.
+        pub fn uncheckedDrawSpan(self: *Self, x_span: Range.Instance(Point.Coordinate), y: Point.Coordinate, draw_mode: PolygonDrawMode.Enum, mask_source: *const Self) void {
+            var start_index = uncheckedIndexOf(.{ .x = x_span.min, .y = y });
+            var end_index = uncheckedIndexOf(.{ .x = x_span.max, .y = y });
+
+            // If the start pixel doesn't fall at the "left" edge of a byte:
+            // draw that pixel the hard way using masking, and start the span at the left edge of the next byte.
+            if (start_index.hand != .left) {
+                self.uncheckedDrawIndex(start_index, draw_mode, mask_source);
+                start_index.offset += 1;
+            }
+
+            // If the end pixel doesn't fall at the "right" edge of a byte:
+            // draw that pixel the hard way using masking and end the span at the right edge of the previous byte.
+            if (end_index.hand != .right) {
+                self.uncheckedDrawIndex(end_index, draw_mode, mask_source);
+                end_index.offset -= 1;
+            }
+
+            // If there are any full bytes left between the start and end, fill them using a fast operation.
+            if (start_index.offset <= end_index.offset) {
+                const range = .{
+                    .min = start_index.offset,
+                    // Ranges are inclusive, but this range will be converted into a slice,
+                    // and Zig's [start..end] slice syntax does not include the end offset.
+                    .max = end_index.offset + 1,
+                };
+                self.uncheckedDrawRange(range, draw_mode, mask_source);
+            }
+        }
+
+        // -- Private instance methods --
+
+        /// Draws a single pixel at the specified index, deriving its color from the specified draw mode.
+        /// Used internally by `uncheckedDrawPixel` and `uncheckedDrawSpan`.
+        /// `index` is not bounds-checked: specifying an index outside the buffer results in undefined behaviour.
+        fn uncheckedDrawIndex(self: *Self, index: Index, draw_mode: PolygonDrawMode.Enum, mask_source: *const Self) void {
+            const native_color = switch (draw_mode) {
+                .solid_color => |color_id| Self.nativeColor(color_id),
+                .highlight => ColorID.highlightByte(self.data[index.offset]),
+                .mask => mask_source.data[index.offset],
             };
+
+            self.uncheckedSetIndex(index, native_color);
+        }
+
+        /// Sets the specified pixel of the byte at the specified index to the specified solid color.
+        /// Used internally by `uncheckedDrawIndex` and `uncheckedSetNativeColor`.
+        /// `index` is not bounds-checked: specifying an index outside the buffer results in undefined behaviour.
+        fn uncheckedSetIndex(self: *Self, index: Index, color: NativeColor) void {
+            const destination = &self.data[index.offset];
+
+            destination.* = switch (index.hand) {
+                .left => (destination.* & 0b0000_1111) | (color & 0b1111_0000),
+                .right => (destination.* & 0b1111_0000) | (color & 0b0000_1111),
+            };
+        }
+
+        /// Given a range of bytes within the buffer storage, fills all pixels within those bytes,
+        /// using the specified draw mode to determine the appropriate color(s).
+        /// Used internally by `uncheckedDrawSpan`, and equivalent to a multibyte version of `uncheckedDrawIndex`.
+        /// `range` is not bounds-checked: specifying a range outside the buffer, or with a negative length,
+        /// results in undefined behaviour.
+        fn uncheckedDrawRange(self: *Self, range: Range.Instance(usize), draw_mode: PolygonDrawMode.Enum, mask_source: *const Self) void {
+            var destination_slice = self.data[range.min..range.max];
+
+            switch (draw_mode) {
+                .solid_color => |color_id| {
+                    mem.set(NativeColor, destination_slice, Self.nativeColor(color_id));
+                },
+                .highlight => {
+                    for (destination_slice) |*byte| {
+                        byte.* = ColorID.highlightByte(byte.*);
+                    }
+                },
+                .mask => {
+                    const mask_slice = mask_source.data[range.min..range.max];
+                    mem.copy(NativeColor, destination_slice, mask_slice);
+                },
+            }
         }
     };
 }
+
+// The unit in which the buffer will read and write pixel color values.
+const NativeColor = u8;
+
+/// Whether a pixel is the "left" (top 4 bits) or "right" (bottom 4 bits) of the byte.
+const Handedness = enum(u1) {
+    left,
+    right,
+
+    /// Given an X coordinate, returns whether it falls into the left or right of the byte.
+    fn of(x: Point.Coordinate) Handedness {
+        return if (@rem(x, 2) == 0) .left else .right;
+    }
+};
 
 /// The storage index for a pixel at a given point.
 const Index = struct {
     /// The offset of the byte containing the pixel.
     offset: usize,
     /// Whether this pixel is the "left" (top 4 bits) or "right" (bottom 4 bits) of the byte.
-    hand: enum(u1) {
-        left,
-        right,
-    },
+    hand: Handedness,
 };
 
 // -- Tests --
@@ -103,53 +200,157 @@ test "Instance handles 0 width or height gracefully" {
 }
 
 test "uncheckedIndexOf returns expected offset and handedness" {
-    const storage = Instance(320, 200){};
+    const Storage = Instance(320, 200);
 
-    testing.expectEqual(.{ .offset = 0, .hand = .left }, storage.uncheckedIndexOf(.{ .x = 0, .y = 0 }));
-    testing.expectEqual(.{ .offset = 0, .hand = .right }, storage.uncheckedIndexOf(.{ .x = 1, .y = 0 }));
-    testing.expectEqual(.{ .offset = 1, .hand = .left }, storage.uncheckedIndexOf(.{ .x = 2, .y = 0 }));
-    testing.expectEqual(.{ .offset = 159, .hand = .right }, storage.uncheckedIndexOf(.{ .x = 319, .y = 0 }));
-    testing.expectEqual(.{ .offset = 160, .hand = .left }, storage.uncheckedIndexOf(.{ .x = 0, .y = 1 }));
+    testing.expectEqual(.{ .offset = 0, .hand = .left }, Storage.uncheckedIndexOf(.{ .x = 0, .y = 0 }));
+    testing.expectEqual(.{ .offset = 0, .hand = .right }, Storage.uncheckedIndexOf(.{ .x = 1, .y = 0 }));
+    testing.expectEqual(.{ .offset = 1, .hand = .left }, Storage.uncheckedIndexOf(.{ .x = 2, .y = 0 }));
+    testing.expectEqual(.{ .offset = 159, .hand = .right }, Storage.uncheckedIndexOf(.{ .x = 319, .y = 0 }));
+    testing.expectEqual(.{ .offset = 160, .hand = .left }, Storage.uncheckedIndexOf(.{ .x = 0, .y = 1 }));
 
-    testing.expectEqual(.{ .offset = 16_080, .hand = .left }, storage.uncheckedIndexOf(.{ .x = 160, .y = 100 }));
-    testing.expectEqual(.{ .offset = 31_840, .hand = .left }, storage.uncheckedIndexOf(.{ .x = 0, .y = 199 }));
-    testing.expectEqual(.{ .offset = 31_999, .hand = .right }, storage.uncheckedIndexOf(.{ .x = 319, .y = 199 }));
-
-    // Uncomment to trigger runtime errors in test builds
-    // _ = storage.uncheckedIndexOf(.{ .x = 0, .y = 200 });
-    // _ = storage.uncheckedIndexOf(.{ .x = -1, .y = 0 });
-}
-
-test "uncheckedGet returns color at point" {
-    var storage = Instance(320, 200){};
-    storage.data[3] = 0b1010_0101;
-
-    testing.expectEqual(0b0000, storage.uncheckedGet(.{ .x = 5, .y = 0 }));
-    testing.expectEqual(0b1010, storage.uncheckedGet(.{ .x = 6, .y = 0 }));
-    testing.expectEqual(0b0101, storage.uncheckedGet(.{ .x = 7, .y = 0 }));
-}
-
-test "uncheckedSet sets color at point" {
-    var storage = Instance(320, 200){};
-
-    storage.uncheckedSet(.{ .x = 6, .y = 0 }, 0b1010);
-    storage.uncheckedSet(.{ .x = 7, .y = 0 }, 0b0101);
-
-    testing.expectEqual(0b1010_0101, storage.data[3]);
+    testing.expectEqual(.{ .offset = 16_080, .hand = .left }, Storage.uncheckedIndexOf(.{ .x = 160, .y = 100 }));
+    testing.expectEqual(.{ .offset = 31_840, .hand = .left }, Storage.uncheckedIndexOf(.{ .x = 0, .y = 199 }));
+    testing.expectEqual(.{ .offset = 31_999, .hand = .right }, Storage.uncheckedIndexOf(.{ .x = 319, .y = 199 }));
 }
 
 test "fill replaces all bytes in buffer with specified color" {
-    const fill_color: ColorID.Trusted = 0b0101;
-    const color_byte: u8 = 0b0101_0101;
+    comptime const Storage = Instance(320, 200);
+    comptime const color = 0b0101;
+    comptime const native_color = Storage.nativeColor(color);
 
     var storage = Instance(320, 200){};
 
     const before_fill = [_]u8{0} ** storage.data.len;
-    const after_fill = [_]u8{color_byte} ** storage.data.len;
+    const after_fill = [_]u8{native_color} ** storage.data.len;
 
     testing.expectEqual(before_fill, storage.data);
 
-    storage.fill(fill_color);
+    storage.fill(color);
 
     testing.expectEqual(after_fill, storage.data);
+}
+
+test "uncheckedSetNativeColor sets color at point" {
+    comptime const Storage = Instance(320, 200);
+    var storage = Storage{};
+
+    storage.uncheckedSetNativeColor(.{ .x = 6, .y = 0 }, Storage.nativeColor(0b1010));
+    storage.uncheckedSetNativeColor(.{ .x = 7, .y = 0 }, Storage.nativeColor(0b0101));
+
+    testing.expectEqual(0b1010_0101, storage.data[3]);
+}
+
+test "uncheckedDrawPixel sets solid color at point and ignores mask" {
+    comptime const Storage = Instance(320, 200);
+    var storage = Storage{};
+    var mask_storage = Storage{};
+    mask_storage.fill(0b1111);
+
+    storage.uncheckedDrawPixel(.{ .x = 6, .y = 0 }, .{ .solid_color = 0b1010 }, &mask_storage);
+
+    testing.expectEqual(0b1010_0000, storage.data[3]);
+}
+
+test "uncheckedDrawPixel highlights color at point and ignores mask" {
+    comptime const Storage = Instance(320, 200);
+    var storage = Storage{};
+    storage.fill(0b0011);
+
+    var mask_storage = Storage{};
+    mask_storage.fill(0b1111);
+
+    storage.uncheckedDrawPixel(.{ .x = 6, .y = 0 }, .highlight, &mask_storage);
+
+    testing.expectEqual(0b1011_0011, storage.data[3]);
+}
+
+test "uncheckedDrawPixel copies color at point from mask" {
+    comptime const Storage = Instance(320, 200);
+    var storage = Storage{};
+
+    var mask_storage = Storage{};
+    mask_storage.fill(0b1111);
+
+    storage.uncheckedDrawPixel(.{ .x = 6, .y = 0 }, .mask, &mask_storage);
+
+    testing.expectEqual(0b1111_0000, storage.data[3]);
+}
+
+test "uncheckedDrawSpan with byte-aligned span sets solid color in slice and ignores mask" {
+    comptime const Storage = Instance(10, 1);
+    var storage = Storage{};
+
+    var mask_storage = Storage{};
+    mask_storage.fill(0b1111);
+
+    storage.uncheckedDrawSpan(.{ .min = 2, .max = 7 }, 0, .{ .solid_color = 0b1001 }, &mask_storage);
+
+    const expected = [_]NativeColor{ 0b0000_0000, 0b1001_1001, 0b1001_1001, 0b1001_1001, 0b0000_0000 };
+    testing.expectEqualSlices(NativeColor, &expected, &storage.data);
+}
+
+test "uncheckedDrawSpan with non-byte-aligned start sets start pixel correctly" {
+    comptime const Storage = Instance(10, 1);
+    var storage = Storage{};
+
+    var mask_storage = Storage{};
+    mask_storage.fill(0b1111);
+
+    storage.uncheckedDrawSpan(.{ .min = 1, .max = 7 }, 0, .{ .solid_color = 0b1001 }, &mask_storage);
+
+    const expected = [_]NativeColor{ 0b0000_1001, 0b1001_1001, 0b1001_1001, 0b1001_1001, 0b0000_0000 };
+    testing.expectEqualSlices(NativeColor, &expected, &storage.data);
+}
+
+test "uncheckedDrawSpan with non-byte-aligned end sets end pixel correctly" {
+    comptime const Storage = Instance(10, 1);
+    var storage = Storage{};
+
+    var mask_storage = Storage{};
+    mask_storage.fill(0b1111);
+
+    storage.uncheckedDrawSpan(.{ .min = 2, .max = 8 }, 0, .{ .solid_color = 0b1001 }, &mask_storage);
+
+    const expected = [_]NativeColor{ 0b0000_0000, 0b1001_1001, 0b1001_1001, 0b1001_1001, 0b1001_0000 };
+    testing.expectEqualSlices(NativeColor, &expected, &storage.data);
+}
+
+test "uncheckedDrawSpan with non-byte-aligned start and end sets start and end pixels correctly" {
+    comptime const Storage = Instance(10, 1);
+    var storage = Storage{};
+
+    var mask_storage = Storage{};
+    mask_storage.fill(0b1111);
+
+    storage.uncheckedDrawSpan(.{ .min = 1, .max = 8 }, 0, .{ .solid_color = 0b1001 }, &mask_storage);
+
+    const expected = [_]NativeColor{ 0b0000_1001, 0b1001_1001, 0b1001_1001, 0b1001_1001, 0b1001_0000 };
+    testing.expectEqualSlices(NativeColor, &expected, &storage.data);
+}
+
+test "uncheckedDrawSpan highlights colors in slice and ignores mask" {
+    comptime const Storage = Instance(10, 1);
+    var storage = Storage{};
+    storage.fill(0b0011);
+
+    var mask_storage = Storage{};
+    mask_storage.fill(0b1111);
+
+    storage.uncheckedDrawSpan(.{ .min = 3, .max = 6 }, 0, .highlight, &mask_storage);
+
+    const expected = [_]NativeColor{ 0b0011_0011, 0b0011_1011, 0b1011_1011, 0b1011_0011, 0b0011_0011 };
+    testing.expectEqualSlices(NativeColor, &expected, &storage.data);
+}
+
+test "uncheckedDrawSpan replaces colors in slice with mask" {
+    comptime const Storage = Instance(10, 1);
+    var storage = Storage{};
+
+    var mask_storage = Storage{};
+    mask_storage.fill(0b1111);
+
+    storage.uncheckedDrawSpan(.{ .min = 3, .max = 6 }, 0, .mask, &mask_storage);
+
+    const expected = [_]NativeColor{ 0b0000_0000, 0b0000_1111, 0b1111_1111, 0b1111_0000, 0b0000_0000 };
+    testing.expectEqualSlices(NativeColor, &expected, &storage.data);
 }
