@@ -1,5 +1,5 @@
-//! Another World's run-length encoding system uses several decoding instructions,
-//! which are marked by the first 2 or 3 bits of every encoded sequence:
+//! Another World's run-length encoding system compresses data using 6 different decoding instructions,
+//! which are identified by the first 2 or 3 bits of each instruction sequence:
 //! 111|cccc_cccc: next 8 bits are count: copy the next (count + 9) bytes immediately after this instruction.
 //! 110|cccc_cccc|oooo_oooo_oooo: next 8 bits are count, next 12 bits are offset relative to write cursor:
 //! copy (count + 1) bytes from the already-uncompressed data at that offset.
