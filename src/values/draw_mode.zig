@@ -3,7 +3,7 @@ const ColorID = @import("../values/color_id.zig");
 /// A raw draw mode, stored in bytecode as an 8-bit unsigned integer.
 pub const Raw = u8;
 
-/// The possible modes in which a polygon can be rendered.
+/// The modes in which a polygon can be drawn.
 pub const Enum = union(enum(Raw)) {
     /// Render the polygon in a solid opaque color using the specified color index.
     solid_color: ColorID.Trusted,

@@ -1,7 +1,7 @@
 const ColorID = @import("../../values/color_id.zig");
 const Point = @import("../../values/point.zig");
 const Range = @import("../../values/range.zig");
-const PolygonDrawMode = @import("../../values/polygon_draw_mode.zig");
+const DrawMode = @import("../../values/draw_mode.zig");
 
 const std = @import("std");
 const mem = std.mem;
@@ -48,7 +48,7 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
         /// Draws a single pixel at the specified point, deriving its color from the specified draw mode.
         /// Used for drawing single-pixel polygons.
         /// This is not bounds-checked: specifying a point outside the buffer results in undefined behaviour.
-        pub fn uncheckedDrawPixel(self: *Self, point: Point.Instance, draw_mode: PolygonDrawMode.Enum, mask_source: *const Self) void {
+        pub fn uncheckedDrawPixel(self: *Self, point: Point.Instance, draw_mode: DrawMode.Enum, mask_source: *const Self) void {
             const index = uncheckedIndexOf(point);
             self.uncheckedDrawIndex(index, draw_mode, mask_source);
         }
@@ -64,7 +64,7 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
         /// Fill a horizontal line with colors using the specified draw mode.
         /// This is not bounds-checked: specifying a span outside the buffer, or with a negative length,
         /// results in undefined behaviour.
-        pub fn uncheckedDrawSpan(self: *Self, x_span: Range.Instance(Point.Coordinate), y: Point.Coordinate, draw_mode: PolygonDrawMode.Enum, mask_source: *const Self) void {
+        pub fn uncheckedDrawSpan(self: *Self, x_span: Range.Instance(Point.Coordinate), y: Point.Coordinate, draw_mode: DrawMode.Enum, mask_source: *const Self) void {
             var start_index = uncheckedIndexOf(.{ .x = x_span.min, .y = y });
             var end_index = uncheckedIndexOf(.{ .x = x_span.max, .y = y });
 
@@ -99,7 +99,7 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
         /// Draws a single pixel at the specified index, deriving its color from the specified draw mode.
         /// Used internally by `uncheckedDrawPixel` and `uncheckedDrawSpan`.
         /// `index` is not bounds-checked: specifying an index outside the buffer results in undefined behaviour.
-        fn uncheckedDrawIndex(self: *Self, index: Index, draw_mode: PolygonDrawMode.Enum, mask_source: *const Self) void {
+        fn uncheckedDrawIndex(self: *Self, index: Index, draw_mode: DrawMode.Enum, mask_source: *const Self) void {
             const native_color = switch (draw_mode) {
                 .solid_color => |color_id| Self.nativeColor(color_id),
                 .highlight => ColorID.highlightByte(self.data[index.offset]),
@@ -126,7 +126,7 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
         /// Used internally by `uncheckedDrawSpan`, and equivalent to a multibyte version of `uncheckedDrawIndex`.
         /// `range` is not bounds-checked: specifying a range outside the buffer, or with a negative length,
         /// results in undefined behaviour.
-        fn uncheckedDrawRange(self: *Self, range: Range.Instance(usize), draw_mode: PolygonDrawMode.Enum, mask_source: *const Self) void {
+        fn uncheckedDrawRange(self: *Self, range: Range.Instance(usize), draw_mode: DrawMode.Enum, mask_source: *const Self) void {
             var destination_slice = self.data[range.min..range.max];
 
             switch (draw_mode) {

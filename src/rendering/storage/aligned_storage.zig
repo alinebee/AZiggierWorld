@@ -1,7 +1,7 @@
 const ColorID = @import("../../values/color_id.zig");
 const Point = @import("../../values/point.zig");
 const Range = @import("../../values/range.zig");
-const PolygonDrawMode = @import("../../values/polygon_draw_mode.zig");
+const DrawMode = @import("../../values/draw_mode.zig");
 
 const mem = @import("std").mem;
 
@@ -36,7 +36,7 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
         /// Draws a single pixel at the specified point, deriving its color from the specified draw mode.
         /// Used for drawing single-pixel polygons.
         /// This is not bounds-checked: specifying a point outside the buffer results in undefined behaviour.
-        pub fn uncheckedDrawPixel(self: *Self, point: Point.Instance, draw_mode: PolygonDrawMode.Enum, mask_source: *const Self) void {
+        pub fn uncheckedDrawPixel(self: *Self, point: Point.Instance, draw_mode: DrawMode.Enum, mask_source: *const Self) void {
             const color = switch (draw_mode) {
                 .solid_color => |color_id| color_id,
                 .highlight => ColorID.highlight(self.uncheckedGet(point)),
@@ -56,7 +56,7 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
         /// Fill a horizontal line with colors using the specified draw mode.
         /// This is not bounds-checked: specifying a span outside the buffer, or with a negative length,
         /// results in undefined behaviour.
-        pub fn uncheckedDrawSpan(self: *Self, x_span: Range.Instance(Point.Coordinate), y: Point.Coordinate, draw_mode: PolygonDrawMode.Enum, mask_source: *const Self) void {
+        pub fn uncheckedDrawSpan(self: *Self, x_span: Range.Instance(Point.Coordinate), y: Point.Coordinate, draw_mode: DrawMode.Enum, mask_source: *const Self) void {
             const row = @intCast(usize, y);
             const start_column = @intCast(usize, x_span.min);
             // Ranges are inclusive, but this range will be converted into a slice,

@@ -6,7 +6,7 @@ const ColorID = @import("../values/color_id.zig");
 const Point = @import("../values/point.zig");
 const Range = @import("../values/range.zig");
 const BoundingBox = @import("../values/bounding_box.zig");
-const PolygonDrawMode = @import("../values/polygon_draw_mode.zig");
+const DrawMode = @import("../values/draw_mode.zig");
 const Font = @import("../assets/font.zig");
 
 const assert = @import("std").debug.assert;
@@ -35,7 +35,7 @@ pub fn Instance(comptime StorageFn: anytype, comptime width: usize, comptime hei
 
         /// Draws a 1px dot at the specified point in this buffer, deciding its color according to the draw mode.
         /// Returns error.PointOutOfBounds if the point does not lie within the buffer's bounds.
-        pub fn drawDot(self: *Self, point: Point.Instance, draw_mode: PolygonDrawMode.Enum, mask_buffer: *const Self) Error!void {
+        pub fn drawDot(self: *Self, point: Point.Instance, draw_mode: DrawMode.Enum, mask_buffer: *const Self) Error!void {
             if (Self.bounds.contains(point) == false) {
                 return error.PointOutOfBounds;
             }
@@ -46,7 +46,7 @@ pub fn Instance(comptime StorageFn: anytype, comptime width: usize, comptime hei
         /// Draw a 1-pixel-wide horizontal line filling the specified range,
         /// deciding its color according to the draw mode.
         /// Portions of the line that are out of bounds will not be drawn.
-        pub fn drawSpan(self: *Self, x: Range.Instance(Point.Coordinate), y: Point.Coordinate, draw_mode: PolygonDrawMode.Enum, mask_buffer: *const Self) void {
+        pub fn drawSpan(self: *Self, x: Range.Instance(Point.Coordinate), y: Point.Coordinate, draw_mode: DrawMode.Enum, mask_buffer: *const Self) void {
             if (Self.bounds.y.contains(y) == false) {
                 return;
             }

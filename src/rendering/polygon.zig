@@ -1,5 +1,5 @@
 const Point = @import("../values/point.zig");
-const PolygonDrawMode = @import("../values/polygon_draw_mode.zig");
+const DrawMode = @import("../values/draw_mode.zig");
 const PolygonScale = @import("../values/polygon_scale.zig");
 const BoundingBox = @import("../values/bounding_box.zig");
 
@@ -8,7 +8,7 @@ const introspection = @import("../utils/introspection.zig");
 /// Defines a scaled polygon in screen space, with between 4 and 50 polygons.
 pub const Instance = struct {
     /// The draw mode with which to render this polygon.
-    draw_mode: PolygonDrawMode.Enum,
+    draw_mode: DrawMode.Enum,
 
     /// The scaled bounding box of this polygon in screen coordinates.
     bounds: BoundingBox.Instance,
@@ -27,7 +27,7 @@ pub const Instance = struct {
     }
 };
 
-pub fn parse(reader: anytype, center: Point.Instance, scale: PolygonScale.Raw, draw_mode: PolygonDrawMode.Enum) Error(@TypeOf(reader))!Instance {
+pub fn parse(reader: anytype, center: Point.Instance, scale: PolygonScale.Raw, draw_mode: DrawMode.Enum) Error(@TypeOf(reader))!Instance {
     const scaled_width = PolygonScale.apply(BoundingBox.Dimension, try reader.readByte(), scale);
     const scaled_height = PolygonScale.apply(BoundingBox.Dimension, try reader.readByte(), scale);
 
