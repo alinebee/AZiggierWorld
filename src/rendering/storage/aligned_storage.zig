@@ -98,9 +98,9 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
         }
 
         /// Create a new buffer from the string representation of a bitmap.
-        pub fn fromString(bitmap_string: []const u8) Self {
+        pub fn fillFromString(self: *Self, bitmap_string: []const u8) void {
             const bitmap = IndexedBitmap.Instance(width, height).fromString(bitmap_string);
-            return .{ .data = bitmap.data };
+            self.data = bitmap.data;
         }
     };
 }

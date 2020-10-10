@@ -106,241 +106,234 @@ pub const Error = error{PointOutOfBounds};
 // -- Testing --
 
 const testing = @import("../utils/testing.zig");
+const expectPixels = @import("test_helpers/storage_test_suite.zig").expectPixels;
+
 const AlignedStorage = @import("storage/aligned_storage.zig");
+const PackedStorage = @import("storage/packed_storage.zig");
 
-test "Instance calculates expected bounding box" {
-    const Buffer = @TypeOf(new(AlignedStorage.Instance, 320, 200));
+/// Test each method of the video buffer interface against an arbitrary storage type.
+fn runTests(comptime Storage: anytype) void {
+    _ = struct {
+        test "Instance calculates expected bounding box" {
+            const Buffer = @TypeOf(new(Storage, 320, 200));
 
-    testing.expectEqual(0, Buffer.bounds.x.min);
-    testing.expectEqual(0, Buffer.bounds.y.min);
-    testing.expectEqual(319, Buffer.bounds.x.max);
-    testing.expectEqual(199, Buffer.bounds.y.max);
+            testing.expectEqual(0, Buffer.bounds.x.min);
+            testing.expectEqual(0, Buffer.bounds.y.min);
+            testing.expectEqual(319, Buffer.bounds.x.max);
+            testing.expectEqual(199, Buffer.bounds.y.max);
+        }
+
+        test "fill fills buffer with specified color" {
+            var buffer = new(Storage, 4, 4);
+            buffer.storage.fillFromString(
+                \\0123
+                \\4567
+                \\89AB
+                \\CDEF
+            );
+
+            buffer.fill(0xF);
+
+            const expected =
+                \\FFFF
+                \\FFFF
+                \\FFFF
+                \\FFFF
+            ;
+
+            expectPixels(expected, buffer.storage);
+        }
+
+        test "drawDot draws fixed color at point and ignores mask buffer" {
+            var buffer = new(Storage, 4, 4);
+
+            var mask_buffer = new(Storage, 4, 4);
+            mask_buffer.fill(0xF);
+
+            try buffer.drawDot(.{ .x = 3, .y = 2 }, .{ .solid_color = 0x9 }, &mask_buffer);
+
+            const expected =
+                \\0000
+                \\0000
+                \\0009
+                \\0000
+            ;
+
+            expectPixels(expected, buffer.storage);
+        }
+
+        test "drawDot ramps translucent color at point and ignores mask buffer" {
+            var buffer = new(Storage, 4, 4);
+            buffer.storage.fillFromString(
+                \\0123
+                \\4567
+                \\89AB
+                \\CDEF
+            );
+
+            var mask_buffer = new(Storage, 4, 4);
+            mask_buffer.fill(0xF);
+
+            try buffer.drawDot(.{ .x = 2, .y = 1 }, .highlight, &mask_buffer);
+            try buffer.drawDot(.{ .x = 0, .y = 3 }, .highlight, &mask_buffer);
+
+            // Colors from 0...7 should have been ramped up to 8...F;
+            // colors from 8...F should have been left as they are.
+            const expected =
+                \\0123
+                \\45E7
+                \\89AB
+                \\CDEF
+            ;
+
+            expectPixels(expected, buffer.storage);
+        }
+
+        test "drawDot renders color from mask at point" {
+            var buffer = new(Storage, 4, 4);
+
+            var mask_buffer = new(Storage, 4, 4);
+            mask_buffer.storage.fillFromString(
+                \\0123
+                \\4567
+                \\89AB
+                \\CDEF
+            );
+
+            try buffer.drawDot(.{ .x = 2, .y = 1 }, .mask, &mask_buffer);
+
+            const expected =
+                \\0000
+                \\0060
+                \\0000
+                \\0000
+            ;
+
+            expectPixels(expected, buffer.storage);
+        }
+
+        test "drawSpan draws a horizontal line in a fixed color and ignores mask buffer, clamping line to fit within bounds" {
+            var buffer = new(Storage, 4, 4);
+
+            var mask_buffer = new(Storage, 4, 4);
+            mask_buffer.fill(0xF);
+
+            buffer.drawSpan(.{ .min = -2, .max = 2 }, 1, .{ .solid_color = 0x9 }, &mask_buffer);
+
+            const expected =
+                \\0000
+                \\9990
+                \\0000
+                \\0000
+            ;
+
+            expectPixels(expected, buffer.storage);
+        }
+
+        test "drawSpan highlights existing colors in a horizontal line and ignores mask buffer, clamping line to fit within bounds" {
+            var buffer = new(Storage, 4, 4);
+            buffer.storage.fillFromString(
+                \\0123
+                \\0123
+                \\0123
+                \\0123
+            );
+
+            var mask_buffer = new(Storage, 4, 4);
+            mask_buffer.fill(0xF);
+
+            buffer.drawSpan(.{ .min = -2, .max = 2 }, 1, .highlight, &mask_buffer);
+
+            // Colors from 0...7 should have been ramped up to 8...F;
+            // colors from 8...F should have been left as they are.
+            const expected =
+                \\0123
+                \\89A3
+                \\0123
+                \\0123
+            ;
+
+            expectPixels(expected, buffer.storage);
+        }
+
+        test "drawSpan copies mask pixels in horizontal line, clamping line to fit within bounds" {
+            var buffer = new(Storage, 4, 4);
+
+            var mask_buffer = new(Storage, 4, 4);
+            mask_buffer.storage.fillFromString(
+                \\0123
+                \\4567
+                \\89AB
+                \\CDEF
+            );
+
+            buffer.drawSpan(.{ .min = -2, .max = 2 }, 1, .mask, &mask_buffer);
+
+            const expected =
+                \\0000
+                \\4560
+                \\0000
+                \\0000
+            ;
+
+            expectPixels(expected, buffer.storage);
+        }
+
+        test "drawSpan draws no pixels when line is completely out of bounds" {
+            var buffer = new(Storage, 4, 4);
+
+            var mask_buffer = new(Storage, 4, 4);
+            mask_buffer.fill(0xF);
+
+            buffer.drawSpan(.{ .min = -2, .max = 2 }, 4, .{ .solid_color = 0x9 }, &mask_buffer);
+
+            const expected =
+                \\0000
+                \\0000
+                \\0000
+                \\0000
+            ;
+
+            expectPixels(expected, buffer.storage);
+        }
+
+        test "drawGlyph renders pixels of glyph at specified position in buffer" {
+            var buffer = new(Storage, 10, 10);
+
+            const glyph = try Font.glyph('A');
+            try buffer.drawGlyph(glyph, .{ .x = 1, .y = 1 }, 0xA);
+
+            const expected =
+                \\0000000000
+                \\00AAAA0000
+                \\0A0000A000
+                \\0A0000A000
+                \\0AAAAAA000
+                \\0A0000A000
+                \\0A0000A000
+                \\0A0000A000
+                \\0000000000
+                \\0000000000
+            ;
+
+            expectPixels(expected, buffer.storage);
+        }
+
+        test "drawGlyph returns error.OutOfBounds for glyphs that are not fully inside the buffer" {
+            var buffer = new(Storage, 10, 10);
+
+            const glyph = try Font.glyph('K');
+
+            testing.expectError(error.PointOutOfBounds, buffer.drawGlyph(glyph, .{ .x = -1, .y = -2 }, 11));
+            testing.expectError(error.PointOutOfBounds, buffer.drawGlyph(glyph, .{ .x = 312, .y = 192 }, 11));
+        }
+    };
 }
 
-test "fill fills buffer with specified color" {
-    var buffer = new(AlignedStorage.Instance, 4, 4);
-    buffer.storage.data = .{
-        .{ 00, 01, 02, 03 },
-        .{ 04, 05, 06, 07 },
-        .{ 08, 09, 10, 11 },
-        .{ 12, 13, 14, 15 },
-    };
-
-    buffer.fill(15);
-
-    const expected_data = @TypeOf(buffer.storage.data){
-        .{ 15, 15, 15, 15 },
-        .{ 15, 15, 15, 15 },
-        .{ 15, 15, 15, 15 },
-        .{ 15, 15, 15, 15 },
-    };
-
-    testing.expectEqual(expected_data, buffer.storage.data);
+test "Run tests with aligned storage" {
+    runTests(AlignedStorage.Instance);
 }
 
-test "drawDot draws fixed color at point and ignores mask buffer" {
-    var buffer = new(AlignedStorage.Instance, 4, 4);
-    var mask_buffer = new(AlignedStorage.Instance, 4, 4);
-    mask_buffer.fill(15);
-
-    const expected_data = @TypeOf(buffer.storage.data){
-        .{ 0, 0, 0, 0 },
-        .{ 0, 0, 0, 0 },
-        .{ 0, 0, 0, 9 },
-        .{ 0, 0, 0, 0 },
-    };
-
-    try buffer.drawDot(.{ .x = 3, .y = 2 }, .{ .solid_color = 9 }, &mask_buffer);
-
-    testing.expectEqual(expected_data, buffer.storage.data);
-}
-
-test "drawDot ramps translucent color at point and ignores mask buffer" {
-    var buffer = new(AlignedStorage.Instance, 4, 4);
-    var mask_buffer = new(AlignedStorage.Instance, 4, 4);
-    mask_buffer.fill(15);
-
-    buffer.storage.data = .{
-        .{ 0, 0, 0, 0 },
-        .{ 0, 0, 0, 0b0011 },
-        .{ 0, 0, 0, 0 },
-        .{ 0, 0, 0, 0 },
-    };
-
-    const expected_data = @TypeOf(buffer.storage.data){
-        .{ 0, 0, 0, 0 },
-        .{ 0, 0, 0, 0b1011 },
-        .{ 0, 0, 0, 0 },
-        .{ 0, 0, 0, 0 },
-    };
-
-    try buffer.drawDot(.{ .x = 3, .y = 1 }, .highlight, &mask_buffer);
-
-    testing.expectEqual(expected_data, buffer.storage.data);
-}
-
-test "drawDot renders color from mask at point" {
-    var buffer = new(AlignedStorage.Instance, 4, 4);
-    var mask_buffer = new(AlignedStorage.Instance, 4, 4);
-
-    buffer.storage.data = .{
-        .{ 00, 00, 00, 00 },
-        .{ 00, 00, 00, 00 },
-        .{ 00, 00, 00, 00 },
-        .{ 00, 00, 00, 00 },
-    };
-
-    mask_buffer.storage.data = .{
-        .{ 00, 01, 02, 03 },
-        .{ 04, 05, 06, 07 },
-        .{ 08, 09, 10, 11 },
-        .{ 12, 13, 14, 15 },
-    };
-
-    const expected_data = @TypeOf(buffer.storage.data){
-        .{ 00, 00, 00, 00 },
-        .{ 00, 00, 06, 00 },
-        .{ 00, 00, 00, 00 },
-        .{ 00, 00, 00, 00 },
-    };
-
-    try buffer.drawDot(.{ .x = 2, .y = 1 }, .mask, &mask_buffer);
-
-    testing.expectEqual(expected_data, buffer.storage.data);
-}
-
-test "drawSpan draws a horizontal line in a fixed color and ignores mask buffer, clamping line to fit within bounds" {
-    var buffer = new(AlignedStorage.Instance, 4, 4);
-    var mask_buffer = new(AlignedStorage.Instance, 4, 4);
-    mask_buffer.fill(15);
-
-    buffer.storage.data = .{
-        .{ 00, 00, 00, 00 },
-        .{ 00, 00, 00, 00 },
-        .{ 00, 00, 00, 00 },
-        .{ 00, 00, 00, 00 },
-    };
-
-    const expected_data = @TypeOf(buffer.storage.data){
-        .{ 00, 00, 00, 00 },
-        .{ 09, 09, 09, 00 },
-        .{ 00, 00, 00, 00 },
-        .{ 00, 00, 00, 00 },
-    };
-
-    buffer.drawSpan(.{ .min = -2, .max = 2 }, 1, .{ .solid_color = 9 }, &mask_buffer);
-
-    testing.expectEqual(expected_data, buffer.storage.data);
-}
-
-test "drawSpan ramps existing colors in a horizontal line and ignores mask buffer, clamping line to fit within bounds" {
-    var buffer = new(AlignedStorage.Instance, 4, 4);
-    var mask_buffer = new(AlignedStorage.Instance, 4, 4);
-    mask_buffer.fill(15);
-
-    buffer.storage.data = .{
-        .{ 0, 0, 0, 0 },
-        .{ 0b0001, 0b0010, 0b0011, 0b0100 },
-        .{ 0, 0, 0, 0 },
-        .{ 0, 0, 0, 0 },
-    };
-
-    const expected_data = @TypeOf(buffer.storage.data){
-        .{ 0, 0, 0, 0 },
-        .{ 0b1001, 0b1010, 0b1011, 0b0100 },
-        .{ 0, 0, 0, 0 },
-        .{ 0, 0, 0, 0 },
-    };
-
-    buffer.drawSpan(.{ .min = -2, .max = 2 }, 1, .highlight, &mask_buffer);
-
-    testing.expectEqual(expected_data, buffer.storage.data);
-}
-
-test "drawSpan renders horizontal line from mask pixels, clamping line to fit within bounds" {
-    var buffer = new(AlignedStorage.Instance, 4, 4);
-    var mask_buffer = new(AlignedStorage.Instance, 4, 4);
-
-    buffer.storage.data = .{
-        .{ 00, 00, 00, 00 },
-        .{ 00, 00, 00, 00 },
-        .{ 00, 00, 00, 00 },
-        .{ 00, 00, 00, 00 },
-    };
-
-    mask_buffer.storage.data = .{
-        .{ 00, 01, 02, 03 },
-        .{ 04, 05, 06, 07 },
-        .{ 08, 09, 10, 11 },
-        .{ 12, 13, 14, 15 },
-    };
-
-    const expected_data = @TypeOf(buffer.storage.data){
-        .{ 00, 00, 00, 00 },
-        .{ 04, 05, 06, 00 },
-        .{ 00, 00, 00, 00 },
-        .{ 00, 00, 00, 00 },
-    };
-
-    buffer.drawSpan(.{ .min = -2, .max = 2 }, 1, .mask, &mask_buffer);
-
-    testing.expectEqual(expected_data, buffer.storage.data);
-}
-
-test "drawSpan draws no pixels when line is completely out of bounds" {
-    var buffer = new(AlignedStorage.Instance, 4, 4);
-    var mask_buffer = new(AlignedStorage.Instance, 4, 4);
-    mask_buffer.fill(15);
-
-    const expected_data = @TypeOf(buffer.storage.data){
-        .{ 0, 0, 0, 0 },
-        .{ 0, 0, 0, 0 },
-        .{ 0, 0, 0, 0 },
-        .{ 0, 0, 0, 0 },
-    };
-
-    buffer.drawSpan(.{ .min = -2, .max = 2 }, 4, .{ .solid_color = 9 }, &mask_buffer);
-
-    testing.expectEqual(expected_data, buffer.storage.data);
-}
-
-test "drawGlyph renders pixels of glyph at specified position in buffer" {
-    var buffer = new(AlignedStorage.Instance, 10, 10);
-
-    const glyph = try Font.glyph('A');
-    try buffer.drawGlyph(glyph, .{ .x = 1, .y = 1 }, 15);
-
-    // 'A' glyph:
-    // 0b01111000,
-    // 0b10000100,
-    // 0b10000100,
-    // 0b11111100,
-    // 0b10000100,
-    // 0b10000100,
-    // 0b10000100,
-    // 0b00000000,
-
-    const expected_data = @TypeOf(buffer.storage.data){
-        .{ 00, 00, 00, 00, 00, 00, 00, 00, 00, 00 },
-        .{ 00, 00, 15, 15, 15, 15, 00, 00, 00, 00 },
-        .{ 00, 15, 00, 00, 00, 00, 15, 00, 00, 00 },
-        .{ 00, 15, 00, 00, 00, 00, 15, 00, 00, 00 },
-        .{ 00, 15, 15, 15, 15, 15, 15, 00, 00, 00 },
-        .{ 00, 15, 00, 00, 00, 00, 15, 00, 00, 00 },
-        .{ 00, 15, 00, 00, 00, 00, 15, 00, 00, 00 },
-        .{ 00, 15, 00, 00, 00, 00, 15, 00, 00, 00 },
-        .{ 00, 00, 00, 00, 00, 00, 00, 00, 00, 00 },
-        .{ 00, 00, 00, 00, 00, 00, 00, 00, 00, 00 },
-    };
-
-    testing.expectEqual(expected_data, buffer.storage.data);
-}
-
-test "drawGlyph returns error.OutOfBounds for glyphs that are not fully inside the buffer" {
-    var buffer = new(AlignedStorage.Instance, 10, 10);
-
-    const glyph = try Font.glyph('K');
-
-    testing.expectError(error.PointOutOfBounds, buffer.drawGlyph(glyph, .{ .x = -1, .y = -2 }, 11));
-    testing.expectError(error.PointOutOfBounds, buffer.drawGlyph(glyph, .{ .x = 312, .y = 192 }, 11));
+test "Run tests with packed storage" {
+    runTests(PackedStorage.Instance);
 }

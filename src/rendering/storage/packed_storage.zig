@@ -171,9 +171,8 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
             return bitmap;
         }
 
-        /// Create a new buffer from the string representation of a bitmap.
-        pub fn fromString(bitmap_string: []const u8) Self {
-            var self = Self{ .data = undefined };
+        /// Fill the buffer from the string representation of a bitmap.
+        pub fn fillFromString(self: *Self, bitmap_string: []const u8) void {
             const bitmap = IndexedBitmap.Instance(width, height).fromString(bitmap_string);
 
             for (bitmap.data) |row, y| {
@@ -186,8 +185,6 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
                     self.uncheckedSetNativeColor(point, native_color);
                 }
             }
-
-            return self;
         }
     };
 }
@@ -280,7 +277,8 @@ test "toBitmap returns bitmap with expected contents" {
 }
 
 test "fromString fills buffer with expected contents" {
-    const storage = Instance(4, 4).fromString(
+    var storage = Instance(4, 4){};
+    storage.fillFromString(
         \\0123
         \\4567
         \\89AB

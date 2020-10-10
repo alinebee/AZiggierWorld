@@ -82,7 +82,8 @@ pub fn runTests(comptime Instance: anytype) void {
         test "uncheckedDrawPixel highlights color at point and ignores mask" {
             comptime const Storage = Instance(4, 4);
 
-            var storage = Storage.fromString(
+            var storage = Storage{};
+            storage.fillFromString(
                 \\0000
                 \\4567
                 \\0000
@@ -201,7 +202,8 @@ pub fn runTests(comptime Instance: anytype) void {
 
         test "uncheckedDrawSpan highlights colors in slice and ignores mask" {
             comptime const Storage = Instance(16, 3);
-            var storage = Storage.fromString(
+            var storage = Storage{};
+            storage.fillFromString(
                 \\0123456789ABCDEF
                 \\0123456789ABCDEF
                 \\0123456789ABCDEF
@@ -226,7 +228,8 @@ pub fn runTests(comptime Instance: anytype) void {
             comptime const Storage = Instance(10, 3);
             var storage = Storage{};
 
-            var mask_storage = Storage.fromString(
+            var mask_storage = Storage{};
+            mask_storage.fillFromString(
                 \\0123456789
                 \\9876543210
                 \\0123456789
