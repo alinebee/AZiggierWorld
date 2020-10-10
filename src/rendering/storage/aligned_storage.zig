@@ -135,38 +135,8 @@ test "Instance handles 0 width or height gracefully" {
     testing.expectEqual([0][0]ColorID.Trusted, @TypeOf(zero_dimensions.data));
 }
 
-test "fillWithNativeColor replaces all bytes in buffer with specified color" {
-    var storage = Instance(4, 4){};
+const storage_test_suite = @import("../test_helpers/storage_test_suite.zig");
 
-    const before_fill = @TypeOf(storage.data){
-        .{ 0, 0, 0, 0 },
-        .{ 0, 0, 0, 0 },
-        .{ 0, 0, 0, 0 },
-        .{ 0, 0, 0, 0 },
-    };
-
-    const after_fill = @TypeOf(storage.data){
-        .{ 15, 15, 15, 15 },
-        .{ 15, 15, 15, 15 },
-        .{ 15, 15, 15, 15 },
-        .{ 15, 15, 15, 15 },
-    };
-
-    testing.expectEqual(before_fill, storage.data);
-
-    storage.fill(15);
-
-    testing.expectEqual(after_fill, storage.data);
-}
-
-test "uncheckedSetNativeColor sets color at point" {
-    var storage = Instance(320, 200){};
-
-    storage.uncheckedSetNativeColor(.{ .x = 0, .y = 0 }, 15);
-    storage.uncheckedSetNativeColor(.{ .x = 3, .y = 4 }, 10);
-    storage.uncheckedSetNativeColor(.{ .x = 319, .y = 199 }, 1);
-
-    testing.expectEqual(15, storage.data[0][0]);
-    testing.expectEqual(10, storage.data[4][3]);
-    testing.expectEqual(1, storage.data[199][319]);
+test "Run storage interface tests" {
+    storage_test_suite.runTests(Instance);
 }
