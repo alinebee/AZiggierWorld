@@ -33,16 +33,6 @@ pub fn Instance(comptime StorageFn: anytype, comptime width: usize, comptime hei
             self.storage.fill(color);
         }
 
-        /// Draws a 1px dot at the specified point in this buffer, deciding its color according to the draw mode.
-        /// Returns error.PointOutOfBounds if the point does not lie within the buffer's bounds.
-        pub fn drawDot(self: *Self, point: Point.Instance, draw_mode: DrawMode.Enum, mask_buffer: *const Self) Error!void {
-            if (Self.bounds.contains(point) == false) {
-                return error.PointOutOfBounds;
-            }
-
-            self.storage.uncheckedDrawPixel(point, draw_mode, &mask_buffer.storage);
-        }
-
         /// Draw a 1-pixel-wide horizontal line filling the specified range,
         /// deciding its color according to the draw mode.
         /// Portions of the line that are out of bounds will not be drawn.
@@ -139,74 +129,6 @@ fn runTests(comptime Storage: anytype) void {
                 \\FFFF
                 \\FFFF
                 \\FFFF
-            ;
-
-            expectPixels(expected, buffer.storage);
-        }
-
-        test "drawDot draws fixed color at point and ignores mask buffer" {
-            var buffer = new(Storage, 4, 4);
-
-            var mask_buffer = new(Storage, 4, 4);
-            mask_buffer.fill(0xF);
-
-            try buffer.drawDot(.{ .x = 3, .y = 2 }, .{ .solid_color = 0x9 }, &mask_buffer);
-
-            const expected =
-                \\0000
-                \\0000
-                \\0009
-                \\0000
-            ;
-
-            expectPixels(expected, buffer.storage);
-        }
-
-        test "drawDot ramps translucent color at point and ignores mask buffer" {
-            var buffer = new(Storage, 4, 4);
-            buffer.storage.fillFromString(
-                \\0123
-                \\4567
-                \\89AB
-                \\CDEF
-            );
-
-            var mask_buffer = new(Storage, 4, 4);
-            mask_buffer.fill(0xF);
-
-            try buffer.drawDot(.{ .x = 2, .y = 1 }, .highlight, &mask_buffer);
-            try buffer.drawDot(.{ .x = 0, .y = 3 }, .highlight, &mask_buffer);
-
-            // Colors from 0...7 should have been ramped up to 8...F;
-            // colors from 8...F should have been left as they are.
-            const expected =
-                \\0123
-                \\45E7
-                \\89AB
-                \\CDEF
-            ;
-
-            expectPixels(expected, buffer.storage);
-        }
-
-        test "drawDot renders color from mask at point" {
-            var buffer = new(Storage, 4, 4);
-
-            var mask_buffer = new(Storage, 4, 4);
-            mask_buffer.storage.fillFromString(
-                \\0123
-                \\4567
-                \\89AB
-                \\CDEF
-            );
-
-            try buffer.drawDot(.{ .x = 2, .y = 1 }, .mask, &mask_buffer);
-
-            const expected =
-                \\0000
-                \\0060
-                \\0000
-                \\0000
             ;
 
             expectPixels(expected, buffer.storage);
