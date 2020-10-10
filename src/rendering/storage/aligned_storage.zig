@@ -3,6 +3,8 @@ const Point = @import("../../values/point.zig");
 const Range = @import("../../values/range.zig");
 const DrawMode = @import("../../values/draw_mode.zig");
 
+const IndexedBitmap = @import("../test_helpers/indexed_bitmap.zig");
+
 const mem = @import("std").mem;
 
 /// Returns a video buffer storage that stores a single pixel per byte.
@@ -86,6 +88,19 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
         // Returns the color of the pixel at the specified point.
         fn uncheckedGet(self: Self, point: Point.Instance) NativeColor {
             return self.data[@intCast(usize, point.y)][@intCast(usize, point.x)];
+        }
+
+        // -- Test helpers --
+
+        /// Export the content of the buffer to a bitmap for easier comparison testing.
+        pub fn toBitmap(self: Self) IndexedBitmap.Instance(width, height) {
+            return IndexedBitmap.Instance(width, height){ .data = self.data };
+        }
+
+        /// Create a new buffer from the string representation of a bitmap.
+        pub fn fromString(bitmap_string: []const u8) Self {
+            const bitmap = IndexedBitmap.Instance(width, height).fromString(bitmap_string);
+            return .{ .data = bitmap.data };
         }
     };
 }
