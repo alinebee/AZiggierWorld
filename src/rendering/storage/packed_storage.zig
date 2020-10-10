@@ -258,18 +258,15 @@ test "uncheckedIndexOf returns expected offset and handedness" {
     testing.expectEqual(.{ .offset = 31_999, .hand = .right }, Storage.uncheckedIndexOf(.{ .x = 319, .y = 199 }));
 }
 
+// zig fmt: off
 test "toBitmap returns bitmap with expected contents" {
     const storage = Instance(4, 4){
         .data = .{
-            0b0000_0001,
-            0b0010_0011,
-            0b0100_0101,
-            0b0110_0111,
-            0b1000_1001,
-            0b1010_1011,
-            0b1100_1101,
-            0b1110_1111,
-        },
+            0x01, 0x23,
+            0x45, 0x67,
+            0x89, 0xAB,
+            0xCD, 0xEF,
+        }
     };
 
     const expected =
@@ -291,18 +288,15 @@ test "fromString fills buffer with expected contents" {
     );
 
     const expected = [8]u8{
-        0b0000_0001,
-        0b0010_0011,
-        0b0100_0101,
-        0b0110_0111,
-        0b1000_1001,
-        0b1010_1011,
-        0b1100_1101,
-        0b1110_1111,
+        0x01, 0x23,
+        0x45, 0x67,
+        0x89, 0xAB,
+        0xCD, 0xEF,
     };
 
     testing.expectEqual(expected, storage.data);
 }
+// zig fmt: on
 
 const storage_test_suite = @import("../test_helpers/storage_test_suite.zig");
 
