@@ -13,18 +13,19 @@ const math = std.math;
 /// like the original Another World's buffers did.
 pub fn Instance(comptime width: usize, comptime height: usize) type {
     comptime const bytes_required = try math.divCeil(usize, width * height, 2);
+    comptime const Data = [bytes_required]NativeColor;
 
     return struct {
         const Self = @This();
 
-        data: [bytes_required]NativeColor = [_]NativeColor{0} ** bytes_required,
+        data: Data = mem.zeroes(Data),
 
         // -- Type-level functions
 
         /// Widens a 4-bit color into a byte representing two pixels of that color.
         /// Intended to be passed to `uncheckedSetNativeColor` for more efficient drawing.
         pub fn nativeColor(color: ColorID.Trusted) NativeColor {
-            return (@as(u8, color) << 4) | color;
+            return .{ .left = color, .right = color };
         }
 
         /// Given an X,Y point, returns the index of the byte within `data` containing that point's pixel.
@@ -104,7 +105,7 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
         fn uncheckedDrawIndex(self: *Self, index: Index, draw_mode: DrawMode.Enum, mask_source: *const Self) void {
             const native_color = switch (draw_mode) {
                 .solid_color => |color_id| Self.nativeColor(color_id),
-                .highlight => ColorID.highlightByte(self.data[index.offset]),
+                .highlight => self.data[index.offset].highlighted(),
                 .mask => mask_source.data[index.offset],
             };
 
@@ -117,10 +118,10 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
         fn uncheckedSetIndex(self: *Self, index: Index, color: NativeColor) void {
             const destination = &self.data[index.offset];
 
-            destination.* = switch (index.hand) {
-                .left => (destination.* & 0b0000_1111) | (color & 0b1111_0000),
-                .right => (destination.* & 0b1111_0000) | (color & 0b0000_1111),
-            };
+            switch (index.hand) {
+                .left => destination.*.left = color.left,
+                .right => destination.*.right = color.right,
+            }
         }
 
         /// Given a range of bytes within the buffer storage, fills all pixels within those bytes,
@@ -137,7 +138,7 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
                 },
                 .highlight => {
                     for (destination_slice) |*byte| {
-                        byte.* = ColorID.highlightByte(byte.*);
+                        byte.* = byte.*.highlighted();
                     }
                 },
                 .mask => {
@@ -160,11 +161,11 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
                         .y = @intCast(Point.Coordinate, y),
                     };
                     const index = uncheckedIndexOf(point);
-                    const color_byte = self.data[index.offset];
-                    column.* = @truncate(ColorID.Trusted, switch (index.hand) {
-                        .left => color_byte >> 4,
-                        .right => color_byte,
-                    });
+                    const native_color = self.data[index.offset];
+                    column.* = switch (index.hand) {
+                        .left => native_color.left,
+                        .right => native_color.right,
+                    };
                 }
             }
 
@@ -190,7 +191,14 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
 }
 
 // The unit in which the buffer will read and write pixel color values.
-const NativeColor = u8;
+const NativeColor = packed struct {
+    right: ColorID.Trusted,
+    left: ColorID.Trusted,
+    
+    fn highlighted(self: NativeColor) NativeColor {
+        return @bitCast(NativeColor, ColorID.highlightByte(@bitCast(u8, self)));
+    }
+};
 
 /// Whether a pixel is the "left" (top 4 bits) or "right" (bottom 4 bits) of the byte.
 const Handedness = enum(u1) {
@@ -220,7 +228,7 @@ test "Instance produces storage of the expected size filled with zeroes." {
 
     testing.expectEqual(32_000, storage.data.len);
 
-    const expected_data = [_]u8{0} ** storage.data.len;
+    const expected_data = [_]NativeColor{ .{ .left = 0, .right = 0 } } ** storage.data.len;
 
     testing.expectEqual(expected_data, storage.data);
 }
@@ -258,12 +266,12 @@ test "uncheckedIndexOf returns expected offset and handedness" {
 // zig fmt: off
 test "toBitmap returns bitmap with expected contents" {
     const storage = Instance(4, 4){
-        .data = .{
+        .data = @bitCast([8]NativeColor, [_]u8{
             0x01, 0x23,
             0x45, 0x67,
             0x89, 0xAB,
             0xCD, 0xEF,
-        }
+        })
     };
 
     const expected =
@@ -285,12 +293,12 @@ test "fromString fills buffer with expected contents" {
         \\CDEF
     );
 
-    const expected = [8]u8{
+    const expected = @bitCast([8]NativeColor, [_]u8{
         0x01, 0x23,
         0x45, 0x67,
         0x89, 0xAB,
         0xCD, 0xEF,
-    };
+    });
 
     testing.expectEqual(expected, storage.data);
 }
