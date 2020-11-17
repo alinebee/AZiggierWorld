@@ -5,6 +5,8 @@ const Comparison = @import("comparison.zig");
 const Address = @import("../values/address.zig");
 const RegisterID = @import("../values/register_id.zig");
 
+const std = @import("std");
+
 /// Compares the value in a register against another register or constant
 /// and jumps to a new address in the program if the comparison succeeds.
 pub const Instance = struct {
@@ -41,13 +43,13 @@ pub const Instance = struct {
 /// Returns an error if the bytecode could not be read or contained an invalid instruction.
 pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instance {
     var self: Instance = undefined;
-
-    // A conditional jump instruction has a control byte with the layout: `rr|000|ccc`, where:
+    
+    // A conditional jump instruction has a control byte with the layout: `ss|000|ccc`, where:
     //
-    // - `rr` determines where to read the value to compare against and thus how many bytes the instruction will read:
-    //   - 11, 10: compare against value in register ID encoded in last byte (5-byte instruction)
-    //   - 01: compare against signed 16-bit constant encoded in last 2 bytes (6-byte instruction)
-    //   - 00: compare against unsigned 8-bit constant encoded in last byte (5-byte instruction)
+    // - `ss` determines where to read the value to compare against and thus how many bytes the instruction will read:
+    //   - 11, 10: compare against value in register ID encoded in last byte (6-byte instruction)
+    //   - 01: compare against signed 16-bit constant encoded in last 2 bytes (7-byte instruction)
+    //   - 00: compare against unsigned 8-bit constant encoded in last byte (6-byte instruction)
     //
     // - `ccc` determines how to compare the two values:
     //   - 000: == equal
@@ -57,14 +59,14 @@ pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instance 
     //   - 100: <  less than
     //   - 101: <= less than or equal to
     //   110 and 111 are unsupported and will trigger error.InvalidJumpComparison.
-
-    const control_code = try program.read(u8);
-    // Operand source is the top 2 bits; comparison is the bottom 3 bits
-    const raw_source = @truncate(u2, control_code >> 6);
-    const raw_comparison = @truncate(Comparison.Raw, control_code);
+    const control_code_fields = @bitCast(packed struct {
+        comparison: u3,
+        unused: u3,
+        source: u2,
+    }, try program.read(u8));
 
     self.lhs = try program.read(RegisterID.Raw);
-    self.rhs = switch (raw_source) {
+    self.rhs = switch (control_code_fields.source) {
         // Even though 16-bit constants are signed, the reference implementation treats 8-bit constants as unsigned.
         0b00 => .{ .constant = try program.read(u8) },
         0b01 => .{ .constant = try program.read(Machine.RegisterValue) },
@@ -75,7 +77,7 @@ pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instance 
 
     // Do failable parsing *after* loading all the bytes that this instruction would normally consume;
     // This way, tests that recover from failed parsing will parse the rest of the bytecode correctly.
-    self.comparison = try Comparison.parse(raw_comparison);
+    self.comparison = try Comparison.parse(control_code_fields.comparison);
 
     return self;
 }

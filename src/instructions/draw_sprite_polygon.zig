@@ -69,7 +69,7 @@ pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instance 
 
     // Unlike DrawBackgroundPolygon, which treats the lower 7 bits of the opcode as the top part of the polygon address,
     // this operation reads two whole bytes for the polygon address and uses the opcode bits for other parts of the
-    // instruction (see below.)
+    // instruction (see OpcodeFields below.)
     // It interprets the raw polygon address same way as DrawBackgroundPolygon though,
     // right-shifting by one to land on an even address boundary.
     self.address = (try program.read(Video.PolygonAddress)) << 1;
@@ -98,25 +98,27 @@ pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instance 
     //   - 01: use `.polygons` region, read next byte as ID of register containing scale
     //   - 10: use `.polygons` region, read next byte as unsigned 8-bit constant
     //   - 11: use `.animations` region, set default scale
+    const opcode_fields = @bitCast(packed struct {
+        scale: u2,
+        y: u2,
+        x: u2,
+        _unused: u2,
+    }, raw_opcode);
 
-    const raw_x = @truncate(u2, raw_opcode >> 4);
-    const raw_y = @truncate(u2, raw_opcode >> 2);
-    const raw_scale = @truncate(u2, raw_opcode);
-
-    self.x = switch (raw_x) {
+    self.x = switch (opcode_fields.x) {
         0b00 => .{ .constant = try program.read(Point.Coordinate) },
         0b01 => .{ .register = try program.read(RegisterID.Raw) },
         0b10 => .{ .constant = @as(Point.Coordinate, try program.read(u8)) },
         0b11 => .{ .constant = @as(Point.Coordinate, try program.read(u8)) + 256 },
     };
 
-    self.y = switch (raw_y) {
+    self.y = switch (opcode_fields.y) {
         0b00 => .{ .constant = try program.read(Point.Coordinate) },
         0b01 => .{ .register = try program.read(RegisterID.Raw) },
         0b10, 0b11 => .{ .constant = @as(Point.Coordinate, try program.read(u8)) },
     };
 
-    switch (raw_scale) {
+    switch (opcode_fields.scale) {
         0b00 => {
             self.source = .polygons;
             self.scale = .default;

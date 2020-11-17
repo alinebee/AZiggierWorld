@@ -272,7 +272,7 @@ test "parse returns error.VerticesMisaligned when vertex pairs are not aligned h
     );
 }
 
-test "parse returns error.VerticesBacktracked when a clockwise vertex is above the one before it one" {
+test "parse returns error.VerticesBacktracked when a clockwise vertex is above the one before it" {
     const reader = fixedBufferStream(&DataExamples.vertices_backtracked).reader();
     testing.expectError(
         error.VerticesBacktracked,
