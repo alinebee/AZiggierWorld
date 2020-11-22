@@ -1,0 +1,13 @@
+{
+  "actions" : {
+    "build" : {
+      "enabled" : false,
+      "script" : "zig build test"
+    },
+    "run" : {
+      "enabled" : true,
+      "script" : "zig build test"
+    }
+  },
+  "identifier" : "079E61F0-C099-463B-A8CC-7B35B254B005"
+}

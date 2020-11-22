@@ -1,0 +1,13 @@
+{
+  "actions" : {
+    "run" : {
+      "enabled" : true,
+      "script" : "#!\/bin\/sh\nzig fmt \"$1\""
+    }
+  },
+  "arguments" : [
+    "${File}"
+  ],
+  "identifier" : "D5467935-9F3E-4AF2-9E91-14FD076CD368",
+  "openLogOnRun" : "fail"
+}
