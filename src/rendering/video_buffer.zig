@@ -41,15 +41,12 @@ pub fn Instance(comptime StorageFn: anytype, comptime width: usize, comptime hei
                 return;
             }
 
+            const operation = Storage.DrawOperation.forMode(draw_mode, &mask_buffer.storage);
+            
             // Clamp the x coordinates for the line to fit within the video buffer,
             // and bail out if it's entirely out of bounds.
             const in_bounds_x = Self.bounds.x.intersection(x) orelse return;
-
-            if (in_bounds_x.min == in_bounds_x.max) {
-                self.storage.uncheckedDrawPixel(.{ .x = in_bounds_x.min, .y = y }, draw_mode, &mask_buffer.storage);
-            } else {
-                self.storage.uncheckedDrawSpan(in_bounds_x, y, draw_mode, &mask_buffer.storage);
-            }
+            self.storage.uncheckedDrawSpan(in_bounds_x, y, operation);
         }
 
         /// Draws the specified 8x8 glyph, positioning its top left corner at the specified point.
@@ -61,29 +58,41 @@ pub fn Instance(comptime StorageFn: anytype, comptime width: usize, comptime hei
                 return error.PointOutOfBounds;
             }
 
-            var native_color = Storage.nativeColor(color);
+            const operation = Storage.DrawOperation.solidColor(color);
+            
             var cursor = origin;
             for (glyph) |row| {
                 var remaining_pixels = row;
-                // While there are still any bits left to draw in this row of the glyph,
-                // pop the topmost bit of the row: if it's 1, draw a pixel at the next X cursor.
-                // Stop drawing once all bits have been consumed or all remaining bits are 0.
-                //
-                // CHECKME: drawing 1 bit at a time is less efficient for two-pixels-per-byte packed buffers,
-                // since we can end up doing 4 mask operations when replacing both pixels in a byte.
-                // If we read off two bits at a time, we could check if we're going to draw both pixels
-                // and just replace the whole byte; but the complexity of that check may end up slower
-                // than just doing the masks.
+                var span_start: Point.Coordinate = cursor.x;
+                var span_width: Point.Coordinate = 0;
+                
                 while (remaining_pixels != 0) {
-                    if (remaining_pixels & 0b1000_0000 != 0) {
-                        self.storage.uncheckedSetNativeColor(cursor, native_color);
+                    const pixel_lit = (remaining_pixels & 0b1000_0000) != 0;
+                    
+                    if (pixel_lit) {
+                        span_width += 1;
+                    } else {
+                        if (span_width > 0) {
+                            const x_range = Range.new(Point.Coordinate, span_start, span_start + span_width - 1);
+                            self.storage.uncheckedDrawSpan(x_range, cursor.y, operation);
+                            
+                            span_start += span_width;
+                            span_width = 0;
+                        }
+                        span_start += 1;
                     }
+                    
                     remaining_pixels <<= 1;
-                    cursor.x += 1;
+                }
+                
+                if (span_width > 0) {
+                    const x_range = Range.new(Point.Coordinate, span_start, span_start + span_width - 1);
+                    self.storage.uncheckedDrawSpan(x_range, cursor.y, operation);
+                    span_start += span_width;
+                    span_width = 0;
                 }
 
                 // Once we've consumed all bits in the row, move down to the next one.
-                cursor.x = origin.x;
                 cursor.y += 1;
             }
         }
@@ -264,55 +273,55 @@ test "Run tests with packed storage" {
 
 // -- Internal implementation tests --
 
-// A fake storage instance that does nothing but record which draw methods were called internally.
-fn MockStorage(comptime width: usize, comptime height: usize) type {
-    return struct {
-        call_counts: struct {
-            uncheckedDrawPixel: usize,
-            uncheckedDrawSpan: usize,
-        } = .{ .uncheckedDrawPixel = 0, .uncheckedDrawSpan = 0 },
-
-        const Self = @This();
-
-        fn uncheckedDrawPixel(self: *Self, point: Point.Instance, draw_mode: DrawMode.Enum, mask_source: *const Self) void {
-            self.call_counts.uncheckedDrawPixel += 1;
-        }
-
-        fn uncheckedDrawSpan(self: *Self, x_span: Range.Instance(Point.Coordinate), y: Point.Coordinate, draw_mode: DrawMode.Enum, mask_source: *const Self) void {
-            self.call_counts.uncheckedDrawSpan += 1;
-        }
-    };
-}
-
-test "drawSpan uses uncheckedDrawPixel to draw spans that end up being a single pixel" {
-    var buffer = new(MockStorage, 4, 4);
-    var mask_buffer = buffer;
-
-    // Span width is 3 pixels, but only 1 pixel of it is within bounds
-    buffer.drawSpan(.{ .min = -2, .max = 0 }, 0, .{ .solid_color = 0x9 }, &mask_buffer);
-
-    testing.expectEqual(1, buffer.storage.call_counts.uncheckedDrawPixel);
-    testing.expectEqual(0, buffer.storage.call_counts.uncheckedDrawSpan);
-}
-
-test "drawSpan uses uncheckedDrawSpan to draw spans wider than a single pixel" {
-    var buffer = new(MockStorage, 4, 4);
-    var mask_buffer = buffer;
-
-    // Span width is 4 pixels, 2 pixels of which are within bounds
-    buffer.drawSpan(.{ .min = -2, .max = 1 }, 0, .{ .solid_color = 0x9 }, &mask_buffer);
-
-    testing.expectEqual(0, buffer.storage.call_counts.uncheckedDrawPixel);
-    testing.expectEqual(1, buffer.storage.call_counts.uncheckedDrawSpan);
-}
-
-test "drawSpan does not call draw methods when span is completely of bounds" {
-    var buffer = new(MockStorage, 4, 4);
-    var mask_buffer = buffer;
-
-    // Span width is 3 pixels, but only 1 pixel of it is within bounds
-    buffer.drawSpan(.{ .min = -2, .max = -1 }, 0, .{ .solid_color = 0x9 }, &mask_buffer);
-
-    testing.expectEqual(0, buffer.storage.call_counts.uncheckedDrawPixel);
-    testing.expectEqual(0, buffer.storage.call_counts.uncheckedDrawSpan);
-}
+// // A fake storage instance that does nothing but record which draw methods were called internally.
+// fn MockStorage(comptime width: usize, comptime height: usize) type {
+//     return struct {
+//         call_counts: struct {
+//             uncheckedDrawPixel: usize,
+//             uncheckedDrawSpan: usize,
+//         } = .{ .uncheckedDrawPixel = 0, .uncheckedDrawSpan = 0 },
+// 
+//         const Self = @This();
+// 
+//         fn uncheckedDrawPixel(self: *Self, point: Point.Instance, draw_mode: DrawMode.Enum, mask_source: *const Self) void {
+//             self.call_counts.uncheckedDrawPixel += 1;
+//         }
+// 
+//         fn uncheckedDrawSpan(self: *Self, x_span: Range.Instance(Point.Coordinate), y: Point.Coordinate, draw_mode: DrawMode.Enum, mask_source: *const Self) void {
+//             self.call_counts.uncheckedDrawSpan += 1;
+//         }
+//     };
+// }
+// 
+// test "drawSpan uses uncheckedDrawPixel to draw spans that end up being a single pixel" {
+//     var buffer = new(MockStorage, 4, 4);
+//     var mask_buffer = buffer;
+// 
+//     // Span width is 3 pixels, but only 1 pixel of it is within bounds
+//     buffer.drawSpan(.{ .min = -2, .max = 0 }, 0, .{ .solid_color = 0x9 }, &mask_buffer);
+// 
+//     testing.expectEqual(1, buffer.storage.call_counts.uncheckedDrawPixel);
+//     testing.expectEqual(0, buffer.storage.call_counts.uncheckedDrawSpan);
+// }
+// 
+// test "drawSpan uses uncheckedDrawSpan to draw spans wider than a single pixel" {
+//     var buffer = new(MockStorage, 4, 4);
+//     var mask_buffer = buffer;
+// 
+//     // Span width is 4 pixels, 2 pixels of which are within bounds
+//     buffer.drawSpan(.{ .min = -2, .max = 1 }, 0, .{ .solid_color = 0x9 }, &mask_buffer);
+// 
+//     testing.expectEqual(0, buffer.storage.call_counts.uncheckedDrawPixel);
+//     testing.expectEqual(1, buffer.storage.call_counts.uncheckedDrawSpan);
+// }
+// 
+// test "drawSpan does not call draw methods when span is completely of bounds" {
+//     var buffer = new(MockStorage, 4, 4);
+//     var mask_buffer = buffer;
+// 
+//     // Span width is 3 pixels, but only 1 pixel of it is within bounds
+//     buffer.drawSpan(.{ .min = -2, .max = -1 }, 0, .{ .solid_color = 0x9 }, &mask_buffer);
+// 
+//     testing.expectEqual(0, buffer.storage.call_counts.uncheckedDrawPixel);
+//     testing.expectEqual(0, buffer.storage.call_counts.uncheckedDrawSpan);
+// }

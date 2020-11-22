@@ -44,102 +44,13 @@ pub fn runTests(comptime Instance: anytype) void {
             expectPixels(expected_after, storage);
         }
 
-        test "uncheckedSetNativeColor sets color at point" {
-            comptime const Storage = Instance(4, 4);
-            var storage = Storage{};
-
-            storage.uncheckedSetNativeColor(.{ .x = 1, .y = 1 }, Storage.nativeColor(0x3));
-            storage.uncheckedSetNativeColor(.{ .x = 2, .y = 1 }, Storage.nativeColor(0xE));
-            storage.uncheckedSetNativeColor(.{ .x = 3, .y = 1 }, Storage.nativeColor(0x1));
-
-            const expected =
-                \\0000
-                \\03E1
-                \\0000
-                \\0000
-            ;
-            expectPixels(expected, storage);
-        }
-
-        test "uncheckedDrawPixel sets solid color at point and ignores mask" {
-            comptime const Storage = Instance(4, 4);
-            var storage = Storage{};
-            var mask_storage = Storage{};
-            mask_storage.fill(0xF);
-
-            storage.uncheckedDrawPixel(.{ .x = 2, .y = 2 }, .{ .solid_color = 0xD }, &mask_storage);
-            storage.uncheckedDrawPixel(.{ .x = 3, .y = 0 }, .{ .solid_color = 0x7 }, &mask_storage);
-
-            const expected =
-                \\0007
-                \\0000
-                \\00D0
-                \\0000
-            ;
-            expectPixels(expected, storage);
-        }
-
-        test "uncheckedDrawPixel highlights color at point and ignores mask" {
-            comptime const Storage = Instance(4, 4);
-
-            var storage = Storage{};
-            storage.fillFromString(
-                \\0000
-                \\4567
-                \\0000
-                \\89AB
-            );
-
-            var mask_storage = Storage{};
-            mask_storage.fill(0xF);
-
-            storage.uncheckedDrawPixel(.{ .x = 0, .y = 1 }, .highlight, &mask_storage);
-            storage.uncheckedDrawPixel(.{ .x = 1, .y = 1 }, .highlight, &mask_storage);
-            storage.uncheckedDrawPixel(.{ .x = 2, .y = 1 }, .highlight, &mask_storage);
-            storage.uncheckedDrawPixel(.{ .x = 3, .y = 1 }, .highlight, &mask_storage);
-
-            storage.uncheckedDrawPixel(.{ .x = 0, .y = 3 }, .highlight, &mask_storage);
-            storage.uncheckedDrawPixel(.{ .x = 1, .y = 3 }, .highlight, &mask_storage);
-            storage.uncheckedDrawPixel(.{ .x = 2, .y = 3 }, .highlight, &mask_storage);
-            storage.uncheckedDrawPixel(.{ .x = 3, .y = 3 }, .highlight, &mask_storage);
-
-            // Colors from 0...7 should have been ramped up to 8...F;
-            // colors from 8...F should have been left as they are.
-            const expected =
-                \\0000
-                \\CDEF
-                \\0000
-                \\89AB
-            ;
-            expectPixels(expected, storage);
-        }
-
-        test "uncheckedDrawPixel copies color at point from mask" {
-            comptime const Storage = Instance(4, 4);
-            var storage = Storage{};
-
-            var mask_storage = Storage{};
-            mask_storage.fill(0xF);
-
-            storage.uncheckedDrawPixel(.{ .x = 1, .y = 1 }, .mask, &mask_storage);
-
-            const expected =
-                \\0000
-                \\0F00
-                \\0000
-                \\0000
-            ;
-            expectPixels(expected, storage);
-        }
-
-        test "uncheckedDrawSpan with byte-aligned span sets solid color in slice and ignores mask" {
+        test "uncheckedDrawSpan with byte-aligned span sets solid color in slice" {
             comptime const Storage = Instance(10, 3);
             var storage = Storage{};
-
-            var mask_storage = Storage{};
-            mask_storage.fill(0xF);
-
-            storage.uncheckedDrawSpan(.{ .min = 2, .max = 7 }, 1, .{ .solid_color = 0xD }, &mask_storage);
+            
+            const operation = Storage.DrawOperation.solidColor(0xD);
+            
+            storage.uncheckedDrawSpan(.{ .min = 2, .max = 7 }, 1, operation);
 
             const expected =
                 \\0000000000
@@ -153,10 +64,9 @@ pub fn runTests(comptime Instance: anytype) void {
             comptime const Storage = Instance(10, 3);
             var storage = Storage{};
 
-            var mask_storage = Storage{};
-            mask_storage.fill(0xF);
+            const operation = Storage.DrawOperation.solidColor(0xC);
 
-            storage.uncheckedDrawSpan(.{ .min = 1, .max = 7 }, 1, .{ .solid_color = 0xC }, &mask_storage);
+            storage.uncheckedDrawSpan(.{ .min = 1, .max = 7 }, 1, operation);
 
             const expected =
                 \\0000000000
@@ -170,10 +80,9 @@ pub fn runTests(comptime Instance: anytype) void {
             comptime const Storage = Instance(10, 3);
             var storage = Storage{};
 
-            var mask_storage = Storage{};
-            mask_storage.fill(0xF);
+            const operation = Storage.DrawOperation.solidColor(0x3);
 
-            storage.uncheckedDrawSpan(.{ .min = 2, .max = 8 }, 1, .{ .solid_color = 3 }, &mask_storage);
+            storage.uncheckedDrawSpan(.{ .min = 2, .max = 8 }, 1, operation);
 
             const expected =
                 \\0000000000
@@ -187,10 +96,9 @@ pub fn runTests(comptime Instance: anytype) void {
             comptime const Storage = Instance(10, 3);
             var storage = Storage{};
 
-            var mask_storage = Storage{};
-            mask_storage.fill(0xF);
+            const operation = Storage.DrawOperation.solidColor(0x7);
 
-            storage.uncheckedDrawSpan(.{ .min = 1, .max = 8 }, 1, .{ .solid_color = 0x7 }, &mask_storage);
+            storage.uncheckedDrawSpan(.{ .min = 1, .max = 8 }, 1, operation);
 
             const expected =
                 \\0000000000
@@ -200,7 +108,7 @@ pub fn runTests(comptime Instance: anytype) void {
             expectPixels(expected, storage);
         }
 
-        test "uncheckedDrawSpan highlights colors in slice and ignores mask" {
+        test "uncheckedDrawSpan highlights colors in slice" {
             comptime const Storage = Instance(16, 3);
             var storage = Storage{};
             storage.fillFromString(
@@ -209,10 +117,9 @@ pub fn runTests(comptime Instance: anytype) void {
                 \\0123456789ABCDEF
             );
 
-            var mask_storage = Storage{};
-            mask_storage.fill(0xF);
+            const operation = Storage.DrawOperation.highlight();
 
-            storage.uncheckedDrawSpan(.{ .min = 0, .max = 15 }, 1, .highlight, &mask_storage);
+            storage.uncheckedDrawSpan(.{ .min = 0, .max = 15 }, 1, operation);
 
             // Colors from 0-7 should have been ramped up to 8-F;
             // Colors from 8-F should have been left as they were.
@@ -235,7 +142,9 @@ pub fn runTests(comptime Instance: anytype) void {
                 \\0123456789
             );
 
-            storage.uncheckedDrawSpan(.{ .min = 3, .max = 6 }, 1, .mask, &mask_storage);
+            const operation = Storage.DrawOperation.mask(&mask_storage);
+            
+            storage.uncheckedDrawSpan(.{ .min = 3, .max = 6 }, 1, operation);
 
             const expected =
                 \\0000000000

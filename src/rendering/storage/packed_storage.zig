@@ -16,17 +16,121 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
     comptime const Data = [bytes_required]NativeColor;
 
     return struct {
-        const Self = @This();
-
         data: Data = mem.zeroes(Data),
 
-        // -- Type-level functions
+        const Self = @This();
 
-        /// Widens a 4-bit color into a byte representing two pixels of that color.
-        /// Intended to be passed to `uncheckedSetNativeColor` for more efficient drawing.
-        pub fn nativeColor(color: ColorID.Trusted) NativeColor {
-            return .{ .left = color, .right = color };
-        }
+        /// Renders a single pixel or a horizontal span of pixels into a packed buffer of this size,
+        /// according to a specific draw operation.
+        pub const DrawOperation = struct {
+            draw_index_fn: fn(self: DrawOperation, buffer: *Self, index: Index) void,
+            draw_range_fn: fn(self: DrawOperation, buffer: *Self, range: Range.Instance(usize)) void,
+            context: union {
+                solid_color: NativeColor,
+                highlight: void,
+                mask: *const Self,
+            },
+            
+            /// Creates a new draw operation that can render into a packed buffer of this size
+            /// using the specified draw mode.
+            pub fn forMode(draw_mode: DrawMode.Enum, mask_source: *const Self) DrawOperation {
+                return switch (draw_mode) {
+                    .solid_color => |color| solidColor(color),
+                    .highlight => highlight(),
+                    .mask => mask(mask_source),
+                };
+            }
+            
+            /// Construct a new draw operation that replaces pixels in the destination buffer
+            /// with a solid color.
+            pub fn solidColor(color: ColorID.Trusted) DrawOperation {
+                return .{
+                    .context = .{ .solid_color = NativeColor.filled(color) },
+                    .draw_index_fn = drawSolidColorPixel,
+                    .draw_range_fn = drawSolidColorRange,
+                };
+            }
+            
+            /// Construct a new draw operation that highlights existing pixels within the buffer.
+            pub fn highlight() DrawOperation {
+                return .{
+                    .context = .{ .highlight = {} },
+                    .draw_index_fn = drawHighlightPixel,
+                    .draw_range_fn = drawHighlightRange,
+                };
+            }
+            
+            /// Construct a new draw operation that replaces pixels in the destination buffer
+            /// with the pixels at the same location in the source buffer.
+            pub fn mask(source: *const Self) DrawOperation {
+                return .{
+                    .context = .{ .mask = source },
+                    .draw_index_fn = drawMaskPixel,
+                    .draw_range_fn = drawMaskRange,
+                };
+            }
+            
+            /// Fills a single pixel at the specified index using this draw operation.
+            /// `index` is not bounds-checked: specifying an index outside the buffer results in undefined behaviour.
+            fn drawPixel(self: DrawOperation, buffer: *Self, index: Index) void {
+                self.draw_index_fn(self, buffer, index);
+            }
+            
+            /// Given a byte-aligned range of bytes within the buffer storage, fills all pixels within those bytes
+            /// using this draw operation to determine the appropriate color(s).
+            /// `range` is not bounds-checked: specifying a range outside the buffer, or with a negative length,
+            /// results in undefined behaviour.
+            fn drawRange(self: DrawOperation, buffer: *Self, range: Range.Instance(usize)) void {
+                self.draw_range_fn(self, buffer, range);
+            }
+            
+            // -- Private methods --
+            
+            fn fillPixel(buffer: *Self, index: Index, color: NativeColor) void {
+                var destination = &buffer.data[index.offset];
+                switch (index.hand) {
+                    .left => destination.*.left = color.left,
+                    .right => destination.*.right = color.right,
+                }
+            }
+            
+            fn drawSolidColorPixel(self: DrawOperation, buffer: *Self, index: Index) void {
+                fillPixel(buffer, index, self.context.solid_color);
+            }
+            
+            fn drawHighlightPixel(self: DrawOperation, buffer: *Self, index: Index) void {
+                const highlighted_color = buffer.data[index.offset].highlighted();
+                fillPixel(buffer, index, highlighted_color);
+            }
+            
+            fn drawMaskPixel(self: DrawOperation, buffer: *Self, index: Index) void {
+                const mask_color = self.context.mask.data[index.offset];
+                fillPixel(buffer, index, mask_color);
+            }
+            
+            fn drawSolidColorRange(self: DrawOperation, buffer: *Self, range: Range.Instance(usize)) void {
+                var destination_slice = buffer.data[range.min..range.max];
+                
+                mem.set(NativeColor, destination_slice, self.context.solid_color);
+            }
+            
+            fn drawHighlightRange(self: DrawOperation, buffer: *Self, range: Range.Instance(usize)) void {
+                var destination_slice = buffer.data[range.min..range.max];
+                
+                for (destination_slice) |*byte| {
+                    byte.* = byte.*.highlighted();
+                }
+            }
+            
+            fn drawMaskRange(self: DrawOperation, buffer: *Self, range: Range.Instance(usize)) void {
+                var destination_slice = buffer.data[range.min..range.max];
+                const mask_slice = self.context.mask.data[range.min..range.max];
+                
+                mem.copy(NativeColor, destination_slice, mask_slice);
+            }
+        };
+
+        // -- Type-level functions
 
         /// Given an X,Y point, returns the index of the byte within `data` containing that point's pixel.
         /// This is not bounds-checked: specifying a point outside the buffer results in undefined behaviour.
@@ -44,48 +148,39 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
 
         /// Fill the entire buffer with the specified color.
         pub fn fill(self: *Self, color: ColorID.Trusted) void {
-            const native_color = nativeColor(color);
+            const native_color = NativeColor.filled(color);
             mem.set(NativeColor, &self.data, native_color);
         }
 
-        /// Draws a single pixel at the specified point, deriving its color from the specified draw mode.
-        /// Used for drawing single-pixel polygons.
-        /// This is not bounds-checked: specifying a point outside the buffer results in undefined behaviour.
-        pub fn uncheckedDrawPixel(self: *Self, point: Point.Instance, draw_mode: DrawMode.Enum, mask_source: *const Self) void {
-            const index = uncheckedIndexOf(point);
-            self.uncheckedDrawIndex(index, draw_mode, mask_source);
-        }
-
-        /// Sets a single pixel at the specified point to the specified color.
-        /// Used for drawing solid font glyphs, which don't need the extra complexity of `uncheckedDrawPixel`.
-        /// This is not bounds-checked: specifying a point outside the buffer results in undefined behaviour.
-        pub fn uncheckedSetNativeColor(self: *Self, point: Point.Instance, native_color: NativeColor) void {
-            const index = uncheckedIndexOf(point);
-            self.uncheckedSetIndex(index, native_color);
-        }
-
-        /// Fill a horizontal line with colors using the specified draw mode.
+        /// Fill a horizontal line using the specified draw operation.
         /// This is not bounds-checked: specifying a span outside the buffer, or with a negative length,
         /// results in undefined behaviour.
-        pub fn uncheckedDrawSpan(self: *Self, x_span: Range.Instance(Point.Coordinate), y: Point.Coordinate, draw_mode: DrawMode.Enum, mask_source: *const Self) void {
+        pub fn uncheckedDrawSpan(self: *Self, x_span: Range.Instance(Point.Coordinate), y: Point.Coordinate, operation: DrawOperation) void {
             var start_index = uncheckedIndexOf(.{ .x = x_span.min, .y = y });
+            
+            // Early-out for drawing single-pixel spans
+            if (x_span.min == x_span.max) {
+                operation.drawPixel(self, start_index);
+                return;
+            }
+            
             var end_index = uncheckedIndexOf(.{ .x = x_span.max, .y = y });
 
             // If the start pixel doesn't fall at the "left" edge of a byte:
-            // draw that pixel the hard way using masking, and start the span at the left edge of the next byte.
+            // draw that pixel individually using masking, and start the span at the left edge of the next byte.
             if (start_index.hand != .left) {
-                self.uncheckedDrawIndex(start_index, draw_mode, mask_source);
+                operation.drawPixel(self, start_index);
                 start_index.offset += 1;
             }
 
             // If the end pixel doesn't fall at the "right" edge of a byte:
-            // draw that pixel the hard way using masking and end the span at the right edge of the previous byte.
+            // draw that pixel individually using masking and end the span at the right edge of the previous byte.
             if (end_index.hand != .right) {
-                self.uncheckedDrawIndex(end_index, draw_mode, mask_source);
+                operation.drawPixel(self, end_index);
                 end_index.offset -= 1;
             }
 
-            // If there are any full bytes left between the start and end, fill them using a fast operation.
+            // If there are any full bytes left between the start and end, fill them using a fast range operation.
             if (start_index.offset <= end_index.offset) {
                 const range = .{
                     .min = start_index.offset,
@@ -93,58 +188,7 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
                     // and Zig's [start..end] slice syntax does not include the end offset.
                     .max = end_index.offset + 1,
                 };
-                self.uncheckedDrawRange(range, draw_mode, mask_source);
-            }
-        }
-
-        // -- Private instance methods --
-
-        /// Draws a single pixel at the specified index, deriving its color from the specified draw mode.
-        /// Used internally by `uncheckedDrawPixel` and `uncheckedDrawSpan`.
-        /// `index` is not bounds-checked: specifying an index outside the buffer results in undefined behaviour.
-        fn uncheckedDrawIndex(self: *Self, index: Index, draw_mode: DrawMode.Enum, mask_source: *const Self) void {
-            const native_color = switch (draw_mode) {
-                .solid_color => |color_id| Self.nativeColor(color_id),
-                .highlight => self.data[index.offset].highlighted(),
-                .mask => mask_source.data[index.offset],
-            };
-
-            self.uncheckedSetIndex(index, native_color);
-        }
-
-        /// Sets the specified pixel of the byte at the specified index to the specified solid color.
-        /// Used internally by `uncheckedDrawIndex` and `uncheckedSetNativeColor`.
-        /// `index` is not bounds-checked: specifying an index outside the buffer results in undefined behaviour.
-        fn uncheckedSetIndex(self: *Self, index: Index, color: NativeColor) void {
-            const destination = &self.data[index.offset];
-
-            switch (index.hand) {
-                .left => destination.*.left = color.left,
-                .right => destination.*.right = color.right,
-            }
-        }
-
-        /// Given a range of bytes within the buffer storage, fills all pixels within those bytes,
-        /// using the specified draw mode to determine the appropriate color(s).
-        /// Used internally by `uncheckedDrawSpan`, and equivalent to a multibyte version of `uncheckedDrawIndex`.
-        /// `range` is not bounds-checked: specifying a range outside the buffer, or with a negative length,
-        /// results in undefined behaviour.
-        fn uncheckedDrawRange(self: *Self, range: Range.Instance(usize), draw_mode: DrawMode.Enum, mask_source: *const Self) void {
-            var destination_slice = self.data[range.min..range.max];
-
-            switch (draw_mode) {
-                .solid_color => |color_id| {
-                    mem.set(NativeColor, destination_slice, Self.nativeColor(color_id));
-                },
-                .highlight => {
-                    for (destination_slice) |*byte| {
-                        byte.* = byte.*.highlighted();
-                    }
-                },
-                .mask => {
-                    const mask_slice = mask_source.data[range.min..range.max];
-                    mem.copy(NativeColor, destination_slice, mask_slice);
-                },
+                operation.drawRange(self, range);
             }
         }
 
@@ -182,8 +226,12 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
                         .x = @intCast(Point.Coordinate, x),
                         .y = @intCast(Point.Coordinate, y),
                     };
-                    const native_color = nativeColor(column);
-                    self.uncheckedSetNativeColor(point, native_color);
+                    const index = uncheckedIndexOf(point);
+                    const destination = &self.data[index.offset];
+                    switch (index.hand) {
+                        .left => destination.*.left = column,
+                        .right => destination.*.right = column,
+                    }
                 }
             }
         }
@@ -194,6 +242,10 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
 const NativeColor = packed struct {
     right: ColorID.Trusted,
     left: ColorID.Trusted,
+    
+    fn filled(color: ColorID.Trusted) NativeColor {
+        return .{ .left = color, .right = color };
+    }
     
     fn highlighted(self: NativeColor) NativeColor {
         return @bitCast(NativeColor, ColorID.highlightByte(@bitCast(u8, self)));
@@ -228,7 +280,7 @@ test "Instance produces storage of the expected size filled with zeroes." {
 
     testing.expectEqual(32_000, storage.data.len);
 
-    const expected_data = [_]NativeColor{ .{ .left = 0, .right = 0 } } ** storage.data.len;
+    const expected_data = [_]NativeColor{ NativeColor.filled(0) } ** storage.data.len;
 
     testing.expectEqual(expected_data, storage.data);
 }
