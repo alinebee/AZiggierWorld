@@ -31,10 +31,10 @@ test "expectEqual correctly coerces types that std.testing.expectEqual does not"
 }
 
 const Error = error{FakeError};
-fn return_error() Error!void {
+fn returnError() Error!void {
     return error.FakeError;
 }
 
 test "expectError passes through correctly" {
-    expectError(Error.FakeError, return_error());
+    expectError(Error.FakeError, returnError());
 }

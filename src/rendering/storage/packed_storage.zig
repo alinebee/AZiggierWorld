@@ -238,19 +238,36 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
     };
 }
 
+const builtin = @import("builtin");
+
+fn NativeColorType() type {
+    const Methods = struct {
+        pub fn filled(color: ColorID.Trusted) Layout {
+            return .{ .left = color, .right = color };
+        }
+        
+        pub fn highlighted(self: Layout) Layout {
+            return @bitCast(Self, ColorID.highlightByte(@bitCast(u8, self)));
+        }
+    };
+    
+    const Layout = if (builtin.endian == .Big) packed struct {
+        left: ColorID.Trusted,
+        right: ColorID.Trusted,
+        
+        usingnamespace Methods;
+    } else packed struct {
+        right: ColorID.Trusted,
+        left: ColorID.Trusted,
+        
+        usingnamespace Methods;
+    };
+    
+    return Layout;
+}
+
 // The unit in which the buffer will read and write pixel color values.
-const NativeColor = packed struct {
-    right: ColorID.Trusted,
-    left: ColorID.Trusted,
-    
-    fn filled(color: ColorID.Trusted) NativeColor {
-        return .{ .left = color, .right = color };
-    }
-    
-    fn highlighted(self: NativeColor) NativeColor {
-        return @bitCast(NativeColor, ColorID.highlightByte(@bitCast(u8, self)));
-    }
-};
+const NativeColor = NativeColorType();
 
 /// Whether a pixel is the "left" (top 4 bits) or "right" (bottom 4 bits) of the byte.
 const Handedness = enum(u1) {
