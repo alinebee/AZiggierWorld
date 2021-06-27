@@ -50,8 +50,8 @@ const expectParse = @import("test_helpers/parse.zig").expectParse;
 test "parse parses valid bytecode and consumes 3 bytes" {
     const instruction = try expectParse(parse, &BytecodeExamples.valid, 4);
 
-    testing.expectEqual(16, instruction.destination);
-    testing.expectEqual(0b1100_0011_1111_0000, instruction.value);
+    try testing.expectEqual(16, instruction.destination);
+    try testing.expectEqual(0b1100_0011_1111_0000, instruction.value);
 }
 
 // zig fmt: off
@@ -70,6 +70,6 @@ test "execute masks destination register" {
 
     instruction.execute(&machine);
 
-    testing.expectEqual(expected_value, @bitCast(RegisterMask, machine.registers[16]));
+    try testing.expectEqual(expected_value, @bitCast(RegisterMask, machine.registers[16]));
 }
 // zig fmt: on

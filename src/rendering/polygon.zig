@@ -205,18 +205,18 @@ test "parse correctly parses 4-vertex dot polygon" {
     const center = Point.Instance{ .x = 320, .y = 200 };
     const polygon = try parse(reader, center, PolygonScale.default, .highlight);
 
-    testing.expectEqual(320, polygon.bounds.x.min);
-    testing.expectEqual(200, polygon.bounds.y.min);
-    testing.expectEqual(320, polygon.bounds.x.max);
-    testing.expectEqual(201, polygon.bounds.y.max);
+    try testing.expectEqual(320, polygon.bounds.x.min);
+    try testing.expectEqual(200, polygon.bounds.y.min);
+    try testing.expectEqual(320, polygon.bounds.x.max);
+    try testing.expectEqual(201, polygon.bounds.y.max);
 
-    testing.expectEqual(4, polygon.count);
-    testing.expectEqual(true, polygon.isDot());
+    try testing.expectEqual(4, polygon.count);
+    try testing.expectEqual(true, polygon.isDot());
 
-    testing.expectEqual(.{ .x = 320, .y = 200 }, polygon.vertices[0]);
-    testing.expectEqual(.{ .x = 320, .y = 201 }, polygon.vertices[1]);
-    testing.expectEqual(.{ .x = 320, .y = 201 }, polygon.vertices[2]);
-    testing.expectEqual(.{ .x = 320, .y = 200 }, polygon.vertices[3]);
+    try testing.expectEqual(.{ .x = 320, .y = 200 }, polygon.vertices[0]);
+    try testing.expectEqual(.{ .x = 320, .y = 201 }, polygon.vertices[1]);
+    try testing.expectEqual(.{ .x = 320, .y = 201 }, polygon.vertices[2]);
+    try testing.expectEqual(.{ .x = 320, .y = 200 }, polygon.vertices[3]);
 }
 
 // zig fmt: off
@@ -226,26 +226,26 @@ test "parse correctly parses and scales pentagon" {
     const center = Point.zero;
     const polygon = try parse(reader, center, PolygonScale.default * 2, .highlight);
 
-    testing.expectEqual(-10, polygon.bounds.x.min);
-    testing.expectEqual(-10, polygon.bounds.y.min);
-    testing.expectEqual(10, polygon.bounds.x.max);
-    testing.expectEqual(10, polygon.bounds.y.max);
+    try testing.expectEqual(-10, polygon.bounds.x.min);
+    try testing.expectEqual(-10, polygon.bounds.y.min);
+    try testing.expectEqual(10, polygon.bounds.x.max);
+    try testing.expectEqual(10, polygon.bounds.y.max);
 
-    testing.expectEqual(6, polygon.count);
-    testing.expectEqual(false, polygon.isDot());
+    try testing.expectEqual(6, polygon.count);
+    try testing.expectEqual(false, polygon.isDot());
 
-    testing.expectEqual(.{ .x = 0,      .y = -10 }, polygon.vertices[0]);
-    testing.expectEqual(.{ .x = 10,     .y = -2 },  polygon.vertices[1]);
-    testing.expectEqual(.{ .x = 4,      .y = 10 },  polygon.vertices[2]);
-    testing.expectEqual(.{ .x = -4,     .y = 10 },  polygon.vertices[3]);
-    testing.expectEqual(.{ .x = -10,    .y = -2 },  polygon.vertices[4]);
-    testing.expectEqual(.{ .x = 0,      .y = -10 }, polygon.vertices[5]);
+    try testing.expectEqual(.{ .x = 0,      .y = -10 }, polygon.vertices[0]);
+    try testing.expectEqual(.{ .x = 10,     .y = -2 },  polygon.vertices[1]);
+    try testing.expectEqual(.{ .x = 4,      .y = 10 },  polygon.vertices[2]);
+    try testing.expectEqual(.{ .x = -4,     .y = 10 },  polygon.vertices[3]);
+    try testing.expectEqual(.{ .x = -10,    .y = -2 },  polygon.vertices[4]);
+    try testing.expectEqual(.{ .x = 0,      .y = -10 }, polygon.vertices[5]);
 }
 // zig fmt: on
 
 test "parse returns error.VertexCountTooLow when count is too low" {
     const reader = fixedBufferStream(&DataExamples.vertex_count_too_low).reader();
-    testing.expectError(
+    try testing.expectError(
         error.VertexCountTooLow,
         parse(reader, Point.zero, PolygonScale.default, .highlight),
     );
@@ -253,7 +253,7 @@ test "parse returns error.VertexCountTooLow when count is too low" {
 
 test "parse returns error.VertexCountTooHigh when count is too high" {
     const reader = fixedBufferStream(&DataExamples.vertex_count_too_high).reader();
-    testing.expectError(
+    try testing.expectError(
         error.VertexCountTooHigh,
         parse(reader, Point.zero, PolygonScale.default, .highlight),
     );
@@ -261,12 +261,12 @@ test "parse returns error.VertexCountTooHigh when count is too high" {
 
 test "parse returns error.VertexCountUneven when count is uneven" {
     const reader = fixedBufferStream(&DataExamples.vertex_count_uneven).reader();
-    testing.expectError(error.VertexCountUneven, parse(reader, Point.zero, PolygonScale.default, .highlight));
+    try testing.expectError(error.VertexCountUneven, parse(reader, Point.zero, PolygonScale.default, .highlight));
 }
 
 test "parse returns error.VerticesMisaligned when vertex pairs are not aligned horizontally" {
     const reader = fixedBufferStream(&DataExamples.vertices_misaligned).reader();
-    testing.expectError(
+    try testing.expectError(
         error.VerticesMisaligned,
         parse(reader, Point.zero, PolygonScale.default, .highlight),
     );
@@ -274,7 +274,7 @@ test "parse returns error.VerticesMisaligned when vertex pairs are not aligned h
 
 test "parse returns error.VerticesBacktracked when a clockwise vertex is above the one before it" {
     const reader = fixedBufferStream(&DataExamples.vertices_backtracked).reader();
-    testing.expectError(
+    try testing.expectError(
         error.VerticesBacktracked,
         parse(reader, Point.zero, PolygonScale.default, .highlight),
     );
@@ -282,7 +282,7 @@ test "parse returns error.VerticesBacktracked when a clockwise vertex is above t
 
 test "parse returns error.VerticesTooFarApart when a clockwise vertex is more than 1023 units below the one before it" {
     const reader = fixedBufferStream(&DataExamples.vertices_too_far_apart).reader();
-    testing.expectError(
+    try testing.expectError(
         error.VerticesTooFarApart,
         parse(reader, Point.zero, 258, .highlight),
     );

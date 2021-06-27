@@ -197,7 +197,7 @@ test "resourcePath allocates and returns expected path to MEMLIST.BIN" {
     const path = try resourcePath(testing.allocator, example_game_path, .resource_list);
     defer testing.allocator.free(path);
 
-    testing.expectEqualStrings(expected_path, path);
+    try testing.expectEqualStrings(expected_path, path);
 }
 
 test "resourcePath allocates and returns expected path to BANKXX file" {
@@ -209,11 +209,11 @@ test "resourcePath allocates and returns expected path to BANKXX file" {
     const path = try resourcePath(testing.allocator, example_game_path, .{ .bank = 0x0A });
     defer testing.allocator.free(path);
 
-    testing.expectEqualStrings(expected_path, path);
+    try testing.expectEqualStrings(expected_path, path);
 }
 
 test "resourcePath returns error.OutOfMemory if memory could not be allocated" {
-    testing.expectError(
+    try testing.expectError(
         error.OutOfMemory,
         resourcePath(testing.failing_allocator, example_game_path, .resource_list),
     );
@@ -226,7 +226,7 @@ test "bufReadResource reads uncompressed data into buffer" {
     var destination: [4]u8 = undefined;
     try bufReadResource(reader, &destination, source.len);
 
-    testing.expectEqualSlices(u8, &source, &destination);
+    try testing.expectEqualSlices(u8, &source, &destination);
 }
 
 test "bufReadResource reads compressed data into buffer" {
@@ -239,7 +239,7 @@ test "bufReadResource returns error.InvalidCompressedData if data could not be d
 
     var destination: [4]u8 = undefined;
 
-    testing.expectError(
+    try testing.expectError(
         error.InvalidCompressedData,
         bufReadResource(reader, &destination, source.len),
     );
@@ -251,7 +251,7 @@ test "bufReadResource returns error.InvalidResourceSize on mismatched compressed
 
     var destination: [3]u8 = undefined;
 
-    testing.expectError(
+    try testing.expectError(
         error.InvalidResourceSize,
         bufReadResource(reader, &destination, source.len),
     );
@@ -263,7 +263,7 @@ test "bufReadResource returns error.EndOfStream when source data is truncated" {
 
     var destination: [4]u8 = undefined;
 
-    testing.expectError(
+    try testing.expectError(
         error.EndOfStream,
         bufReadResource(reader, &destination, destination.len),
     );
@@ -272,19 +272,19 @@ test "bufReadResource returns error.EndOfStream when source data is truncated" {
 test "readResourceList parses all descriptors from a stream" {
     var reader = io.fixedBufferStream(&ResourceListExamples.valid).reader();
 
-    testing.expectError(error.OutOfMemory, readResourceList(testing.failing_allocator, reader, 3));
+    try testing.expectError(error.OutOfMemory, readResourceList(testing.failing_allocator, reader, 3));
 }
 
 test "readResourceList returns error.OutOfMemory when it runs out of memory" {
     var reader = io.fixedBufferStream(&ResourceListExamples.valid).reader();
 
-    testing.expectError(error.OutOfMemory, readResourceList(testing.failing_allocator, reader, 3));
+    try testing.expectError(error.OutOfMemory, readResourceList(testing.failing_allocator, reader, 3));
 }
 
 test "readResourceList returns error.ResourceListTooLarge when stream contains too many descriptors" {
     var reader = io.fixedBufferStream(&ResourceListExamples.too_many_descriptors).reader();
 
-    testing.expectError(error.ResourceListTooLarge, readResourceList(testing.allocator, reader, max_descriptors));
+    try testing.expectError(error.ResourceListTooLarge, readResourceList(testing.allocator, reader, max_descriptors));
 }
 
 // See integration_tests/resource_loading.zig for tests of Instance itself,

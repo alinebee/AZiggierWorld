@@ -33,7 +33,7 @@ const testing = std.testing;
 test "Integration test fixture directory has been populated with game data" {
     const game_path = validFixturePath(testing.allocator) catch |err| {
         if (err == error.FileNotFound) {
-            log.warn("\nTo run integration tests, place the MEMLIST.BIN and BANK01-BANK0D files from an MS-DOS version of Another World into the {} directory in the project root.\n", .{relative_fixture_path});
+            log.warn("\nTo run integration tests, place the MEMLIST.BIN and BANK01-BANK0D files from an MS-DOS version of Another World into the {s} directory in the project root.\n", .{relative_fixture_path});
             return;
         } else {
             return err;

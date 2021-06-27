@@ -46,8 +46,8 @@ const expectParse = @import("test_helpers/parse.zig").expectParse;
 test "parse parses valid bytecode and consumes 4 bytes" {
     const instruction = try expectParse(parse, &BytecodeExamples.valid, 4);
 
-    testing.expectEqual(16, instruction.destination);
-    testing.expectEqual(-18901, instruction.value);
+    try testing.expectEqual(16, instruction.destination);
+    try testing.expectEqual(-18901, instruction.value);
 }
 
 test "execute adds to destination register" {
@@ -61,7 +61,7 @@ test "execute adds to destination register" {
 
     instruction.execute(&machine);
 
-    testing.expectEqual(-875, machine.registers[16]);
+    try testing.expectEqual(-875, machine.registers[16]);
 }
 
 test "execute wraps on overflow" {
@@ -75,7 +75,7 @@ test "execute wraps on overflow" {
 
     instruction.execute(&machine);
 
-    testing.expectEqual(-32768, machine.registers[16]);
+    try testing.expectEqual(-32768, machine.registers[16]);
 }
 
 test "execute wraps on underflow" {
@@ -89,5 +89,5 @@ test "execute wraps on underflow" {
 
     instruction.execute(&machine);
 
-    testing.expectEqual(32767, machine.registers[16]);
+    try testing.expectEqual(32767, machine.registers[16]);
 }

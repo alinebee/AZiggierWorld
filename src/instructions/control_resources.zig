@@ -71,23 +71,23 @@ const MockMachine = @import("test_helpers/mock_machine.zig");
 test "parse parses unload_all instruction and consumes 3 bytes" {
     const instruction = try expectParse(parse, &BytecodeExamples.unload_all, 3);
 
-    testing.expectEqual(.unload_all, instruction);
+    try testing.expectEqual(.unload_all, instruction);
 }
 
 test "parse parses start_game_part instruction and consumes 3 bytes" {
     const instruction = try expectParse(parse, &BytecodeExamples.start_game_part, 3);
 
-    testing.expectEqual(.{ .start_game_part = .arena_cinematic }, instruction);
+    try testing.expectEqual(.{ .start_game_part = .arena_cinematic }, instruction);
 }
 
 test "parse parses load_resource instruction and consumes 3 bytes" {
     const instruction = try expectParse(parse, &BytecodeExamples.load_resource, 3);
 
-    testing.expectEqual(.{ .load_resource = 0xDEAD }, instruction);
+    try testing.expectEqual(.{ .load_resource = 0xDEAD }, instruction);
 }
 
 test "execute with unload_all instruction calls unloadAllResources with correct parameters" {
-    const instruction = Instance.unload_all;
+    const instruction: Instance = .unload_all;
 
     var machine = MockMachine.new(struct {
         pub fn startGamePart(game_part: GamePart.Enum) !void {
@@ -102,7 +102,7 @@ test "execute with unload_all instruction calls unloadAllResources with correct 
     });
 
     try instruction._execute(&machine);
-    testing.expectEqual(1, machine.call_counts.unloadAllResources);
+    try testing.expectEqual(1, machine.call_counts.unloadAllResources);
 }
 
 test "execute with start_game_part instruction calls startGamePart with correct parameters" {
@@ -110,7 +110,7 @@ test "execute with start_game_part instruction calls startGamePart with correct 
 
     var machine = MockMachine.new(struct {
         pub fn startGamePart(game_part: GamePart.Enum) !void {
-            testing.expectEqual(.arena_cinematic, game_part);
+            try testing.expectEqual(.arena_cinematic, game_part);
         }
 
         pub fn loadResource(resource_id: ResourceID.Raw) !void {
@@ -123,7 +123,7 @@ test "execute with start_game_part instruction calls startGamePart with correct 
     });
 
     try instruction._execute(&machine);
-    testing.expectEqual(1, machine.call_counts.startGamePart);
+    try testing.expectEqual(1, machine.call_counts.startGamePart);
 }
 
 test "execute with load_resource instruction calls loadResource with correct parameters" {
@@ -135,7 +135,7 @@ test "execute with load_resource instruction calls loadResource with correct par
         }
 
         pub fn loadResource(resource_id: ResourceID.Raw) !void {
-            testing.expectEqual(0xBEEF, resource_id);
+            try testing.expectEqual(0xBEEF, resource_id);
         }
 
         pub fn unloadAllResources() void {
@@ -144,5 +144,5 @@ test "execute with load_resource instruction calls loadResource with correct par
     });
 
     try instruction._execute(&machine);
-    testing.expectEqual(1, machine.call_counts.loadResource);
+    try testing.expectEqual(1, machine.call_counts.loadResource);
 }

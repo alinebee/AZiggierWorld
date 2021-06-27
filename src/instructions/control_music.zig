@@ -92,23 +92,23 @@ test "parse parses play instruction and consumes 6 bytes" {
             .delay = 0xBEEF,
         },
     };
-    testing.expectEqual(expected, instruction);
+    try testing.expectEqual(expected, instruction);
 }
 
 test "parse parses set_delay instruction and consumes 6 bytes" {
     const instruction = try expectParse(parse, &BytecodeExamples.set_delay, 6);
 
-    testing.expectEqual(.{ .set_delay = 0xBEEF }, instruction);
+    try testing.expectEqual(.{ .set_delay = 0xBEEF }, instruction);
 }
 
 test "parse parses stop instruction and consumes 6 bytes" {
     const instruction = try expectParse(parse, &BytecodeExamples.stop, 6);
 
-    testing.expectEqual(.stop, instruction);
+    try testing.expectEqual(.stop, instruction);
 }
 
 test "execute with play instruction calls playMusic with correct parameters" {
-    const instruction = Instance{
+    const instruction: Instance = .{
         .play = .{
             .resource_id = 0x8BAD,
             .offset = 0x12,
@@ -118,9 +118,9 @@ test "execute with play instruction calls playMusic with correct parameters" {
 
     var machine = MockMachine.new(struct {
         pub fn playMusic(resource_id: ResourceID.Raw, offset: Audio.Offset, delay: Audio.Delay) !void {
-            testing.expectEqual(0x8BAD, resource_id);
-            testing.expectEqual(0x12, offset);
-            testing.expectEqual(0xF00D, delay);
+            try testing.expectEqual(0x8BAD, resource_id);
+            try testing.expectEqual(0x12, offset);
+            try testing.expectEqual(0xF00D, delay);
         }
 
         pub fn setMusicDelay(delay: Audio.Delay) void {
@@ -133,11 +133,11 @@ test "execute with play instruction calls playMusic with correct parameters" {
     });
 
     try instruction._execute(&machine);
-    testing.expectEqual(1, machine.call_counts.playMusic);
+    try testing.expectEqual(1, machine.call_counts.playMusic);
 }
 
 test "execute with set_delay instruction calls setMusicDelay with correct parameters" {
-    const instruction = Instance{ .set_delay = 0xF00D };
+    const instruction: Instance = .{ .set_delay = 0xF00D };
 
     var machine = MockMachine.new(struct {
         pub fn playMusic(resource_id: ResourceID.Raw, offset: Audio.Offset, delay: Audio.Delay) !void {
@@ -145,7 +145,7 @@ test "execute with set_delay instruction calls setMusicDelay with correct parame
         }
 
         pub fn setMusicDelay(delay: Audio.Delay) void {
-            testing.expectEqual(0xF00D, delay);
+            testing.expectEqual(0xF00D, delay) catch { unreachable; };
         }
 
         pub fn stopMusic() void {
@@ -154,11 +154,11 @@ test "execute with set_delay instruction calls setMusicDelay with correct parame
     });
 
     try instruction._execute(&machine);
-    testing.expectEqual(1, machine.call_counts.setMusicDelay);
+    try testing.expectEqual(1, machine.call_counts.setMusicDelay);
 }
 
 test "execute with stop instruction calls stopMusic with correct parameters" {
-    const instruction = Instance.stop;
+    const instruction: Instance = .stop;
 
     var machine = MockMachine.new(struct {
         pub fn playMusic(resource_id: ResourceID.Raw, offset: Audio.Offset, delay: Audio.Delay) !void {
@@ -173,5 +173,5 @@ test "execute with stop instruction calls stopMusic with correct parameters" {
     });
 
     try instruction._execute(&machine);
-    testing.expectEqual(1, machine.call_counts.stopMusic);
+    try testing.expectEqual(1, machine.call_counts.stopMusic);
 }

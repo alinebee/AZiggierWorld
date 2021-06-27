@@ -51,13 +51,13 @@ pub fn errorType(comptime function: anytype) type {
 const testing = @import("testing.zig");
 
 test "bitCount returns number of bits in integer" {
-    testing.expectEqual(0, bitCount(u0));
-    testing.expectEqual(1, bitCount(u1));
-    testing.expectEqual(4, bitCount(u4));
-    testing.expectEqual(8, bitCount(u8));
-    testing.expectEqual(16, bitCount(u16));
-    testing.expectEqual(32, bitCount(u32));
-    testing.expectEqual(64, bitCount(u64));
+    try testing.expectEqual(0, bitCount(u0));
+    try testing.expectEqual(1, bitCount(u1));
+    try testing.expectEqual(4, bitCount(u4));
+    try testing.expectEqual(8, bitCount(u8));
+    try testing.expectEqual(16, bitCount(u16));
+    try testing.expectEqual(32, bitCount(u32));
+    try testing.expectEqual(64, bitCount(u64));
 }
 
 test "bitCount triggers compile error when passed non-integer" {
@@ -70,7 +70,7 @@ test "returnType gets return type of free function" {
         fn example() void {}
     };
 
-    testing.expectEqual(void, returnType(Namespace.example));
+    try testing.expectEqual(void, returnType(Namespace.example));
 }
 
 test "returnType gets return type of bound function" {
@@ -81,7 +81,7 @@ test "returnType gets return type of bound function" {
     };
 
     const foo = Struct{};
-    testing.expectEqual(void, returnType(foo.boundExample));
+    try testing.expectEqual(void, returnType(foo.boundExample));
 }
 
 test "returnType triggers compile error when passed non-function type" {
@@ -96,7 +96,7 @@ test "payloadType gets return type of function that returns a type directly" {
         }
     };
 
-    testing.expectEqual(u32, payloadType(Namespace.example));
+    try testing.expectEqual(u32, payloadType(Namespace.example));
 }
 
 test "payloadType gets return type of function that returns an optional" {
@@ -106,7 +106,7 @@ test "payloadType gets return type of function that returns an optional" {
         }
     };
 
-    testing.expectEqual(u32, payloadType(Namespace.example));
+    try testing.expectEqual(u32, payloadType(Namespace.example));
 }
 
 test "payloadType gets return type of function that returns an error union" {
@@ -116,7 +116,7 @@ test "payloadType gets return type of function that returns an error union" {
         }
     };
 
-    testing.expectEqual(u32, payloadType(Namespace.example));
+    try testing.expectEqual(u32, payloadType(Namespace.example));
 }
 
 test "errorType gets return type of function that returns an error union" {
@@ -127,7 +127,7 @@ test "errorType gets return type of function that returns an error union" {
         }
     };
 
-    testing.expectEqual(CustomError, errorType(Namespace.example));
+    try testing.expectEqual(CustomError, errorType(Namespace.example));
 }
 
 test "errorType returns compile error when given function that does not return an error union" {

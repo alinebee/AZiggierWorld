@@ -59,19 +59,19 @@ const MockMachine = @import("test_helpers/mock_machine.zig");
 test "parse parses valid bytecode and consumes 3 bytes" {
     const instruction = try expectParse(parse, &BytecodeExamples.valid, 3);
 
-    testing.expectEqual(.{ .specific = 0 }, instruction.buffer_id);
-    testing.expectEqual(1, instruction.color_id);
+    try testing.expectEqual(.{ .specific = 0 }, instruction.buffer_id);
+    try testing.expectEqual(1, instruction.color_id);
 }
 
 test "parse returns error.InvalidBufferID on unknown buffer identifier and consumes 3 bytes" {
-    testing.expectError(
+    try testing.expectError(
         error.InvalidBufferID,
         expectParse(parse, &BytecodeExamples.invalid_buffer_id, 3),
     );
 }
 
 test "parse returns error.InvalidColorID on unknown color and consumes 3 bytes" {
-    testing.expectError(
+    try testing.expectError(
         error.InvalidColorID,
         expectParse(parse, &BytecodeExamples.invalid_color_id, 3),
     );
@@ -85,11 +85,11 @@ test "execute calls fillVideoBuffer with correct parameters" {
 
     var machine = MockMachine.new(struct {
         pub fn fillVideoBuffer(buffer_id: BufferID.Enum, color_id: ColorID.Trusted) void {
-            testing.expectEqual(.back_buffer, buffer_id);
-            testing.expectEqual(12, color_id);
+            testing.expectEqual(.back_buffer, buffer_id) catch { unreachable; };
+            testing.expectEqual(12, color_id) catch { unreachable; };
         }
     });
 
     instruction._execute(&machine);
-    testing.expectEqual(1, machine.call_counts.fillVideoBuffer);
+    try testing.expectEqual(1, machine.call_counts.fillVideoBuffer);
 }

@@ -46,18 +46,18 @@ test "execute jumps to previous address from the stack" {
     machine.program = Program.new(&bytecode);
     try machine.stack.push(9);
 
-    testing.expectEqual(1, machine.stack.depth);
-    testing.expectEqual(0, machine.program.counter);
+    try testing.expectEqual(1, machine.stack.depth);
+    try testing.expectEqual(0, machine.program.counter);
 
     try instruction.execute(&machine);
 
-    testing.expectEqual(0, machine.stack.depth);
-    testing.expectEqual(9, machine.program.counter);
+    try testing.expectEqual(0, machine.stack.depth);
+    try testing.expectEqual(9, machine.program.counter);
 }
 
 test "execute returns error.StackUnderflow when stack is empty" {
     const instruction = Instance{};
 
     var machine = Machine.new();
-    testing.expectError(error.StackUnderflow, instruction.execute(&machine));
+    try testing.expectError(error.StackUnderflow, instruction.execute(&machine));
 }

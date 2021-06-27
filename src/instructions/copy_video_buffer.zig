@@ -95,44 +95,44 @@ const MockMachine = @import("test_helpers/mock_machine.zig");
 test "parse parses valid bytecode without vertical offset flag and consumes 3 bytes" {
     const instruction = try expectParse(parse, &BytecodeExamples.specific_buffer_ignore_offset, 3);
 
-    testing.expectEqual(.{ .specific = 3 }, instruction.source);
-    testing.expectEqual(.{ .specific = 1 }, instruction.destination);
-    testing.expectEqual(false, instruction.use_vertical_offset);
+    try testing.expectEqual(.{ .specific = 3 }, instruction.source);
+    try testing.expectEqual(.{ .specific = 1 }, instruction.destination);
+    try testing.expectEqual(false, instruction.use_vertical_offset);
 }
 
 test "parse parses valid bytecode with vertical offset flag and consumes 3 bytes" {
     const instruction = try expectParse(parse, &BytecodeExamples.specific_buffer_respect_offset, 3);
 
-    testing.expectEqual(.{ .specific = 3 }, instruction.source);
-    testing.expectEqual(.{ .specific = 1 }, instruction.destination);
-    testing.expectEqual(true, instruction.use_vertical_offset);
+    try testing.expectEqual(.{ .specific = 3 }, instruction.source);
+    try testing.expectEqual(.{ .specific = 1 }, instruction.destination);
+    try testing.expectEqual(true, instruction.use_vertical_offset);
 }
 
 test "parse parses valid bytecode with front buffer source and consumes 3 bytes" {
     const instruction = try expectParse(parse, &BytecodeExamples.front_buffer, 3);
 
-    testing.expectEqual(.front_buffer, instruction.source);
-    testing.expectEqual(.{ .specific = 1 }, instruction.destination);
-    testing.expectEqual(false, instruction.use_vertical_offset);
+    try testing.expectEqual(.front_buffer, instruction.source);
+    try testing.expectEqual(.{ .specific = 1 }, instruction.destination);
+    try testing.expectEqual(false, instruction.use_vertical_offset);
 }
 
 test "parse parses valid bytecode with back buffer source and consumes 3 bytes" {
     const instruction = try expectParse(parse, &BytecodeExamples.back_buffer, 3);
 
-    testing.expectEqual(.back_buffer, instruction.source);
-    testing.expectEqual(.{ .specific = 1 }, instruction.destination);
-    testing.expectEqual(false, instruction.use_vertical_offset);
+    try testing.expectEqual(.back_buffer, instruction.source);
+    try testing.expectEqual(.{ .specific = 1 }, instruction.destination);
+    try testing.expectEqual(false, instruction.use_vertical_offset);
 }
 
 test "parse returns error.InvalidBufferID on unknown source and consumes 3 bytes" {
-    testing.expectError(
+    try testing.expectError(
         error.InvalidBufferID,
         expectParse(parse, &BytecodeExamples.invalid_source, 3),
     );
 }
 
 test "parse returns error.InvalidBufferID on unknown destination and consumes 3 bytes" {
-    testing.expectError(
+    try testing.expectError(
         error.InvalidBufferID,
         expectParse(parse, &BytecodeExamples.invalid_destination, 3),
     );
@@ -147,15 +147,15 @@ test "execute calls copyVideoBuffer with offset when use_vertical_offset = true"
 
     var machine = MockMachine.new(struct {
         pub fn copyVideoBuffer(source: BufferID.Enum, destination: BufferID.Enum, vertical_offset: Point.Coordinate) void {
-            testing.expectEqual(.front_buffer, source);
-            testing.expectEqual(.back_buffer, destination);
-            testing.expectEqual(199, vertical_offset);
+            testing.expectEqual(.front_buffer, source) catch { unreachable; };
+            testing.expectEqual(.back_buffer, destination) catch { unreachable; };
+            testing.expectEqual(199, vertical_offset) catch { unreachable; };
         }
     });
     machine.registers[RegisterID.scroll_y_position] = 199;
 
     instruction._execute(&machine);
-    testing.expectEqual(1, machine.call_counts.copyVideoBuffer);
+    try testing.expectEqual(1, machine.call_counts.copyVideoBuffer);
 }
 
 test "execute ignores vertical offset when use_vertical_offset = false" {
@@ -167,13 +167,13 @@ test "execute ignores vertical offset when use_vertical_offset = false" {
 
     var machine = MockMachine.new(struct {
         pub fn copyVideoBuffer(source: BufferID.Enum, destination: BufferID.Enum, vertical_offset: Point.Coordinate) void {
-            testing.expectEqual(.front_buffer, source);
-            testing.expectEqual(.back_buffer, destination);
-            testing.expectEqual(0, vertical_offset);
+            testing.expectEqual(.front_buffer, source) catch { unreachable; };
+            testing.expectEqual(.back_buffer, destination) catch { unreachable; };
+            testing.expectEqual(0, vertical_offset) catch { unreachable; };
         }
     });
     machine.registers[RegisterID.scroll_y_position] = 199;
 
     instruction._execute(&machine);
-    testing.expectEqual(1, machine.call_counts.copyVideoBuffer);
+    try testing.expectEqual(1, machine.call_counts.copyVideoBuffer);
 }

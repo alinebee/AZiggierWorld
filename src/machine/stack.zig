@@ -50,21 +50,21 @@ const testing = @import("../utils/testing.zig");
 
 test "Pushing increments the stack" {
     var stack = Instance{};
-    testing.expectEqual(0, stack.depth);
+    try testing.expectEqual(0, stack.depth);
 
     try stack.push(0xBEEF);
-    testing.expectEqual(1, stack.depth);
+    try testing.expectEqual(1, stack.depth);
 }
 
 test "Popping decrements the stack and returns the last pushed address" {
     var stack = Instance{};
     try stack.push(0xDEAD);
     try stack.push(0xBEEF);
-    testing.expectEqual(2, stack.depth);
+    try testing.expectEqual(2, stack.depth);
 
-    testing.expectEqual(0xBEEF, stack.pop());
-    testing.expectEqual(0xDEAD, stack.pop());
-    testing.expectEqual(0, stack.depth);
+    try testing.expectEqual(0xBEEF, stack.pop());
+    try testing.expectEqual(0xDEAD, stack.pop());
+    try testing.expectEqual(0, stack.depth);
 }
 
 test "Clearing empties the stack" {
@@ -73,15 +73,15 @@ test "Clearing empties the stack" {
     try stack.push(0xF00D);
     try stack.push(0xDEAD);
     try stack.push(0xBEEF);
-    testing.expectEqual(4, stack.depth);
+    try testing.expectEqual(4, stack.depth);
 
     stack.clear();
-    testing.expectEqual(0, stack.depth);
+    try testing.expectEqual(0, stack.depth);
 }
 
 test "Popping an empty stack returns error.StackUnderflow" {
     var stack = Instance{};
-    testing.expectError(error.StackUnderflow, stack.pop());
+    try testing.expectError(error.StackUnderflow, stack.pop());
 }
 
 test "Pushing onto a full stack returns error.StackOverflow" {
@@ -91,5 +91,5 @@ test "Pushing onto a full stack returns error.StackOverflow" {
         try stack.push(0xBEEF);
     }
 
-    testing.expectError(error.StackOverflow, stack.push(0xDEAD));
+    try testing.expectError(error.StackOverflow, stack.push(0xDEAD));
 }

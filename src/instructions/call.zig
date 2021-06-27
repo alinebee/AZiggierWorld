@@ -42,7 +42,7 @@ const expectParse = @import("test_helpers/parse.zig").expectParse;
 
 test "parse parses instruction from valid bytecode and consumes 3 bytes" {
     const instruction = try expectParse(parse, &BytecodeExamples.valid, 3);
-    testing.expectEqual(0xDEAD, instruction.address);
+    try testing.expectEqual(0xDEAD, instruction.address);
 }
 
 test "execute puts previous address on the stack and jumps to new address" {
@@ -55,14 +55,14 @@ test "execute puts previous address on the stack and jumps to new address" {
     var machine = Machine.new();
     machine.program = Program.new(&bytecode);
 
-    testing.expectEqual(0, machine.stack.depth);
-    testing.expectEqual(0, machine.program.counter);
+    try testing.expectEqual(0, machine.stack.depth);
+    try testing.expectEqual(0, machine.program.counter);
 
     try instruction.execute(&machine);
 
-    testing.expectEqual(1, machine.stack.depth);
-    testing.expectEqual(9, machine.program.counter);
-    testing.expectEqual(0, machine.stack.pop());
+    try testing.expectEqual(1, machine.stack.depth);
+    try testing.expectEqual(9, machine.program.counter);
+    try testing.expectEqual(0, machine.stack.pop());
 }
 
 test "execute returns error.StackOverflow when stack is full" {
@@ -80,7 +80,7 @@ test "execute returns error.StackOverflow when stack is full" {
         try machine.stack.push(0xBEEF);
     }
 
-    testing.expectError(error.StackOverflow, instruction.execute(&machine));
+    try testing.expectError(error.StackOverflow, instruction.execute(&machine));
 }
 
 test "execute returns error.InvalidAddress when address is out of range" {
@@ -92,5 +92,5 @@ test "execute returns error.InvalidAddress when address is out of range" {
 
     var machine = Machine.new();
     machine.program = Program.new(&bytecode);
-    testing.expectError(error.InvalidAddress, instruction.execute(&machine));
+    try testing.expectError(error.InvalidAddress, instruction.execute(&machine));
 }

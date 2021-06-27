@@ -117,7 +117,7 @@ test "parse parses equal_to_register instruction and consumes 6 bytes" {
         .comparison = .equal,
         .address = 0xDEAD,
     };
-    testing.expectEqual(expected, instruction);
+    try testing.expectEqual(expected, instruction);
 }
 
 test "parse parses equal_to_const16 instruction and consumes 7 bytes" {
@@ -128,7 +128,7 @@ test "parse parses equal_to_const16 instruction and consumes 7 bytes" {
         .comparison = .equal,
         .address = 0xDEAD,
     };
-    testing.expectEqual(expected, instruction);
+    try testing.expectEqual(expected, instruction);
 }
 
 test "parse parses equal_to_const8 instruction and consumes 6 bytes" {
@@ -139,7 +139,7 @@ test "parse parses equal_to_const8 instruction and consumes 6 bytes" {
         .comparison = .equal,
         .address = 0xDEAD,
     };
-    testing.expectEqual(expected, instruction);
+    try testing.expectEqual(expected, instruction);
 }
 
 test "parse parses not_equal instruction and consumes 6 bytes" {
@@ -150,7 +150,7 @@ test "parse parses not_equal instruction and consumes 6 bytes" {
         .comparison = .not_equal,
         .address = 0xDEAD,
     };
-    testing.expectEqual(expected, instruction);
+    try testing.expectEqual(expected, instruction);
 }
 
 test "parse parses greater_than instruction and consumes 6 bytes" {
@@ -161,7 +161,7 @@ test "parse parses greater_than instruction and consumes 6 bytes" {
         .comparison = .greater_than,
         .address = 0xDEAD,
     };
-    testing.expectEqual(expected, instruction);
+    try testing.expectEqual(expected, instruction);
 }
 
 test "parse parses greater_than_or_equal_to instruction and consumes 6 bytes" {
@@ -172,7 +172,7 @@ test "parse parses greater_than_or_equal_to instruction and consumes 6 bytes" {
         .comparison = .greater_than_or_equal_to,
         .address = 0xDEAD,
     };
-    testing.expectEqual(expected, instruction);
+    try testing.expectEqual(expected, instruction);
 }
 
 test "parse parses less_than instruction and consumes 6 bytes" {
@@ -183,7 +183,7 @@ test "parse parses less_than instruction and consumes 6 bytes" {
         .comparison = .less_than,
         .address = 0xDEAD,
     };
-    testing.expectEqual(expected, instruction);
+    try testing.expectEqual(expected, instruction);
 }
 
 test "parse parses less_than_or_equal_to instruction and consumes 6 bytes" {
@@ -194,11 +194,11 @@ test "parse parses less_than_or_equal_to instruction and consumes 6 bytes" {
         .comparison = .less_than_or_equal_to,
         .address = 0xDEAD,
     };
-    testing.expectEqual(expected, instruction);
+    try testing.expectEqual(expected, instruction);
 }
 
 test "parse returns error.InvalidJumpComparison for instruction with invalid comparison" {
-    testing.expectError(
+    try testing.expectError(
         error.InvalidJumpComparison,
         expectParse(parse, &BytecodeExamples.invalid_comparison, 6),
     );
@@ -219,11 +219,11 @@ test "execute compares expected registers and jumps to expected address when con
         .address = 9,
     };
 
-    testing.expectEqual(0, machine.program.counter);
+    try testing.expectEqual(0, machine.program.counter);
 
     try instruction.execute(&machine);
 
-    testing.expectEqual(9, machine.program.counter);
+    try testing.expectEqual(9, machine.program.counter);
 }
 
 test "execute compares expected register to constant and jumps to expected address when condition succeeds" {
@@ -240,9 +240,9 @@ test "execute compares expected register to constant and jumps to expected addre
         .address = 9,
     };
 
-    testing.expectEqual(0, machine.program.counter);
+    try testing.expectEqual(0, machine.program.counter);
     try instruction.execute(&machine);
-    testing.expectEqual(9, machine.program.counter);
+    try testing.expectEqual(9, machine.program.counter);
 }
 
 test "execute does not jump when condition fails" {
@@ -260,11 +260,11 @@ test "execute does not jump when condition fails" {
         .address = 9,
     };
 
-    testing.expectEqual(0, machine.program.counter);
+    try testing.expectEqual(0, machine.program.counter);
 
     try instruction.execute(&machine);
 
-    testing.expectEqual(0, machine.program.counter);
+    try testing.expectEqual(0, machine.program.counter);
 }
 
 test "execute returns error.InvalidAddress when address is out of range" {
@@ -282,5 +282,5 @@ test "execute returns error.InvalidAddress when address is out of range" {
         .address = 1000,
     };
 
-    testing.expectError(error.InvalidAddress, instruction.execute(&machine));
+    try testing.expectError(error.InvalidAddress, instruction.execute(&machine));
 }

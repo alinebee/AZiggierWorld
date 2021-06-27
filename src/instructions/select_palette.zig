@@ -56,11 +56,11 @@ const MockMachine = @import("test_helpers/mock_machine.zig");
 test "parse parses valid bytecode and consumes 2 bytes" {
     const instruction = try expectParse(parse, &BytecodeExamples.valid, 3);
 
-    testing.expectEqual(31, instruction.palette_id);
+    try testing.expectEqual(31, instruction.palette_id);
 }
 
 test "parse returns error.InvalidPaletteID on unknown palette identifier and consumes 2 bytes" {
-    testing.expectError(
+    try testing.expectError(
         error.InvalidPaletteID,
         expectParse(parse, &BytecodeExamples.invalid_palette_id, 3),
     );
@@ -73,10 +73,10 @@ test "execute calls selectPalette with correct parameters" {
 
     var machine = MockMachine.new(struct {
         pub fn selectPalette(palette_id: PaletteID.Trusted) void {
-            testing.expectEqual(16, palette_id);
+            testing.expectEqual(16, palette_id) catch { unreachable; };
         }
     });
 
     instruction._execute(&machine);
-    testing.expectEqual(1, machine.call_counts.selectPalette);
+    try testing.expectEqual(1, machine.call_counts.selectPalette);
 }

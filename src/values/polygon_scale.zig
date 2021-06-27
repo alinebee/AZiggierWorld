@@ -26,53 +26,53 @@ const testing = @import("../utils/testing.zig");
 const math = @import("std").math;
 
 test "apply scales up signed values" {
-    testing.expectEqual(-2674, apply(i16, -1337, default * 2));
+    try testing.expectEqual(-2674, apply(i16, -1337, default * 2));
 }
 
 test "apply scales down signed values, rounding down" {
-    testing.expectEqual(-668, apply(i16, -1337, default / 2));
+    try testing.expectEqual(-668, apply(i16, -1337, default / 2));
 }
 
 test "apply applies no scaling to signed values at default value" {
-    testing.expectEqual(-1337, apply(i16, -1337, default));
+    try testing.expectEqual(-1337, apply(i16, -1337, default));
 }
 
 test "apply applies no scaling to signed 0" {
-    testing.expectEqual(0, apply(i16, 0, default * 2));
+    try testing.expectEqual(0, apply(i16, 0, default * 2));
 }
 
 test "apply wraps signed values on overflow instead of trapping" {
-    testing.expectEqual(-1536, apply(i16, math.maxInt(i16), math.maxInt(Raw)));
+    try testing.expectEqual(-1536, apply(i16, math.maxInt(i16), math.maxInt(Raw)));
 }
 
 test "apply wraps signed values on underflow instead of trapping" {
-    testing.expectEqual(512, apply(i16, math.minInt(i16), math.maxInt(Raw)));
+    try testing.expectEqual(512, apply(i16, math.minInt(i16), math.maxInt(Raw)));
 }
 
 test "apply scales up unsigned values" {
-    testing.expectEqual(2674, apply(u16, 1337, default * 2));
+    try testing.expectEqual(2674, apply(u16, 1337, default * 2));
 }
 
 test "apply scales down unsigned values, rounding down" {
-    testing.expectEqual(668, apply(u16, 1337, default / 2));
+    try testing.expectEqual(668, apply(u16, 1337, default / 2));
 }
 
 test "apply applies no scaling to unsigned values at default value" {
-    testing.expectEqual(1337, apply(u16, 1337, default));
+    try testing.expectEqual(1337, apply(u16, 1337, default));
 }
 
 test "apply applies no scaling to unsigned 0" {
-    testing.expectEqual(0, apply(i16, 0, default * 2));
+    try testing.expectEqual(0, apply(i16, 0, default * 2));
 }
 
 test "apply wraps signed values on overflow instead of trapping" {
-    testing.expectEqual(63488, apply(u16, math.maxInt(u16), math.maxInt(Raw)));
+    try testing.expectEqual(63488, apply(u16, math.maxInt(u16), math.maxInt(Raw)));
 }
 
 test "apply wraps even full-width signed values on overflow instead of trapping" {
-    testing.expectEqual(144115188075854848, apply(isize, math.maxInt(isize), math.maxInt(Raw)));
+    try testing.expectEqual(144115188075854848, apply(isize, math.maxInt(isize), math.maxInt(Raw)));
 }
 
 test "apply wraps even full-width unsigned values on overflow instead of trapping" {
-    testing.expectEqual(288230376151710720, apply(usize, math.maxInt(usize), math.maxInt(Raw)));
+    try testing.expectEqual(288230376151710720, apply(usize, math.maxInt(usize), math.maxInt(Raw)));
 }

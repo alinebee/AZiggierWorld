@@ -238,13 +238,11 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
     };
 }
 
-const builtin = @import("builtin");
-
 /// The unit in which the buffer will read and write pixel color values.
 /// Two 4-bit colors are packed into a single byte: Zig packed structs
 /// have endianness-dependent field order so we must flip based on endianness.
 /// q.v.:
-const NativeColor = if (builtin.endian == .Big)
+const NativeColor = if (std.Target.current.cpu.arch.endian() == .Big)
     packed struct {
         left: ColorID.Trusted,
         right: ColorID.Trusted,
@@ -289,41 +287,41 @@ const testing = @import("../../utils/testing.zig");
 test "Instance produces storage of the expected size filled with zeroes." {
     const storage = Instance(320, 200){};
 
-    testing.expectEqual(32_000, storage.data.len);
+    try testing.expectEqual(32_000, storage.data.len);
 
     const expected_data = [_]NativeColor{ filledColor(0) } ** storage.data.len;
 
-    testing.expectEqual(expected_data, storage.data);
+    try testing.expectEqual(expected_data, storage.data);
 }
 
 test "Instance rounds up storage size for uneven pixel counts." {
     const storage = Instance(319, 199){};
-    testing.expectEqual(31_741, storage.data.len);
+    try testing.expectEqual(31_741, storage.data.len);
 }
 
 test "Instance handles 0 width or height gracefully" {
     const zero_height = Instance(320, 0){};
-    testing.expectEqual(0, zero_height.data.len);
+    try testing.expectEqual(0, zero_height.data.len);
 
     const zero_width = Instance(0, 200){};
-    testing.expectEqual(0, zero_width.data.len);
+    try testing.expectEqual(0, zero_width.data.len);
 
     const zero_dimensions = Instance(0, 0){};
-    testing.expectEqual(0, zero_dimensions.data.len);
+    try testing.expectEqual(0, zero_dimensions.data.len);
 }
 
 test "uncheckedIndexOf returns expected offset and handedness" {
     const Storage = Instance(320, 200);
 
-    testing.expectEqual(.{ .offset = 0, .hand = .left }, Storage.uncheckedIndexOf(.{ .x = 0, .y = 0 }));
-    testing.expectEqual(.{ .offset = 0, .hand = .right }, Storage.uncheckedIndexOf(.{ .x = 1, .y = 0 }));
-    testing.expectEqual(.{ .offset = 1, .hand = .left }, Storage.uncheckedIndexOf(.{ .x = 2, .y = 0 }));
-    testing.expectEqual(.{ .offset = 159, .hand = .right }, Storage.uncheckedIndexOf(.{ .x = 319, .y = 0 }));
-    testing.expectEqual(.{ .offset = 160, .hand = .left }, Storage.uncheckedIndexOf(.{ .x = 0, .y = 1 }));
+    try testing.expectEqual(.{ .offset = 0, .hand = .left }, Storage.uncheckedIndexOf(.{ .x = 0, .y = 0 }));
+    try testing.expectEqual(.{ .offset = 0, .hand = .right }, Storage.uncheckedIndexOf(.{ .x = 1, .y = 0 }));
+    try testing.expectEqual(.{ .offset = 1, .hand = .left }, Storage.uncheckedIndexOf(.{ .x = 2, .y = 0 }));
+    try testing.expectEqual(.{ .offset = 159, .hand = .right }, Storage.uncheckedIndexOf(.{ .x = 319, .y = 0 }));
+    try testing.expectEqual(.{ .offset = 160, .hand = .left }, Storage.uncheckedIndexOf(.{ .x = 0, .y = 1 }));
 
-    testing.expectEqual(.{ .offset = 16_080, .hand = .left }, Storage.uncheckedIndexOf(.{ .x = 160, .y = 100 }));
-    testing.expectEqual(.{ .offset = 31_840, .hand = .left }, Storage.uncheckedIndexOf(.{ .x = 0, .y = 199 }));
-    testing.expectEqual(.{ .offset = 31_999, .hand = .right }, Storage.uncheckedIndexOf(.{ .x = 319, .y = 199 }));
+    try testing.expectEqual(.{ .offset = 16_080, .hand = .left }, Storage.uncheckedIndexOf(.{ .x = 160, .y = 100 }));
+    try testing.expectEqual(.{ .offset = 31_840, .hand = .left }, Storage.uncheckedIndexOf(.{ .x = 0, .y = 199 }));
+    try testing.expectEqual(.{ .offset = 31_999, .hand = .right }, Storage.uncheckedIndexOf(.{ .x = 319, .y = 199 }));
 }
 
 // zig fmt: off
@@ -344,7 +342,7 @@ test "toBitmap returns bitmap with expected contents" {
         \\CDEF
     ;
 
-    IndexedBitmap.expectBitmap(expected, storage.toBitmap());
+    try IndexedBitmap.expectBitmap(expected, storage.toBitmap());
 }
 
 test "fromString fills buffer with expected contents" {
@@ -363,7 +361,7 @@ test "fromString fills buffer with expected contents" {
         0xCD, 0xEF,
     });
 
-    testing.expectEqual(expected, storage.data);
+    try testing.expectEqual(expected, storage.data);
 }
 // zig fmt: on
 

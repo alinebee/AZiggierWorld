@@ -196,62 +196,62 @@ const MockMachine = @import("test_helpers/mock_machine.zig");
 test "parse parses all-registers instruction and consumes 6 bytes" {
     const instruction = try expectParse(parse, &BytecodeExamples.registers, 6);
 
-    testing.expectEqual(.polygons, instruction.source);
+    try testing.expectEqual(.polygons, instruction.source);
     // Address is right-shifted by 1
-    testing.expectEqual(0b0001_1110_0001_1110, instruction.address);
-    testing.expectEqual(.{ .register = 1 }, instruction.x);
-    testing.expectEqual(.{ .register = 2 }, instruction.y);
-    testing.expectEqual(.{ .register = 3 }, instruction.scale);
+    try testing.expectEqual(0b0001_1110_0001_1110, instruction.address);
+    try testing.expectEqual(.{ .register = 1 }, instruction.x);
+    try testing.expectEqual(.{ .register = 2 }, instruction.y);
+    try testing.expectEqual(.{ .register = 3 }, instruction.scale);
 }
 
 test "parse parses instruction with full-width constants and consumes 8 bytes" {
     const instruction = try expectParse(parse, &BytecodeExamples.wide_constants, 8);
 
-    testing.expectEqual(.polygons, instruction.source);
-    testing.expectEqual(0b0001_1110_0001_1110, instruction.address);
-    testing.expectEqual(.{ .constant = -18901 }, instruction.x);
-    testing.expectEqual(.{ .constant = 3470 }, instruction.y);
-    testing.expectEqual(.{ .constant = 255 }, instruction.scale);
+    try testing.expectEqual(.polygons, instruction.source);
+    try testing.expectEqual(0b0001_1110_0001_1110, instruction.address);
+    try testing.expectEqual(.{ .constant = -18901 }, instruction.x);
+    try testing.expectEqual(.{ .constant = 3470 }, instruction.y);
+    try testing.expectEqual(.{ .constant = 255 }, instruction.scale);
 }
 
 test "parse parses instruction with short constants and consumes 6 bytes" {
     const instruction = try expectParse(parse, &BytecodeExamples.short_constants, 6);
 
-    testing.expectEqual(.polygons, instruction.source);
-    testing.expectEqual(0b0001_1110_0001_1110, instruction.address);
-    testing.expectEqual(.{ .constant = 160 }, instruction.x);
-    testing.expectEqual(.{ .constant = 100 }, instruction.y);
-    testing.expectEqual(.{ .constant = 255 }, instruction.scale);
+    try testing.expectEqual(.polygons, instruction.source);
+    try testing.expectEqual(0b0001_1110_0001_1110, instruction.address);
+    try testing.expectEqual(.{ .constant = 160 }, instruction.x);
+    try testing.expectEqual(.{ .constant = 100 }, instruction.y);
+    try testing.expectEqual(.{ .constant = 255 }, instruction.scale);
 }
 
 test "parse parses instruction with short constants with boosted X and consumes 6 bytes" {
     const instruction = try expectParse(parse, &BytecodeExamples.short_boosted_x_constants, 6);
 
-    testing.expectEqual(.polygons, instruction.source);
-    testing.expectEqual(0b0001_1110_0001_1110, instruction.address);
-    testing.expectEqual(.{ .constant = 64 + 256 }, instruction.x);
-    testing.expectEqual(.{ .constant = 200 }, instruction.y);
-    testing.expectEqual(.{ .constant = 255 }, instruction.scale);
+    try testing.expectEqual(.polygons, instruction.source);
+    try testing.expectEqual(0b0001_1110_0001_1110, instruction.address);
+    try testing.expectEqual(.{ .constant = 64 + 256 }, instruction.x);
+    try testing.expectEqual(.{ .constant = 200 }, instruction.y);
+    try testing.expectEqual(.{ .constant = 255 }, instruction.scale);
 }
 
 test "parse parses instruction with default scale/polygon source and consumes 5 bytes" {
     const instruction = try expectParse(parse, &BytecodeExamples.default_scale_from_polygons, 5);
 
-    testing.expectEqual(.polygons, instruction.source);
-    testing.expectEqual(0b0001_1110_0001_1110, instruction.address);
-    testing.expectEqual(.{ .constant = 160 }, instruction.x);
-    testing.expectEqual(.{ .constant = 100 }, instruction.y);
-    testing.expectEqual(.default, instruction.scale);
+    try testing.expectEqual(.polygons, instruction.source);
+    try testing.expectEqual(0b0001_1110_0001_1110, instruction.address);
+    try testing.expectEqual(.{ .constant = 160 }, instruction.x);
+    try testing.expectEqual(.{ .constant = 100 }, instruction.y);
+    try testing.expectEqual(.default, instruction.scale);
 }
 
 test "parse parses instruction with default scale/animation source and consumes 5 bytes" {
     const instruction = try expectParse(parse, &BytecodeExamples.default_scale_from_animations, 5);
 
-    testing.expectEqual(.animations, instruction.source);
-    testing.expectEqual(0b0001_1110_0001_1110, instruction.address);
-    testing.expectEqual(.{ .constant = 160 }, instruction.x);
-    testing.expectEqual(.{ .constant = 100 }, instruction.y);
-    testing.expectEqual(.default, instruction.scale);
+    try testing.expectEqual(.animations, instruction.source);
+    try testing.expectEqual(0b0001_1110_0001_1110, instruction.address);
+    try testing.expectEqual(.{ .constant = 160 }, instruction.x);
+    try testing.expectEqual(.{ .constant = 100 }, instruction.y);
+    try testing.expectEqual(.default, instruction.scale);
 }
 
 test "execute with constants calls drawPolygon with correct parameters" {
@@ -265,17 +265,17 @@ test "execute with constants calls drawPolygon with correct parameters" {
 
     var machine = MockMachine.new(struct {
         pub fn drawPolygon(source: Video.PolygonSource, address: Video.PolygonAddress, point: Point.Instance, scale: PolygonScale.Raw) !void {
-            testing.expectEqual(.animations, source);
-            testing.expectEqual(0xDEAD, address);
-            testing.expectEqual(320, point.x);
-            testing.expectEqual(200, point.y);
-            testing.expectEqual(PolygonScale.default, scale);
+            try testing.expectEqual(.animations, source);
+            try testing.expectEqual(0xDEAD, address);
+            try testing.expectEqual(320, point.x);
+            try testing.expectEqual(200, point.y);
+            try testing.expectEqual(PolygonScale.default, scale);
         }
     });
 
     try instruction._execute(&machine);
 
-    testing.expectEqual(1, machine.call_counts.drawPolygon);
+    try testing.expectEqual(1, machine.call_counts.drawPolygon);
 }
 
 test "execute with registers calls drawPolygon with correct parameters" {
@@ -289,11 +289,11 @@ test "execute with registers calls drawPolygon with correct parameters" {
 
     var machine = MockMachine.new(struct {
         pub fn drawPolygon(source: Video.PolygonSource, address: Video.PolygonAddress, point: Point.Instance, scale: PolygonScale.Raw) !void {
-            testing.expectEqual(.polygons, source);
-            testing.expectEqual(0xDEAD, address);
-            testing.expectEqual(-1234, point.x);
-            testing.expectEqual(5678, point.y);
-            testing.expectEqual(16384, scale);
+            try testing.expectEqual(.polygons, source);
+            try testing.expectEqual(0xDEAD, address);
+            try testing.expectEqual(-1234, point.x);
+            try testing.expectEqual(5678, point.y);
+            try testing.expectEqual(16384, scale);
         }
     });
 
@@ -303,7 +303,7 @@ test "execute with registers calls drawPolygon with correct parameters" {
 
     try instruction._execute(&machine);
 
-    testing.expectEqual(1, machine.call_counts.drawPolygon);
+    try testing.expectEqual(1, machine.call_counts.drawPolygon);
 }
 
 test "execute with register scale value interprets value as unsigned" {
@@ -317,7 +317,7 @@ test "execute with register scale value interprets value as unsigned" {
 
     var machine = MockMachine.new(struct {
         pub fn drawPolygon(_source: Video.PolygonSource, _address: Video.PolygonAddress, _point: Point.Instance, scale: PolygonScale.Raw) !void {
-            testing.expectEqual(46635, scale);
+            try testing.expectEqual(46635, scale);
         }
     });
 
@@ -327,5 +327,5 @@ test "execute with register scale value interprets value as unsigned" {
 
     try instruction._execute(&machine);
 
-    testing.expectEqual(1, machine.call_counts.drawPolygon);
+    try testing.expectEqual(1, machine.call_counts.drawPolygon);
 }

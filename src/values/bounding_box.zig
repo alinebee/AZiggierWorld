@@ -65,22 +65,22 @@ pub fn centeredOn(center: Point.Instance, width: Dimension, height: Dimension) I
 
 const testing = @import("../utils/testing.zig");
 
-fn expectIntersects(expectation: bool, bb1: Instance, bb2: Instance) void {
-    testing.expectEqual(expectation, bb1.intersects(bb2));
-    testing.expectEqual(expectation, bb2.intersects(bb1));
+fn expectIntersects(expectation: bool, bb1: Instance, bb2: Instance) !void {
+    try testing.expectEqual(expectation, bb1.intersects(bb2));
+    try testing.expectEqual(expectation, bb2.intersects(bb1));
 }
 
-fn expectContains(expectation: bool, bb: Instance, point: Point.Instance) void {
-    testing.expectEqual(expectation, bb.contains(point));
+fn expectContains(expectation: bool, bb: Instance, point: Point.Instance) !void {
+    try testing.expectEqual(expectation, bb.contains(point));
 }
 
 test "centeredOn creates correct bounding box" {
     const bb = centeredOn(.{ .x = 80, .y = 40 }, 320, 200);
 
-    testing.expectEqual(-80, bb.x.min);
-    testing.expectEqual(-60, bb.y.min);
-    testing.expectEqual(240, bb.x.max);
-    testing.expectEqual(140, bb.y.max);
+    try testing.expectEqual(-80, bb.x.min);
+    try testing.expectEqual(-60, bb.y.min);
+    try testing.expectEqual(240, bb.x.max);
+    try testing.expectEqual(140, bb.y.max);
 }
 
 test "origin returns expected origin" {
@@ -88,7 +88,7 @@ test "origin returns expected origin" {
         .x = .{ .min = 160, .max = 320 },
         .y = .{ .min = 100, .max = 200 },
     };
-    testing.expectEqual(.{ .x = 160, .y = 100 }, bb.origin());
+    try testing.expectEqual(.{ .x = 160, .y = 100 }, bb.origin());
 }
 
 test "intersects returns true for overlapping rectangles" {
@@ -105,14 +105,14 @@ test "intersects returns true for overlapping rectangles" {
     const completely_enclosed = new(160, 100, 200, 120);
     const completely_encloses = new(-200, -200, 400, 400);
 
-    expectIntersects(true, reference, touching_top_left);
-    expectIntersects(true, reference, touching_bottom_right);
-    expectIntersects(true, reference, touching_left_edge);
-    expectIntersects(true, reference, touching_right_edge);
-    expectIntersects(true, reference, touching_top_edge);
-    expectIntersects(true, reference, touching_bottom_edge);
-    expectIntersects(true, reference, completely_enclosed);
-    expectIntersects(true, reference, completely_encloses);
+    try expectIntersects(true, reference, touching_top_left);
+    try expectIntersects(true, reference, touching_bottom_right);
+    try expectIntersects(true, reference, touching_left_edge);
+    try expectIntersects(true, reference, touching_right_edge);
+    try expectIntersects(true, reference, touching_top_edge);
+    try expectIntersects(true, reference, touching_bottom_edge);
+    try expectIntersects(true, reference, completely_enclosed);
+    try expectIntersects(true, reference, completely_encloses);
 }
 
 test "encloses returns true for completely enclosed rectangles and false for others" {
@@ -125,12 +125,12 @@ test "encloses returns true for completely enclosed rectangles and false for oth
     const completely_encloses = new(-200, -200, 400, 400);
     const completely_disjoint = new(-5000, -5000, -4000, -4000);
 
-    testing.expectEqual(true, reference.encloses(completely_enclosed));
-    testing.expectEqual(true, reference.encloses(equal));
+    try testing.expectEqual(true, reference.encloses(completely_enclosed));
+    try testing.expectEqual(true, reference.encloses(equal));
 
-    testing.expectEqual(false, reference.encloses(overlapping));
-    testing.expectEqual(false, reference.encloses(completely_disjoint));
-    testing.expectEqual(false, reference.encloses(completely_encloses));
+    try testing.expectEqual(false, reference.encloses(overlapping));
+    try testing.expectEqual(false, reference.encloses(completely_disjoint));
+    try testing.expectEqual(false, reference.encloses(completely_encloses));
 }
 
 test "intersects returns false for disjoint rectangles" {
@@ -146,13 +146,13 @@ test "intersects returns false for disjoint rectangles" {
 
     const completely_disjoint = new(-5000, -5000, -4000, -4000);
 
-    expectIntersects(false, reference, not_quite_touching_top_left);
-    expectIntersects(false, reference, not_quite_touching_bottom_left);
-    expectIntersects(false, reference, not_quite_touching_left_edge);
-    expectIntersects(false, reference, not_quite_touching_right_edge);
-    expectIntersects(false, reference, not_quite_touching_top_edge);
-    expectIntersects(false, reference, not_quite_touching_bottom_edge);
-    expectIntersects(false, reference, completely_disjoint);
+    try expectIntersects(false, reference, not_quite_touching_top_left);
+    try expectIntersects(false, reference, not_quite_touching_bottom_left);
+    try expectIntersects(false, reference, not_quite_touching_left_edge);
+    try expectIntersects(false, reference, not_quite_touching_right_edge);
+    try expectIntersects(false, reference, not_quite_touching_top_edge);
+    try expectIntersects(false, reference, not_quite_touching_bottom_edge);
+    try expectIntersects(false, reference, completely_disjoint);
 }
 
 test "contains returns true for points within bounds" {
@@ -166,13 +166,13 @@ test "contains returns true for points within bounds" {
     const bottom_edge = Point.Instance{ .x = 160, .y = 199 };
     const center = Point.Instance{ .x = 160, .y = 100 };
 
-    expectContains(true, reference, top_left_corner);
-    expectContains(true, reference, bottom_right_corner);
-    expectContains(true, reference, left_edge);
-    expectContains(true, reference, right_edge);
-    expectContains(true, reference, top_edge);
-    expectContains(true, reference, bottom_edge);
-    expectContains(true, reference, center);
+    try expectContains(true, reference, top_left_corner);
+    try expectContains(true, reference, bottom_right_corner);
+    try expectContains(true, reference, left_edge);
+    try expectContains(true, reference, right_edge);
+    try expectContains(true, reference, top_edge);
+    try expectContains(true, reference, bottom_edge);
+    try expectContains(true, reference, center);
 }
 
 test "contains returns false for points out of bounds" {
@@ -186,26 +186,26 @@ test "contains returns false for points out of bounds" {
     const not_quite_bottom_edge = Point.Instance{ .x = 160, .y = 200 };
     const somewhere_else_entirely = Point.Instance{ .x = -5000, .y = -5000 };
 
-    expectContains(false, reference, not_quite_top_left_corner);
-    expectContains(false, reference, not_quite_bottom_rightcorner);
-    expectContains(false, reference, not_quite_left_edge);
-    expectContains(false, reference, not_quite_right_edge);
-    expectContains(false, reference, not_quite_top_edge);
-    expectContains(false, reference, not_quite_bottom_edge);
-    expectContains(false, reference, somewhere_else_entirely);
+    try expectContains(false, reference, not_quite_top_left_corner);
+    try expectContains(false, reference, not_quite_bottom_rightcorner);
+    try expectContains(false, reference, not_quite_left_edge);
+    try expectContains(false, reference, not_quite_right_edge);
+    try expectContains(false, reference, not_quite_top_edge);
+    try expectContains(false, reference, not_quite_bottom_edge);
+    try expectContains(false, reference, somewhere_else_entirely);
 }
 
 test "isUnit returns true for 0-width, 1-height bounding box" {
     const bb = new(160, 100, 160, 101);
-    testing.expectEqual(true, bb.isUnit());
+    try testing.expectEqual(true, bb.isUnit());
 }
 
 test "isUnit returns false for 1-width, 1-height bounding box" {
     const bb = new(160, 100, 161, 101);
-    testing.expectEqual(false, bb.isUnit());
+    try testing.expectEqual(false, bb.isUnit());
 }
 
 test "isUnit returns false for 0-width, 0-height bounding box" {
     const bb = new(160, 100, 160, 100);
-    testing.expectEqual(false, bb.isUnit());
+    try testing.expectEqual(false, bb.isUnit());
 }

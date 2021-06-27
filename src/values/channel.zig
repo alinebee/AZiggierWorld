@@ -20,10 +20,10 @@ pub fn parse(raw: Raw) Error!Trusted {
 const testing = @import("../utils/testing.zig");
 
 test "parse returns expected enum cases" {
-    testing.expectEqual(0, parse(0));
-    testing.expectEqual(1, parse(1));
-    testing.expectEqual(2, parse(2));
-    testing.expectEqual(3, parse(3));
+    try testing.expectEqual(0, parse(0));
+    try testing.expectEqual(1, parse(1));
+    try testing.expectEqual(2, parse(2));
+    try testing.expectEqual(3, parse(3));
 
-    testing.expectError(error.InvalidChannel, parse(4));
+    try testing.expectError(error.InvalidChannel, parse(4));
 }

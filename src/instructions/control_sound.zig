@@ -91,17 +91,17 @@ test "parse parses play instruction and consumes 6 bytes" {
             .frequency = 0xBE,
         },
     };
-    testing.expectEqual(expected, instruction);
+    try testing.expectEqual(expected, instruction);
 }
 
 test "parse parses stop instruction and consumes 6 bytes" {
     const instruction = try expectParse(parse, &BytecodeExamples.stop, 6);
     const expected = Instance{ .stop = 1 };
-    testing.expectEqual(expected, instruction);
+    try testing.expectEqual(expected, instruction);
 }
 
 test "parse returns error.InvalidChannel when unknown channel is specified in bytecode" {
-    testing.expectError(
+    try testing.expectError(
         error.InvalidChannel,
         expectParse(parse, &BytecodeExamples.invalid_channel, 6),
     );
@@ -119,10 +119,10 @@ test "execute with play instruction calls playSound with correct parameters" {
 
     var machine = MockMachine.new(struct {
         pub fn playSound(resource_id: ResourceID.Raw, channel: Channel.Trusted, volume: Audio.Volume, frequency: Audio.Frequency) !void {
-            testing.expectEqual(0xDEAD, resource_id);
-            testing.expectEqual(0, channel);
-            testing.expectEqual(20, volume);
-            testing.expectEqual(0, frequency);
+            try testing.expectEqual(0xDEAD, resource_id);
+            try testing.expectEqual(0, channel);
+            try testing.expectEqual(20, volume);
+            try testing.expectEqual(0, frequency);
         }
 
         pub fn stopChannel(channel: Channel.Trusted) void {
@@ -131,7 +131,7 @@ test "execute with play instruction calls playSound with correct parameters" {
     });
 
     try instruction._execute(&machine);
-    testing.expectEqual(1, machine.call_counts.playSound);
+    try testing.expectEqual(1, machine.call_counts.playSound);
 }
 
 test "execute with stop instruction runs on machine without errors" {
@@ -143,10 +143,10 @@ test "execute with stop instruction runs on machine without errors" {
         }
 
         pub fn stopChannel(channel: Channel.Trusted) void {
-            testing.expectEqual(1, channel);
+            testing.expectEqual(1, channel) catch { unreachable; };
         }
     });
 
     try instruction._execute(&machine);
-    testing.expectEqual(1, machine.call_counts.stopChannel);
+    try testing.expectEqual(1, machine.call_counts.stopChannel);
 }

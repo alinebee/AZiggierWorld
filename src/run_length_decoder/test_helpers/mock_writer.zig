@@ -47,7 +47,7 @@ test "writeFromReader records correct instruction without consuming any bytes fr
     var fakeReader = FakeReader{};
 
     try writer.writeFromSource(&fakeReader, 16);
-    testing.expectEqual(
+    try testing.expectEqual(
         .{ .write_from_source = 16 },
         writer.last_instruction,
     );
@@ -57,7 +57,7 @@ test "copyFromDestination records correct instruction" {
     var writer = new();
 
     try writer.copyFromDestination(16, 0xDEADBEEF);
-    testing.expectEqual(
+    try testing.expectEqual(
         .{
             .copy_from_destination = .{
                 .count = 16,

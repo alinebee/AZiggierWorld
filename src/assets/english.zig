@@ -168,9 +168,9 @@ pub fn find(id: StringID.Raw) Error![]const u8 {
 const testing = @import("../utils/testing.zig");
 
 test "find returns string for valid identifier" {
-    testing.expectEqual("L E T ' S   G O", find(0x02C));
+    try testing.expectEqual("L E T ' S   G O", find(0x02C));
 }
 
 test "find returns error.InvalidStringID for unknown identifier" {
-    testing.expectError(error.InvalidStringID, find(0x02F));
+    try testing.expectError(error.InvalidStringID, find(0x02F));
 }

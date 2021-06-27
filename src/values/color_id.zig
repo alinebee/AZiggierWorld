@@ -39,54 +39,54 @@ pub fn highlightByte(color_byte: u8) u8 {
 const testing = @import("../utils/testing.zig");
 
 test "parse succeeds for in-bounds integer" {
-    testing.expectEqual(0, parse(0b0000_0000));
-    testing.expectEqual(15, parse(0b0000_1111));
+    try testing.expectEqual(0, parse(0b0000_0000));
+    try testing.expectEqual(15, parse(0b0000_1111));
 }
 
 test "parse returns InvalidThreadID for out-of-bounds integer" {
-    testing.expectError(error.InvalidColorID, parse(0b0001_0000));
+    try testing.expectError(error.InvalidColorID, parse(0b0001_0000));
 }
 
 test "highlight remaps lower 8 colors to upper 8 colors" {
-    testing.expectEqual(0b1000, highlight(0b0000));
-    testing.expectEqual(0b1001, highlight(0b0001));
-    testing.expectEqual(0b1010, highlight(0b0010));
-    testing.expectEqual(0b1011, highlight(0b0011));
-    testing.expectEqual(0b1100, highlight(0b0100));
-    testing.expectEqual(0b1101, highlight(0b0101));
-    testing.expectEqual(0b1110, highlight(0b0110));
-    testing.expectEqual(0b1111, highlight(0b0111));
+    try testing.expectEqual(0b1000, highlight(0b0000));
+    try testing.expectEqual(0b1001, highlight(0b0001));
+    try testing.expectEqual(0b1010, highlight(0b0010));
+    try testing.expectEqual(0b1011, highlight(0b0011));
+    try testing.expectEqual(0b1100, highlight(0b0100));
+    try testing.expectEqual(0b1101, highlight(0b0101));
+    try testing.expectEqual(0b1110, highlight(0b0110));
+    try testing.expectEqual(0b1111, highlight(0b0111));
 }
 
 test "highlight leaves upper 8 colors as they were" {
-    testing.expectEqual(0b1000, highlight(0b1000));
-    testing.expectEqual(0b1001, highlight(0b1001));
-    testing.expectEqual(0b1010, highlight(0b1010));
-    testing.expectEqual(0b1011, highlight(0b1011));
-    testing.expectEqual(0b1100, highlight(0b1100));
-    testing.expectEqual(0b1101, highlight(0b1101));
-    testing.expectEqual(0b1110, highlight(0b1110));
-    testing.expectEqual(0b1111, highlight(0b1111));
+    try testing.expectEqual(0b1000, highlight(0b1000));
+    try testing.expectEqual(0b1001, highlight(0b1001));
+    try testing.expectEqual(0b1010, highlight(0b1010));
+    try testing.expectEqual(0b1011, highlight(0b1011));
+    try testing.expectEqual(0b1100, highlight(0b1100));
+    try testing.expectEqual(0b1101, highlight(0b1101));
+    try testing.expectEqual(0b1110, highlight(0b1110));
+    try testing.expectEqual(0b1111, highlight(0b1111));
 }
 
 test "highlightByte remaps lower 8 colors to upper 8 colors" {
-    testing.expectEqual(0b1000_1000, highlightByte(0b0000_0000));
-    testing.expectEqual(0b1001_1001, highlightByte(0b0001_0001));
-    testing.expectEqual(0b1010_1010, highlightByte(0b0010_0010));
-    testing.expectEqual(0b1011_1011, highlightByte(0b0011_0011));
-    testing.expectEqual(0b1100_1100, highlightByte(0b0100_0100));
-    testing.expectEqual(0b1101_1101, highlightByte(0b0101_0101));
-    testing.expectEqual(0b1110_1110, highlightByte(0b0110_0110));
-    testing.expectEqual(0b1111_1111, highlightByte(0b0111_0111));
+    try testing.expectEqual(0b1000_1000, highlightByte(0b0000_0000));
+    try testing.expectEqual(0b1001_1001, highlightByte(0b0001_0001));
+    try testing.expectEqual(0b1010_1010, highlightByte(0b0010_0010));
+    try testing.expectEqual(0b1011_1011, highlightByte(0b0011_0011));
+    try testing.expectEqual(0b1100_1100, highlightByte(0b0100_0100));
+    try testing.expectEqual(0b1101_1101, highlightByte(0b0101_0101));
+    try testing.expectEqual(0b1110_1110, highlightByte(0b0110_0110));
+    try testing.expectEqual(0b1111_1111, highlightByte(0b0111_0111));
 }
 
 test "highlightByte leaves upper 8 colors as they were" {
-    testing.expectEqual(0b1000_1000, highlightByte(0b1000_1000));
-    testing.expectEqual(0b1001_1001, highlightByte(0b1001_1001));
-    testing.expectEqual(0b1010_1010, highlightByte(0b1010_1010));
-    testing.expectEqual(0b1011_1011, highlightByte(0b1011_1011));
-    testing.expectEqual(0b1100_1100, highlightByte(0b1100_1100));
-    testing.expectEqual(0b1101_1101, highlightByte(0b1101_1101));
-    testing.expectEqual(0b1110_1110, highlightByte(0b1110_1110));
-    testing.expectEqual(0b1111_1111, highlightByte(0b1111_1111));
+    try testing.expectEqual(0b1000_1000, highlightByte(0b1000_1000));
+    try testing.expectEqual(0b1001_1001, highlightByte(0b1001_1001));
+    try testing.expectEqual(0b1010_1010, highlightByte(0b1010_1010));
+    try testing.expectEqual(0b1011_1011, highlightByte(0b1011_1011));
+    try testing.expectEqual(0b1100_1100, highlightByte(0b1100_1100));
+    try testing.expectEqual(0b1101_1101, highlightByte(0b1101_1101));
+    try testing.expectEqual(0b1110_1110, highlightByte(0b1110_1110));
+    try testing.expectEqual(0b1111_1111, highlightByte(0b1111_1111));
 }

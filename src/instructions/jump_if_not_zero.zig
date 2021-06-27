@@ -54,8 +54,8 @@ const expectParse = @import("test_helpers/parse.zig").expectParse;
 
 test "parse parses instruction from valid bytecode and consumes 4 bytes" {
     const instruction = try expectParse(parse, &BytecodeExamples.valid, 4);
-    testing.expectEqual(1, instruction.register);
-    testing.expectEqual(0xDEAD, instruction.address);
+    try testing.expectEqual(1, instruction.register);
+    try testing.expectEqual(0xDEAD, instruction.address);
 }
 
 test "execute decrements register and jumps to new address if register is still non-zero" {
@@ -70,12 +70,12 @@ test "execute decrements register and jumps to new address if register is still 
     machine.program = Program.new(&bytecode);
     machine.registers[255] = 2;
 
-    testing.expectEqual(0, machine.program.counter);
+    try testing.expectEqual(0, machine.program.counter);
 
     try instruction.execute(&machine);
 
-    testing.expectEqual(1, machine.registers[255]);
-    testing.expectEqual(9, machine.program.counter);
+    try testing.expectEqual(1, machine.registers[255]);
+    try testing.expectEqual(9, machine.program.counter);
 }
 
 test "execute decrements register but does not jump if register reaches zero" {
@@ -90,12 +90,12 @@ test "execute decrements register but does not jump if register reaches zero" {
     machine.program = Program.new(&bytecode);
     machine.registers[255] = 1;
 
-    testing.expectEqual(0, machine.program.counter);
+    try testing.expectEqual(0, machine.program.counter);
 
     try instruction.execute(&machine);
 
-    testing.expectEqual(0, machine.registers[255]);
-    testing.expectEqual(0, machine.program.counter);
+    try testing.expectEqual(0, machine.registers[255]);
+    try testing.expectEqual(0, machine.program.counter);
 }
 
 test "execute decrement wraps around on underflow" {
@@ -112,7 +112,7 @@ test "execute decrement wraps around on underflow" {
 
     try instruction.execute(&machine);
 
-    testing.expectEqual(32767, machine.registers[255]);
+    try testing.expectEqual(32767, machine.registers[255]);
 }
 
 test "execute returns error.InvalidAddress on jump when address is out of range" {
@@ -127,5 +127,5 @@ test "execute returns error.InvalidAddress on jump when address is out of range"
     machine.program = Program.new(&bytecode);
     machine.registers[255] = 2;
 
-    testing.expectError(error.InvalidAddress, instruction.execute(&machine));
+    try testing.expectError(error.InvalidAddress, instruction.execute(&machine));
 }

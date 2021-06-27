@@ -41,11 +41,11 @@ const ParseFailure = struct {
     }
 
     pub fn format(self: ParseFailure, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
-        try std.fmt.format(writer, "Resource #{} at {}\nOpcode: {}\nBytes: {X}\nError: {}", .{
+        try std.fmt.format(writer, "Resource #{} at {}\nOpcode: {s}\nBytes: {s}\nError: {s}", .{
             self.resource_id,
             self.offset,
             self.opcodeName(),
-            self.parsed_bytes[0..self.parsed_count],
+            std.fmt.fmtSliceHexUpper(self.parsed_bytes[0..self.parsed_count]),
             self.err,
         });
     }
@@ -88,9 +88,9 @@ test "parseNextInstruction parses all programs in fixture bytecode" {
     if (failures.items.len > 0) {
         std.debug.print("\n{} instruction(s) failed to parse:\n", .{failures.items.len});
         for (failures.items) |failure| {
-            std.debug.print("\n{}\n\n", .{failure});
+            std.debug.print("\n{s}\n\n", .{failure});
         }
     }
 
-    testing.expectEqual(0, failures.items.len);
+    try testing.expectEqual(0, failures.items.len);
 }

@@ -58,14 +58,14 @@ test "new creates new virtual machine with expected state" {
 
     for (machine.threads) |thread, id| {
         if (id == ThreadID.main) {
-            testing.expectEqual(.{ .active = 0 }, thread.execution_state);
+            try testing.expectEqual(.{ .active = 0 }, thread.execution_state);
         } else {
-            testing.expectEqual(.inactive, thread.execution_state);
+            try testing.expectEqual(.inactive, thread.execution_state);
         }
-        testing.expectEqual(.running, thread.suspend_state);
+        try testing.expectEqual(.running, thread.suspend_state);
     }
 
     for (machine.registers) |register| {
-        testing.expectEqual(0, register);
+        try testing.expectEqual(0, register);
     }
 }

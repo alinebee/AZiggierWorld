@@ -49,14 +49,14 @@ pub fn parse(raw: Raw) Error!Enum {
 const testing = @import("../utils/testing.zig");
 
 test "parse parses raw operation types correctly" {
-    testing.expectEqual(.sound_or_empty, parse(0));
-    testing.expectEqual(.music, parse(1));
-    testing.expectEqual(.bitmap, parse(2));
-    testing.expectEqual(.palettes, parse(3));
-    testing.expectEqual(.bytecode, parse(4));
-    testing.expectEqual(.polygons, parse(5));
-    testing.expectEqual(.sprite_polygons, parse(6));
-    testing.expectError(
+    try testing.expectEqual(.sound_or_empty, parse(0));
+    try testing.expectEqual(.music, parse(1));
+    try testing.expectEqual(.bitmap, parse(2));
+    try testing.expectEqual(.palettes, parse(3));
+    try testing.expectEqual(.bytecode, parse(4));
+    try testing.expectEqual(.polygons, parse(5));
+    try testing.expectEqual(.sprite_polygons, parse(6));
+    try testing.expectError(
         error.InvalidResourceType,
         parse(7),
     );

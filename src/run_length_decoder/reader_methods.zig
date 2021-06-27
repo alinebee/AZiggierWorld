@@ -49,16 +49,16 @@ test "readInt reads integers of the specified width" {
     // MockReader.new returns a bitwise reader that already includes `ReaderMethods`.
     var parser = MockReader.new(u64, 0xDEAD_BEEF_8BAD_F00D);
 
-    testing.expectEqual(0xDE, parser.readInt(u8));
-    testing.expectEqual(0xAD, parser.readInt(u8));
-    testing.expectEqual(0xBEEF, parser.readInt(u16));
-    testing.expectEqual(0x8BADF00D, parser.readInt(u32));
-    testing.expectEqual(true, parser.isAtEnd());
+    try testing.expectEqual(0xDE, parser.readInt(u8));
+    try testing.expectEqual(0xAD, parser.readInt(u8));
+    try testing.expectEqual(0xBEEF, parser.readInt(u16));
+    try testing.expectEqual(0x8BADF00D, parser.readInt(u32));
+    try testing.expectEqual(true, parser.isAtEnd());
 }
 
 test "readInt returns error.SourceExhausted when source buffer is too short" {
     var parser = MockReader.new(u8, 0xDE);
 
-    testing.expectError(error.SourceExhausted, parser.readInt(u16));
-    testing.expectEqual(true, parser.isAtEnd());
+    try testing.expectError(error.SourceExhausted, parser.readInt(u16));
+    try testing.expectEqual(true, parser.isAtEnd());
 }

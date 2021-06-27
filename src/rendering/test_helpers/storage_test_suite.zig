@@ -3,9 +3,9 @@ const expectBitmap = @import("indexed_bitmap.zig").expectBitmap;
 // -- Test helpers --
 
 /// Compare the contents of a storage buffer against an expected string.
-pub fn expectPixels(expected: []const u8, actual: anytype) void {
+pub fn expectPixels(expected: []const u8, actual: anytype) !void {
     const bitmap = actual.toBitmap();
-    expectBitmap(expected, bitmap);
+    try expectBitmap(expected, bitmap);
 }
 
 // -- Tests --
@@ -30,7 +30,7 @@ pub fn runTests(comptime Instance: anytype) void {
                 \\0000
             ;
 
-            expectPixels(expected_before, storage);
+            try expectPixels(expected_before, storage);
 
             storage.fill(0xA);
 
@@ -41,15 +41,15 @@ pub fn runTests(comptime Instance: anytype) void {
                 \\AAAA
             ;
 
-            expectPixels(expected_after, storage);
+            try expectPixels(expected_after, storage);
         }
 
         test "uncheckedDrawSpan with byte-aligned span sets solid color in slice" {
             comptime const Storage = Instance(10, 3);
             var storage = Storage{};
-            
+
             const operation = Storage.DrawOperation.solidColor(0xD);
-            
+
             storage.uncheckedDrawSpan(.{ .min = 2, .max = 7 }, 1, operation);
 
             const expected =
@@ -57,7 +57,7 @@ pub fn runTests(comptime Instance: anytype) void {
                 \\00DDDDDD00
                 \\0000000000
             ;
-            expectPixels(expected, storage);
+            try expectPixels(expected, storage);
         }
 
         test "uncheckedDrawSpan with non-byte-aligned start sets start pixel correctly" {
@@ -73,7 +73,7 @@ pub fn runTests(comptime Instance: anytype) void {
                 \\0CCCCCCC00
                 \\0000000000
             ;
-            expectPixels(expected, storage);
+            try expectPixels(expected, storage);
         }
 
         test "uncheckedDrawSpan with non-byte-aligned end sets end pixel correctly" {
@@ -89,7 +89,7 @@ pub fn runTests(comptime Instance: anytype) void {
                 \\0033333330
                 \\0000000000
             ;
-            expectPixels(expected, storage);
+            try expectPixels(expected, storage);
         }
 
         test "uncheckedDrawSpan with non-byte-aligned start and end sets start and end pixels correctly" {
@@ -105,7 +105,7 @@ pub fn runTests(comptime Instance: anytype) void {
                 \\0777777770
                 \\0000000000
             ;
-            expectPixels(expected, storage);
+            try expectPixels(expected, storage);
         }
 
         test "uncheckedDrawSpan highlights colors in slice" {
@@ -128,7 +128,7 @@ pub fn runTests(comptime Instance: anytype) void {
                 \\89ABCDEF89ABCDEF
                 \\0123456789ABCDEF
             ;
-            expectPixels(expected, storage);
+            try expectPixels(expected, storage);
         }
 
         test "uncheckedDrawSpan replaces colors in slice with mask" {
@@ -143,7 +143,7 @@ pub fn runTests(comptime Instance: anytype) void {
             );
 
             const operation = Storage.DrawOperation.mask(&mask_storage);
-            
+
             storage.uncheckedDrawSpan(.{ .min = 3, .max = 6 }, 1, operation);
 
             const expected =
@@ -151,7 +151,7 @@ pub fn runTests(comptime Instance: anytype) void {
                 \\0006543000
                 \\0000000000
             ;
-            expectPixels(expected, storage);
+            try expectPixels(expected, storage);
         }
     };
 }

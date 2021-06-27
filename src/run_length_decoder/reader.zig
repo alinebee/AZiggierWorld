@@ -187,18 +187,18 @@ test "init() reads unpacked size, initial checksum and first chunk from end of s
 
     var reader = try Instance.init(&source);
 
-    testing.expectEqual(0x8BADF00D, reader.uncompressed_size);
-    testing.expectEqual(0x00000001, reader.current_chunk);
+    try testing.expectEqual(0x8BADF00D, reader.uncompressed_size);
+    try testing.expectEqual(0x00000001, reader.current_chunk);
 
     // During initialization, the CRC stored in the source data gets XORed with the first raw chunk of data.
     const expected_crc = mem.readIntBig(u32, source[12..16]) ^ mem.readIntBig(u32, source[8..12]);
-    testing.expectEqual(expected_crc, reader.crc);
+    try testing.expectEqual(expected_crc, reader.crc);
 }
 
 test "new() returns `error.SourceExhausted` when source buffer is too small" {
     const source = [_]u8{0};
 
-    testing.expectError(error.SourceExhausted, new(&source));
+    try testing.expectError(error.SourceExhausted, new(&source));
 }
 
 test "readBit() reads chunks bit by bit in reverse order" {
@@ -214,28 +214,28 @@ test "readBit() reads chunks bit by bit in reverse order" {
         const bit = try reader.readBit();
         try writer.writeBits(bit, 1);
     }
-    testing.expectEqual(true, reader.isAtEnd());
+    try testing.expectEqual(true, reader.isAtEnd());
 
     // readBit() returns source bits in reverse order, starting from the end of the last chunk of real data.
     const source_bits = mem.readIntBig(u64, source[0..destination.len]);
     const expected_bits = @bitReverse(u64, source_bits);
     const actual_bits = mem.readIntBig(u64, &destination);
 
-    testing.expectEqual(expected_bits, actual_bits);
+    try testing.expectEqual(expected_bits, actual_bits);
 }
 
 test "isAtEnd() returns false and validateChecksum() returns error.ChecksumNotReady when reader hasn't consumed all bits yet" {
     const single_chunk_source = DataExamples.valid[4..];
 
     var reader = try new(single_chunk_source);
-    testing.expectEqual(false, reader.isAtEnd());
-    testing.expectError(error.ChecksumNotReady, reader.validateChecksum());
+    try testing.expectEqual(false, reader.isAtEnd());
+    try testing.expectError(error.ChecksumNotReady, reader.validateChecksum());
 
     // Even once it has begun consuming its last chunk,
     // it should not report as done until all bits of the chunk have been read
     _ = try reader.readBit();
-    testing.expectEqual(false, reader.isAtEnd());
-    testing.expectError(error.ChecksumNotReady, reader.validateChecksum());
+    try testing.expectEqual(false, reader.isAtEnd());
+    try testing.expectError(error.ChecksumNotReady, reader.validateChecksum());
 }
 
 test "isAtEnd() returns true and validateChecksum() returns error.ChecksumFailed when reader has consumed all bits but has a non-0 checksum" {
@@ -243,12 +243,12 @@ test "isAtEnd() returns true and validateChecksum() returns error.ChecksumFailed
 
     var bits_remaining: usize = 8 * 8;
     while (bits_remaining > 0) : (bits_remaining -= 1) {
-        testing.expectEqual(false, reader.isAtEnd());
-        testing.expectError(error.ChecksumNotReady, reader.validateChecksum());
+        try testing.expectEqual(false, reader.isAtEnd());
+        try testing.expectError(error.ChecksumNotReady, reader.validateChecksum());
         _ = try reader.readBit();
     } else {
-        testing.expectEqual(true, reader.isAtEnd());
-        testing.expectError(error.ChecksumFailed, reader.validateChecksum());
+        try testing.expectEqual(true, reader.isAtEnd());
+        try testing.expectError(error.ChecksumFailed, reader.validateChecksum());
     }
 }
 
@@ -257,11 +257,11 @@ test "isAtEnd() returns true and validateChecksum() passes when reader has consu
 
     var bits_remaining: usize = 8 * 8;
     while (bits_remaining > 0) : (bits_remaining -= 1) {
-        testing.expectEqual(false, reader.isAtEnd());
-        testing.expectError(error.ChecksumNotReady, reader.validateChecksum());
+        try testing.expectEqual(false, reader.isAtEnd());
+        try testing.expectError(error.ChecksumNotReady, reader.validateChecksum());
         _ = try reader.readBit();
     } else {
-        testing.expectEqual(true, reader.isAtEnd());
+        try testing.expectEqual(true, reader.isAtEnd());
         try reader.validateChecksum();
     }
 }

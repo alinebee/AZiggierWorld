@@ -87,17 +87,17 @@ test "parse parses bytecode with low X coordinate and consumes 4 bytes" {
     const instruction = try expectParse(parse, &BytecodeExamples.low_x, 4);
 
     // Address will be the first two bytes right-shifted by 1
-    testing.expectEqual(0b0001_1110_0001_1110, instruction.address);
-    testing.expectEqual(30, instruction.point.x);
-    testing.expectEqual(40, instruction.point.y);
+    try testing.expectEqual(0b0001_1110_0001_1110, instruction.address);
+    try testing.expectEqual(30, instruction.point.x);
+    try testing.expectEqual(40, instruction.point.y);
 }
 
 test "parse parses bytecode with high X coordinate and consumes 4 bytes" {
     const instruction = try expectParse(parse, &BytecodeExamples.high_x, 4);
 
-    testing.expectEqual(0b0001_1110_0001_1110, instruction.address);
-    testing.expectEqual(255 + (240 - 199), instruction.point.x);
-    testing.expectEqual(199, instruction.point.y);
+    try testing.expectEqual(0b0001_1110_0001_1110, instruction.address);
+    try testing.expectEqual(255 + (240 - 199), instruction.point.x);
+    try testing.expectEqual(199, instruction.point.y);
 }
 
 test "execute calls drawPolygon with correct parameters" {
@@ -108,15 +108,15 @@ test "execute calls drawPolygon with correct parameters" {
 
     var machine = MockMachine.new(struct {
         pub fn drawPolygon(source: Video.PolygonSource, address: Video.PolygonAddress, point: Point.Instance, scale: PolygonScale.Raw) !void {
-            testing.expectEqual(.polygons, source);
-            testing.expectEqual(0xDEAD, address);
-            testing.expectEqual(320, point.x);
-            testing.expectEqual(200, point.y);
-            testing.expectEqual(PolygonScale.default, scale);
+            try testing.expectEqual(.polygons, source);
+            try testing.expectEqual(0xDEAD, address);
+            try testing.expectEqual(320, point.x);
+            try testing.expectEqual(200, point.y);
+            try testing.expectEqual(PolygonScale.default, scale);
         }
     });
 
     try instruction._execute(&machine);
 
-    testing.expectEqual(1, machine.call_counts.drawPolygon);
+    try testing.expectEqual(1, machine.call_counts.drawPolygon);
 }

@@ -29,10 +29,10 @@ pub fn parse(raw: Raw) Error!Enum {
 const testing = @import("../utils/testing.zig");
 
 test "parse parses raw operation bytes correctly" {
-    testing.expectEqual(.Resume, parse(0));
-    testing.expectEqual(.Suspend, parse(1));
-    testing.expectEqual(.Deactivate, parse(2));
-    testing.expectError(
+    try testing.expectEqual(.Resume, parse(0));
+    try testing.expectEqual(.Suspend, parse(1));
+    try testing.expectEqual(.Deactivate, parse(2));
+    try testing.expectError(
         error.InvalidThreadOperation,
         parse(3),
     );

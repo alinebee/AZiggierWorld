@@ -37,7 +37,7 @@ test "dosName formats resource_list filename correctly" {
     const dos_name = try filename.dosName(testing.allocator);
     defer testing.allocator.free(dos_name);
 
-    testing.expectEqualStrings("MEMLIST.BIN", dos_name);
+    try testing.expectEqualStrings("MEMLIST.BIN", dos_name);
 }
 
 test "dosName formats single-digit bank filename with correct padding" {
@@ -46,7 +46,7 @@ test "dosName formats single-digit bank filename with correct padding" {
     const dos_name = try filename.dosName(testing.allocator);
     defer testing.allocator.free(dos_name);
 
-    testing.expectEqualStrings("BANK03", dos_name);
+    try testing.expectEqualStrings("BANK03", dos_name);
 }
 
 test "dosName formats two-decimal-digit bank filename as hex with correct padding" {
@@ -55,7 +55,7 @@ test "dosName formats two-decimal-digit bank filename as hex with correct paddin
     const dos_name = try filename.dosName(testing.allocator);
     defer testing.allocator.free(dos_name);
 
-    testing.expectEqualStrings("BANK0A", dos_name);
+    try testing.expectEqualStrings("BANK0A", dos_name);
 }
 
 test "dosName formats two-hex-digit bank filename as two-digit hex" {
@@ -64,13 +64,13 @@ test "dosName formats two-hex-digit bank filename as two-digit hex" {
     const dos_name = try filename.dosName(testing.allocator);
     defer testing.allocator.free(dos_name);
 
-    testing.expectEqualStrings("BANKFE", dos_name);
+    try testing.expectEqualStrings("BANKFE", dos_name);
 }
 
 test "dosName returns error when memory could not be allocated" {
     const filename: Instance = .resource_list;
 
-    testing.expectError(
+    try testing.expectError(
         error.OutOfMemory,
         filename.dosName(testing.failing_allocator),
     );

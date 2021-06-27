@@ -69,12 +69,12 @@ const expectParse = @import("test_helpers/parse.zig").expectParse;
 test "parse parses valid bytecode and consumes 4 bytes" {
     const instruction = try expectParse(parse, &BytecodeExamples.valid, 4);
 
-    testing.expectEqual(16, instruction.destination);
-    testing.expectEqual(8, instruction.shift);
+    try testing.expectEqual(16, instruction.destination);
+    try testing.expectEqual(8, instruction.shift);
 }
 
 test "parse returns error.ShiftTooLarge and consumes 4 bytes on invalid shift distance" {
-    testing.expectError(
+    try testing.expectError(
         error.ShiftTooLarge,
         expectParse(parse, &BytecodeExamples.invalid_shift, 4),
     );
@@ -95,5 +95,5 @@ test "execute shifts destination register" {
 
     instruction.execute(&machine);
 
-    testing.expectEqual(expected_value, @bitCast(u16, machine.registers[16]));
+    try testing.expectEqual(expected_value, @bitCast(u16, machine.registers[16]));
 }

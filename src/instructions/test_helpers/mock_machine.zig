@@ -134,111 +134,111 @@ const testing = @import("../../utils/testing.zig");
 test "MockMachine calls drawPolygon correctly on stub implementation" {
     var mock = new(struct {
         fn drawPolygon(source: Video.PolygonSource, address: Video.PolygonAddress, point: Point.Instance, scale: PolygonScale.Raw) !void {
-            testing.expectEqual(.animations, source);
-            testing.expectEqual(0xBEEF, address);
-            testing.expectEqual(320, point.x);
-            testing.expectEqual(200, point.y);
-            testing.expectEqual(128, scale);
+            try testing.expectEqual(.animations, source);
+            try testing.expectEqual(0xBEEF, address);
+            try testing.expectEqual(320, point.x);
+            try testing.expectEqual(200, point.y);
+            try testing.expectEqual(128, scale);
         }
     });
 
     try mock.drawPolygon(.animations, 0xBEEF, .{ .x = 320, .y = 200 }, 128);
-    testing.expectEqual(1, mock.call_counts.drawPolygon);
+    try testing.expectEqual(1, mock.call_counts.drawPolygon);
 }
 
 test "MockMachine calls drawString correctly on stub implementation" {
     var mock = new(struct {
         fn drawString(string_id: StringID.Raw, color_id: ColorID.Trusted, point: Point.Instance) !void {
-            testing.expectEqual(0xBEEF, string_id);
-            testing.expectEqual(2, color_id);
-            testing.expectEqual(320, point.x);
-            testing.expectEqual(200, point.y);
+            try testing.expectEqual(0xBEEF, string_id);
+            try testing.expectEqual(2, color_id);
+            try testing.expectEqual(320, point.x);
+            try testing.expectEqual(200, point.y);
         }
     });
 
     try mock.drawString(0xBEEF, 2, .{ .x = 320, .y = 200 });
-    testing.expectEqual(1, mock.call_counts.drawString);
+    try testing.expectEqual(1, mock.call_counts.drawString);
 }
 
 test "MockMachine calls selectPalette correctly on stub implementation" {
     var mock = new(struct {
         fn selectPalette(palette_id: PaletteID.Trusted) void {
-            testing.expectEqual(16, palette_id);
+            testing.expectEqual(16, palette_id) catch { unreachable; };
         }
     });
 
     mock.selectPalette(16);
-    testing.expectEqual(1, mock.call_counts.selectPalette);
+    try testing.expectEqual(1, mock.call_counts.selectPalette);
 }
 
 test "MockMachine calls selectVideoBuffer correctly on stub implementation" {
     var mock = new(struct {
         fn selectVideoBuffer(buffer_id: BufferID.Enum) void {
-            testing.expectEqual(.front_buffer, buffer_id);
+            testing.expectEqual(.front_buffer, buffer_id) catch { unreachable; };
         }
     });
 
     mock.selectVideoBuffer(.front_buffer);
-    testing.expectEqual(1, mock.call_counts.selectVideoBuffer);
+    try testing.expectEqual(1, mock.call_counts.selectVideoBuffer);
 }
 
 test "MockMachine calls fillVideoBuffer correctly on stub implementation" {
     var mock = new(struct {
         fn fillVideoBuffer(buffer_id: BufferID.Enum, color_id: ColorID.Trusted) void {
-            testing.expectEqual(.front_buffer, buffer_id);
-            testing.expectEqual(15, color_id);
+            testing.expectEqual(.front_buffer, buffer_id) catch { unreachable; };
+            testing.expectEqual(15, color_id) catch { unreachable; };
         }
     });
 
     mock.fillVideoBuffer(.front_buffer, 15);
-    testing.expectEqual(1, mock.call_counts.fillVideoBuffer);
+    try testing.expectEqual(1, mock.call_counts.fillVideoBuffer);
 }
 
 test "MockMachine calls copyVideoBuffer correctly on stub implementation" {
     var mock = new(struct {
         fn copyVideoBuffer(source: BufferID.Enum, destination: BufferID.Enum, vertical_offset: Point.Coordinate) void {
-            testing.expectEqual(.{ .specific = 1 }, source);
-            testing.expectEqual(.back_buffer, destination);
-            testing.expectEqual(176, vertical_offset);
+            testing.expectEqual(.{ .specific = 1 }, source) catch { unreachable; };
+            testing.expectEqual(.back_buffer, destination) catch { unreachable; };
+            testing.expectEqual(176, vertical_offset) catch { unreachable; };
         }
     });
 
     mock.copyVideoBuffer(.{ .specific = 1 }, .back_buffer, 176);
-    testing.expectEqual(1, mock.call_counts.copyVideoBuffer);
+    try testing.expectEqual(1, mock.call_counts.copyVideoBuffer);
 }
 
 test "MockMachine calls renderVideoBuffer correctly on stub implementation" {
     var mock = new(struct {
         fn renderVideoBuffer(buffer_id: BufferID.Enum, delay: Video.FrameDelay) void {
-            testing.expectEqual(.back_buffer, buffer_id);
-            testing.expectEqual(5, delay);
+            testing.expectEqual(.back_buffer, buffer_id) catch { unreachable; };
+            testing.expectEqual(5, delay) catch { unreachable; };
         }
     });
 
     mock.renderVideoBuffer(.back_buffer, 5);
-    testing.expectEqual(1, mock.call_counts.renderVideoBuffer);
+    try testing.expectEqual(1, mock.call_counts.renderVideoBuffer);
 }
 
 test "MockMachine calls startGamePart correctly on stub implementation" {
     var mock = new(struct {
         fn startGamePart(game_part: GamePart.Enum) !void {
-            testing.expectEqual(.copy_protection, game_part);
+            try testing.expectEqual(.copy_protection, game_part);
         }
     });
 
     try mock.startGamePart(.copy_protection);
-    testing.expectEqual(1, mock.call_counts.startGamePart);
+    try testing.expectEqual(1, mock.call_counts.startGamePart);
 }
 
 test "MockMachine calls loadResource correctly on stub implementation" {
     var mock = new(struct {
         fn loadResource(resource_id: ResourceID.Raw) !void {
-            testing.expectEqual(0x8BAD, resource_id);
+            try testing.expectEqual(0x8BAD, resource_id);
         }
     });
 
     try mock.loadResource(0x8BAD);
-    testing.expectEqual(1, mock.call_counts.loadResource);
+    try testing.expectEqual(1, mock.call_counts.loadResource);
 }
 
 test "MockMachine calls unloadAllResources correctly on stub implementation" {
@@ -247,31 +247,31 @@ test "MockMachine calls unloadAllResources correctly on stub implementation" {
     });
 
     mock.unloadAllResources();
-    testing.expectEqual(1, mock.call_counts.unloadAllResources);
+    try testing.expectEqual(1, mock.call_counts.unloadAllResources);
 }
 
 test "MockMachine calls playMusic correctly on stub implementation" {
     var mock = new(struct {
         fn playMusic(resource_id: ResourceID.Raw, offset: Audio.Offset, delay: Audio.Delay) !void {
-            testing.expectEqual(0xBEEF, resource_id);
-            testing.expectEqual(128, offset);
-            testing.expectEqual(1234, delay);
+            try testing.expectEqual(0xBEEF, resource_id);
+            try testing.expectEqual(128, offset);
+            try testing.expectEqual(1234, delay);
         }
     });
 
     try mock.playMusic(0xBEEF, 128, 1234);
-    testing.expectEqual(1, mock.call_counts.playMusic);
+    try testing.expectEqual(1, mock.call_counts.playMusic);
 }
 
 test "MockMachine calls setMusicDelay correctly on stub implementation" {
     var mock = new(struct {
         fn setMusicDelay(delay: Audio.Delay) void {
-            testing.expectEqual(1234, delay);
+            testing.expectEqual(1234, delay) catch { unreachable; };
         }
     });
 
     mock.setMusicDelay(1234);
-    testing.expectEqual(1, mock.call_counts.setMusicDelay);
+    try testing.expectEqual(1, mock.call_counts.setMusicDelay);
 }
 
 test "MockMachine calls stopMusic correctly on stub implementation" {
@@ -280,30 +280,30 @@ test "MockMachine calls stopMusic correctly on stub implementation" {
     });
 
     mock.stopMusic();
-    testing.expectEqual(1, mock.call_counts.stopMusic);
+    try testing.expectEqual(1, mock.call_counts.stopMusic);
 }
 
 test "MockMachine calls playSound correctly on stub implementation" {
     var mock = new(struct {
         fn playSound(resource_id: ResourceID.Raw, channel: Channel.Trusted, volume: Audio.Volume, frequency: Audio.Frequency) !void {
-            testing.expectEqual(0xBEEF, resource_id);
-            testing.expectEqual(2, channel);
-            testing.expectEqual(64, volume);
-            testing.expectEqual(128, frequency);
+            try testing.expectEqual(0xBEEF, resource_id);
+            try testing.expectEqual(2, channel);
+            try testing.expectEqual(64, volume);
+            try testing.expectEqual(128, frequency);
         }
     });
 
     try mock.playSound(0xBEEF, 2, 64, 128);
-    testing.expectEqual(1, mock.call_counts.playSound);
+    try testing.expectEqual(1, mock.call_counts.playSound);
 }
 
 test "MockMachine calls stopChannel correctly on stub implementation" {
     var mock = new(struct {
         fn stopChannel(channel: Channel.Trusted) void {
-            testing.expectEqual(2, channel);
+            testing.expectEqual(2, channel) catch { unreachable; };
         }
     });
 
     mock.stopChannel(2);
-    testing.expectEqual(1, mock.call_counts.stopChannel);
+    try testing.expectEqual(1, mock.call_counts.stopChannel);
 }

@@ -79,11 +79,11 @@ test "decodeNextInstruction parses 111 instruction" {
 
     try decodeInstruction(&reader, &writer);
 
-    testing.expectEqual(
+    try testing.expectEqual(
         .{ .write_from_source = 0b0111_1101 + 9 },
         writer.last_instruction,
     );
-    testing.expect(reader.isAtEnd());
+    try testing.expect(reader.isAtEnd());
 }
 
 test "decodeNextInstruction parses 111 instruction with max count without overflowing" {
@@ -92,11 +92,11 @@ test "decodeNextInstruction parses 111 instruction with max count without overfl
 
     try decodeInstruction(&reader, &writer);
 
-    testing.expectEqual(
+    try testing.expectEqual(
         .{ .write_from_source = 0b1111_1111 + 9 },
         writer.last_instruction,
     );
-    testing.expect(reader.isAtEnd());
+    try testing.expect(reader.isAtEnd());
 }
 
 test "decodeNextInstruction parses 110 instruction" {
@@ -108,7 +108,7 @@ test "decodeNextInstruction parses 110 instruction" {
 
     try decodeInstruction(&reader, &writer);
 
-    testing.expectEqual(
+    try testing.expectEqual(
         .{
             .copy_from_destination = .{
                 .count = 0b0111_1101 + 1,
@@ -117,7 +117,7 @@ test "decodeNextInstruction parses 110 instruction" {
         },
         writer.last_instruction,
     );
-    testing.expect(reader.isAtEnd());
+    try testing.expect(reader.isAtEnd());
 }
 
 test "decodeNextInstruction parses 101 instruction" {
@@ -128,7 +128,7 @@ test "decodeNextInstruction parses 101 instruction" {
 
     try decodeInstruction(&reader, &writer);
 
-    testing.expectEqual(
+    try testing.expectEqual(
         .{
             .copy_from_destination = .{
                 .count = 4,
@@ -137,7 +137,7 @@ test "decodeNextInstruction parses 101 instruction" {
         },
         writer.last_instruction,
     );
-    testing.expect(reader.isAtEnd());
+    try testing.expect(reader.isAtEnd());
 }
 
 test "decodeNextInstruction parses 100 instruction" {
@@ -148,7 +148,7 @@ test "decodeNextInstruction parses 100 instruction" {
 
     try decodeInstruction(&reader, &writer);
 
-    testing.expectEqual(
+    try testing.expectEqual(
         .{
             .copy_from_destination = .{
                 .count = 3,
@@ -157,7 +157,7 @@ test "decodeNextInstruction parses 100 instruction" {
         },
         writer.last_instruction,
     );
-    testing.expect(reader.isAtEnd());
+    try testing.expect(reader.isAtEnd());
 }
 
 test "decodeNextInstruction parses 01 instruction" {
@@ -168,7 +168,7 @@ test "decodeNextInstruction parses 01 instruction" {
 
     try decodeInstruction(&reader, &writer);
 
-    testing.expectEqual(
+    try testing.expectEqual(
         .{
             .copy_from_destination = .{
                 .count = 2,
@@ -177,7 +177,7 @@ test "decodeNextInstruction parses 01 instruction" {
         },
         writer.last_instruction,
     );
-    testing.expect(reader.isAtEnd());
+    try testing.expect(reader.isAtEnd());
 }
 
 test "decodeNextInstruction parses 00 instruction" {
@@ -188,9 +188,9 @@ test "decodeNextInstruction parses 00 instruction" {
 
     try decodeInstruction(&reader, &writer);
 
-    testing.expectEqual(
+    try testing.expectEqual(
         .{ .write_from_source = 0b110 + 1 },
         writer.last_instruction,
     );
-    testing.expect(reader.isAtEnd());
+    try testing.expect(reader.isAtEnd());
 }

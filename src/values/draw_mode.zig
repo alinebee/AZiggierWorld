@@ -38,10 +38,10 @@ test "parse correctly parses raw draw mode" {
     var raw: u8 = 0;
     while (raw < 16) : (raw += 1) {
         const color_id = @intCast(ColorID.Trusted, raw);
-        testing.expectEqual(.{ .solid_color = color_id }, parse(raw));
+        try testing.expectEqual(.{ .solid_color = color_id }, parse(raw));
     }
 
-    testing.expectEqual(.highlight, parse(16));
-    testing.expectEqual(.mask, parse(17));
-    testing.expectEqual(.mask, parse(255));
+    try testing.expectEqual(.highlight, parse(16));
+    try testing.expectEqual(.mask, parse(17));
+    try testing.expectEqual(.mask, parse(255));
 }

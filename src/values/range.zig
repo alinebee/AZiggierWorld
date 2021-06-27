@@ -63,72 +63,72 @@ const testing = @import("../utils/testing.zig");
 test "new returns range of expected type with expected values" {
     const range = Examples.reference;
 
-    testing.expectEqual(-10, range.min);
-    testing.expectEqual(10, range.max);
-    testing.expectEqual(isize, @TypeOf(range.min));
-    testing.expectEqual(isize, @TypeOf(range.max));
+    try testing.expectEqual(-10, range.min);
+    try testing.expectEqual(10, range.max);
+    try testing.expectEqual(isize, @TypeOf(range.min));
+    try testing.expectEqual(isize, @TypeOf(range.max));
 }
 
 test "contains returns true for values within range and false for values outside it" {
     const range = Examples.reference;
 
-    testing.expectEqual(true, range.contains(-10));
-    testing.expectEqual(true, range.contains(0));
-    testing.expectEqual(true, range.contains(10));
+    try testing.expectEqual(true, range.contains(-10));
+    try testing.expectEqual(true, range.contains(0));
+    try testing.expectEqual(true, range.contains(10));
 
-    testing.expectEqual(false, range.contains(-11));
-    testing.expectEqual(false, range.contains(11));
+    try testing.expectEqual(false, range.contains(-11));
+    try testing.expectEqual(false, range.contains(11));
 }
 
-fn expectIntersects(expectation: bool, range1: anytype, range2: @TypeOf(range1)) void {
+fn expectIntersects(expectation: bool, range1: anytype, range2: @TypeOf(range1)) !void {
     // Intersects is commutative.
-    testing.expectEqual(expectation, range1.intersects(range2));
-    testing.expectEqual(expectation, range2.intersects(range1));
+    try testing.expectEqual(expectation, range1.intersects(range2));
+    try testing.expectEqual(expectation, range2.intersects(range1));
 }
 
 test "intersects returns true for ranges that intersect and false for ranges that don't intersect" {
-    expectIntersects(true, Examples.reference, Examples.reference);
-    expectIntersects(true, Examples.reference, Examples.enclosed);
-    expectIntersects(true, Examples.reference, Examples.enclosing);
-    expectIntersects(true, Examples.reference, Examples.overlapping_start);
-    expectIntersects(true, Examples.reference, Examples.overlapping_end);
-    expectIntersects(true, Examples.reference, Examples.touching_start);
-    expectIntersects(true, Examples.reference, Examples.touching_end);
+    try expectIntersects(true, Examples.reference, Examples.reference);
+    try expectIntersects(true, Examples.reference, Examples.enclosed);
+    try expectIntersects(true, Examples.reference, Examples.enclosing);
+    try expectIntersects(true, Examples.reference, Examples.overlapping_start);
+    try expectIntersects(true, Examples.reference, Examples.overlapping_end);
+    try expectIntersects(true, Examples.reference, Examples.touching_start);
+    try expectIntersects(true, Examples.reference, Examples.touching_end);
 
-    expectIntersects(false, Examples.reference, Examples.disjoint);
+    try expectIntersects(false, Examples.reference, Examples.disjoint);
 }
 
 test "intersects returns true for ranges that completely enclose another and false otherwise" {
     const range = new(isize, -10, 10);
 
-    testing.expectEqual(true, Examples.reference.encloses(Examples.reference));
-    testing.expectEqual(true, Examples.reference.encloses(Examples.enclosed));
+    try testing.expectEqual(true, Examples.reference.encloses(Examples.reference));
+    try testing.expectEqual(true, Examples.reference.encloses(Examples.enclosed));
 
-    testing.expectEqual(false, Examples.reference.encloses(Examples.enclosing));
-    testing.expectEqual(false, Examples.reference.encloses(Examples.overlapping_start));
-    testing.expectEqual(false, Examples.reference.encloses(Examples.overlapping_end));
-    testing.expectEqual(false, Examples.reference.encloses(Examples.touching_start));
-    testing.expectEqual(false, Examples.reference.encloses(Examples.touching_end));
-    testing.expectEqual(false, Examples.reference.encloses(Examples.disjoint));
+    try testing.expectEqual(false, Examples.reference.encloses(Examples.enclosing));
+    try testing.expectEqual(false, Examples.reference.encloses(Examples.overlapping_start));
+    try testing.expectEqual(false, Examples.reference.encloses(Examples.overlapping_end));
+    try testing.expectEqual(false, Examples.reference.encloses(Examples.touching_start));
+    try testing.expectEqual(false, Examples.reference.encloses(Examples.touching_end));
+    try testing.expectEqual(false, Examples.reference.encloses(Examples.disjoint));
 }
 
-fn expectIntersection(expectation: anytype, range1: anytype, range2: @TypeOf(range1)) void {
+fn expectIntersection(expectation: anytype, range1: anytype, range2: @TypeOf(range1)) !void {
     // Intersection is commutative
-    testing.expectEqual(expectation, range1.intersection(range2));
-    testing.expectEqual(expectation, range2.intersection(range1));
+    try testing.expectEqual(expectation, range1.intersection(range2));
+    try testing.expectEqual(expectation, range2.intersection(range1));
 }
 
 test "intersection returns intersection of two ranges or null for disjoint ranges" {
     const range = new(isize, -10, 10);
 
-    expectIntersection(Examples.reference, Examples.reference, Examples.reference);
-    expectIntersection(Examples.enclosed, Examples.reference, Examples.enclosed);
-    expectIntersection(Examples.reference, Examples.reference, Examples.enclosing);
+    try expectIntersection(Examples.reference, Examples.reference, Examples.reference);
+    try expectIntersection(Examples.enclosed, Examples.reference, Examples.enclosed);
+    try expectIntersection(Examples.reference, Examples.reference, Examples.enclosing);
 
-    expectIntersection(.{ .min = -10, .max = -5 }, Examples.reference, Examples.overlapping_start);
-    expectIntersection(.{ .min = 5, .max = 10 }, Examples.reference, Examples.overlapping_end);
-    expectIntersection(.{ .min = -10, .max = -10 }, Examples.reference, Examples.touching_start);
-    expectIntersection(.{ .min = 10, .max = 10 }, Examples.reference, Examples.touching_end);
+    try expectIntersection(.{ .min = -10, .max = -5 }, Examples.reference, Examples.overlapping_start);
+    try expectIntersection(.{ .min = 5, .max = 10 }, Examples.reference, Examples.overlapping_end);
+    try expectIntersection(.{ .min = -10, .max = -10 }, Examples.reference, Examples.touching_start);
+    try expectIntersection(.{ .min = 10, .max = 10 }, Examples.reference, Examples.touching_end);
 
-    expectIntersection(null, Examples.reference, Examples.disjoint);
+    try expectIntersection(null, Examples.reference, Examples.disjoint);
 }

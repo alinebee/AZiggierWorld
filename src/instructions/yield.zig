@@ -35,12 +35,12 @@ const expectParse = @import("test_helpers/parse.zig").expectParse;
 
 test "parse parses instruction from valid bytecode and consumes 1 byte" {
     const instruction = try expectParse(parse, &BytecodeExamples.valid, 1);
-    testing.expectEqual(Instance{}, instruction);
+    try testing.expectEqual(Instance{}, instruction);
 }
 
 test "execute returns YieldToNextThread action" {
     const instruction = Instance{};
 
     var machine = Machine.new();
-    testing.expectEqual(.YieldToNextThread, instruction.execute(&machine));
+    try testing.expectEqual(.YieldToNextThread, instruction.execute(&machine));
 }

@@ -68,19 +68,19 @@ test "expectParse returns parsed instruction if all bytes were parsed" {
     const bytecode = [_]u8{0} ** 6;
 
     const instruction = try expectParse(parse5MoreBytes, &bytecode, 6);
-    testing.expectEqual(EmptyInstruction{}, instruction);
+    try testing.expectEqual(EmptyInstruction{}, instruction);
 }
 
 test "expectParse returns error.UnderRead if too few bytes were parsed, even if parse returned a different error" {
     const bytecode = [_]u8{0} ** 6;
 
-    testing.expectError(error.UnderRead, expectParse(parse5MoreBytes, &bytecode, 7));
-    testing.expectError(error.UnderRead, expectParse(parse5MoreBytesAndFail, &bytecode, 7));
+    try testing.expectError(error.UnderRead, expectParse(parse5MoreBytes, &bytecode, 7));
+    try testing.expectError(error.UnderRead, expectParse(parse5MoreBytesAndFail, &bytecode, 7));
 }
 
 test "expectParse returns error.OverRead if too many bytes were parsed, even if parse returned a different error" {
     const bytecode = [_]u8{0} ** 6;
 
-    testing.expectError(error.OverRead, expectParse(parse5MoreBytes, &bytecode, 3));
-    testing.expectError(error.OverRead, expectParse(parse5MoreBytesAndFail, &bytecode, 3));
+    try testing.expectError(error.OverRead, expectParse(parse5MoreBytes, &bytecode, 3));
+    try testing.expectError(error.OverRead, expectParse(parse5MoreBytesAndFail, &bytecode, 3));
 }

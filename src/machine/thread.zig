@@ -160,8 +160,8 @@ test "scheduleJump schedules activation with specified program counter for next 
 
     thread.scheduleJump(0xDEAD);
 
-    testing.expectEqual(.inactive, thread.execution_state);
-    testing.expectEqual(.{ .active = 0xDEAD }, thread.scheduled_execution_state);
+    try testing.expectEqual(.inactive, thread.execution_state);
+    try testing.expectEqual(.{ .active = 0xDEAD }, thread.scheduled_execution_state);
 }
 
 test "scheduleDeactivate schedules deactivation for next tic" {
@@ -169,8 +169,8 @@ test "scheduleDeactivate schedules deactivation for next tic" {
 
     thread.scheduleDeactivate();
 
-    testing.expectEqual(.{ .active = 0xDEAD }, thread.execution_state);
-    testing.expectEqual(.inactive, thread.scheduled_execution_state);
+    try testing.expectEqual(.{ .active = 0xDEAD }, thread.execution_state);
+    try testing.expectEqual(.inactive, thread.scheduled_execution_state);
 }
 
 test "scheduleResume schedules resuming for next tic" {
@@ -178,8 +178,8 @@ test "scheduleResume schedules resuming for next tic" {
 
     thread.scheduleResume();
 
-    testing.expectEqual(.suspended, thread.suspend_state);
-    testing.expectEqual(.running, thread.scheduled_suspend_state);
+    try testing.expectEqual(.suspended, thread.suspend_state);
+    try testing.expectEqual(.running, thread.scheduled_suspend_state);
 }
 
 test "scheduleSuspend schedules suspending for next tic" {
@@ -187,49 +187,49 @@ test "scheduleSuspend schedules suspending for next tic" {
 
     thread.scheduleSuspend();
 
-    testing.expectEqual(.running, thread.suspend_state);
-    testing.expectEqual(.suspended, thread.scheduled_suspend_state);
+    try testing.expectEqual(.running, thread.suspend_state);
+    try testing.expectEqual(.suspended, thread.scheduled_suspend_state);
 }
 
 test "update applies scheduled execution state" {
     var thread = Instance{};
 
     thread.scheduleJump(0xDEAD);
-    testing.expectEqual(.inactive, thread.execution_state);
-    testing.expectEqual(.{ .active = 0xDEAD }, thread.scheduled_execution_state);
+    try testing.expectEqual(.inactive, thread.execution_state);
+    try testing.expectEqual(.{ .active = 0xDEAD }, thread.scheduled_execution_state);
 
     thread.update();
-    testing.expectEqual(.{ .active = 0xDEAD }, thread.execution_state);
-    testing.expectEqual(null, thread.scheduled_execution_state);
+    try testing.expectEqual(.{ .active = 0xDEAD }, thread.execution_state);
+    try testing.expectEqual(null, thread.scheduled_execution_state);
 
     thread.scheduleDeactivate();
-    testing.expectEqual(.{ .active = 0xDEAD }, thread.execution_state);
-    testing.expectEqual(.inactive, thread.scheduled_execution_state);
+    try testing.expectEqual(.{ .active = 0xDEAD }, thread.execution_state);
+    try testing.expectEqual(.inactive, thread.scheduled_execution_state);
 
     thread.update();
-    testing.expectEqual(.inactive, thread.execution_state);
-    testing.expectEqual(null, thread.scheduled_execution_state);
+    try testing.expectEqual(.inactive, thread.execution_state);
+    try testing.expectEqual(null, thread.scheduled_execution_state);
 }
 
 test "update applies scheduled suspend state" {
     var thread = Instance{};
 
-    testing.expectEqual(.running, thread.suspend_state);
-    testing.expectEqual(null, thread.scheduled_suspend_state);
+    try testing.expectEqual(.running, thread.suspend_state);
+    try testing.expectEqual(null, thread.scheduled_suspend_state);
 
     thread.scheduleSuspend();
-    testing.expectEqual(.running, thread.suspend_state);
-    testing.expectEqual(.suspended, thread.scheduled_suspend_state);
+    try testing.expectEqual(.running, thread.suspend_state);
+    try testing.expectEqual(.suspended, thread.scheduled_suspend_state);
 
     thread.update();
-    testing.expectEqual(.suspended, thread.suspend_state);
-    testing.expectEqual(null, thread.scheduled_suspend_state);
+    try testing.expectEqual(.suspended, thread.suspend_state);
+    try testing.expectEqual(null, thread.scheduled_suspend_state);
 
     thread.scheduleResume();
-    testing.expectEqual(.suspended, thread.suspend_state);
-    testing.expectEqual(.running, thread.scheduled_suspend_state);
+    try testing.expectEqual(.suspended, thread.suspend_state);
+    try testing.expectEqual(.running, thread.scheduled_suspend_state);
 
     thread.update();
-    testing.expectEqual(.running, thread.suspend_state);
-    testing.expectEqual(null, thread.scheduled_suspend_state);
+    try testing.expectEqual(.running, thread.suspend_state);
+    try testing.expectEqual(null, thread.scheduled_suspend_state);
 }

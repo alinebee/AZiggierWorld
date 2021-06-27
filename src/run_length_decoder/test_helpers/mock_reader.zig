@@ -77,9 +77,9 @@ test "readBit reads all bits in order from highest to lowest" {
     const expected = [_]u1{ 1, 0, 0, 1, 0, 1, 1, 0 };
 
     for (expected) |bit| {
-        testing.expectEqual(bit, reader.readBit());
+        try testing.expectEqual(bit, reader.readBit());
     }
-    testing.expectEqual(true, reader.isAtEnd());
+    try testing.expectEqual(true, reader.isAtEnd());
 }
 
 test "readBit is left-padded" {
@@ -87,20 +87,20 @@ test "readBit is left-padded" {
     const expected = [_]u1{ 0, 0, 1, 1, 0 };
 
     for (expected) |bit| {
-        testing.expectEqual(bit, reader.readBit());
+        try testing.expectEqual(bit, reader.readBit());
     }
-    testing.expectEqual(true, reader.isAtEnd());
+    try testing.expectEqual(true, reader.isAtEnd());
 }
 
 test "readBit returns error.SourceExhausted once it runs out of bits" {
     var reader = new(u1, 0b1);
-    testing.expectEqual(1, reader.readBit());
-    testing.expectError(error.SourceExhausted, reader.readBit());
-    testing.expectEqual(true, reader.isAtEnd());
+    try testing.expectEqual(1, reader.readBit());
+    try testing.expectError(error.SourceExhausted, reader.readBit());
+    try testing.expectEqual(true, reader.isAtEnd());
 }
 
 test "validateChecksum returns error.ChecksumNotReady if reader hasn't consumed all bits" {
     var reader = new(u1, 0b1);
-    testing.expectError(error.ChecksumNotReady, reader.validateChecksum());
-    testing.expectEqual(false, reader.isAtEnd());
+    try testing.expectError(error.ChecksumNotReady, reader.validateChecksum());
+    try testing.expectEqual(false, reader.isAtEnd());
 }

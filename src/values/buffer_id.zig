@@ -36,13 +36,13 @@ pub fn parse(raw: Raw) Error!Enum {
 const testing = @import("../utils/testing.zig");
 
 test "parse correctly parses raw buffer ID" {
-    testing.expectEqual(.{ .specific = 0 }, parse(0));
-    testing.expectEqual(.{ .specific = 1 }, parse(1));
-    testing.expectEqual(.{ .specific = 2 }, parse(2));
-    testing.expectEqual(.{ .specific = 3 }, parse(3));
-    testing.expectEqual(.front_buffer, parse(0xFE));
-    testing.expectEqual(.back_buffer, parse(0xFF));
+    try testing.expectEqual(.{ .specific = 0 }, parse(0));
+    try testing.expectEqual(.{ .specific = 1 }, parse(1));
+    try testing.expectEqual(.{ .specific = 2 }, parse(2));
+    try testing.expectEqual(.{ .specific = 3 }, parse(3));
+    try testing.expectEqual(.front_buffer, parse(0xFE));
+    try testing.expectEqual(.back_buffer, parse(0xFF));
 
-    testing.expectError(error.InvalidBufferID, parse(4));
-    testing.expectError(error.InvalidBufferID, parse(0xFD));
+    try testing.expectError(error.InvalidBufferID, parse(4));
+    try testing.expectError(error.InvalidBufferID, parse(0xFD));
 }

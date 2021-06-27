@@ -1,14 +1,14 @@
-const ResourceType = @import("resource_type.zig");
-const Filename = @import("filename.zig");
-
-const introspection = @import("../utils/introspection.zig");
-
 //! Another World compresses hundreds of game resources (audio, bitmaps, bytecode polygon data)
 //! into a set of BANK01-BANK0D data files. To keep track of where each resource lives,
 //! the game defines _resource descriptors_ in a file named MEMLIST.BIN.
 //!
-//! This defines the structure of these resource descriptors, along with methods
+//! This file defines the structure of these resource descriptors, along with methods
 //! to parse them from a MEMLIST.BIN file.
+
+const ResourceType = @import("resource_type.zig");
+const Filename = @import("filename.zig");
+
+const introspection = @import("../utils/introspection.zig");
 
 /// Describes an individual resource in Another World's data files:
 /// its length, type and the bank file in which it is located.
@@ -188,35 +188,35 @@ test "iterator.next() correctly parses file descriptor" {
     var reader = fixedBufferStream(&DescriptorExamples.valid_data).reader();
     var descriptors = iterator(reader);
 
-    testing.expectEqual(DescriptorExamples.valid_descriptor, descriptors.next());
+    try testing.expectEqual(DescriptorExamples.valid_descriptor, descriptors.next());
 }
 
 test "iterator.next() stops parsing at end-of-file marker" {
     var reader = fixedBufferStream(&DescriptorExamples.valid_end_of_file).reader();
     var descriptors = iterator(reader);
 
-    testing.expectEqual(null, descriptors.next());
+    try testing.expectEqual(null, descriptors.next());
 }
 
 test "iterator.next() returns error.InvalidResourceType when resource type byte is not recognized" {
     var reader = fixedBufferStream(&DescriptorExamples.invalid_resource_type).reader();
     var descriptors = iterator(reader);
 
-    testing.expectError(error.InvalidResourceType, descriptors.next());
+    try testing.expectError(error.InvalidResourceType, descriptors.next());
 }
 
 test "iterator.next() returns error.InvalidResourceSize when compressed size is larger than uncompressed size" {
     var reader = fixedBufferStream(&DescriptorExamples.invalid_resource_size).reader();
     var descriptors = iterator(reader);
 
-    testing.expectError(error.InvalidResourceSize, descriptors.next());
+    try testing.expectError(error.InvalidResourceSize, descriptors.next());
 }
 
 test "iterator.next() returns error.EndOfStream on incomplete data" {
     var reader = fixedBufferStream(DescriptorExamples.valid_data[0..4]).reader();
     var descriptors = iterator(reader);
 
-    testing.expectError(error.EndOfStream, descriptors.next());
+    try testing.expectError(error.EndOfStream, descriptors.next());
 }
 
 test "iterator parses all expected descriptors until it reaches end-of-file marker" {
@@ -224,26 +224,26 @@ test "iterator parses all expected descriptors until it reaches end-of-file mark
     var descriptors = iterator(reader);
 
     while (try descriptors.next()) |descriptor| {
-        testing.expectEqual(DescriptorExamples.valid_descriptor, descriptor);
+        try testing.expectEqual(DescriptorExamples.valid_descriptor, descriptor);
     }
 
     // Check that it parsed all available bytes from the reader
-    testing.expectError(error.EndOfStream, reader.readByte());
+    try testing.expectError(error.EndOfStream, reader.readByte());
 }
 
 test "iterator returns error.EndOfStream when it runs out of data before encountering end-of-file marker" {
     var reader = fixedBufferStream(&FileExamples.truncated).reader();
     var descriptors = iterator(reader);
 
-    testing.expectEqual(DescriptorExamples.valid_descriptor, descriptors.next());
-    testing.expectEqual(DescriptorExamples.valid_descriptor, descriptors.next());
-    testing.expectError(error.EndOfStream, descriptors.next());
+    try testing.expectEqual(DescriptorExamples.valid_descriptor, descriptors.next());
+    try testing.expectEqual(DescriptorExamples.valid_descriptor, descriptors.next());
+    try testing.expectError(error.EndOfStream, descriptors.next());
 }
 
 test "iterator returns error when it reaches invalid data in the middle of stream" {
     var reader = fixedBufferStream(&FileExamples.invalid_resource_type).reader();
     var descriptors = iterator(reader);
 
-    testing.expectEqual(DescriptorExamples.valid_descriptor, descriptors.next());
-    testing.expectError(error.InvalidResourceType, descriptors.next());
+    try testing.expectEqual(DescriptorExamples.valid_descriptor, descriptors.next());
+    try testing.expectError(error.InvalidResourceType, descriptors.next());
 }

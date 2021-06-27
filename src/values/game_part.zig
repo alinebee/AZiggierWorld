@@ -74,18 +74,18 @@ pub const Error = error{
 const testing = @import("../utils/testing.zig");
 
 test "parse returns expected enum cases" {
-    testing.expectEqual(.copy_protection, parse(0x3E80));
-    testing.expectEqual(.intro_cinematic, parse(0x3E81));
-    testing.expectEqual(.gameplay1, parse(0x3E82));
-    testing.expectEqual(.gameplay2, parse(0x3E83));
-    testing.expectEqual(.gameplay3, parse(0x3E84));
-    testing.expectEqual(.arena_cinematic, parse(0x3E85));
-    testing.expectEqual(.gameplay4, parse(0x3E86));
-    testing.expectEqual(.gameplay5, parse(0x3E87));
-    testing.expectEqual(.password_entry, parse(0x3E88));
+    try testing.expectEqual(.copy_protection, parse(0x3E80));
+    try testing.expectEqual(.intro_cinematic, parse(0x3E81));
+    try testing.expectEqual(.gameplay1, parse(0x3E82));
+    try testing.expectEqual(.gameplay2, parse(0x3E83));
+    try testing.expectEqual(.gameplay3, parse(0x3E84));
+    try testing.expectEqual(.arena_cinematic, parse(0x3E85));
+    try testing.expectEqual(.gameplay4, parse(0x3E86));
+    try testing.expectEqual(.gameplay5, parse(0x3E87));
+    try testing.expectEqual(.password_entry, parse(0x3E88));
 
-    testing.expectError(error.InvalidGamePart, parse(0x0000));
-    testing.expectError(error.InvalidGamePart, parse(0x3E79));
-    testing.expectError(error.InvalidGamePart, parse(0x3E89));
-    testing.expectError(error.InvalidGamePart, parse(0xFFFF));
+    try testing.expectError(error.InvalidGamePart, parse(0x0000));
+    try testing.expectError(error.InvalidGamePart, parse(0x3E79));
+    try testing.expectError(error.InvalidGamePart, parse(0x3E89));
+    try testing.expectError(error.InvalidGamePart, parse(0xFFFF));
 }

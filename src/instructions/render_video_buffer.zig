@@ -63,11 +63,11 @@ const MockMachine = @import("test_helpers/mock_machine.zig");
 test "parse parses valid bytecode and consumes 2 bytes" {
     const instruction = try expectParse(parse, &BytecodeExamples.valid, 2);
 
-    testing.expectEqual(.back_buffer, instruction.buffer_id);
+    try testing.expectEqual(.back_buffer, instruction.buffer_id);
 }
 
 test "parse returns error.InvalidBufferID on unknown buffer identifier and consumes 2 bytes" {
-    testing.expectError(
+    try testing.expectError(
         error.InvalidBufferID,
         expectParse(parse, &BytecodeExamples.invalid_buffer_id, 2),
     );
@@ -80,15 +80,15 @@ test "execute calls renderVideoBuffer with correct parameters" {
 
     var machine = MockMachine.new(struct {
         pub fn renderVideoBuffer(buffer_id: BufferID.Enum, delay: Video.FrameDelay) void {
-            testing.expectEqual(.back_buffer, buffer_id);
-            testing.expectEqual(5, delay);
+            testing.expectEqual(.back_buffer, buffer_id) catch { unreachable; };
+            testing.expectEqual(5, delay) catch { unreachable; };
         }
     });
     machine.registers[RegisterID.frame_duration] = 5;
     machine.registers[RegisterID.render_video_buffer_UNKNOWN] = 1234;
 
     instruction._execute(&machine);
-    testing.expectEqual(1, machine.call_counts.renderVideoBuffer);
+    try testing.expectEqual(1, machine.call_counts.renderVideoBuffer);
 
-    testing.expectEqual(0, machine.registers[RegisterID.render_video_buffer_UNKNOWN]);
+    try testing.expectEqual(0, machine.registers[RegisterID.render_video_buffer_UNKNOWN]);
 }

@@ -18,12 +18,12 @@ pub const Instance = struct {
     point: Point.Instance,
 
     // Public implementation is constrained to concrete type so that instruction.zig can infer errors.
-    pub fn execute(self: Instance, machine: *Machine.Instance) Error!void {
+    pub fn execute(self: Instance, machine: *Machine.Instance) !void {
         return self._execute(machine);
     }
 
     // Private implementation is generic to allow tests to use mocks.
-    fn _execute(self: Instance, machine: anytype) Error!void {
+    fn _execute(self: Instance, machine: anytype) !void {
         return machine.drawString(self.string_id, self.color_id, self.point);
     }
 };
@@ -75,14 +75,14 @@ const MockMachine = @import("test_helpers/mock_machine.zig");
 test "parse parses valid bytecode and consumes 6 bytes" {
     const instruction = try expectParse(parse, &BytecodeExamples.valid, 6);
 
-    testing.expectEqual(0xDEAD, instruction.string_id);
-    testing.expectEqual(15, instruction.color_id);
-    testing.expectEqual(160, instruction.point.x);
-    testing.expectEqual(100, instruction.point.y);
+    try testing.expectEqual(0xDEAD, instruction.string_id);
+    try testing.expectEqual(15, instruction.color_id);
+    try testing.expectEqual(160, instruction.point.x);
+    try testing.expectEqual(100, instruction.point.y);
 }
 
 test "parse returns error.InvalidColorID on out of range color and consumes 6 bytes" {
-    testing.expectError(
+    try testing.expectError(
         error.InvalidColorID,
         expectParse(parse, &BytecodeExamples.invalid_color_id, 6),
     );
@@ -100,15 +100,15 @@ test "execute calls drawString with correct parameters" {
 
     var machine = MockMachine.new(struct {
         pub fn drawString(string_id: StringID.Raw, color_id: ColorID.Trusted, point: Point.Instance) !void {
-            testing.expectEqual(0xDEAD, string_id);
-            testing.expectEqual(15, color_id);
-            testing.expectEqual(160, point.x);
-            testing.expectEqual(100, point.y);
+            try testing.expectEqual(0xDEAD, string_id);
+            try testing.expectEqual(15, color_id);
+            try testing.expectEqual(160, point.x);
+            try testing.expectEqual(100, point.y);
         }
     });
 
     try instruction._execute(&machine);
-    testing.expectEqual(1, machine.call_counts.drawString);
+    try testing.expectEqual(1, machine.call_counts.drawString);
 }
 
 test "execute passes along error.InvalidStringID if machine cannot find appropriate string" {
@@ -127,5 +127,5 @@ test "execute passes along error.InvalidStringID if machine cannot find appropri
         }
     });
 
-    testing.expectError(error.InvalidStringID, instruction._execute(&machine));
+    try testing.expectError(error.InvalidStringID, instruction._execute(&machine));
 }

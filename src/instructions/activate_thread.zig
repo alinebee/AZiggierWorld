@@ -55,12 +55,12 @@ const expectParse = @import("test_helpers/parse.zig").expectParse;
 test "parse parses instruction from valid bytecode and consumes 4 bytes" {
     const instruction = try expectParse(parse, &BytecodeExamples.valid, 4);
 
-    testing.expectEqual(63, instruction.thread_id);
-    testing.expectEqual(0xDEAD, instruction.address);
+    try testing.expectEqual(63, instruction.thread_id);
+    try testing.expectEqual(0xDEAD, instruction.address);
 }
 
 test "parse returns error.InvalidThreadID and consumes 4 bytes when thread ID is invalid" {
-    testing.expectError(
+    try testing.expectError(
         error.InvalidThreadID,
         expectParse(parse, &BytecodeExamples.invalid_thread_id, 4),
     );
@@ -75,5 +75,5 @@ test "execute schedules specified thread to jump to specified address" {
     var machine = Machine.new();
     instruction.execute(&machine);
 
-    testing.expectEqual(.{ .active = 0xDEAD }, machine.threads[63].scheduled_execution_state);
+    try testing.expectEqual(.{ .active = 0xDEAD }, machine.threads[63].scheduled_execution_state);
 }

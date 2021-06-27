@@ -86,27 +86,27 @@ const expectParse = @import("test_helpers/parse.zig").expectParse;
 test "parse parses valid bytecode and consumes 4 bytes" {
     const instruction = try expectParse(parse, &BytecodeExamples.valid, 4);
 
-    testing.expectEqual(62, instruction.start_thread_id);
-    testing.expectEqual(63, instruction.end_thread_id);
-    testing.expectEqual(.Deactivate, instruction.operation);
+    try testing.expectEqual(62, instruction.start_thread_id);
+    try testing.expectEqual(63, instruction.end_thread_id);
+    try testing.expectEqual(.Deactivate, instruction.operation);
 }
 
 test "parse returns Error.InvalidThreadID and consumes 4 bytes when start thread ID is invalid" {
-    testing.expectError(
+    try testing.expectError(
         Error.InvalidThreadID,
         expectParse(parse, &BytecodeExamples.invalid_start_thread_id, 4),
     );
 }
 
 test "parse returns Error.InvalidThreadID and consumes 4 bytes when end thread ID is invalid" {
-    testing.expectError(
+    try testing.expectError(
         error.InvalidThreadID,
         expectParse(parse, &BytecodeExamples.invalid_end_thread_id, 4),
     );
 }
 
 test "parse returns Error.InvalidThreadRange and consumes 4 bytes when thread range is transposed" {
-    testing.expectError(
+    try testing.expectError(
         error.InvalidThreadRange,
         expectParse(parse, &BytecodeExamples.transposed_thread_ids, 4),
     );
@@ -121,15 +121,15 @@ test "execute with resume operation schedules specified threads to resume" {
 
     var machine = Machine.new();
 
-    testing.expectEqual(null, machine.threads[1].scheduled_suspend_state);
-    testing.expectEqual(null, machine.threads[2].scheduled_suspend_state);
-    testing.expectEqual(null, machine.threads[3].scheduled_suspend_state);
+    try testing.expectEqual(null, machine.threads[1].scheduled_suspend_state);
+    try testing.expectEqual(null, machine.threads[2].scheduled_suspend_state);
+    try testing.expectEqual(null, machine.threads[3].scheduled_suspend_state);
 
     instruction.execute(&machine);
 
-    testing.expectEqual(.running, machine.threads[1].scheduled_suspend_state);
-    testing.expectEqual(.running, machine.threads[2].scheduled_suspend_state);
-    testing.expectEqual(.running, machine.threads[3].scheduled_suspend_state);
+    try testing.expectEqual(.running, machine.threads[1].scheduled_suspend_state);
+    try testing.expectEqual(.running, machine.threads[2].scheduled_suspend_state);
+    try testing.expectEqual(.running, machine.threads[3].scheduled_suspend_state);
 }
 
 test "execute with suspend operation schedules specified threads to suspend" {
@@ -141,15 +141,15 @@ test "execute with suspend operation schedules specified threads to suspend" {
 
     var machine = Machine.new();
 
-    testing.expectEqual(null, machine.threads[1].scheduled_suspend_state);
-    testing.expectEqual(null, machine.threads[2].scheduled_suspend_state);
-    testing.expectEqual(null, machine.threads[3].scheduled_suspend_state);
+    try testing.expectEqual(null, machine.threads[1].scheduled_suspend_state);
+    try testing.expectEqual(null, machine.threads[2].scheduled_suspend_state);
+    try testing.expectEqual(null, machine.threads[3].scheduled_suspend_state);
 
     instruction.execute(&machine);
 
-    testing.expectEqual(.suspended, machine.threads[1].scheduled_suspend_state);
-    testing.expectEqual(.suspended, machine.threads[2].scheduled_suspend_state);
-    testing.expectEqual(.suspended, machine.threads[3].scheduled_suspend_state);
+    try testing.expectEqual(.suspended, machine.threads[1].scheduled_suspend_state);
+    try testing.expectEqual(.suspended, machine.threads[2].scheduled_suspend_state);
+    try testing.expectEqual(.suspended, machine.threads[3].scheduled_suspend_state);
 }
 
 test "execute with deactivate operation schedules specified threads to deactivate" {
@@ -161,13 +161,13 @@ test "execute with deactivate operation schedules specified threads to deactivat
 
     var machine = Machine.new();
 
-    testing.expectEqual(null, machine.threads[1].scheduled_execution_state);
-    testing.expectEqual(null, machine.threads[2].scheduled_execution_state);
-    testing.expectEqual(null, machine.threads[3].scheduled_execution_state);
+    try testing.expectEqual(null, machine.threads[1].scheduled_execution_state);
+    try testing.expectEqual(null, machine.threads[2].scheduled_execution_state);
+    try testing.expectEqual(null, machine.threads[3].scheduled_execution_state);
 
     instruction.execute(&machine);
 
-    testing.expectEqual(.inactive, machine.threads[1].scheduled_execution_state);
-    testing.expectEqual(.inactive, machine.threads[2].scheduled_execution_state);
-    testing.expectEqual(.inactive, machine.threads[3].scheduled_execution_state);
+    try testing.expectEqual(.inactive, machine.threads[1].scheduled_execution_state);
+    try testing.expectEqual(.inactive, machine.threads[2].scheduled_execution_state);
+    try testing.expectEqual(.inactive, machine.threads[3].scheduled_execution_state);
 }

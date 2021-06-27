@@ -42,7 +42,7 @@ pub fn Instance(comptime StorageFn: anytype, comptime width: usize, comptime hei
             }
 
             const operation = Storage.DrawOperation.forMode(draw_mode, &mask_buffer.storage);
-            
+
             // Clamp the x coordinates for the line to fit within the video buffer,
             // and bail out if it's entirely out of bounds.
             const in_bounds_x = Self.bounds.x.intersection(x) orelse return;
@@ -59,32 +59,32 @@ pub fn Instance(comptime StorageFn: anytype, comptime width: usize, comptime hei
             }
 
             const operation = Storage.DrawOperation.solidColor(color);
-            
+
             var cursor = origin;
             for (glyph) |row| {
                 var remaining_pixels = row;
                 var span_start: Point.Coordinate = cursor.x;
                 var span_width: Point.Coordinate = 0;
-                
+
                 while (remaining_pixels != 0) {
                     const pixel_lit = (remaining_pixels & 0b1000_0000) != 0;
-                    
+
                     if (pixel_lit) {
                         span_width += 1;
                     } else {
                         if (span_width > 0) {
                             const x_range = Range.new(Point.Coordinate, span_start, span_start + span_width - 1);
                             self.storage.uncheckedDrawSpan(x_range, cursor.y, operation);
-                            
+
                             span_start += span_width;
                             span_width = 0;
                         }
                         span_start += 1;
                     }
-                    
+
                     remaining_pixels <<= 1;
                 }
-                
+
                 if (span_width > 0) {
                     const x_range = Range.new(Point.Coordinate, span_start, span_start + span_width - 1);
                     self.storage.uncheckedDrawSpan(x_range, cursor.y, operation);
@@ -118,10 +118,10 @@ fn runTests(comptime Storage: anytype) void {
         test "Instance calculates expected bounding box" {
             const Buffer = @TypeOf(new(Storage, 320, 200));
 
-            testing.expectEqual(0, Buffer.bounds.x.min);
-            testing.expectEqual(0, Buffer.bounds.y.min);
-            testing.expectEqual(319, Buffer.bounds.x.max);
-            testing.expectEqual(199, Buffer.bounds.y.max);
+            try testing.expectEqual(0, Buffer.bounds.x.min);
+            try testing.expectEqual(0, Buffer.bounds.y.min);
+            try testing.expectEqual(319, Buffer.bounds.x.max);
+            try testing.expectEqual(199, Buffer.bounds.y.max);
         }
 
         test "fill fills buffer with specified color" {
@@ -142,7 +142,7 @@ fn runTests(comptime Storage: anytype) void {
                 \\FFFF
             ;
 
-            expectPixels(expected, buffer.storage);
+            try expectPixels(expected, buffer.storage);
         }
 
         test "drawSpan draws a horizontal line in a fixed color and ignores mask buffer, clamping line to fit within bounds" {
@@ -160,7 +160,7 @@ fn runTests(comptime Storage: anytype) void {
                 \\0000
             ;
 
-            expectPixels(expected, buffer.storage);
+            try expectPixels(expected, buffer.storage);
         }
 
         test "drawSpan highlights existing colors in a horizontal line and ignores mask buffer, clamping line to fit within bounds" {
@@ -186,7 +186,7 @@ fn runTests(comptime Storage: anytype) void {
                 \\0123
             ;
 
-            expectPixels(expected, buffer.storage);
+            try expectPixels(expected, buffer.storage);
         }
 
         test "drawSpan copies mask pixels in horizontal line, clamping line to fit within bounds" {
@@ -209,7 +209,7 @@ fn runTests(comptime Storage: anytype) void {
                 \\0000
             ;
 
-            expectPixels(expected, buffer.storage);
+            try expectPixels(expected, buffer.storage);
         }
 
         test "drawSpan draws no pixels when line is completely out of bounds" {
@@ -227,7 +227,7 @@ fn runTests(comptime Storage: anytype) void {
                 \\0000
             ;
 
-            expectPixels(expected, buffer.storage);
+            try expectPixels(expected, buffer.storage);
         }
 
         test "drawGlyph renders pixels of glyph at specified position in buffer" {
@@ -249,7 +249,7 @@ fn runTests(comptime Storage: anytype) void {
                 \\0000000000
             ;
 
-            expectPixels(expected, buffer.storage);
+            try expectPixels(expected, buffer.storage);
         }
 
         test "drawGlyph returns error.OutOfBounds for glyphs that are not fully inside the buffer" {
@@ -257,8 +257,8 @@ fn runTests(comptime Storage: anytype) void {
 
             const glyph = try Font.glyph('K');
 
-            testing.expectError(error.PointOutOfBounds, buffer.drawGlyph(glyph, .{ .x = -1, .y = -2 }, 11));
-            testing.expectError(error.PointOutOfBounds, buffer.drawGlyph(glyph, .{ .x = 312, .y = 192 }, 11));
+            try testing.expectError(error.PointOutOfBounds, buffer.drawGlyph(glyph, .{ .x = -1, .y = -2 }, 11));
+            try testing.expectError(error.PointOutOfBounds, buffer.drawGlyph(glyph, .{ .x = 312, .y = 192 }, 11));
         }
     };
 }
@@ -280,48 +280,48 @@ test "Run tests with packed storage" {
 //             uncheckedDrawPixel: usize,
 //             uncheckedDrawSpan: usize,
 //         } = .{ .uncheckedDrawPixel = 0, .uncheckedDrawSpan = 0 },
-// 
+//
 //         const Self = @This();
-// 
+//
 //         fn uncheckedDrawPixel(self: *Self, point: Point.Instance, draw_mode: DrawMode.Enum, mask_source: *const Self) void {
 //             self.call_counts.uncheckedDrawPixel += 1;
 //         }
-// 
+//
 //         fn uncheckedDrawSpan(self: *Self, x_span: Range.Instance(Point.Coordinate), y: Point.Coordinate, draw_mode: DrawMode.Enum, mask_source: *const Self) void {
 //             self.call_counts.uncheckedDrawSpan += 1;
 //         }
 //     };
 // }
-// 
+//
 // test "drawSpan uses uncheckedDrawPixel to draw spans that end up being a single pixel" {
 //     var buffer = new(MockStorage, 4, 4);
 //     var mask_buffer = buffer;
-// 
+//
 //     // Span width is 3 pixels, but only 1 pixel of it is within bounds
 //     buffer.drawSpan(.{ .min = -2, .max = 0 }, 0, .{ .solid_color = 0x9 }, &mask_buffer);
-// 
-//     testing.expectEqual(1, buffer.storage.call_counts.uncheckedDrawPixel);
-//     testing.expectEqual(0, buffer.storage.call_counts.uncheckedDrawSpan);
+//
+//     try testing.expectEqual(1, buffer.storage.call_counts.uncheckedDrawPixel);
+//     try testing.expectEqual(0, buffer.storage.call_counts.uncheckedDrawSpan);
 // }
-// 
+//
 // test "drawSpan uses uncheckedDrawSpan to draw spans wider than a single pixel" {
 //     var buffer = new(MockStorage, 4, 4);
 //     var mask_buffer = buffer;
-// 
+//
 //     // Span width is 4 pixels, 2 pixels of which are within bounds
 //     buffer.drawSpan(.{ .min = -2, .max = 1 }, 0, .{ .solid_color = 0x9 }, &mask_buffer);
-// 
-//     testing.expectEqual(0, buffer.storage.call_counts.uncheckedDrawPixel);
-//     testing.expectEqual(1, buffer.storage.call_counts.uncheckedDrawSpan);
+//
+//     try testing.expectEqual(0, buffer.storage.call_counts.uncheckedDrawPixel);
+//     try testing.expectEqual(1, buffer.storage.call_counts.uncheckedDrawSpan);
 // }
-// 
+//
 // test "drawSpan does not call draw methods when span is completely of bounds" {
 //     var buffer = new(MockStorage, 4, 4);
 //     var mask_buffer = buffer;
-// 
+//
 //     // Span width is 3 pixels, but only 1 pixel of it is within bounds
 //     buffer.drawSpan(.{ .min = -2, .max = -1 }, 0, .{ .solid_color = 0x9 }, &mask_buffer);
-// 
-//     testing.expectEqual(0, buffer.storage.call_counts.uncheckedDrawPixel);
-//     testing.expectEqual(0, buffer.storage.call_counts.uncheckedDrawSpan);
+//
+//     try testing.expectEqual(0, buffer.storage.call_counts.uncheckedDrawPixel);
+//     try testing.expectEqual(0, buffer.storage.call_counts.uncheckedDrawSpan);
 // }

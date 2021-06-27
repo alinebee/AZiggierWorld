@@ -1,7 +1,7 @@
-const intToEnum = @import("../utils/introspection.zig").intToEnum;
-
 //! Types and operations dealing with built-in opcodes in Another World bytecode.
 //! See instruction.zig for how these are mapped to implementations of those opcodes.
+
+const intToEnum = @import("../utils/introspection.zig").intToEnum;
 
 /// A raw opcode as represented in Another World's bytecode.
 pub const Raw = u8;
@@ -70,39 +70,39 @@ pub fn parse(raw_opcode: Raw) Error!Enum {
 const testing = @import("../utils/testing.zig");
 
 test "parse returns expected values" {
-    testing.expectEqual(.RegisterSet, parse(0));
-    testing.expectEqual(.RegisterCopy, parse(1));
-    testing.expectEqual(.RegisterAdd, parse(2));
-    testing.expectEqual(.RegisterAddConstant, parse(3));
-    testing.expectEqual(.Call, parse(4));
-    testing.expectEqual(.Return, parse(5));
-    testing.expectEqual(.Yield, parse(6));
-    testing.expectEqual(.Jump, parse(7));
-    testing.expectEqual(.ActivateThread, parse(8));
-    testing.expectEqual(.JumpIfNotZero, parse(9));
-    testing.expectEqual(.JumpConditional, parse(10));
-    testing.expectEqual(.SelectPalette, parse(11));
-    testing.expectEqual(.ControlThreads, parse(12));
-    testing.expectEqual(.SelectVideoBuffer, parse(13));
-    testing.expectEqual(.FillVideoBuffer, parse(14));
-    testing.expectEqual(.CopyVideoBuffer, parse(15));
-    testing.expectEqual(.RenderVideoBuffer, parse(16));
-    testing.expectEqual(.Kill, parse(17));
-    testing.expectEqual(.DrawString, parse(18));
-    testing.expectEqual(.RegisterSubtract, parse(19));
-    testing.expectEqual(.RegisterAnd, parse(20));
-    testing.expectEqual(.RegisterOr, parse(21));
-    testing.expectEqual(.RegisterShiftLeft, parse(22));
-    testing.expectEqual(.RegisterShiftRight, parse(23));
-    testing.expectEqual(.ControlSound, parse(24));
-    testing.expectEqual(.ControlResources, parse(25));
-    testing.expectEqual(.ControlMusic, parse(26));
+    try testing.expectEqual(.RegisterSet, parse(0));
+    try testing.expectEqual(.RegisterCopy, parse(1));
+    try testing.expectEqual(.RegisterAdd, parse(2));
+    try testing.expectEqual(.RegisterAddConstant, parse(3));
+    try testing.expectEqual(.Call, parse(4));
+    try testing.expectEqual(.Return, parse(5));
+    try testing.expectEqual(.Yield, parse(6));
+    try testing.expectEqual(.Jump, parse(7));
+    try testing.expectEqual(.ActivateThread, parse(8));
+    try testing.expectEqual(.JumpIfNotZero, parse(9));
+    try testing.expectEqual(.JumpConditional, parse(10));
+    try testing.expectEqual(.SelectPalette, parse(11));
+    try testing.expectEqual(.ControlThreads, parse(12));
+    try testing.expectEqual(.SelectVideoBuffer, parse(13));
+    try testing.expectEqual(.FillVideoBuffer, parse(14));
+    try testing.expectEqual(.CopyVideoBuffer, parse(15));
+    try testing.expectEqual(.RenderVideoBuffer, parse(16));
+    try testing.expectEqual(.Kill, parse(17));
+    try testing.expectEqual(.DrawString, parse(18));
+    try testing.expectEqual(.RegisterSubtract, parse(19));
+    try testing.expectEqual(.RegisterAnd, parse(20));
+    try testing.expectEqual(.RegisterOr, parse(21));
+    try testing.expectEqual(.RegisterShiftLeft, parse(22));
+    try testing.expectEqual(.RegisterShiftRight, parse(23));
+    try testing.expectEqual(.ControlSound, parse(24));
+    try testing.expectEqual(.ControlResources, parse(25));
+    try testing.expectEqual(.ControlMusic, parse(26));
 
-    testing.expectEqual(.DrawSpritePolygon, parse(0b0100_0000));
-    testing.expectEqual(.DrawSpritePolygon, parse(0b0111_1111));
-    testing.expectEqual(.DrawBackgroundPolygon, parse(0b1000_0000));
-    testing.expectEqual(.DrawBackgroundPolygon, parse(0b1111_1111));
+    try testing.expectEqual(.DrawSpritePolygon, parse(0b0100_0000));
+    try testing.expectEqual(.DrawSpritePolygon, parse(0b0111_1111));
+    try testing.expectEqual(.DrawBackgroundPolygon, parse(0b1000_0000));
+    try testing.expectEqual(.DrawBackgroundPolygon, parse(0b1111_1111));
 
-    testing.expectError(error.InvalidOpcode, parse(27));
-    testing.expectError(error.InvalidOpcode, parse(63));
+    try testing.expectError(error.InvalidOpcode, parse(27));
+    try testing.expectError(error.InvalidOpcode, parse(63));
 }

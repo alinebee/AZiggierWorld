@@ -45,8 +45,8 @@ const expectParse = @import("test_helpers/parse.zig").expectParse;
 test "parse parses valid bytecode and consumes 3 bytes" {
     const instruction = try expectParse(parse, &BytecodeExamples.valid, 3);
 
-    testing.expectEqual(16, instruction.destination);
-    testing.expectEqual(17, instruction.source);
+    try testing.expectEqual(16, instruction.destination);
+    try testing.expectEqual(17, instruction.source);
 }
 
 test "execute updates specified register with value" {
@@ -61,6 +61,6 @@ test "execute updates specified register with value" {
 
     instruction.execute(&machine);
 
-    testing.expectEqual(-900, machine.registers[16]);
-    testing.expectEqual(-900, machine.registers[17]);
+    try testing.expectEqual(-900, machine.registers[16]);
+    try testing.expectEqual(-900, machine.registers[17]);
 }

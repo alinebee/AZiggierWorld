@@ -53,11 +53,11 @@ const MockMachine = @import("test_helpers/mock_machine.zig");
 test "parse parses valid bytecode and consumes 2 bytes" {
     const instruction = try expectParse(parse, &BytecodeExamples.valid, 2);
 
-    testing.expectEqual(.{ .specific = 0 }, instruction.buffer_id);
+    try testing.expectEqual(.{ .specific = 0 }, instruction.buffer_id);
 }
 
 test "parse returns error.InvalidBufferID on unknown buffer identifier and consumes 2 bytes" {
-    testing.expectError(
+    try testing.expectError(
         error.InvalidBufferID,
         expectParse(parse, &BytecodeExamples.invalid_buffer_id, 2),
     );
@@ -70,10 +70,10 @@ test "execute calls selectVideoBuffer with correct parameters" {
 
     var machine = MockMachine.new(struct {
         pub fn selectVideoBuffer(buffer_id: BufferID.Enum) void {
-            testing.expectEqual(.back_buffer, buffer_id);
+            testing.expectEqual(.back_buffer, buffer_id) catch { unreachable; };
         }
     });
 
     instruction._execute(&machine);
-    testing.expectEqual(1, machine.call_counts.selectVideoBuffer);
+    try testing.expectEqual(1, machine.call_counts.selectVideoBuffer);
 }

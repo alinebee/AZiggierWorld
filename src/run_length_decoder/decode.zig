@@ -77,7 +77,7 @@ test "decode decodes valid payload" {
 
     try decode(source, destination);
 
-    testing.expectEqualSlices(u8, &payload, destination);
+    try testing.expectEqualSlices(u8, &payload, destination);
 }
 
 test "decode returns error.UncompressedSizeMismatch when passed a destination that doesn't match the reported uncompressed size" {
@@ -92,7 +92,7 @@ test "decode returns error.UncompressedSizeMismatch when passed a destination th
     var destination = try testing.allocator.alloc(u8, encoder.uncompressed_size + 10);
     defer testing.allocator.free(destination);
 
-    testing.expectError(error.UncompressedSizeMismatch, decode(source, destination));
+    try testing.expectError(error.UncompressedSizeMismatch, decode(source, destination));
 }
 
 test "decode returns error.CopyOutOfRange on payload with invalid copy pointer" {
@@ -107,7 +107,7 @@ test "decode returns error.CopyOutOfRange on payload with invalid copy pointer" 
     var destination = try testing.allocator.alloc(u8, encoder.uncompressed_size);
     defer testing.allocator.free(destination);
 
-    testing.expectError(error.CopyOutOfRange, decode(source, destination));
+    try testing.expectError(error.CopyOutOfRange, decode(source, destination));
 }
 
 test "decode returns error.SourceExhausted on payload with too few bytes" {
@@ -122,7 +122,7 @@ test "decode returns error.SourceExhausted on payload with too few bytes" {
     var destination = try testing.allocator.alloc(u8, encoder.uncompressed_size);
     defer testing.allocator.free(destination);
 
-    testing.expectError(error.SourceExhausted, decode(source, destination));
+    try testing.expectError(error.SourceExhausted, decode(source, destination));
 }
 
 test "decode returns error.DestinationExhausted on payload with undercounted uncompressed size" {
@@ -138,7 +138,7 @@ test "decode returns error.DestinationExhausted on payload with undercounted unc
     var destination = try testing.allocator.alloc(u8, encoder.uncompressed_size);
     defer testing.allocator.free(destination);
 
-    testing.expectError(error.DestinationExhausted, decode(source, destination));
+    try testing.expectError(error.DestinationExhausted, decode(source, destination));
 }
 
 test "decode returns error.InvalidChecksum on payload with corrupted byte" {
@@ -150,11 +150,11 @@ test "decode returns error.InvalidChecksum on payload with corrupted byte" {
     const source = try encoder.finalize(testing.allocator);
     defer testing.allocator.free(source);
 
-    testing.expect(source[0] != 0xFF);
+    try testing.expect(source[0] != 0xFF);
     source[0] = 0xFF;
 
     var destination = try testing.allocator.alloc(u8, encoder.uncompressed_size);
     defer testing.allocator.free(destination);
 
-    testing.expectError(error.ChecksumFailed, decode(source, destination));
+    try testing.expectError(error.ChecksumFailed, decode(source, destination));
 }

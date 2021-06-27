@@ -27,10 +27,10 @@ pub fn parse(raw_id: Raw) Error!Trusted {
 const testing = @import("../utils/testing.zig");
 
 test "parse succeeds for in-bounds integers" {
-    testing.expectEqual(0, parse(0b0000_0000));
-    testing.expectEqual(31, parse(0b0001_1111));
+    try testing.expectEqual(0, parse(0b0000_0000));
+    try testing.expectEqual(31, parse(0b0001_1111));
 }
 
 test "parse returns InvalidThreadID for out-of-bounds integer" {
-    testing.expectError(error.InvalidPaletteID, parse(0b0010_0000));
+    try testing.expectError(error.InvalidPaletteID, parse(0b0010_0000));
 }

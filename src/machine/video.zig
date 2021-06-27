@@ -37,7 +37,7 @@ pub const Interface = struct {
     /// Render a polygon from the specified source and address at the specified screen position and scale.
     /// Returns an error if the specified polygon address was invalid.
     pub fn drawPolygon(self: *Machine.Instance, source: PolygonSource, address: PolygonAddress, point: Point.Instance, scale: PolygonScale.Raw) !void {
-        log_unimplemented("Video.drawPolygon: draw {}.{X} at x:{} y:{} scale:{}", .{
+        log_unimplemented("Video.drawPolygon: draw {s}.{X} at x:{} y:{} scale:{}", .{
             @tagName(source),
             address,
             point.x,
@@ -49,7 +49,7 @@ pub const Interface = struct {
     /// Render a string from the current string table at the specified screen position in the specified color.
     /// Returns an error if the string could not be found.
     pub fn drawString(self: *Machine.Instance, string_id: StringID.Raw, color_id: ColorID.Trusted, point: Point.Instance) !void {
-        log_unimplemented("Video.drawString: draw #{} color:{} at x:{} y:{}", .{
+        log_unimplemented("Video.drawString: draw #{s} color:{} at x:{} y:{}", .{
             try english.find(string_id),
             color_id,
             point.x,

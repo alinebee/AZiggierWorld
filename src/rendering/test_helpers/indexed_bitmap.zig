@@ -82,11 +82,11 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
 ///     \\CDEF
 /// ;
 /// expectBitmap(expected, bitmap);
-pub fn expectBitmap(expected: []const u8, actual: anytype) void {
+pub fn expectBitmap(expected: []const u8, actual: anytype) !void {
     const actual_formatted = fmt.allocPrint(testing.allocator, "{}", .{actual}) catch unreachable;
     defer testing.allocator.free(actual_formatted);
 
-    testing.expectEqualStrings(expected, actual_formatted);
+    try testing.expectEqualStrings(expected, actual_formatted);
 }
 
 // -- Tests --
@@ -108,7 +108,7 @@ test "fromString populates bitmap data correctly from multiline string" {
         .{ 12, 13, 14, 15 },
     };
 
-    testing.expectEqual(expected, bitmap.data);
+    try testing.expectEqual(expected, bitmap.data);
 }
 
 test "format prints colors as lines of hex values" {
@@ -131,7 +131,7 @@ test "format prints colors as lines of hex values" {
     const actual_output = try fmt.allocPrint(testing.allocator, "{}", .{bitmap});
     defer testing.allocator.free(actual_output);
 
-    testing.expectEqualStrings(expected_output, actual_output);
+    try testing.expectEqualStrings(expected_output, actual_output);
 }
 
 test "expectBitmap compares bitmaps correctly" {
@@ -150,5 +150,5 @@ test "expectBitmap compares bitmaps correctly" {
         \\89AB
         \\CDEF
     ;
-    expectBitmap(expected, bitmap);
+    try expectBitmap(expected, bitmap);
 }

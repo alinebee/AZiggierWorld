@@ -11,7 +11,7 @@ pub const Interface = struct {
     /// Load the resources for the specified game part and begin executing its program.
     /// Returns an error if one or more resources do not exist or could not be loaded.
     pub fn startGamePart(self: *Machine.Instance, game_part: GamePart.Enum) !void {
-        log_unimplemented("Resources.startGamePart: load game part {}", .{@tagName(game_part)});
+        log_unimplemented("Resources.startGamePart: load game part {s}", .{@tagName(game_part)});
     }
 
     /// Load the specified resource if it is not already loaded.

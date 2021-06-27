@@ -172,15 +172,15 @@ test "write4Bytes generates expected payload" {
     defer encoder.deinit();
 
     try encoder.write4Bytes(.{ 0xDE, 0xAD, 0xBE, 0xEF });
-    testing.expectEqual(5 + 32, encoder.bits_written);
-    testing.expectEqual(4, encoder.uncompressed_size);
+    try testing.expectEqual(5 + 32, encoder.bits_written);
+    try testing.expectEqual(4, encoder.uncompressed_size);
 
     var stream = io.fixedBufferStream(encoder.payload.items);
     var reader = io.bitReader(.Big, stream.reader());
 
-    testing.expectEqual(0b00_011, reader.readBitsNoEof(u5, 5));
+    try testing.expectEqual(0b00_011, reader.readBitsNoEof(u5, 5));
     // Raw bytes should be in reverse order so that they decode into their original order
-    testing.expectEqual(0xEFBEADDE, reader.readBitsNoEof(u32, 32));
+    try testing.expectEqual(0xEFBEADDE, reader.readBitsNoEof(u32, 32));
 }
 
 test "copyPrevious4Bytes generates expected payload" {
@@ -188,13 +188,13 @@ test "copyPrevious4Bytes generates expected payload" {
     defer encoder.deinit();
 
     try encoder.copyPrevious4Bytes();
-    testing.expectEqual(13, encoder.bits_written);
-    testing.expectEqual(4, encoder.uncompressed_size);
+    try testing.expectEqual(13, encoder.bits_written);
+    try testing.expectEqual(4, encoder.uncompressed_size);
 
     var stream = io.fixedBufferStream(encoder.payload.items);
     var reader = io.bitReader(.Big, stream.reader());
 
-    testing.expectEqual(0b101_0000_0001_00, reader.readBitsNoEof(u13, 13));
+    try testing.expectEqual(0b101_0000_0001_00, reader.readBitsNoEof(u13, 13));
 }
 
 test "finalize produces valid decodable data" {
@@ -207,13 +207,13 @@ test "finalize produces valid decodable data" {
     try encoder.write4Bytes(.{ 0x8B, 0xAD, 0xF0, 0x0D });
     try encoder.copyPrevious4Bytes();
 
-    testing.expectEqual(16, encoder.uncompressed_size);
-    testing.expectEqual(24, encoder.compressedSize());
+    try testing.expectEqual(16, encoder.uncompressed_size);
+    try testing.expectEqual(24, encoder.compressedSize());
 
     var compressed_data = try encoder.finalize(testing.allocator);
     defer testing.allocator.free(compressed_data);
 
-    testing.expectEqual(encoder.compressedSize(), compressed_data.len);
+    try testing.expectEqual(encoder.compressedSize(), compressed_data.len);
 
     var destination = try testing.allocator.alloc(u8, encoder.uncompressed_size);
     defer testing.allocator.free(destination);
@@ -221,9 +221,9 @@ test "finalize produces valid decodable data" {
     try decode(compressed_data, destination);
     var destination_reader = io.fixedBufferStream(destination).reader();
 
-    testing.expectEqual(0x8BADF00D, destination_reader.readIntBig(u32));
-    testing.expectEqual(0x8BADF00D, destination_reader.readIntBig(u32));
+    try testing.expectEqual(0x8BADF00D, destination_reader.readIntBig(u32));
+    try testing.expectEqual(0x8BADF00D, destination_reader.readIntBig(u32));
 
-    testing.expectEqual(0xDEADBEEF, destination_reader.readIntBig(u32));
-    testing.expectEqual(0xDEADBEEF, destination_reader.readIntBig(u32));
+    try testing.expectEqual(0xDEADBEEF, destination_reader.readIntBig(u32));
+    try testing.expectEqual(0xDEADBEEF, destination_reader.readIntBig(u32));
 }

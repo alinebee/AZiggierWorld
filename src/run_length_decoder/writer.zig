@@ -28,7 +28,7 @@ pub const Instance = struct {
         if (self.cursor < count) {
             return error.DestinationExhausted;
         }
-        
+
         var bytes_remaining = count;
         while (bytes_remaining > 0) : (bytes_remaining -= 1) {
             const byte = try reader.readByte();
@@ -47,18 +47,18 @@ pub const Instance = struct {
         if (offset == 0 or offset > (self.destination.len - self.cursor)) {
             return error.CopyOutOfRange;
         }
-        
+
         if (self.cursor < count) {
             return error.DestinationExhausted;
         }
-        
+
         // -1 accounts for the fact that our internal cursor is at the "end" of the byte,
         // and is only decremented once we write the byte, to avoid underflowing.
         // The offset we get from Another World's data files assume the cursor indicates
         // the start of the byte.
         var start_index: usize = self.cursor + (offset - 1);
         const end_index = start_index - count;
-        
+
         while (start_index > end_index) : (start_index -= 1) {
             const byte = self.destination[start_index];
             self.uncheckedWriteByte(byte);
@@ -101,10 +101,10 @@ test "writeFromSource writes bytes in reverse order starting at the end of the d
     var writer = new(&destination);
 
     try writer.writeFromSource(&reader, 4);
-    testing.expect(writer.isAtEnd());
+    try testing.expect(writer.isAtEnd());
 
     const expected = [_]u8{ 0xEF, 0xBE, 0xAD, 0xDE };
-    testing.expectEqualSlices(u8, &expected, &destination);
+    try testing.expectEqualSlices(u8, &expected, &destination);
 }
 
 test "writeFromSource returns error.DestinationExhausted if destination does not have space" {
@@ -114,7 +114,7 @@ test "writeFromSource returns error.DestinationExhausted if destination does not
     var destination: [2]u8 = undefined;
     var writer = new(&destination);
 
-    testing.expectError(error.DestinationExhausted, writer.writeFromSource(&reader, 4));
+    try testing.expectError(error.DestinationExhausted, writer.writeFromSource(&reader, 4));
 }
 
 test "writeFromSource does not trap on egregiously large count" {
@@ -124,7 +124,7 @@ test "writeFromSource does not trap on egregiously large count" {
     var destination: [2]u8 = undefined;
     var writer = new(&destination);
 
-    testing.expectError(error.DestinationExhausted, writer.writeFromSource(&reader, max_usize));
+    try testing.expectError(error.DestinationExhausted, writer.writeFromSource(&reader, max_usize));
 }
 
 test "copyFromDestination copies bytes from location in destination relative to current cursor" {
@@ -144,7 +144,7 @@ test "copyFromDestination copies bytes from location in destination relative to 
         0x00, 0x00, 0x00, 0xDE,
         0xEF, 0xBE, 0xAD, 0xDE,
     };
-    testing.expectEqualSlices(u8, &expected_after_first_copy, &destination);
+    try testing.expectEqualSlices(u8, &expected_after_first_copy, &destination);
 
     // Copy the last two bytes (the second of which is now 5 bytes ahead of write cursor)
     try writer.copyFromDestination(2, 5);
@@ -153,17 +153,17 @@ test "copyFromDestination copies bytes from location in destination relative to 
         0x00, 0xAD, 0xDE, 0xDE,
         0xEF, 0xBE, 0xAD, 0xDE,
     };
-    testing.expectEqualSlices(u8, &expected_after_second_copy, &destination);
+    try testing.expectEqualSlices(u8, &expected_after_second_copy, &destination);
 
     // Copy the 4th-to-last byte (which is now 4 bytes ahead of write cursor)
     try writer.copyFromDestination(1, 4);
-    testing.expect(writer.isAtEnd());
+    try testing.expect(writer.isAtEnd());
 
     const expected_after_third_copy = [8]u8{
         0xEF, 0xAD, 0xDE, 0xDE,
         0xEF, 0xBE, 0xAD, 0xDE,
     };
-    testing.expectEqualSlices(u8, &expected_after_third_copy, &destination);
+    try testing.expectEqualSlices(u8, &expected_after_third_copy, &destination);
 }
 
 test "copyFromDestination returns error.DestinationExhausted when writing too many bytes" {
@@ -174,7 +174,7 @@ test "copyFromDestination returns error.DestinationExhausted when writing too ma
     var writer = new(&destination);
     writer.cursor = 1;
 
-    testing.expectError(error.DestinationExhausted, writer.copyFromDestination(2, 2));
+    try testing.expectError(error.DestinationExhausted, writer.copyFromDestination(2, 2));
 }
 
 test "copyFromDestination does not trap on egregiously large count" {
@@ -185,21 +185,21 @@ test "copyFromDestination does not trap on egregiously large count" {
     var writer = new(&destination);
     writer.cursor = 1;
 
-    testing.expectError(error.DestinationExhausted, writer.copyFromDestination(max_usize, 2));
+    try testing.expectError(error.DestinationExhausted, writer.copyFromDestination(max_usize, 2));
 }
 
 test "copyFromDestination returns error.CopyOutOfRange when offset is too small" {
     var destination: [8]u8 = undefined;
 
     var writer = new(&destination);
-    testing.expectError(error.CopyOutOfRange, writer.copyFromDestination(0, 1));
+    try testing.expectError(error.CopyOutOfRange, writer.copyFromDestination(0, 1));
 }
 
 test "copyFromDestination returns error.CopyOutOfRange when offset is beyond the end of the buffer" {
     var destination: [8]u8 = undefined;
 
     var writer = new(&destination);
-    testing.expectError(error.CopyOutOfRange, writer.copyFromDestination(1, 1));
+    try testing.expectError(error.CopyOutOfRange, writer.copyFromDestination(1, 1));
 }
 
 
@@ -207,6 +207,5 @@ test "copyFromDestination does not trap on egregiously large offset" {
     var destination: [8]u8 = undefined;
 
     var writer = new(&destination);
-    testing.expectError(error.CopyOutOfRange, writer.copyFromDestination(1, max_usize));
+    try testing.expectError(error.CopyOutOfRange, writer.copyFromDestination(1, max_usize));
 }
-
