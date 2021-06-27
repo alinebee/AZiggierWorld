@@ -38,12 +38,14 @@ const Instance = struct {
 
     /// Add an instruction that writes a raw 4-byte sequence to the end of the destination.
     pub fn write4Bytes(self: *Instance, bytes: u32) !void {
-        const instruction: u5 = 0b00_011;
+        const instruction: u5 = 0b00_011; // Read 4 bytes
         try self.writeBits(instruction);
 
         // reverse the bytes, so that the RLE writer will write them
         // from last to first to the end of its destination buffer.
         // That way they'll come out in the original intended order.
+        // TODO: replace this with a byte array to ensure consistent
+        // behavior on big-endian systems
         const swapped_bytes = @byteSwap(u32, bytes);
         try self.writeBits(swapped_bytes);
 
@@ -52,7 +54,7 @@ const Instance = struct {
 
     /// Encode an invalid instruction to write more bytes than exist in the payload.
     pub fn invalidWrite(self: *Instance) !void {
-        const instruction: u5 = 0b00_111;
+        const instruction: u5 = 0b00_011; // Read 4 bytes
         try self.writeBits(instruction);
 
         self.uncompressed_size += 4;
