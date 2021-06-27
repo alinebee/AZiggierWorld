@@ -167,7 +167,7 @@ test "copyFromDestination copies bytes from location in destination relative to 
 }
 
 test "copyFromDestination returns error.DestinationExhausted when writing too many bytes" {
-    var destination = [5]u8 {
+    var destination = [5]u8{
         0x00, 0xEF, 0xBE, 0xAD, 0xDE,
     };
 
@@ -178,7 +178,7 @@ test "copyFromDestination returns error.DestinationExhausted when writing too ma
 }
 
 test "copyFromDestination does not trap on egregiously large count" {
-    var destination = [5]u8 {
+    var destination = [5]u8{
         0x00, 0xEF, 0xBE, 0xAD, 0xDE,
     };
 
@@ -201,7 +201,6 @@ test "copyFromDestination returns error.CopyOutOfRange when offset is beyond the
     var writer = new(&destination);
     try testing.expectError(error.CopyOutOfRange, writer.copyFromDestination(1, 1));
 }
-
 
 test "copyFromDestination does not trap on egregiously large offset" {
     var destination: [8]u8 = undefined;

@@ -85,8 +85,12 @@ test "execute calls fillVideoBuffer with correct parameters" {
 
     var machine = MockMachine.new(struct {
         pub fn fillVideoBuffer(buffer_id: BufferID.Enum, color_id: ColorID.Trusted) void {
-            testing.expectEqual(.back_buffer, buffer_id) catch { unreachable; };
-            testing.expectEqual(12, color_id) catch { unreachable; };
+            testing.expectEqual(.back_buffer, buffer_id) catch {
+                unreachable;
+            };
+            testing.expectEqual(12, color_id) catch {
+                unreachable;
+            };
         }
     });
 

@@ -80,8 +80,12 @@ test "execute calls renderVideoBuffer with correct parameters" {
 
     var machine = MockMachine.new(struct {
         pub fn renderVideoBuffer(buffer_id: BufferID.Enum, delay: Video.FrameDelay) void {
-            testing.expectEqual(.back_buffer, buffer_id) catch { unreachable; };
-            testing.expectEqual(5, delay) catch { unreachable; };
+            testing.expectEqual(.back_buffer, buffer_id) catch {
+                unreachable;
+            };
+            testing.expectEqual(5, delay) catch {
+                unreachable;
+            };
         }
     });
     machine.registers[RegisterID.frame_duration] = 5;

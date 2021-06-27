@@ -17,8 +17,8 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
         const Self = @This();
 
         pub const DrawOperation = struct {
-            draw_index_fn: fn(self: DrawOperation, buffer: *Self, row: usize, column: usize) void,
-            draw_range_fn: fn(self: DrawOperation, buffer: *Self, row: usize, start_column: usize, end_column: usize) void,
+            draw_index_fn: fn (self: DrawOperation, buffer: *Self, row: usize, column: usize) void,
+            draw_range_fn: fn (self: DrawOperation, buffer: *Self, row: usize, start_column: usize, end_column: usize) void,
             context: union {
                 solid_color: ColorID.Trusted,
                 highlight: void,

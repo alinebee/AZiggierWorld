@@ -73,7 +73,9 @@ test "execute calls selectPalette with correct parameters" {
 
     var machine = MockMachine.new(struct {
         pub fn selectPalette(palette_id: PaletteID.Trusted) void {
-            testing.expectEqual(16, palette_id) catch { unreachable; };
+            testing.expectEqual(16, palette_id) catch {
+                unreachable;
+            };
         }
     });
 

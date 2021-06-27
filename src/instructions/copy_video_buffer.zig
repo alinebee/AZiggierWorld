@@ -147,9 +147,15 @@ test "execute calls copyVideoBuffer with offset when use_vertical_offset = true"
 
     var machine = MockMachine.new(struct {
         pub fn copyVideoBuffer(source: BufferID.Enum, destination: BufferID.Enum, vertical_offset: Point.Coordinate) void {
-            testing.expectEqual(.front_buffer, source) catch { unreachable; };
-            testing.expectEqual(.back_buffer, destination) catch { unreachable; };
-            testing.expectEqual(199, vertical_offset) catch { unreachable; };
+            testing.expectEqual(.front_buffer, source) catch {
+                unreachable;
+            };
+            testing.expectEqual(.back_buffer, destination) catch {
+                unreachable;
+            };
+            testing.expectEqual(199, vertical_offset) catch {
+                unreachable;
+            };
         }
     });
     machine.registers[RegisterID.scroll_y_position] = 199;
@@ -167,9 +173,15 @@ test "execute ignores vertical offset when use_vertical_offset = false" {
 
     var machine = MockMachine.new(struct {
         pub fn copyVideoBuffer(source: BufferID.Enum, destination: BufferID.Enum, vertical_offset: Point.Coordinate) void {
-            testing.expectEqual(.front_buffer, source) catch { unreachable; };
-            testing.expectEqual(.back_buffer, destination) catch { unreachable; };
-            testing.expectEqual(0, vertical_offset) catch { unreachable; };
+            testing.expectEqual(.front_buffer, source) catch {
+                unreachable;
+            };
+            testing.expectEqual(.back_buffer, destination) catch {
+                unreachable;
+            };
+            testing.expectEqual(0, vertical_offset) catch {
+                unreachable;
+            };
         }
     });
     machine.registers[RegisterID.scroll_y_position] = 199;

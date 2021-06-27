@@ -23,8 +23,8 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
         /// Renders a single pixel or a horizontal span of pixels into a packed buffer of this size,
         /// according to a specific draw operation.
         pub const DrawOperation = struct {
-            draw_index_fn: fn(self: DrawOperation, buffer: *Self, index: Index) void,
-            draw_range_fn: fn(self: DrawOperation, buffer: *Self, range: Range.Instance(usize)) void,
+            draw_index_fn: fn (self: DrawOperation, buffer: *Self, index: Index) void,
+            draw_range_fn: fn (self: DrawOperation, buffer: *Self, range: Range.Instance(usize)) void,
             context: union {
                 solid_color: NativeColor,
                 highlight: void,
@@ -289,7 +289,7 @@ test "Instance produces storage of the expected size filled with zeroes." {
 
     try testing.expectEqual(32_000, storage.data.len);
 
-    const expected_data = [_]NativeColor{ filledColor(0) } ** storage.data.len;
+    const expected_data = [_]NativeColor{filledColor(0)} ** storage.data.len;
 
     try testing.expectEqual(expected_data, storage.data);
 }

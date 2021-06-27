@@ -66,7 +66,7 @@ test "decode decodes valid payload" {
     var encoder = Encoder.new(testing.allocator);
     defer encoder.deinit();
 
-    const payload = [_]u8 { 0x8B, 0xAD, 0xF0, 0x0D };
+    const payload = [_]u8{ 0x8B, 0xAD, 0xF0, 0x0D };
     try encoder.write4Bytes(payload);
 
     const source = try encoder.finalize(testing.allocator);
@@ -145,7 +145,7 @@ test "decode returns error.InvalidChecksum on payload with corrupted byte" {
     var encoder = Encoder.new(testing.allocator);
     defer encoder.deinit();
 
-    try encoder.write4Bytes(.{ 0x8B,0xAD, 0xF0, 0x0D });
+    try encoder.write4Bytes(.{ 0x8B, 0xAD, 0xF0, 0x0D });
 
     const source = try encoder.finalize(testing.allocator);
     defer testing.allocator.free(source);

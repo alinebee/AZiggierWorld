@@ -70,7 +70,9 @@ test "execute calls selectVideoBuffer with correct parameters" {
 
     var machine = MockMachine.new(struct {
         pub fn selectVideoBuffer(buffer_id: BufferID.Enum) void {
-            testing.expectEqual(.back_buffer, buffer_id) catch { unreachable; };
+            testing.expectEqual(.back_buffer, buffer_id) catch {
+                unreachable;
+            };
         }
     });
 

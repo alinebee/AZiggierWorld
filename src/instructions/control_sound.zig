@@ -143,7 +143,9 @@ test "execute with stop instruction runs on machine without errors" {
         }
 
         pub fn stopChannel(channel: Channel.Trusted) void {
-            testing.expectEqual(1, channel) catch { unreachable; };
+            testing.expectEqual(1, channel) catch {
+                unreachable;
+            };
         }
     });
 

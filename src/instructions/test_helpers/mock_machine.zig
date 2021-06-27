@@ -163,7 +163,9 @@ test "MockMachine calls drawString correctly on stub implementation" {
 test "MockMachine calls selectPalette correctly on stub implementation" {
     var mock = new(struct {
         fn selectPalette(palette_id: PaletteID.Trusted) void {
-            testing.expectEqual(16, palette_id) catch { unreachable; };
+            testing.expectEqual(16, palette_id) catch {
+                unreachable;
+            };
         }
     });
 
@@ -174,7 +176,9 @@ test "MockMachine calls selectPalette correctly on stub implementation" {
 test "MockMachine calls selectVideoBuffer correctly on stub implementation" {
     var mock = new(struct {
         fn selectVideoBuffer(buffer_id: BufferID.Enum) void {
-            testing.expectEqual(.front_buffer, buffer_id) catch { unreachable; };
+            testing.expectEqual(.front_buffer, buffer_id) catch {
+                unreachable;
+            };
         }
     });
 
@@ -185,8 +189,12 @@ test "MockMachine calls selectVideoBuffer correctly on stub implementation" {
 test "MockMachine calls fillVideoBuffer correctly on stub implementation" {
     var mock = new(struct {
         fn fillVideoBuffer(buffer_id: BufferID.Enum, color_id: ColorID.Trusted) void {
-            testing.expectEqual(.front_buffer, buffer_id) catch { unreachable; };
-            testing.expectEqual(15, color_id) catch { unreachable; };
+            testing.expectEqual(.front_buffer, buffer_id) catch {
+                unreachable;
+            };
+            testing.expectEqual(15, color_id) catch {
+                unreachable;
+            };
         }
     });
 
@@ -197,9 +205,15 @@ test "MockMachine calls fillVideoBuffer correctly on stub implementation" {
 test "MockMachine calls copyVideoBuffer correctly on stub implementation" {
     var mock = new(struct {
         fn copyVideoBuffer(source: BufferID.Enum, destination: BufferID.Enum, vertical_offset: Point.Coordinate) void {
-            testing.expectEqual(.{ .specific = 1 }, source) catch { unreachable; };
-            testing.expectEqual(.back_buffer, destination) catch { unreachable; };
-            testing.expectEqual(176, vertical_offset) catch { unreachable; };
+            testing.expectEqual(.{ .specific = 1 }, source) catch {
+                unreachable;
+            };
+            testing.expectEqual(.back_buffer, destination) catch {
+                unreachable;
+            };
+            testing.expectEqual(176, vertical_offset) catch {
+                unreachable;
+            };
         }
     });
 
@@ -210,8 +224,12 @@ test "MockMachine calls copyVideoBuffer correctly on stub implementation" {
 test "MockMachine calls renderVideoBuffer correctly on stub implementation" {
     var mock = new(struct {
         fn renderVideoBuffer(buffer_id: BufferID.Enum, delay: Video.FrameDelay) void {
-            testing.expectEqual(.back_buffer, buffer_id) catch { unreachable; };
-            testing.expectEqual(5, delay) catch { unreachable; };
+            testing.expectEqual(.back_buffer, buffer_id) catch {
+                unreachable;
+            };
+            testing.expectEqual(5, delay) catch {
+                unreachable;
+            };
         }
     });
 
@@ -266,7 +284,9 @@ test "MockMachine calls playMusic correctly on stub implementation" {
 test "MockMachine calls setMusicDelay correctly on stub implementation" {
     var mock = new(struct {
         fn setMusicDelay(delay: Audio.Delay) void {
-            testing.expectEqual(1234, delay) catch { unreachable; };
+            testing.expectEqual(1234, delay) catch {
+                unreachable;
+            };
         }
     });
 
@@ -300,7 +320,9 @@ test "MockMachine calls playSound correctly on stub implementation" {
 test "MockMachine calls stopChannel correctly on stub implementation" {
     var mock = new(struct {
         fn stopChannel(channel: Channel.Trusted) void {
-            testing.expectEqual(2, channel) catch { unreachable; };
+            testing.expectEqual(2, channel) catch {
+                unreachable;
+            };
         }
     });
 

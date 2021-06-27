@@ -145,7 +145,9 @@ test "execute with set_delay instruction calls setMusicDelay with correct parame
         }
 
         pub fn setMusicDelay(delay: Audio.Delay) void {
-            testing.expectEqual(0xF00D, delay) catch { unreachable; };
+            testing.expectEqual(0xF00D, delay) catch {
+                unreachable;
+            };
         }
 
         pub fn stopMusic() void {
