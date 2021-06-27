@@ -43,17 +43,17 @@ const Instance = struct {
 
         // HERE BE DRAGONS
         //
-        // currentChunk always has an extra 1 after its most significant bit, to mark how many bits are left to consume
-        // from that chunk. Once the chunk is down to a single 1,it means we've consumed all of the significant bits
-        // before that marker and it's time to load the next chunk.
+        // currentChunk always has an extra 1 bit after its most significant bit, to mark how many bits are left
+        // to consume from that chunk. Once the chunk is down to a single 1, it means we've consumed all of
+        // the significant bits before that marker and it's time to load the next chunk.
         //
-        // Normally when `readBit` loads in the next chunk, it sets its top bit to 1 to mark that we have 31 more bits
-        // to go in that chunk. But that step does *not* happen for the first chunk when we load it here in `init`:
-        // Instead, the first chunk *already* has the most significant bit 1 encoded into it in the original game data.
-        // This is because compressed game resources usually won't fall on nice tidy 4-byte boundaries, and the first
-        // chunk will be a partial chunk containing the remainder.
+        // Normally when `readBit` loads in the next chunk and pops off the first bit, it then sets the top bit to 1
+        // to mark that we have 31 more bits to go in that chunk. That step does *not* happen for the first chunk
+        // when we load it here in `init`: Instead, the first chunk should *already* have the most significant bit
+        // marker encoded into it in the original game data. This is because compressed game resources usually won't
+        // fall on nice tidy 4-byte boundaries, and the first chunk will be a partial chunk containing the remainder.
 
-        // (This also means that the first chunk can have a maximum of 31 significant bits; at least one bit is "lost"
+        // This also means that the first chunk can have a maximum of 31 significant bits; at least one bit is "lost"
         // to the hardcoded marker. In the event that all the real data did fall on a 4-byte boundary, we would expect
         // the first chunk to consist of all zeroes, or 31 zeroes and a 1 at the end. Such a chunk would be skipped
         // altogether by `readBit`.
