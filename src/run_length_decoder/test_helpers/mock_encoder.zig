@@ -37,17 +37,17 @@ const Instance = struct {
     }
 
     /// Add an instruction that writes a raw 4-byte sequence to the end of the destination.
-    pub fn write4Bytes(self: *Instance, bytes: u32) !void {
+    pub fn write4Bytes(self: *Instance, bytes: [4]u8) !void {
         const instruction: u5 = 0b00_011; // Read 4 bytes
         try self.writeBits(instruction);
 
-        // reverse the bytes, so that the RLE writer will write them
+        // Reverse the bytes, so that the RLE writer will write them
         // from last to first to the end of its destination buffer.
         // That way they'll come out in the original intended order.
-        // TODO: replace this with a byte array to ensure consistent
-        // behavior on big-endian systems
-        const swapped_bytes = @byteSwap(u32, bytes);
-        try self.writeBits(swapped_bytes);
+        var bytes_remaining: usize = 4;
+        while (bytes_remaining > 0) : (bytes_remaining -= 1) {
+            try self.writeBits(bytes[bytes_remaining - 1]);
+        }
 
         self.uncompressed_size += 4;
     }
@@ -71,9 +71,8 @@ const Instance = struct {
     /// Add the specified bit to the end of the payload,
     /// starting from the most significant bit of the first byte.
     fn writeBit(self: *Instance, bit: u1) !void {
-        var byte_index = self.bits_written / 8;
-        var shift = @intCast(u3, 7 - (self.bits_written % 8));
-
+        const byte_index = self.bits_written / 8;
+        const shift = @intCast(u3, 7 - (self.bits_written % 8));
         const mask = @as(u8, bit) << shift;
 
         if (byte_index == self.payload.items.len) {
@@ -172,7 +171,7 @@ test "write4Bytes generates expected payload" {
     var encoder = Instance.init(testing.allocator);
     defer encoder.deinit();
 
-    try encoder.write4Bytes(0xDEADBEEF);
+    try encoder.write4Bytes(.{ 0xDE, 0xAD, 0xBE, 0xEF });
     testing.expectEqual(5 + 32, encoder.bits_written);
     testing.expectEqual(4, encoder.uncompressed_size);
 
@@ -202,10 +201,10 @@ test "finalize produces valid decodable data" {
     var encoder = Instance.init(testing.allocator);
     defer encoder.deinit();
 
-    try encoder.write4Bytes(0xDEADBEEF);
+    try encoder.write4Bytes(.{ 0xDE, 0xAD, 0xBE, 0xEF });
     try encoder.copyPrevious4Bytes();
 
-    try encoder.write4Bytes(0x8BADF00D);
+    try encoder.write4Bytes(.{ 0x8B, 0xAD, 0xF0, 0x0D });
     try encoder.copyPrevious4Bytes();
 
     testing.expectEqual(16, encoder.uncompressed_size);

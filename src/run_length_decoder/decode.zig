@@ -32,11 +32,15 @@ const Error = Reader.Error || Writer.Error || error{
 
 /// Decodes Run-Length-Encoded data, reading RLE-compressed data from the source
 /// and writing decompressed data to the destination.
-/// `source` and `destination` are allowed to be the same buffer; if they are,
-/// `source` should be located at the start of `destination` to prevent the writer
-/// from overtaking the reader.
-/// On success, `destination` contains fully uncompressed data.
+///
+/// On success, `destination` will contain the fully uncompressed data.
 /// Returns an error if decoding failed.
+///
+/// Preconditions:
+/// - The destination must be exactly large enough to hold the uncompressed data.
+/// - `source` and `destination` are allowed to be the same region of memory;
+///   if they are, `source` must be located at the start of `destination`
+///   to prevent the writer from overtaking the reader.
 pub fn decode(source: []const u8, destination: []u8) Error!void {
     var reader = try Reader.new(source);
 
@@ -62,7 +66,8 @@ test "decode decodes valid payload" {
     var encoder = Encoder.new(testing.allocator);
     defer encoder.deinit();
 
-    try encoder.write4Bytes(0x8BADF00D);
+    const payload = [_]u8 { 0x8B, 0xAD, 0xF0, 0x0D };
+    try encoder.write4Bytes(payload);
 
     const source = try encoder.finalize(testing.allocator);
     defer testing.allocator.free(source);
@@ -71,6 +76,8 @@ test "decode decodes valid payload" {
     defer testing.allocator.free(destination);
 
     try decode(source, destination);
+
+    testing.expectEqualSlices(u8, &payload, destination);
 }
 
 test "decode returns error.UncompressedSizeMismatch when passed a destination that doesn't match the reported uncompressed size" {
@@ -122,7 +129,7 @@ test "decode returns error.DestinationExhausted on payload with undercounted unc
     var encoder = Encoder.new(testing.allocator);
     defer encoder.deinit();
 
-    try encoder.write4Bytes(0x8BADF00D);
+    try encoder.write4Bytes(.{ 0x8B, 0xAD, 0xF0, 0x0D });
     encoder.uncompressed_size -= 2;
 
     const source = try encoder.finalize(testing.allocator);
@@ -138,7 +145,7 @@ test "decode returns error.InvalidChecksum on payload with corrupted byte" {
     var encoder = Encoder.new(testing.allocator);
     defer encoder.deinit();
 
-    try encoder.write4Bytes(0x8BADF00D);
+    try encoder.write4Bytes(.{ 0x8B,0xAD, 0xF0, 0x0D });
 
     const source = try encoder.finalize(testing.allocator);
     defer testing.allocator.free(source);

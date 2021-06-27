@@ -164,8 +164,8 @@ fn bufReadResource(reader: anytype, buffer: []u8, compressed_size: usize) Resour
     var compressed_region = buffer[0..compressed_size];
     const bytes_read = try reader.readNoEof(compressed_region);
 
+    // If the data was compressed, decompress it in place.
     if (compressed_size < buffer.len) {
-        // Decompress RLE-compressed data in place.
         decode(compressed_region, buffer) catch {
             // Normalize errors to a generic "welp compressed data was invalid somehow"
             // since the specific errors are meaningless to an upstream context.
