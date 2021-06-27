@@ -67,10 +67,10 @@ pub const Error = Program.Error;
 pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instance {
     var self: Instance = undefined;
 
-    // Unlike DrawBackgroundPolygon, which treats the lower 7 bits of the opcode as the top part of the polygon address,
-    // this operation reads two whole bytes for the polygon address and uses the opcode bits for other parts of the
-    // instruction (see below.)
-    // It interprets the raw polygon address same way as DrawBackgroundPolygon though,
+    // Unlike DrawBackgroundPolygon, which treats the lower 7 bits of the opcode as the top part
+    // of the polygon address, this operation reads the two bytes after the opcode as the polygon
+    // address and uses the lower 6 bits of the opcode for other parts of the instruction (see below.)
+    // It interprets the raw polygon address the same way as DrawBackgroundPolygon though,
     // right-shifting by one to land on an even address boundary.
     self.address = (try program.read(Video.PolygonAddress)) << 1;
 
