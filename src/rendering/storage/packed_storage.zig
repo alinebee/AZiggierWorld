@@ -45,7 +45,7 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
             /// with a solid color.
             pub fn solidColor(color: ColorID.Trusted) DrawOperation {
                 return .{
-                    .context = .{ .solid_color = NativeColor.filled(color) },
+                    .context = .{ .solid_color = filledColor(color) },
                     .draw_index_fn = drawSolidColorPixel,
                     .draw_range_fn = drawSolidColorRange,
                 };
@@ -99,7 +99,7 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
             }
 
             fn drawHighlightPixel(self: DrawOperation, buffer: *Self, index: Index) void {
-                const highlighted_color = buffer.data[index.offset].highlighted();
+                const highlighted_color = highlightedColor(buffer.data[index.offset]);
                 fillPixel(buffer, index, highlighted_color);
             }
 
@@ -118,7 +118,7 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
                 var destination_slice = buffer.data[range.min..range.max];
 
                 for (destination_slice) |*byte| {
-                    byte.* = byte.*.highlighted();
+                    byte.* = highlightedColor(byte.*);
                 }
             }
 
@@ -148,7 +148,7 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
 
         /// Fill the entire buffer with the specified color.
         pub fn fill(self: *Self, color: ColorID.Trusted) void {
-            const native_color = NativeColor.filled(color);
+            const native_color = filledColor(color);
             mem.set(NativeColor, &self.data, native_color);
         }
 
@@ -240,43 +240,28 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
 
 const builtin = @import("builtin");
 
-fn NativeColorType() type {
-    const Layout = if (builtin.endian == .Big)
-        packed struct {
-            left: ColorID.Trusted,
-            right: ColorID.Trusted,
+/// The unit in which the buffer will read and write pixel color values.
+/// Two 4-bit colors are packed into a single byte: Zig packed structs
+/// have endianness-dependent field order so we must flip based on endianness.
+/// q.v.:
+const NativeColor = if (builtin.endian == .Big)
+    packed struct {
+        left: ColorID.Trusted,
+        right: ColorID.Trusted,
+    }
+else
+    packed struct {
+        right: ColorID.Trusted,
+        left: ColorID.Trusted,
+    };
 
-            const Self = @This();
-
-            pub fn filled(color: ColorID.Trusted) Self {
-                return .{ .left = color, .right = color };
-            }
-
-            pub fn highlighted(self: Self) Self {
-                return @bitCast(Self, ColorID.highlightByte(@bitCast(u8, self)));
-            }
-        }
-    else
-        packed struct {
-            right: ColorID.Trusted,
-            left: ColorID.Trusted,
-
-            const Self = @This();
-
-            pub fn filled(color: ColorID.Trusted) Self {
-                return .{ .left = color, .right = color };
-            }
-
-            pub fn highlighted(self: Self) Self {
-                return @bitCast(Self, ColorID.highlightByte(@bitCast(u8, self)));
-            }
-        };
-
-    return Layout;
+fn filledColor(color: ColorID.Trusted) NativeColor {
+    return .{ .left = color, .right = color };
 }
 
-// The unit in which the buffer will read and write pixel color values.
-const NativeColor = NativeColorType();
+fn highlightedColor(color: NativeColor) NativeColor {
+    return @bitCast(NativeColor, ColorID.highlightByte(@bitCast(u8, color)));
+}
 
 /// Whether a pixel is the "left" (top 4 bits) or "right" (bottom 4 bits) of the byte.
 const Handedness = enum(u1) {
@@ -306,7 +291,7 @@ test "Instance produces storage of the expected size filled with zeroes." {
 
     testing.expectEqual(32_000, storage.data.len);
 
-    const expected_data = [_]NativeColor{NativeColor.filled(0)} ** storage.data.len;
+    const expected_data = [_]NativeColor{ filledColor(0) } ** storage.data.len;
 
     testing.expectEqual(expected_data, storage.data);
 }
