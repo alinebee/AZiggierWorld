@@ -17,15 +17,14 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
         const Self = @This();
 
         pub const DrawOperation = struct {
-            draw_index_fn: fn (self: DrawOperation, buffer: *Self, row: usize, column: usize) void,
-            draw_range_fn: fn (self: DrawOperation, buffer: *Self, row: usize, start_column: usize, end_column: usize) void,
+            draw_fn: fn (self: DrawOperation, buffer: *Self, row: usize, start_column: usize, end_column: usize) void,
             context: union {
                 solid_color: ColorID.Trusted,
                 highlight: void,
                 mask: *const Self,
             },
 
-            /// Creates a new draw operation that can render into a packed buffer of this size
+            /// Creates a new draw operation that can render into an aligned buffer of this size
             /// using the specified draw mode.
             pub fn forMode(draw_mode: DrawMode.Enum, mask_source: *const Self) DrawOperation {
                 return switch (draw_mode) {
@@ -40,8 +39,7 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
             pub fn solidColor(color: ColorID.Trusted) DrawOperation {
                 return .{
                     .context = .{ .solid_color = color },
-                    .draw_index_fn = drawSolidColorPixel,
-                    .draw_range_fn = drawSolidColorRange,
+                    .draw_fn = drawSolidColorRange,
                 };
             }
 
@@ -49,8 +47,7 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
             pub fn highlight() DrawOperation {
                 return .{
                     .context = .{ .highlight = {} },
-                    .draw_index_fn = drawHighlightPixel,
-                    .draw_range_fn = drawHighlightRange,
+                    .draw_fn = drawHighlightRange,
                 };
             }
 
@@ -59,15 +56,8 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
             pub fn mask(source: *const Self) DrawOperation {
                 return .{
                     .context = .{ .mask = source },
-                    .draw_index_fn = drawMaskPixel,
-                    .draw_range_fn = drawMaskRange,
+                    .draw_fn = drawMaskRange,
                 };
-            }
-
-            /// Fills a single pixel at the specified index using this draw operation.
-            /// `index` is not bounds-checked: specifying an index outside the buffer results in undefined behaviour.
-            fn drawPixel(self: DrawOperation, buffer: *Self, row: usize, column: usize) void {
-                self.draw_index_fn(self, buffer, row, column);
             }
 
             /// Given a byte-aligned range of bytes within the buffer storage, fills all pixels within those bytes
@@ -75,24 +65,10 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
             /// `range` is not bounds-checked: specifying a range outside the buffer, or with a negative length,
             /// results in undefined behaviour.
             fn drawRange(self: DrawOperation, buffer: *Self, row: usize, start_column: usize, end_column: usize) void {
-                self.draw_range_fn(self, buffer, row, start_column, end_column);
+                self.draw_fn(self, buffer, row, start_column, end_column);
             }
 
             // -- Private methods --
-
-            fn drawSolidColorPixel(self: DrawOperation, buffer: *Self, row: usize, column: usize) void {
-                buffer.data[row][column] = self.context.solid_color;
-            }
-
-            fn drawHighlightPixel(self: DrawOperation, buffer: *Self, row: usize, column: usize) void {
-                const highlighted_color = ColorID.highlight(self.context.mask.data[row][column]);
-                buffer.data[row][column] = highlighted_color;
-            }
-
-            fn drawMaskPixel(self: DrawOperation, buffer: *Self, row: usize, column: usize) void {
-                const mask_color = self.context.mask.data[row][column];
-                buffer.data[row][column] = mask_color;
-            }
 
             fn drawSolidColorRange(self: DrawOperation, buffer: *Self, row: usize, start_column: usize, end_column: usize) void {
                 var destination_slice = buffer.data[row][start_column..end_column];
@@ -131,11 +107,6 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
             const row = @intCast(usize, y);
             const start_column = @intCast(usize, x_span.min);
 
-            if (x_span.min == x_span.max) {
-                operation.drawPixel(self, row, start_column);
-                return;
-            }
-
             // Ranges are inclusive, but this range will be converted into a slice,
             // and Zig's [start..end] slice syntax does not include the end offset.
             const end_column = @intCast(usize, x_span.max) + 1;
@@ -168,7 +139,7 @@ const testing = @import("../../utils/testing.zig");
 test "Instance produces storage of the expected size filled with zeroes." {
     const storage = Instance(320, 200){};
 
-    const ExpectedData = [200][320]ColorID.Trusted;
+    const ExpectedData = [200][320]NativeColor;
 
     try testing.expectEqual(ExpectedData, @TypeOf(storage.data));
 
@@ -179,13 +150,13 @@ test "Instance produces storage of the expected size filled with zeroes." {
 
 test "Instance handles 0 width or height gracefully" {
     const zero_height = Instance(320, 0){};
-    try testing.expectEqual([0][320]ColorID.Trusted, @TypeOf(zero_height.data));
+    try testing.expectEqual([0][320]NativeColor, @TypeOf(zero_height.data));
 
     const zero_width = Instance(0, 200){};
-    try testing.expectEqual([200][0]ColorID.Trusted, @TypeOf(zero_width.data));
+    try testing.expectEqual([200][0]NativeColor, @TypeOf(zero_width.data));
 
     const zero_dimensions = Instance(0, 0){};
-    try testing.expectEqual([0][0]ColorID.Trusted, @TypeOf(zero_dimensions.data));
+    try testing.expectEqual([0][0]NativeColor, @TypeOf(zero_dimensions.data));
 }
 
 const storage_test_suite = @import("../test_helpers/storage_test_suite.zig");

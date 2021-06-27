@@ -52,7 +52,7 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
                         'D' => 13,
                         'E' => 14,
                         'F' => 15,
-                        else => @panic("Only uppercase hexadecimal characters (0-F) are supported"),
+                        else => std.debug.panic("Only uppercase hexadecimal characters (0-F) are supported, got '{c}'", .{ string[offset] }),
                     };
                 }
             }

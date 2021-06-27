@@ -5,7 +5,7 @@ const BoundingBox = @import("../values/bounding_box.zig");
 
 const introspection = @import("../utils/introspection.zig");
 
-/// Defines a scaled polygon in screen space, with between 4 and 50 polygons.
+/// Defines a scaled polygon in screen space, with between 4 and 50 vertices.
 pub const Instance = struct {
     /// The draw mode with which to render this polygon.
     draw_mode: DrawMode.Enum,
