@@ -10,7 +10,7 @@ pub const Instruction = union(enum) {
 
 /// Returns a mock writer that does nothing but track the most recent RLE instruction it was asked to perform.
 /// Intended solely for testing RLE instruction parsing: in particular, it will not consume any bytes from
-/// a reader when receiving a `writeFromReader` command.
+/// a reader when receiving a `writeFromSource` command.
 pub fn new() Instance {
     return Instance{ .last_instruction = null };
 }
