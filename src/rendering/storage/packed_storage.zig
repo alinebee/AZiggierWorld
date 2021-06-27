@@ -30,7 +30,7 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
                 highlight: void,
                 mask: *const Self,
             },
-            
+
             /// Creates a new draw operation that can render into a packed buffer of this size
             /// using the specified draw mode.
             pub fn forMode(draw_mode: DrawMode.Enum, mask_source: *const Self) DrawOperation {
@@ -40,7 +40,7 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
                     .mask => mask(mask_source),
                 };
             }
-            
+
             /// Construct a new draw operation that replaces pixels in the destination buffer
             /// with a solid color.
             pub fn solidColor(color: ColorID.Trusted) DrawOperation {
@@ -50,7 +50,7 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
                     .draw_range_fn = drawSolidColorRange,
                 };
             }
-            
+
             /// Construct a new draw operation that highlights existing pixels within the buffer.
             pub fn highlight() DrawOperation {
                 return .{
@@ -59,7 +59,7 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
                     .draw_range_fn = drawHighlightRange,
                 };
             }
-            
+
             /// Construct a new draw operation that replaces pixels in the destination buffer
             /// with the pixels at the same location in the source buffer.
             pub fn mask(source: *const Self) DrawOperation {
@@ -69,13 +69,13 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
                     .draw_range_fn = drawMaskRange,
                 };
             }
-            
+
             /// Fills a single pixel at the specified index using this draw operation.
             /// `index` is not bounds-checked: specifying an index outside the buffer results in undefined behaviour.
             fn drawPixel(self: DrawOperation, buffer: *Self, index: Index) void {
                 self.draw_index_fn(self, buffer, index);
             }
-            
+
             /// Given a byte-aligned range of bytes within the buffer storage, fills all pixels within those bytes
             /// using this draw operation to determine the appropriate color(s).
             /// `range` is not bounds-checked: specifying a range outside the buffer, or with a negative length,
@@ -83,9 +83,9 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
             fn drawRange(self: DrawOperation, buffer: *Self, range: Range.Instance(usize)) void {
                 self.draw_range_fn(self, buffer, range);
             }
-            
+
             // -- Private methods --
-            
+
             fn fillPixel(buffer: *Self, index: Index, color: NativeColor) void {
                 var destination = &buffer.data[index.offset];
                 switch (index.hand) {
@@ -93,39 +93,39 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
                     .right => destination.*.right = color.right,
                 }
             }
-            
+
             fn drawSolidColorPixel(self: DrawOperation, buffer: *Self, index: Index) void {
                 fillPixel(buffer, index, self.context.solid_color);
             }
-            
+
             fn drawHighlightPixel(self: DrawOperation, buffer: *Self, index: Index) void {
                 const highlighted_color = buffer.data[index.offset].highlighted();
                 fillPixel(buffer, index, highlighted_color);
             }
-            
+
             fn drawMaskPixel(self: DrawOperation, buffer: *Self, index: Index) void {
                 const mask_color = self.context.mask.data[index.offset];
                 fillPixel(buffer, index, mask_color);
             }
-            
+
             fn drawSolidColorRange(self: DrawOperation, buffer: *Self, range: Range.Instance(usize)) void {
                 var destination_slice = buffer.data[range.min..range.max];
-                
+
                 mem.set(NativeColor, destination_slice, self.context.solid_color);
             }
-            
+
             fn drawHighlightRange(self: DrawOperation, buffer: *Self, range: Range.Instance(usize)) void {
                 var destination_slice = buffer.data[range.min..range.max];
-                
+
                 for (destination_slice) |*byte| {
                     byte.* = byte.*.highlighted();
                 }
             }
-            
+
             fn drawMaskRange(self: DrawOperation, buffer: *Self, range: Range.Instance(usize)) void {
                 var destination_slice = buffer.data[range.min..range.max];
                 const mask_slice = self.context.mask.data[range.min..range.max];
-                
+
                 mem.copy(NativeColor, destination_slice, mask_slice);
             }
         };
@@ -157,13 +157,13 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
         /// results in undefined behaviour.
         pub fn uncheckedDrawSpan(self: *Self, x_span: Range.Instance(Point.Coordinate), y: Point.Coordinate, operation: DrawOperation) void {
             var start_index = uncheckedIndexOf(.{ .x = x_span.min, .y = y });
-            
+
             // Early-out for drawing single-pixel spans
             if (x_span.min == x_span.max) {
                 operation.drawPixel(self, start_index);
                 return;
             }
-            
+
             var end_index = uncheckedIndexOf(.{ .x = x_span.max, .y = y });
 
             // If the start pixel doesn't fall at the "left" edge of a byte:
@@ -241,28 +241,37 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
 const builtin = @import("builtin");
 
 fn NativeColorType() type {
-    const Methods = struct {
-        pub fn filled(color: ColorID.Trusted) Layout {
-            return .{ .left = color, .right = color };
+    const Layout = if (builtin.endian == .Big)
+        packed struct {
+            left: ColorID.Trusted,
+            right: ColorID.Trusted,
+
+            const Self = @This();
+
+            pub fn filled(color: ColorID.Trusted) Self {
+                return .{ .left = color, .right = color };
+            }
+
+            pub fn highlighted(self: Self) Self {
+                return @bitCast(Self, ColorID.highlightByte(@bitCast(u8, self)));
+            }
         }
-        
-        pub fn highlighted(self: Layout) Layout {
-            return @bitCast(Self, ColorID.highlightByte(@bitCast(u8, self)));
-        }
-    };
-    
-    const Layout = if (builtin.endian == .Big) packed struct {
-        left: ColorID.Trusted,
-        right: ColorID.Trusted,
-        
-        usingnamespace Methods;
-    } else packed struct {
-        right: ColorID.Trusted,
-        left: ColorID.Trusted,
-        
-        usingnamespace Methods;
-    };
-    
+    else
+        packed struct {
+            right: ColorID.Trusted,
+            left: ColorID.Trusted,
+
+            const Self = @This();
+
+            pub fn filled(color: ColorID.Trusted) Self {
+                return .{ .left = color, .right = color };
+            }
+
+            pub fn highlighted(self: Self) Self {
+                return @bitCast(Self, ColorID.highlightByte(@bitCast(u8, self)));
+            }
+        };
+
     return Layout;
 }
 
@@ -297,7 +306,7 @@ test "Instance produces storage of the expected size filled with zeroes." {
 
     testing.expectEqual(32_000, storage.data.len);
 
-    const expected_data = [_]NativeColor{ NativeColor.filled(0) } ** storage.data.len;
+    const expected_data = [_]NativeColor{NativeColor.filled(0)} ** storage.data.len;
 
     testing.expectEqual(expected_data, storage.data);
 }
