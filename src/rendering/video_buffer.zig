@@ -37,19 +37,17 @@ pub fn Instance(comptime StorageFn: anytype, comptime width: usize, comptime hei
         /// deciding its color according to the draw mode.
         /// Portions of the line that are out of bounds will not be drawn.
         pub fn drawSpan(self: *Self, x: Range.Instance(Point.Coordinate), y: Point.Coordinate, draw_mode: DrawMode.Enum, mask_buffer: *const Self) void {
-            if (Self.bounds.y.contains(y) == false) {
-                return;
-            }
-
-            const operation = Storage.DrawOperation.forMode(draw_mode, &mask_buffer.storage);
+            if (Self.bounds.y.contains(y) == false) return;
 
             // Clamp the x coordinates for the line to fit within the video buffer,
             // and bail out if it's entirely out of bounds.
             const in_bounds_x = Self.bounds.x.intersection(x) orelse return;
+
+            const operation = Storage.DrawOperation.forMode(draw_mode, &mask_buffer.storage);
             self.storage.uncheckedDrawSpan(in_bounds_x, y, operation);
         }
 
-        /// Draws the specified 8x8 glyph, positioning its top left corner at the specified point.
+        /// Draws the specified 8x8 glyph in a solid color, positioning its top left corner at the specified point.
         /// Returns error.PointOutOfBounds if the glyph's bounds do not lie fully inside the buffer.
         pub fn drawGlyph(self: *Self, glyph: Font.Glyph, origin: Point.Instance, color: ColorID.Trusted) Error!void {
             const glyph_bounds = BoundingBox.new(origin.x, origin.y, origin.x + 8, origin.y + 8);
@@ -61,6 +59,8 @@ pub fn Instance(comptime StorageFn: anytype, comptime width: usize, comptime hei
             const operation = Storage.DrawOperation.solidColor(color);
 
             var cursor = origin;
+
+            // Walk through each row of the glyph drawing spans of lit pixels.
             for (glyph) |row| {
                 var remaining_pixels = row;
                 var span_start: Point.Coordinate = cursor.x;
@@ -68,10 +68,14 @@ pub fn Instance(comptime StorageFn: anytype, comptime width: usize, comptime hei
 
                 while (remaining_pixels != 0) {
                     const pixel_lit = (remaining_pixels & 0b1000_0000) != 0;
+                    remaining_pixels <<= 1;
 
-                    if (pixel_lit) {
-                        span_width += 1;
-                    } else {
+                    // Accumulate lit pixels into a single span for faster drawing.
+                    if (pixel_lit == true) span_width += 1;
+
+                    // If we reach an unlit pixel, or the last lit pixel of the row,
+                    // draw the current span of lit pixels and start a new span.
+                    if (pixel_lit == false or remaining_pixels == 0) {
                         if (span_width > 0) {
                             const x_range = Range.new(Point.Coordinate, span_start, span_start + span_width - 1);
                             self.storage.uncheckedDrawSpan(x_range, cursor.y, operation);
@@ -81,15 +85,6 @@ pub fn Instance(comptime StorageFn: anytype, comptime width: usize, comptime hei
                         }
                         span_start += 1;
                     }
-
-                    remaining_pixels <<= 1;
-                }
-
-                if (span_width > 0) {
-                    const x_range = Range.new(Point.Coordinate, span_start, span_start + span_width - 1);
-                    self.storage.uncheckedDrawSpan(x_range, cursor.y, operation);
-                    span_start += span_width;
-                    span_width = 0;
                 }
 
                 // Once we've consumed all bits in the row, move down to the next one.
@@ -233,19 +228,19 @@ fn runTests(comptime Storage: anytype) void {
         test "drawGlyph renders pixels of glyph at specified position in buffer" {
             var buffer = new(Storage, 10, 10);
 
-            const glyph = try Font.glyph('A');
-            try buffer.drawGlyph(glyph, .{ .x = 1, .y = 1 }, 0xA);
+            const glyph = try Font.glyph('Q');
+            try buffer.drawGlyph(glyph, .{ .x = 1, .y = 1 }, 0x1);
 
             const expected =
                 \\0000000000
-                \\00AAAA0000
-                \\0A0000A000
-                \\0A0000A000
-                \\0AAAAAA000
-                \\0A0000A000
-                \\0A0000A000
-                \\0A0000A000
-                \\0000000000
+                \\0011110000
+                \\0100001000
+                \\0100001000
+                \\0100001000
+                \\0100001000
+                \\0100011000
+                \\0011111000
+                \\0000000110
                 \\0000000000
             ;
 
