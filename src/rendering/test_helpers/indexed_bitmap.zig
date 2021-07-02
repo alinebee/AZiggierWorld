@@ -4,8 +4,6 @@ const std = @import("std");
 const fmt = std.fmt;
 const mem = std.mem;
 
-pub const Error = error{InvalidASCIIFormat};
-
 /// Stores a 16-color bitmap with the specified width and height, and converts its contents
 /// to and from a multiline string representation. Intended for unit-testing the contents of a draw buffer.
 pub fn Instance(comptime width: usize, comptime height: usize) type {
@@ -31,11 +29,12 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
 
             for (self.data) |*row, y| {
                 for (row) |*color, x| {
-                    // Each line of pixels is expected to be terminated by a newline character.
+                    // Each line of pixels is expected to be terminated by a newline character
+                    // which is skipped when parsing the string.
                     const line_width = width + 1;
-                    const offset = (y * line_width) + x;
+                    const index = (y * line_width) + x;
 
-                    color.* = switch (string[offset]) {
+                    color.* = switch (string[index]) {
                         '0' => 0,
                         '1' => 1,
                         '2' => 2,
@@ -52,7 +51,9 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
                         'D' => 13,
                         'E' => 14,
                         'F' => 15,
-                        else => std.debug.panic("Only uppercase hexadecimal characters (0-F) are supported, got '{c}'", .{ string[offset] }),
+                        else => |unknown_char| {
+                            std.debug.panic("Only uppercase hexadecimal characters (0-F) are supported, got '{c}' at index #{}", .{ unknown_char, index });
+                        },
                     };
                 }
             }
@@ -151,4 +152,16 @@ test "expectBitmap compares bitmaps correctly" {
         \\CDEF
     ;
     try expectBitmap(expected, bitmap);
+}
+
+test "Malformed strings cause panic" {
+    const invalid_format =
+        \\012
+        \\4567
+        \\89AB
+        \\CDEF
+    ;
+
+    // Uncomment to panic
+    //_ = Instance(4, 4).fromString(invalid_format);
 }

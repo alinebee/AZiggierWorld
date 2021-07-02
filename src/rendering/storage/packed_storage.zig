@@ -20,8 +20,8 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
 
         const Self = @This();
 
-        /// Renders a single pixel or a horizontal span of pixels into a packed buffer of this size,
-        /// according to a specific draw operation.
+        /// Renders a single pixel or a horizontal span of pixels into a packed buffer
+        /// using one of three draw operations: solid color, highlight or mask.
         pub const DrawOperation = struct {
             draw_index_fn: fn (self: DrawOperation, buffer: *Self, index: Index) void,
             draw_range_fn: fn (self: DrawOperation, buffer: *Self, range: Range.Instance(usize)) void,
@@ -109,13 +109,13 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
             }
 
             fn drawSolidColorRange(self: DrawOperation, buffer: *Self, range: Range.Instance(usize)) void {
-                var destination_slice = buffer.data[range.min..range.max];
+                const destination_slice = buffer.data[range.min..range.max];
 
                 mem.set(NativeColor, destination_slice, self.context.solid_color);
             }
 
             fn drawHighlightRange(self: DrawOperation, buffer: *Self, range: Range.Instance(usize)) void {
-                var destination_slice = buffer.data[range.min..range.max];
+                const destination_slice = buffer.data[range.min..range.max];
 
                 for (destination_slice) |*byte| {
                     byte.* = highlightedColor(byte.*);
@@ -123,7 +123,7 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
             }
 
             fn drawMaskRange(self: DrawOperation, buffer: *Self, range: Range.Instance(usize)) void {
-                var destination_slice = buffer.data[range.min..range.max];
+                const destination_slice = buffer.data[range.min..range.max];
                 const mask_slice = self.context.mask.data[range.min..range.max];
 
                 mem.copy(NativeColor, destination_slice, mask_slice);

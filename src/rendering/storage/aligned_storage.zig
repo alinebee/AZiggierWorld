@@ -16,6 +16,8 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
 
         const Self = @This();
 
+        /// Renders a horizontal span of pixels into an aligned buffer
+        /// using one of three draw operations: solid color, highlight or mask.
         pub const DrawOperation = struct {
             draw_fn: fn (self: DrawOperation, buffer: *Self, row: usize, start_column: usize, end_column: usize) void,
             context: union {
