@@ -189,7 +189,7 @@ fn execute(comptime Instruction: type, raw_opcode: Opcode.Raw, program: *Program
     const instruction = try Instruction.parse(raw_opcode, program);
 
     // You'd think there'd be an easier way to express "try the function if necessary, otherwise just call it".
-    comptime const ReturnType = introspection.returnType(instruction.execute);
+    comptime const ReturnType = introspection.ReturnType(instruction.execute);
     comptime const returns_error = @typeInfo(ReturnType) == .ErrorUnion;
     const payload = if (returns_error)
         try instruction.execute(machine)

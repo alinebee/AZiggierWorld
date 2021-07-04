@@ -141,7 +141,7 @@ fn readResourceList(allocator: *mem.Allocator, reader: anytype, expected_count: 
 
 /// The type of errors that can be returned from a call to `bufReadResource`.
 fn ResourceError(comptime Reader: type) type {
-    const ReaderError = introspection.errorType(Reader.readNoEof);
+    const ReaderError = introspection.ErrorType(Reader.readNoEof);
 
     return ReaderError || error{
         /// Attempted to copy a resource's data into a buffer that was too small for it.

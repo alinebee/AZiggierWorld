@@ -90,7 +90,7 @@ pub fn parse(reader: anytype, center: Point.Instance, scale: PolygonScale.Raw, d
 
 /// The errors that can be returned by a call to `parse`.
 pub fn Error(comptime Reader: type) type {
-    const ReadError = introspection.errorType(Reader.readByte);
+    const ReadError = introspection.ErrorType(Reader.readByte);
     return ReadError || ValidationError;
 }
 

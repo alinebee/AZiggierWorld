@@ -8,14 +8,14 @@ pub const intToEnum = std.meta.intToEnum;
 /// Given an integer type, returns the number of bits in that integer.
 pub const bitCount = std.meta.bitCount;
 
-/// Given an integer type, returns the type used for legal left/right-shift operations.
-pub const shiftType = std.math.Log2Int;
-
 /// Casts an integer type to another, returning an error on overflow (instead of trapping like @intCast).
 pub const intCast = std.math.cast;
 
+/// Given an integer type, returns the type used for legal left/right-shift operations.
+pub const ShiftType = std.math.Log2Int;
+
 /// Given a function reference, introspects the return type of that function.
-pub fn returnType(comptime function: anytype) type {
+pub fn ReturnType(comptime function: anytype) type {
     const type_info = @typeInfo(@TypeOf(function));
     return switch (type_info) {
         .Fn => |info| info.return_type.?,
@@ -26,8 +26,8 @@ pub fn returnType(comptime function: anytype) type {
 
 /// Given a function that returns a regular type, an optional (`?payload`)
 /// or an error union (`error_set!payload`), returns the type of the payload.
-pub fn payloadType(comptime function: anytype) type {
-    const return_type = returnType(function);
+pub fn PayloadType(comptime function: anytype) type {
+    const return_type = ReturnType(function);
     return switch (@typeInfo(return_type)) {
         .ErrorUnion => |info| info.payload,
         .Optional => |info| info.child,
@@ -38,8 +38,8 @@ pub fn payloadType(comptime function: anytype) type {
 /// Given a function that returns an error union (`error_set!payload`),
 /// returns the type of the error set.
 /// Returns a compile error if the function does not return an error union.
-pub fn errorType(comptime function: anytype) type {
-    const return_type = returnType(function);
+pub fn ErrorType(comptime function: anytype) type {
+    const return_type = ReturnType(function);
     return switch (@typeInfo(return_type)) {
         .ErrorUnion => |info| info.error_set,
         else => @compileError("Parameter did not return an ErrorUnion"),
@@ -65,15 +65,15 @@ test "bitCount triggers compile error when passed non-integer" {
     //_ = bitCount(struct {});
 }
 
-test "returnType gets return type of free function" {
+test "ReturnType gets return type of free function" {
     const Namespace = struct {
         fn example() void {}
     };
 
-    try testing.expectEqual(void, returnType(Namespace.example));
+    try testing.expectEqual(void, ReturnType(Namespace.example));
 }
 
-test "returnType gets return type of bound function" {
+test "ReturnType gets return type of bound function" {
     const Struct = struct {
         const Self = @This();
 
@@ -81,45 +81,45 @@ test "returnType gets return type of bound function" {
     };
 
     const foo = Struct{};
-    try testing.expectEqual(void, returnType(foo.boundExample));
+    try testing.expectEqual(void, ReturnType(foo.boundExample));
 }
 
-test "returnType triggers compile error when passed non-function type" {
+test "ReturnType triggers compile error when passed non-function type" {
     // Uncomment me to trigger a compile error!
-    // _ = returnType(u32);
+    // _ = ReturnType(u32);
 }
 
-test "payloadType gets return type of function that returns a type directly" {
+test "PayloadType gets return type of function that returns a type directly" {
     const Namespace = struct {
         fn example() u32 {
             return 0;
         }
     };
 
-    try testing.expectEqual(u32, payloadType(Namespace.example));
+    try testing.expectEqual(u32, PayloadType(Namespace.example));
 }
 
-test "payloadType gets return type of function that returns an optional" {
+test "PayloadType gets return type of function that returns an optional" {
     const Namespace = struct {
         fn example() ?u32 {
             return null;
         }
     };
 
-    try testing.expectEqual(u32, payloadType(Namespace.example));
+    try testing.expectEqual(u32, PayloadType(Namespace.example));
 }
 
-test "payloadType gets return type of function that returns an error union" {
+test "PayloadType gets return type of function that returns an error union" {
     const Namespace = struct {
         fn example() anyerror!u32 {
             return 0;
         }
     };
 
-    try testing.expectEqual(u32, payloadType(Namespace.example));
+    try testing.expectEqual(u32, PayloadType(Namespace.example));
 }
 
-test "errorType gets return type of function that returns an error union" {
+test "ErrorType gets return type of function that returns an error union" {
     const CustomError = error{FlagrantViolation};
     const Namespace = struct {
         fn example() CustomError!u32 {
@@ -127,14 +127,14 @@ test "errorType gets return type of function that returns an error union" {
         }
     };
 
-    try testing.expectEqual(CustomError, errorType(Namespace.example));
+    try testing.expectEqual(CustomError, ErrorType(Namespace.example));
 }
 
-test "errorType returns compile error when given function that does not return an error union" {
+test "ErrorType returns compile error when given function that does not return an error union" {
     const Namespace = struct {
         fn example() void {}
     };
 
     // Uncomment to trigger a compile-time error!
-    //_ = errorType(Namespace.example);
+    //_ = ErrorType(Namespace.example);
 }

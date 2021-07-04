@@ -9,7 +9,7 @@ const introspection = @import("../../utils/introspection.zig");
 
 /// Try to parse a literal sequence of bytecode into a specific instruction;
 /// on success or failure, check that the expected number of bytes were consumed.
-pub fn expectParse(comptime parseFn: anytype, bytecode: []const u8, expected_bytes_consumed: usize) returnType(parseFn) {
+pub fn expectParse(comptime parseFn: anytype, bytecode: []const u8, expected_bytes_consumed: usize) ReturnType(parseFn) {
     var program = Program.new(bytecode);
     const raw_opcode = try program.read(Opcode.Raw);
 
@@ -35,9 +35,9 @@ pub const Error = error{
 
 /// Calculates the return type of the expectParse generic function by combining
 /// the original parse function's return type with expectParse's error set.
-fn returnType(comptime parseFn: anytype) type {
-    const error_type = introspection.errorType(parseFn);
-    const payload_type = introspection.payloadType(parseFn);
+fn ReturnType(comptime parseFn: anytype) type {
+    const error_type = introspection.ErrorType(parseFn);
+    const payload_type = introspection.PayloadType(parseFn);
     return (Error || error_type)!payload_type;
 }
 

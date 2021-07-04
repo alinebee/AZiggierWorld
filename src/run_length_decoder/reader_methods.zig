@@ -13,7 +13,7 @@ const introspection = @import("../utils/introspection.zig");
 ///   }
 ///
 pub fn extend(comptime Self: type) type {
-    const ReadError = introspection.errorType(Self.readBit);
+    const ReadError = introspection.ErrorType(Self.readBit);
 
     return struct {
         /// Returns a raw byte constructed by consuming 8 bits from the underlying reader.

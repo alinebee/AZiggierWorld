@@ -5,7 +5,7 @@ const RegisterID = @import("../values/register_id.zig");
 
 const introspection = @import("../utils/introspection.zig");
 
-const RegisterShift = introspection.shiftType(Machine.RegisterValue);
+const RegisterShift = introspection.ShiftType(Machine.RegisterValue);
 
 /// Right-shift (>>) the bits in a register's value by a specified distance.
 pub const Instance = struct {
