@@ -112,11 +112,7 @@ pub fn Instance(comptime StorageFn: anytype, comptime width: usize, comptime hei
 
             // Early-out for polygons that cover a single screen pixel
             if (polygon.isDot()) {
-                self.storage.uncheckedDrawSpan(
-                    .{ .min = origin.x, .max = origin.x },
-                    origin.y,
-                    operation
-                );
+                self.storage.uncheckedDrawSpan(.{ .min = origin.x, .max = origin.x }, origin.y, operation);
                 return;
             }
 
@@ -178,11 +174,7 @@ pub fn Instance(comptime StorageFn: anytype, comptime width: usize, comptime hei
 
                             // Flip the span if needed to ensure it always runs from left to right.
                             // This handles vertices that cross in the middle.
-                            const x_range: Range.Instance(Point.Coordinate) = if (x1 < x2)
-                                .{ .min = x1, .max = x2 }
-                            else
-                                .{ .min = x2, .max = x1 }
-                            ;
+                            const x_range: Range.Instance(Point.Coordinate) = if (x1 < x2) .{ .min = x1, .max = x2 } else .{ .min = x2, .max = x1 };
 
                             // Only draw if the resulting span is within the buffer's bounds
                             if (Self.bounds.x.intersection(x_range)) |clamped_range| {
@@ -226,10 +218,14 @@ const FixedPrecision = struct {
     }
 
     /// The whole component of the number.
-    fn whole(self: Self) i16 { return @truncate(i16, self.raw >> 16); }
+    fn whole(self: Self) i16 {
+        return @truncate(i16, self.raw >> 16);
+    }
 
     /// The fractional component of the number.
-    fn fraction(self: Self) u16 { return @truncate(u16, self.raw); }
+    fn fraction(self: Self) u16 {
+        return @truncate(u16, self.raw);
+    }
 
     /// Set a new fractional component of the number.
     fn setFraction(self: *Self, _fraction: u16) void {
