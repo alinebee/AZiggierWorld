@@ -14,6 +14,17 @@ pub const intCast = std.math.cast;
 /// Given an integer type, returns the type used for legal left/right-shift operations.
 pub const ShiftType = std.math.Log2Int;
 
+/// If given a pointer type, returns the type that the pointer points to;
+/// if given any other type, returns the base type.
+/// Intended to simplify the introspection of `anytype` parameters that may be passed by reference or by value.
+pub fn BaseType(comptime pointer_or_type: type) type {
+    const type_info = @typeInfo(pointer_or_type);
+    return switch (type_info) {
+        .Pointer => |info| info.child,
+        else => pointer_or_type,
+    };
+}
+
 /// Given a function reference, introspects the return type of that function.
 pub fn ReturnType(comptime function: anytype) type {
     const type_info = @typeInfo(@TypeOf(function));
@@ -137,4 +148,20 @@ test "ErrorType returns compile error when given function that does not return a
 
     // Uncomment to trigger a compile-time error!
     //_ = ErrorType(Namespace.example);
+}
+
+test "BaseType returns struct type when given a pointer to a struct" {
+    const MyStruct = struct { foo: usize };
+
+    const pointer_to_struct: *MyStruct = undefined;
+
+    try testing.expectEqual(MyStruct, BaseType(@TypeOf(pointer_to_struct)));
+}
+
+test "BaseType returns struct type when given a struct type" {
+    const MyStruct = struct { foo: usize };
+
+    const value_of_struct: MyStruct = undefined;
+
+    try testing.expectEqual(MyStruct, BaseType(@TypeOf(value_of_struct)));
 }

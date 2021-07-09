@@ -21,8 +21,8 @@ pub const PolygonSource = enum {
     animations,
 };
 
-/// The offset within a polygon or animation resource from which to read polygon data.
-pub const PolygonAddress = u16;
+/// The offset within a polygon resource from which to read polygon data.
+pub const PolygonAddress = @import("../resources/polygon_resource").Address;
 
 /// The length of time to leave on screen.
 /// FIXME: Determine the range of this value in actual bytecode.

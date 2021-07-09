@@ -161,8 +161,8 @@ fn validateVertices(vertices: []const Point.Instance) ValidationError!void {
 // -- Data examples --
 
 // zig fmt: off
-const DataExamples = struct {
-    const valid_dot = [_]u8 {
+pub const DataExamples = struct {
+    pub const valid_dot = [_]u8 {
         0, 1, // width and height
         4, // vertex count
         0, 0,
