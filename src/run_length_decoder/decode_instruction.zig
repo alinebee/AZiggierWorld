@@ -1,12 +1,15 @@
-//! Another World's run-length encoding system compresses data using 6 different decoding instructions,
+//! Defines a function for parsing and executing Another World's run-length encoding (RLE) instructions.
+//!
+//! Another World's RLE algorithm compressed data using 6 different instructions,
 //! which are identified by the first 2 or 3 bits of each instruction sequence:
-//! 111|cccc_cccc: next 8 bits are count: copy the next (count + 9) bytes immediately after this instruction.
-//! 110|cccc_cccc|oooo_oooo_oooo: next 8 bits are count, next 12 bits are offset relative to write cursor:
-//! copy (count + 1) bytes from the already-uncompressed data at that offset.
-//! 101|oooo_oooo_oo: next 10 bits are relative offset: copy 4 bytes from uncompressed data at offset.
-//! 100|oooo_oooo_o: next 9 bits are relative offset: copy 3 bytes from uncompressed data at offset.
-//! 01|oooo_oooo: next 8 bits are relative offset: copy 2 bytes from uncompressed data at offset.
-//! 00|ccc: next 3 bits are count: copy the next (count + 1) bytes immediately after this instruction.
+//!
+//! 111|cccc_cccc: next 8 bits are count: write the [count + 9] bytes following this instruction to the write cursor.
+//! 110|cccc_cccc|oooo_oooo_oooo: next 8 bits are count, next 12 bits are an offset *relative to the write cursor*:
+//! duplicate the [count + 1] already-uncompressed bytes from that offset to the write cursor.
+//! 101|oooo_oooo_oo: next 10 bits are relative offset: duplicate 4 bytes from uncompressed data at offset.
+//! 100|oooo_oooo_o: next 9 bits are relative offset: duplicate 3 bytes from uncompressed data at offset.
+//! 01|oooo_oooo: next 8 bits are relative offset: duplicate 2 bytes from uncompressed data at offset.
+//! 00|ccc: next 3 bits are count: write the next [count + 1] bytes following this instruction to the write cursor.
 
 /// Reads the next RLE instruction from the specified reader, and executes the instruction on the specified writer.
 /// Returns an error if the reader could not read or the writer could not write.

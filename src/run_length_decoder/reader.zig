@@ -1,12 +1,21 @@
+//! Defines a reader that reads a source buffer of RLE-encoded data with methods to consume individual bits,
+//! bytes or integers of arbitrary size from the source.
+//!
+//! Internally, this reader parses data backwards from the end of the buffer in chunks of 4 bytes,
+//! and maintains a checksum of the chunks it has read. Once reading is complete, the checksum
+//! can be validated to determine that the source data was free of errors.
+//!
+//! See decode.zig for details of the overall algorithm, and decode_instruction.zig for details of the encoding syntax.
+
 const std = @import("std");
 const mem = std.mem;
 
 const ReaderMethods = @import("reader_methods.zig");
 
-/// Returns a new reader that consumes the specified source buffer.
-/// This reads chunks of 4 bytes starting from the end of the buffer and returns their individual bits,
-/// to be interpreted by the decoder as RLE instructions or raw data.
-pub fn new(source: []const u8) !Instance {
+/// Returns a new reader that consumes the specified source buffer, assumed to contain data encoded
+/// using Another World's RLE algorithm.
+/// Returns `error.SourceExhausted` if the source buffer is too short to be a valid compressed.
+pub fn new(source: []const u8) Error!Instance {
     return try Instance.init(source);
 }
 
@@ -32,7 +41,7 @@ const Instance = struct {
     crc: u32,
 
     /// Create and initialize a reader to consume the specified source data.
-    /// Returns an error if the source buffer does not contain enough bytes to initialize the reader.
+    /// Returns error.SourceExhausted if the source buffer does not contain enough bytes to initialize the reader.
     fn init(source: []const u8) Error!Instance {
         var self: Instance = undefined;
 

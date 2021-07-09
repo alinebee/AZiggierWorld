@@ -1,4 +1,14 @@
-/// Create a new writer that will begin writing to the end of the specified destination buffer.
+//! Defines a writer that writes decompressed data into a destination buffer, in response to
+//! instructions from a reader that is parsing compressed RLE-encoded data from a source buffer.
+//! Depending on the instruction, the writer will either write source bytes directly from the source
+//! or duplicate sequences of bytes from previously-decompressed regions of the destination.
+//!
+//! The writer begins writing from the end of the destination buffer, working backwards to the start,
+//! with the upshot that bytes from the soruce reader are written in reverse order.
+//!
+//! See decode.zig for details of the overall algorithm, and decode_instruction.zig for details of the encoding syntax.
+
+/// Create a new writer that will begin writing uncompressed data to the end of the specified destination buffer.
 pub fn new(destination: []u8) Instance {
     return Instance{
         .destination = destination,
@@ -8,7 +18,7 @@ pub fn new(destination: []u8) Instance {
 
 /// The byte-wise writer for the run-length decoder. This writing decompressed bytes
 /// to a destination buffer, starting from the end of the buffer and working its way forward.
-pub const Instance = struct {
+const Instance = struct {
     /// The destination buffer to write to.
     destination: []u8,
 

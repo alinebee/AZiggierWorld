@@ -1,3 +1,7 @@
+//! Defines helper methods for readers of RLE-encoded data.
+//! These methods are shared between the real reader implementation
+//! (see reader.zig) and the mock used in tests (see mock_reader.zig).
+
 const std = @import("std");
 const assert = std.debug.assert;
 const trait = std.meta.trait;
