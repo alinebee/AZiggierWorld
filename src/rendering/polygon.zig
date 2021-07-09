@@ -94,8 +94,8 @@ pub fn Error(comptime Reader: type) type {
     return ReadError || ValidationError;
 }
 
-const min_vertices = 4;
-const max_vertices = 50;
+pub const min_vertices = 4;
+pub const max_vertices = 50;
 
 const min_vertical_span = 0;
 const max_vertical_span = 1023;

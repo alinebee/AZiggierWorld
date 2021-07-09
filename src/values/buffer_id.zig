@@ -1,11 +1,20 @@
+//! Types for parsing video buffer IDs from Another World bytecode instructions.
+
+const math = @import("std").math;
+
 /// A raw video buffer identifier as represented in Another World's bytecode.
 pub const Raw = u8;
 
 /// A specific buffer ID from 0 to 3. This is guaranteed to be valid.
 pub const Specific = u2;
 
-pub const front_buffer: Raw = 0xFE;
-pub const back_buffer: Raw = 0xFF;
+/// The number of buffers.
+pub const count = math.maxInt(Specific);
+
+/// The ID of the front buffer as represented in bytecode.
+pub const raw_front_buffer: Raw = 0xFE;
+/// The ID of the back buffer as represented in bytecode.
+pub const raw_back_buffer: Raw = 0xFF;
 
 // TODO: confirm the order and meaning of front and back buffers.
 pub const Enum = union(enum(Raw)) {
@@ -25,8 +34,8 @@ pub const Error = error{
 pub fn parse(raw: Raw) Error!Enum {
     return switch (raw) {
         0...3 => .{ .specific = @truncate(Specific, raw) },
-        front_buffer => .front_buffer,
-        back_buffer => .back_buffer,
+        raw_front_buffer => .front_buffer,
+        raw_back_buffer => .back_buffer,
         else => error.InvalidBufferID,
     };
 }

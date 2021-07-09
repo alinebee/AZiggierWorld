@@ -98,7 +98,7 @@ pub fn Instance(comptime StorageFn: anytype, comptime width: usize, comptime hei
         /// - any vertex along the right-hand side of the polygon is higher than the previous vertex.
         /// - any vertex along the right-hand side of the polygon is > 1023 units below the previous vertex.
         pub fn drawPolygon(self: *Self, polygon: Polygon.Instance, mask_buffer: *const Self) Error!void {
-            if (polygon.count < 4) {
+            if (polygon.count < Polygon.min_vertices or polygon.count > Polygon.max_vertices) {
                 return error.InvalidVertexCount;
             }
 
@@ -107,11 +107,11 @@ pub fn Instance(comptime StorageFn: anytype, comptime width: usize, comptime hei
                 return;
             }
 
-            const origin = polygon.bounds.origin();
             const operation = Storage.DrawOperation.forMode(polygon.draw_mode, &mask_buffer.storage);
 
             // Early-out for polygons that cover a single screen pixel
             if (polygon.isDot()) {
+                const origin = polygon.bounds.origin();
                 self.storage.uncheckedDrawSpan(.{ .min = origin.x, .max = origin.x }, origin.y, operation);
                 return;
             }

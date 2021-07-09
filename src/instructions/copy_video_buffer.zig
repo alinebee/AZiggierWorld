@@ -48,7 +48,7 @@ pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instance 
     var sanitised_source: BufferID.Raw = undefined;
     var use_vertical_offset: bool = undefined;
 
-    if (raw_source == BufferID.front_buffer or raw_source == BufferID.back_buffer) {
+    if (raw_source == BufferID.raw_front_buffer or raw_source == BufferID.raw_back_buffer) {
         sanitised_source = raw_source;
         use_vertical_offset = false;
     } else {

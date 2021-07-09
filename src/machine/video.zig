@@ -7,28 +7,13 @@ const StringID = @import("../values/string_id.zig");
 const BufferID = @import("../values/buffer_id.zig");
 const PaletteID = @import("../values/palette_id.zig");
 const PolygonScale = @import("../values/polygon_scale.zig");
+const Video = @import("../rendering/video.zig");
 
 const english = @import("../assets/english.zig");
 
-/// Defines where to read polygon from for a polygon draw operation.
-/// Another World's polygons may be stored in one of two locations:
-/// - polygons: A game-part-specific resource containing scene backgrounds and incidental animations.
-/// - animations: A shared resource containing common sprites like players, enemies, weapons etc.
-pub const PolygonSource = enum {
-    /// Draw polygon data from the currently-loaded polygon resource.
-    polygons,
-    /// Draw polygon data from the currently-loaded animation resource.
-    animations,
-};
-
-/// The offset within a polygon resource from which to read polygon data.
-pub const PolygonAddress = @import("../resources/polygon_resource").Address;
-
-/// The length of time to leave on screen.
-/// FIXME: Determine the range of this value in actual bytecode.
-/// This is read from a register, but the type should be more constrained than that
-/// (e.g. negative values are likely illegal.)
-pub const FrameDelay = Machine.RegisterValue;
+pub const PolygonSource = Video.PolygonSource;
+pub const FrameDelay = Video.FrameDelay;
+pub const PolygonAddress = @import("../resources/polygon_resource.zig").Address;
 
 const log_unimplemented = @import("../utils/logging.zig").log_unimplemented;
 
