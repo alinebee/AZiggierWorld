@@ -251,7 +251,7 @@ fn parseOffset(reader: anytype, scale: PolygonScale.Raw) ParseError!Point.Instan
 
 // zig fmt: off
 const DataExamples = struct {
-    // Individual header examples
+    // - Individual header examples -
 
     const polygon_entry_header = [_]u8{0b1100_1010}; // Lower 6 bits define draw mode with solid color 0xA (0b1010)
     const group_entry_header = [_]u8{0b0000_0010};
@@ -277,7 +277,7 @@ const DataExamples = struct {
         0b1111_1111, // Unused padding byte
     };
 
-    // - Full resource block
+    // - Full resource block -
 
     // Simple 4-vertex polygons @ 12 bytes long each
     const polygon_1 = Polygon.DataExamples.valid_dot;
@@ -328,16 +328,40 @@ const DataExamples = struct {
     // - Group 2 points to polygon 2
     // Should result in iterating 3 polygons.
     const resource = [_]u8{}
-        // Block contents                           // Offset
-        // --------------                           // ------
+        // Block contents                           // Address
+        // --------------                           // -------
         ++ polygon_entry_header ++ polygon_1        // 0
         ++ polygon_entry_header ++ polygon_2        // 12
         ++ group_entry_header ++ group_1            // 24
-        ++ group_1_pointer_1                        // 28 - points to 12
-        ++ group_1_pointer_2                        // 32 - points to 0
-        ++ group_1_pointer_3                        // 38 - points to 42
+        ++ group_1_pointer_1                        // 28 - points to polygon at 12
+        ++ group_1_pointer_2                        // 32 - points to polygon at 0
+        ++ group_1_pointer_3                        // 38 - points to group at 42
         ++ group_entry_header ++ group_2            // 42
-        ++ group_2_pointer_1                        // 46 - points to 12
+        ++ group_2_pointer_1                        // 46 - points to polygon at 12
+    ;
+
+    // - Malformed resources -
+
+    const single_pointer_group = [_]u8{ 0, 0, 0 };
+
+    // Defines a polygon resource containing 2 groups, each of which points to the other.
+    // Iterating this should fail by hitting the recursion limit.
+    const circular_reference = [_]u8{}
+        // Block contents                               // Address
+        // --------------                               // -------
+        ++ group_entry_header ++ single_pointer_group   // 0
+        ++ [_]u8{ 0, 8 >> 1, 0, 0 }                     // 4 - points to group at 8
+        ++ group_entry_header ++ single_pointer_group   // 8
+        ++ [_]u8{ 0, 0 >> 1, 0, 0 }                     // 12 - points to group at 0
+    ;
+
+    // Defines a polygon resource containing 1 group with 1 pointer that points beyond the limits of the data.
+    // Iterating this should fail with an InvalidAddress error.
+    const invalid_pointer_address = [_]u8{}
+        // Block contents                               // Address
+        // --------------                               // -------
+        ++ group_entry_header ++ single_pointer_group   // 0
+        ++ [_]u8 { 0, 128 >> 1, 0, 0 }                  // 4 - points to 128, beyond data
     ;
 };
 
@@ -536,10 +560,56 @@ test "iteratePolygons correctly visits all polygons in group" {
     try testing.expectEqual(4, polygon_3.count);
 }
 
-test "iteratePolygons fails with error.PolygonRecursionDepthExceeded on circular reference in polygon data" {}
+test "iteratePolygons fails with error.PolygonRecursionDepthExceeded on circular reference in polygon data" {
+    const resource = new(&DataExamples.circular_reference);
 
-test "iteratePolygons fails with error.InvalidAddress if requested address does not exist" {}
+    var visitor = TestVisitor.init(testing.allocator);
+    defer visitor.deinit();
 
-test "iteratePolygons fails with error.InvalidAddress if entry pointer within data points to address that does not exist" {}
+    const origin = .{ .x = 0, .y = 0 };
+    const address = 0; // First group in resource data
 
-test "iteratePolygons fails with error.EndOfStream on truncated polygon data" {}
+    try testing.expectError(error.PolygonRecursionDepthExceeded, resource.iteratePolygons(address, origin, PolygonScale.default, &visitor));
+    try testing.expectEqual(0, visitor.polygons.items.len);
+}
+
+test "iteratePolygons fails with error.InvalidAddress if requested address does not exist" {
+    const resource = new(&DataExamples.resource);
+
+    var visitor = TestVisitor.init(testing.allocator);
+    defer visitor.deinit();
+
+    const origin = .{ .x = 0, .y = 0 };
+    const address = 1024; // Does not exist
+
+    try testing.expectError(error.InvalidAddress, resource.iteratePolygons(address, origin, PolygonScale.default, &visitor));
+    try testing.expectEqual(0, visitor.polygons.items.len);
+
+}
+
+test "iteratePolygons fails with error.InvalidAddress if entry pointer within data points to address that does not exist" {
+    const resource = new(&DataExamples.invalid_pointer_address);
+
+    var visitor = TestVisitor.init(testing.allocator);
+    defer visitor.deinit();
+
+    const origin = .{ .x = 0, .y = 0 };
+    const address = 0; // First group in resource data
+
+    try testing.expectError(error.InvalidAddress, resource.iteratePolygons(address, origin, PolygonScale.default, &visitor));
+    try testing.expectEqual(0, visitor.polygons.items.len);
+}
+
+test "iteratePolygons fails with error.EndOfStream on truncated polygon data" {
+    const truncated_data = DataExamples.resource[0..32];
+    const resource = new(truncated_data);
+
+    var visitor = TestVisitor.init(testing.allocator);
+    defer visitor.deinit();
+
+    const origin = .{ .x = 0, .y = 0 };
+    const address = 24; // First group in resource data
+
+    try testing.expectError(error.EndOfStream, resource.iteratePolygons(address, origin, PolygonScale.default, &visitor));
+    try testing.expectEqual(1, visitor.polygons.items.len);
+}
