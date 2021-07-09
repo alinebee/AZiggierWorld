@@ -1,6 +1,8 @@
 const math = @import("std").math;
 
-/// Defines a range of integers from a minimum up to and including a maximum value.
+/// Defines a closed range of integers from a minimum up to *and including* a maximum value.
+/// Precondition:
+/// `min` must be <= `max`. Specifying `min` > `max` will result in undefined behaviour.
 pub fn new(comptime Integer: type, min: Integer, max: Integer) Instance(Integer) {
     return Instance(Integer){ .min = min, .max = max };
 }

@@ -1,16 +1,21 @@
-//! Defines functions for parsing Another World's polygon resource data.
+//! This file defines a parser that extracts polygons from Another World's polygon resource data.
 //!
-//! Another World's polygon resources are stored as a recursive hierarchy:
-//! - At the top level are entries which may either be a single polygon or a group of n polygons/subgroups.
-//! - Each group of polygons is a variable-length list of "pointers" to other entries within the polygon data.
-//!   Those pointers may point to a single polygon or to another group.
-//!   Groups also define an x,y offset to apply to all entries within that group;
-//!   Each individual pointer can also define its own x,y offset to apply on top of that,
-//!   and can also override the draw mode of the polygon it points to.
+//! Another World's polygon resources were stored as a recursive hierarchy:
+//! - At the top level are entries, which can be either a single polygon (see polygon.zig)
+//!   or a group of n polygons.
+//! - Within each group of polygons is a variable-length list of address pointers to other entries
+//!   within the polygon data block. Those pointers may point to a single polygon or to another group,
+//!   allowing arbitrarily nested groups.
 //!
-//! This grouping structure allowed Another World to group multiple polygons into conceptual draw units
-//! and to efficiently reuse polygons while applying situation-specific tweaks to them.
-//! (It also allows potential recursion cycles, which the parser must manually guard against.)
+//! Groups also define an x,y offset to apply to all entries within that group;
+//! each individual pointer also defines its own x,y offset to apply on top of the group's offset,
+//! and (in the case of pointers to polygons) can optionally override the draw mode of their polygon.
+//!
+//! This grouping structure allowed Another World to group sets of polygons into conceptual draw units
+//! (e.g. all polygons for the player sprite were drawn as a group), and to efficiently share and reuse
+//! polygons while applying situation-specific tweaks to them.
+//!
+//! (It also allows potential recursion cycles, which this parser manually guards against.)
 
 const Polygon = @import("../rendering/polygon.zig");
 const PolygonScale = @import("../values/polygon_scale.zig");
@@ -36,10 +41,19 @@ pub const Instance = struct {
     /// from malformed resources, we return an error once we hit this maximum depth.
     const max_recursion_depth = 10;
 
-    /// Reads polygons from the specified address within the polygon data and calls visitor.visit with each polygon.
-    /// Visitor.visit must have the signature: fn (Polygon.Instance) !bool and must return true to continue iteration
+    /// Reads polygons from the specified address within the polygon data, and calls `visitor.visit` with each polygon.
+    /// Polygons are positioned and scaled according to the `origin` and `scale` parameters.
+    ///
+    /// `visitor.visit` must have the signature: fn (Polygon.Instance) !bool and must return true to continue iteration
     /// or false to stop iterating.
-    /// Returns one of Error if malformed data is encountered when reading polygon data or if visitor.visit returns an error.
+    ///
+    /// Returns one of Error if the address is invalid, if malformed data is encountered when reading polygon data,
+    /// or if `visitor.visit` returns an error.
+    ///
+    /// Precondition:
+    /// Address must be known in advance to point to the start of a polygon or group definition within the data.
+    /// Addresses cannot be validated, so it is possible to start parsing from e.g. the middle of a polygon or group;
+    /// At best this will result in an error; at worst, silently succeeding but producing garbage polygon data.
     pub fn iteratePolygons(self: Instance, address: Address, origin: Point.Instance, scale: PolygonScale.Raw, visitor: anytype) Error(@TypeOf(visitor))!void {
         try self.recursivelyParseEntry(address, origin, scale, null, 0, visitor);
     }
