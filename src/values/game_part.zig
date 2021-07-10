@@ -2,8 +2,6 @@ const ResourceID = @import("resource_id.zig");
 
 const intToEnum = @import("../utils/introspection.zig").intToEnum;
 
-// zig fmt: off
-
 /// Defines the parts in an Another World game, which can represent either chapters of gameplay,
 /// cinematics, or menu screens. The VM can have a single game part loaded and running at a time.
 pub const Enum = enum(Raw) {
@@ -23,6 +21,7 @@ pub const Enum = enum(Raw) {
     gameplay5,
     password_entry,
 
+    // zig fmt: off
     /// The IDs of the resources to load for this game part.
     pub fn resourceIDs(self: Enum) ResourceIDs {
         return switch (self) {
@@ -37,8 +36,22 @@ pub const Enum = enum(Raw) {
             .password_entry     => .{ .palettes = 0x7D, .bytecode = 0x7E, .polygons = 0x7F },
         };
     }
+    // zig fmt: on
+
+    /// All game parts in order of occurrence
+    pub const all = [_]Enum{
+        // TODO: try populating this via @typeInfo(@This()).Enum.fields
+        .copy_protection,
+        .intro_cinematic,
+        .gameplay1,
+        .gameplay2,
+        .gameplay3,
+        .arena_cinematic,
+        .gameplay4,
+        .gameplay5,
+        .password_entry,
+    };
 };
-// zig fmt: on
 
 /// Defines the resources needed for a specific part of the game.
 pub const ResourceIDs = struct {

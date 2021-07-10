@@ -11,6 +11,7 @@ const instrospection = @import("../utils/introspection.zig");
 const validFixturePath = @import("helpers.zig").validFixturePath;
 const std = @import("std");
 
+/// Records and prints the details of a bytecode instruction that could not be parsed.
 const ParseFailure = struct {
     resource_id: usize,
     offset: usize,
@@ -67,10 +68,10 @@ test "parseNextInstruction parses all programs in fixture bytecode" {
         const data = try loader.readResource(testing.allocator, descriptor);
         defer testing.allocator.free(data);
 
-        var program = Program.Instance{ .bytecode = data };
+        var program = Program.new(data);
 
-        var last_valid_address = program.counter;
-        while (program.counter < program.bytecode.len) : (last_valid_address = program.counter) {
+        while (program.isAtEnd() == false) {
+            const last_valid_address = program.counter;
             if (Instruction.parseNextInstruction(&program)) {
                 // Instruction parsing succeeded, hooray!
             } else |err| {

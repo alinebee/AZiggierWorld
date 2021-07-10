@@ -66,6 +66,11 @@ pub const Instance = struct {
 
         self.counter = address;
     }
+
+    /// Whether the end of the program has been reached.
+    pub fn isAtEnd(self: Instance) bool {
+        return self.counter >= self.bytecode.len;
+    }
 };
 
 /// Create a new program that will execute from the start of the specified bytecode.

@@ -19,7 +19,7 @@ pub fn new(allocator: *mem.Allocator, game_path: []const u8) !Instance {
     return instance;
 }
 
-const Instance = struct {
+pub const Instance = struct {
     allocator: *mem.Allocator,
     resource_descriptors: []const ResourceDescriptor.Instance,
     path: []const u8,
