@@ -169,7 +169,7 @@ const EntryHeader = union(enum) {
 
 /// Represents the header for a polygon group within polygon resource data.
 const GroupHeader = struct {
-    /// The x,y distance to offset this group's polygons and subgroups from the parent origin.
+    /// The scaled x,y distance to offset this group's polygons and subgroups from the parent origin.
     /// Should be subtracted from - not added to - the parent origin.
     offset: Point.Instance,
     /// The number of entries within this group, from 1-256.
@@ -178,12 +178,12 @@ const GroupHeader = struct {
     /// Parses a group header from a byte stream containing polygon resource data.
     /// Consumes 3 bytes from the stream.
     /// Fails with an error if there are not enough bytes in the stream.
-    fn parse(reader: anytype, scale: PolygonScale.Raw) ParseError!GroupHeader {
+    fn parse(reader: anytype, scale: PolygonScale.Raw) !GroupHeader {
         // Each polygon group is stored as the following bytes:
-        // 0: Unscaled X offset at which to draw the group: multiplied by the scale and then *subtracted* from the parent origin.
-        // 1: Unscaled Y offset at which to draw the group: multiplied by the scale and then *subtracted* from the parent origin.
-        // 2: Number of entries in this group - 1.
-        // 3...: the pointers for each entry in this group (see EntryPointer below).
+        // 0: Unscaled X offset at which to draw the group: multiplied by `scale` to get the final offset.
+        // 1: Unscaled Y offset at which to draw the group: multiplied by `scale` to get the final offset.
+        // 2: Number of entries in this group, minus 1.
+        // 3...: the pointers for each entry in this group (see EntryPointer).
         return GroupHeader{
             .offset = try parseOffset(reader, scale),
             // The entry count is undercounted by 1, so a single group can contain 1-256 entries.
@@ -206,21 +206,20 @@ const EntryPointer = struct {
     /// Parses a single entry pointer from a byte stream containing polygon resource data.
     /// Consumes either 4 or 6 bytes from the stream, depending on the contents of the pointer record.
     /// Fails with an error if there are not enough bytes in the stream.
-    fn parse(reader: anytype, scale: PolygonScale.Raw) ParseError!EntryPointer {
+    fn parse(reader: anytype, scale: PolygonScale.Raw) !EntryPointer {
         // Each pointer is stored as the following bytes:
         // 0...1: A 16-bit control code with the layout `maaa_aaaa_aaaa_aaaa`, where:
         //        - `m` is a 1-bit flag determining whether to read extra bytes for the override draw mode.
         //        - `a` is the 15-bit right-shifted address (within the same resource) of the polygon or group this entry points to.
         //          (Having pointers to polygons allows the same polygon to be reused within several different groups.)
-        // 2:     The unscaled X offset at which to draw the polygon, relative to the overall group.
+        // 2:     The unscaled X offset at which to draw the polygon/group, relative to the parent group.
         //        Multiplied by the scale to get the final offset.
-        // 3:     The unscaled Y offset at which to draw the polygon, relative to the overall group.
+        // 3:     The unscaled Y offset at which to draw the polygon/group, relative to the parent group.
         //        Multiplied by the scale to get the final offset.
-        // 4...5: An extra 16-bit word that will be read only if the top bit of the control code was 1.
-        //        This has the layout `xmmm_mmmm_xxxx_xxxx`, where:
+        // [4...5]: An optional 16-bit word that will be read only if the top bit of the control code was 1.
+        //        This has the layout `mmmm_mmmm_xxxx_xxxx`, where:
         //        - `m` is the draw mode to render the polygon with, overriding the polygon's own draw mode.
-        //        - `x` are unused or unknown.
-        //          TODO: explore what values these unknown bits hold.
+        //        - `x` is an unused padding byte to ensure the following data starts on an even address.
         const code = try reader.readInt(Address, .Big);
         const overrides_draw_mode = (code >> 15) == 0b1;
 
@@ -232,18 +231,30 @@ const EntryPointer = struct {
 
         if (overrides_draw_mode) {
             // Pointers that override the draw mode are two bytes longer, but only the first byte is used.
-            // The second byte is presumably just padding, to ensure that pointers remain an even byte length.
-            // Group headers and polygons are also an even length, once you factor in their entry header byte;
-            // together this ensures that all polygon addresses stay aligned to 2-byte boundaries, and can be
+            // The second byte is (probably) just padding, to ensure that pointers remain an even byte length.
+            //
+            // Group headers and polygons are also an even length, once you factor in their entry header byte:
+            // together this ensures that all polygon addresses stay aligned to 2-byte boundaries, so they can be
             // represented in 15 bits instead of 16.
             //
             // Another World takes advantage of this by packing a flag into the top bit of the polygon address,
-            // in both the entry pointer and in background draw instructions: see draw_background_polygon.zig
-            // for details of the latter.
+            // both in the entry pointer (see above) and in background draw instructions (see draw_background_polygon.zig).
             const raw_draw_mode = try reader.readByte();
             _ = try reader.readByte();
 
-            // Why did the original implementation mask this? Does the top bit have special meaning?
+            // The original C implementation didn't have nice Optional types like Zig, so for pointers that don't
+            // override the draw mode it would use the top bit of the draw mode parameter as a sentinel meaning
+            // "use the polygon's default draw mode".
+            // For pointers that do override the draw mode, it masked off the top bit when parsing the draw mode byte
+            // to prevent the custom value from accidentally matching the sentinel.
+            //
+            // We have optionals in Zig, so we don't need to worry about colliding with sentinels; but we still need
+            // to mask off that bit in case any pointers in the original game data had left it on by mistake.
+            //
+            // The original pointer parsing code is here:
+            // https://github.com/fabiensanglard/Another-World-Bytecode-Interpreter/blob/dea6914a82f493cb329188bcffa46b9d0b234ea6/src/video.cpp#L228
+            // And the original code that consumed the draw mode is here:
+            // https://github.com/fabiensanglard/Another-World-Bytecode-Interpreter/blob/dea6914a82f493cb329188bcffa46b9d0b234ea6/src/video.cpp#L91-L93
             self.draw_mode = DrawMode.parse(raw_draw_mode & 0b0111_1111);
         } else {
             self.draw_mode = null;
