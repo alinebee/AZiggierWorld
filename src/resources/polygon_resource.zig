@@ -182,7 +182,7 @@ const GroupHeader = struct {
         return GroupHeader{
             .offset = try parseOffset(reader, scale),
             // The entry count is undercounted by 1, so a single group can contain 1-256 entries.
-            .count = @intCast(usize, try reader.readByte()) + 1,
+            .count = @as(usize, try reader.readByte()) + 1,
         };
     }
 };

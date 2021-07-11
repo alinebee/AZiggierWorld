@@ -214,7 +214,7 @@ const FixedPrecision = struct {
 
     /// Create a new fixed precision value from a whole number.
     fn new(_whole: i16) Self {
-        return .{ .raw = @intCast(i32, _whole) << 16 };
+        return .{ .raw = @as(i32, _whole) << 16 };
     }
 
     /// The whole component of the number.
@@ -269,7 +269,7 @@ fn stepDistance(delta_x: Point.Coordinate, delta_y: VerticalDelta) FixedPrecisio
     return .{
         // The slope table uses 14 bits of precision for the fractional component.
         // The final result must then be left-shifted by 2 to arrive at the desired 16.16 precision.
-        .raw = (@intCast(i32, delta_x) * @intCast(i32, slope)) << 2,
+        .raw = (@as(i32, delta_x) * @as(i32, slope)) << 2,
     };
 }
 
