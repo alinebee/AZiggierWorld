@@ -33,20 +33,6 @@ pub fn Instance(comptime StorageFn: anytype, comptime width: usize, comptime hei
             self.storage.fill(color);
         }
 
-        /// Draw a 1-pixel-wide horizontal line filling the specified range,
-        /// deciding its color according to the draw mode.
-        /// Portions of the line that are out of bounds will not be drawn.
-        pub fn drawSpan(self: *Self, x: Range.Instance(Point.Coordinate), y: Point.Coordinate, draw_mode: DrawMode.Enum, mask_buffer: *const Self) void {
-            if (Self.bounds.y.contains(y) == false) return;
-
-            // Clamp the x coordinates for the line to fit within the video buffer,
-            // and bail out if it's entirely out of bounds.
-            const in_bounds_x = Self.bounds.x.intersection(x) orelse return;
-
-            const operation = Storage.DrawOperation.forMode(draw_mode, &mask_buffer.storage);
-            self.storage.uncheckedDrawSpan(in_bounds_x, y, operation);
-        }
-
         /// Draws the specified 8x8 glyph in a solid color, positioning its top left corner at the specified point.
         /// Returns error.GlyphOutOfBounds if the glyph's bounds do not lie fully inside the buffer.
         pub fn drawGlyph(self: *Self, glyph: Font.Glyph, origin: Point.Instance, color: ColorID.Trusted) Error!void {
@@ -318,91 +304,6 @@ fn runTests(comptime Storage: anytype) void {
                 \\FFFF
                 \\FFFF
                 \\FFFF
-            ;
-
-            try expectPixels(expected, buffer.storage);
-        }
-
-        test "drawSpan draws a horizontal line in a fixed color and ignores mask buffer, clamping line to fit within bounds" {
-            var buffer = new(Storage, 4, 4);
-
-            var mask_buffer = new(Storage, 4, 4);
-            mask_buffer.fill(0xF);
-
-            buffer.drawSpan(.{ .min = -2, .max = 2 }, 1, .{ .solid_color = 0x9 }, &mask_buffer);
-
-            const expected =
-                \\0000
-                \\9990
-                \\0000
-                \\0000
-            ;
-
-            try expectPixels(expected, buffer.storage);
-        }
-
-        test "drawSpan highlights existing colors in a horizontal line and ignores mask buffer, clamping line to fit within bounds" {
-            var buffer = new(Storage, 4, 4);
-            buffer.storage.fillFromString(
-                \\0123
-                \\0123
-                \\0123
-                \\0123
-            );
-
-            var mask_buffer = new(Storage, 4, 4);
-            mask_buffer.fill(0xF);
-
-            buffer.drawSpan(.{ .min = -2, .max = 2 }, 1, .highlight, &mask_buffer);
-
-            // Colors from 0...7 should have been ramped up to 8...F;
-            // colors from 8...F should have been left as they are.
-            const expected =
-                \\0123
-                \\89A3
-                \\0123
-                \\0123
-            ;
-
-            try expectPixels(expected, buffer.storage);
-        }
-
-        test "drawSpan copies mask pixels in horizontal line, clamping line to fit within bounds" {
-            var buffer = new(Storage, 4, 4);
-
-            var mask_buffer = new(Storage, 4, 4);
-            mask_buffer.storage.fillFromString(
-                \\0123
-                \\4567
-                \\89AB
-                \\CDEF
-            );
-
-            buffer.drawSpan(.{ .min = -2, .max = 2 }, 1, .mask, &mask_buffer);
-
-            const expected =
-                \\0000
-                \\4560
-                \\0000
-                \\0000
-            ;
-
-            try expectPixels(expected, buffer.storage);
-        }
-
-        test "drawSpan draws no pixels when line is completely out of bounds" {
-            var buffer = new(Storage, 4, 4);
-
-            var mask_buffer = new(Storage, 4, 4);
-            mask_buffer.fill(0xF);
-
-            buffer.drawSpan(.{ .min = -2, .max = 2 }, 4, .{ .solid_color = 0x9 }, &mask_buffer);
-
-            const expected =
-                \\0000
-                \\0000
-                \\0000
-                \\0000
             ;
 
             try expectPixels(expected, buffer.storage);
