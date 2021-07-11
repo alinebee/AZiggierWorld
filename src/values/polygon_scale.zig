@@ -12,12 +12,27 @@ pub const default: Raw = 64;
 /// Scale a signed or unsigned integer value by the specified factor.
 /// This will wrap if the scaled result is too large to fit into the target integer width.
 pub fn apply(comptime Int: type, value: Int, scale: Raw) Int {
+    // The reference implementation implicitly relies on C++'s integral promotion rules:
+    // https://en.cppreference.com/w/cpp/language/implicit_conversion#Numeric_promotions
+    // where signed 16-bit values would be silently promoted to native-width integers
+    // before doing arithmetic, then truncated after.
+    // Zig does not automatically do this (for good reason) and would give inconsistent
+    // results to C/C++ if we naively adapted the original algorithm.
+    // Instead, we explicitly promote to full-width to document what's going on and ensure
+    // we match the same behaviour.
+    //
+    // This implementation may diverge from the original game's behaviour on 16-bit hardware,
+    // in cases where the raw scale value was large enough to flow into the sign bit of an i16;
+    // that could theoretically happen since scale values from registers are 16 bits,
+    // but I expect that it never occurred in the original game.
     comptime const fullwidth_type = if (trait.isUnsignedInt(Int)) usize else isize;
-    comptime const divisor = @as(fullwidth_type, default);
+    comptime const fullwidth_divisor = @as(fullwidth_type, default);
 
-    const scaled_value = @divTrunc(@as(fullwidth_type, value) *% @as(fullwidth_type, scale), divisor);
+    const fullwidth_value = @as(fullwidth_type, value);
+    const fullwidth_scale = @as(fullwidth_type, scale);
+    const fullwidth_scaled_value = @divTrunc(fullwidth_value *% fullwidth_scale, fullwidth_divisor);
 
-    return @truncate(Int, scaled_value);
+    return @truncate(Int, fullwidth_scaled_value);
 }
 
 // -- Tests --
@@ -39,6 +54,11 @@ test "apply applies no scaling to signed values at default value" {
 
 test "apply applies no scaling to signed 0" {
     try testing.expectEqual(0, apply(i16, 0, default * 2));
+}
+
+test "apply with scale 0 scales down to 0" {
+    try testing.expectEqual(0, apply(i16, 1337, 0));
+    try testing.expectEqual(0, apply(i16, -1337, 0));
 }
 
 test "apply wraps signed values on overflow instead of trapping" {

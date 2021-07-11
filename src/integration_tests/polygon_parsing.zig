@@ -100,8 +100,8 @@ fn parsePolygonInstructionsForGamePart(allocator: *std.mem.Allocator, loader: Re
 }
 
 const Error = error{
-    /// A game part's draw instructions tried to draw polygon data from an animations block that
-    /// was not loaded for that game part.
+    /// A game part's draw instructions tried to draw polygon data from the `animations` block
+    /// when one is not defined for that game part.
     MissingAnimationsBlock,
 };
 
@@ -114,7 +114,7 @@ const PolygonVisitor = struct {
     }
 };
 
-test "Execute polygon instructions for every game part" {
+test "Parse polygon instructions for every game part" {
     const game_path = validFixturePath(testing.allocator) catch return;
     defer testing.allocator.free(game_path);
 
