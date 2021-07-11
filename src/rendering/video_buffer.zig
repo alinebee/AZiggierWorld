@@ -94,7 +94,7 @@ pub fn Instance(comptime StorageFn: anytype, comptime width: usize, comptime hei
 
         /// Draws a single polygon into the buffer using the position and draw mode specified in the polygon's data.
         /// Returns an error if:
-        /// - polygon.count == 0.
+        /// - polygon.count < 4 or > 50.
         /// - any vertex along the right-hand side of the polygon is higher than the previous vertex.
         /// - any vertex along the right-hand side of the polygon is > 1023 units below the previous vertex.
         pub fn drawPolygon(self: *Self, polygon: Polygon.Instance, mask_buffer: *const Self) Error!void {
@@ -166,9 +166,9 @@ pub fn Instance(comptime StorageFn: anytype, comptime width: usize, comptime hei
                     var rows_remaining = vertical_delta;
 
                     while (rows_remaining > 0) : (rows_remaining -= 1) {
-                        // Don't draw parts of the polygon that are off the top of the buffer,
+                        // Don't draw parts of the polygon that are outside the buffer,
                         // but still accumulate their changes to x.
-                        if (y >= Self.bounds.x.min) {
+                        if (Self.bounds.y.contains(y)) {
                             const x1 = clockwise_x.whole();
                             const x2 = counterclockwise_x.whole();
 
@@ -488,6 +488,39 @@ fn runTests(comptime Storage: anytype) void {
                 \\001100
                 \\011110
                 \\011100
+                \\000000
+                \\000000
+            ;
+
+            try buffer.drawPolygon(poly, &mask_buffer);
+            try expectPixels(expected, buffer.storage);
+        }
+
+        test "drawPolygon with malformed bounds does not draw offscreen" {
+            var poly = Polygon.new(
+                .{ .solid_color = 0x1 },
+                &.{
+                    .{ .x = 3, .y = 6 },
+                    .{ .x = 4, .y = 7 },
+                    .{ .x = 2, .y = 10 },
+                    .{ .x = 1, .y = 10 },
+                    .{ .x = 1, .y = 7 },
+                    .{ .x = 2, .y = 6 },
+                },
+            );
+            // The polygon's vertices are all off the bottom of the screen,
+            // but the bounds puts it on-screen.
+            poly.bounds.y.min = 0;
+
+            var buffer = new(Storage, 6, 6);
+            var mask_buffer = new(Storage, 6, 6);
+            mask_buffer.fill(0xF);
+
+            const expected =
+                \\000000
+                \\000000
+                \\000000
+                \\000000
                 \\000000
                 \\000000
             ;

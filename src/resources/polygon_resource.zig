@@ -267,10 +267,12 @@ const EntryPointer = struct {
 };
 
 // Parse the polygon offset for a group header or entry pointer.
-fn parseOffset(reader: anytype, scale: PolygonScale.Raw) ParseError!Point.Instance {
+fn parseOffset(reader: anytype, scale: PolygonScale.Raw) !Point.Instance {
+    const raw_x = try reader.readByte();
+    const raw_y = try reader.readByte();
     return Point.Instance{
-        .x = PolygonScale.apply(i16, try reader.readByte(), scale),
-        .y = PolygonScale.apply(i16, try reader.readByte(), scale),
+        .x = PolygonScale.apply(i16, raw_x, scale),
+        .y = PolygonScale.apply(i16, raw_y, scale),
     };
 }
 
