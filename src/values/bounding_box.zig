@@ -51,12 +51,26 @@ pub fn new(min_x: Point.Coordinate, min_y: Point.Coordinate, max_x: Point.Coordi
 pub fn centeredOn(center: Point.Instance, width: Dimension, height: Dimension) Instance {
     var self: Instance = undefined;
 
-    // TODO: add tests for wrap-on-overflow
-    self.x.min = center.x -% @intCast(Point.Coordinate, width / 2);
-    self.y.min = center.y -% @intCast(Point.Coordinate, height / 2);
+    const native_width = @as(isize, width);
+    const native_height = @as(isize, height);
 
-    self.x.max = self.x.min +% @intCast(Point.Coordinate, width);
-    self.y.max = self.y.min +% @intCast(Point.Coordinate, height);
+    const native_minx = @as(isize, center.x) -% @divTrunc(native_width, 2);
+    const native_miny = @as(isize, center.y) -% @divTrunc(native_height, 2);
+
+    // Note: this diverges from the reference implementation, which added
+    // [width / 2] and [height / 2] to the center to get the max x and y.
+    // Since division truncates, this would result in odd widths/heights
+    // having a max 1 lower than it should be, potentially causing
+    // polygons at the top/left screen edges to not be drawn when they should.
+    // The behaviour below is more correct, but may cause the rendering to diverge
+    // from the original in unwanted ways.
+    const native_maxx = native_minx +% native_width;
+    const native_maxy = native_miny +% native_height;
+
+    self.x.min = @truncate(Point.Coordinate, native_minx);
+    self.x.max = @truncate(Point.Coordinate, native_maxx);
+    self.y.min = @truncate(Point.Coordinate, native_miny);
+    self.y.max = @truncate(Point.Coordinate, native_maxy);
 
     return self;
 }
@@ -64,6 +78,7 @@ pub fn centeredOn(center: Point.Instance, width: Dimension, height: Dimension) I
 // -- Tests --
 
 const testing = @import("../utils/testing.zig");
+const math = @import("std").math;
 
 fn expectIntersects(expectation: bool, bb1: Instance, bb2: Instance) !void {
     try testing.expectEqual(expectation, bb1.intersects(bb2));
@@ -81,6 +96,50 @@ test "centeredOn creates correct bounding box" {
     try testing.expectEqual(-60, bb.y.min);
     try testing.expectEqual(240, bb.x.max);
     try testing.expectEqual(140, bb.y.max);
+}
+
+test "centeredOn creates corrected bounding box for odd values" {
+    const bb = centeredOn(.{ .x = 80, .y = 40 }, 201, 99);
+
+    try testing.expectEqual(-20, bb.x.min);
+    try testing.expectEqual(181, bb.x.max);
+    try testing.expectEqual(-9, bb.y.min);
+    try testing.expectEqual(90, bb.y.max);
+}
+
+test "centeredOn handles max dimensions without trapping" {
+    const max = math.maxInt(Dimension);
+    const bb = centeredOn(.{ .x = 0, .y = 0 }, max, max);
+
+    // This is a pathological edge case caused by applying the division remainder
+    // from an uneven width/height to the max instead of the min, causing the max to overflow.
+    // Solving this would require either clamping the dimensions or diverging even further
+    // from the original game's rounding behaviour; we can assume that the original implementation
+    // never intended or needed to account for max dimensions, so I'm leaving this unfixed for now.
+    try testing.expectEqual(-32767, bb.x.min);
+    try testing.expectEqual(-32768, bb.x.max);
+    try testing.expectEqual(-32767, bb.y.min);
+    try testing.expectEqual(-32768, bb.y.max);
+}
+
+test "centeredOn overflows without trapping" {
+    const max = math.maxInt(Point.Coordinate);
+    const bb = centeredOn(.{ .x = max, .y = max }, 2, 2);
+
+    try testing.expectEqual(32766, bb.x.min);
+    try testing.expectEqual(-32768, bb.x.max);
+    try testing.expectEqual(32766, bb.y.min);
+    try testing.expectEqual(-32768, bb.y.max);
+}
+
+test "centeredOn underflows without trapping" {
+    const min = math.minInt(Point.Coordinate);
+    const bb = centeredOn(.{ .x = min, .y = min }, 2, 2);
+
+    try testing.expectEqual(32767, bb.x.min);
+    try testing.expectEqual(-32767, bb.x.max);
+    try testing.expectEqual(32767, bb.y.min);
+    try testing.expectEqual(-32767, bb.y.max);
 }
 
 test "origin returns expected origin" {
