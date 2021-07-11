@@ -146,20 +146,21 @@ const EntryHeader = union(enum) {
         //   treat the following bytes as a polygon group.
         // - Otherwise: treat the control code as unrecognised and fail.
         //
-        // TODO: Figure out if the reference logic is actually correct,
-        // by observing the range of control codes used in the actual game data.
-        // - Why use the top two bits to denote polygon vs group, instead of a single bit?
-        // - Why does the value 2 denote a polygon group? Were more valid control codes planned?
+        // Another World's DOS game data does not contain any control codes that aren't of the forms
+        // 0b11_xxxxxx or 0b00_000010, so these questions are unclear:
+        // - Why use two of the top bits to denote polygon vs group, instead of a single bit?
+        // - Why use the explicit value 2 to denote a polygon group, instead of just all 0s?
+        // Possibly there were other control codes that were cut before release or left unimplemented.
 
-        const code = try reader.readByte();
+        const raw = try reader.readByte();
 
-        const type_flag = code >> 6;
-        const data = code & 0b0011_1111;
+        const top_2_bits = raw >> 6;
+        const remaining_6_bits = raw & 0b0011_1111;
 
-        if (type_flag == 0b11) {
-            const draw_mode = DrawMode.parse(data);
+        if (top_2_bits == 0b11) {
+            const draw_mode = DrawMode.parse(remaining_6_bits);
             return EntryHeader{ .single_polygon = draw_mode };
-        } else if (data == 0b10) {
+        } else if (remaining_6_bits == 0b000010) {
             return EntryHeader.group;
         } else {
             return error.UnknownPolygonEntryType;
@@ -219,7 +220,7 @@ const EntryPointer = struct {
         // [4...5]: An optional 16-bit word that will be read only if the top bit of the control code was 1.
         //        This has the layout `mmmm_mmmm_xxxx_xxxx`, where:
         //        - `m` is the draw mode to render the polygon with, overriding the polygon's own draw mode.
-        //        - `x` is an unused padding byte to ensure the following data starts on an even address.
+        //        - `x` appears to be an unused padding byte to ensure the following data starts on an even address.
         const code = try reader.readInt(Address, .Big);
         const overrides_draw_mode = (code >> 15) == 0b1;
 
@@ -231,7 +232,9 @@ const EntryPointer = struct {
 
         if (overrides_draw_mode) {
             // Pointers that override the draw mode are two bytes longer, but only the first byte is used.
-            // The second byte is (probably) just padding, to ensure that pointers remain an even byte length.
+            // The second byte is *probably* just padding, to ensure that pointers remain an even byte length.
+            // (However, this padding byte contains a variety of different bit patterns in the original DOS game data,
+            // so perhaps it has special meaning that went unused by the reference implementation.)
             //
             // Group headers and polygons are also an even length, once you factor in their entry header byte:
             // together this ensures that all polygon addresses stay aligned to 2-byte boundaries, so they can be
@@ -243,13 +246,18 @@ const EntryPointer = struct {
             _ = try reader.readByte();
 
             // The original C implementation didn't have nice Optional types like Zig, so for pointers that don't
-            // override the draw mode it would use the top bit of the draw mode parameter as a sentinel meaning
+            // override the draw mode it apparently used the top bit of the draw mode parameter as a sentinel meaning
             // "use the polygon's default draw mode".
-            // For pointers that do override the draw mode, it masked off the top bit when parsing the draw mode byte
+            // For pointers that do override the draw mode, it masked off the top bit when parsing the draw mode byte,
             // to prevent the custom value from accidentally matching the sentinel.
             //
-            // We have optionals in Zig, so we don't need to worry about colliding with sentinels; but we still need
-            // to mask off that bit in case any pointers in the original game data had left it on by mistake.
+            // We have optionals in Zig so we don't need to worry about the custom value colliding with the sentinel;
+            // but we still need to mask off that top bit, since a lot of the pointers in the original DOS game data
+            // did leave it set. Otherwise, the top bit would change the type of draw mode from `solid_color` or `highlight`
+            // to `mask`. (See draw_mode.zig for how raw draw mode values are interpreted.)
+            //
+            // (It's possible that top bit had some special meaning for overridden draw modes, like the bit pattern
+            // in the padding byte; if so, it likewise went unused in the reference implementation.)
             //
             // The original pointer parsing code is here:
             // https://github.com/fabiensanglard/Another-World-Bytecode-Interpreter/blob/dea6914a82f493cb329188bcffa46b9d0b234ea6/src/video.cpp#L228
