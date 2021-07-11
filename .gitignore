@@ -3,3 +3,5 @@ zig-cache/
 fixtures/
 # Scratchpad for local testing
 scratchpad.zig
+# OS noise
+.DS_Store
