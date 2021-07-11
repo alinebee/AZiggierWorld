@@ -98,7 +98,7 @@ pub fn Instance(comptime StorageFn: anytype, comptime width: usize, comptime hei
             // Early-out for polygons that cover a single screen pixel
             if (polygon.isDot()) {
                 const origin = polygon.bounds.origin();
-                self.storage.uncheckedDrawSpan(.{ .min = origin.x, .max = origin.x }, origin.y, operation);
+                self.storage.uncheckedDrawDot(origin, operation);
                 return;
             }
 

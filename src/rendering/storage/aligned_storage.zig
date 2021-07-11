@@ -116,6 +116,15 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
             operation.drawRange(self, row, start_column, end_column);
         }
 
+        /// Draw a single pixel using the specified draw operation.
+        /// This is not bounds-checked: specifying a point outside the buffer results in undefined behaviour.
+        pub fn uncheckedDrawDot(self: *Self, point: Point.Instance, operation: DrawOperation) void {
+            // TODO: add optimized functions to DrawOperation that avoid loops?
+            const row = @intCast(usize, point.y);
+            const column = @intCast(usize, point.x);
+            operation.drawRange(self, row, column, column + 1);
+        }
+
         // -- Test helpers --
 
         /// Export the content of the buffer to a bitmap for easier comparison testing.

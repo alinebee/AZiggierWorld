@@ -192,6 +192,13 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
             }
         }
 
+        /// Draw a single pixel using the specified draw operation.
+        /// This is not bounds-checked: specifying a point outside the buffer results in undefined behaviour.
+        pub fn uncheckedDrawDot(self: *Self, point: Point.Instance, operation: DrawOperation) void {
+            var index = uncheckedIndexOf(point);
+            operation.drawPixel(self, index);
+        }
+
         // -- Test helpers --
 
         /// Export the content of the buffer to a bitmap for easier comparison testing.
