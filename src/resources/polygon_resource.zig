@@ -83,19 +83,13 @@ pub const Instance = struct {
             .group => {
                 const group_header = try GroupHeader.parse(reader, scale);
 
-                const group_origin = Point.Instance{
-                    .x = origin.x -% group_header.offset.x,
-                    .y = origin.y -% group_header.offset.y,
-                };
+                const group_origin = origin.subtracting(group_header.offset);
 
                 var entries_remaining = group_header.count;
                 while (entries_remaining > 0) : (entries_remaining -= 1) {
                     const entry = try EntryPointer.parse(reader, scale);
 
-                    const entry_origin = Point.Instance{
-                        .x = group_origin.x +% entry.offset.x,
-                        .y = group_origin.y +% entry.offset.y,
-                    };
+                    const entry_origin = group_origin.adding(entry.offset);
 
                     try self.recursivelyParseEntry(entry.address, entry_origin, scale, entry.draw_mode, recursion_depth + 1, visitor);
                 }

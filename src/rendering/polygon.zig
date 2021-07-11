@@ -62,28 +62,36 @@ pub fn new(draw_mode: DrawMode.Enum, vertices: []const Point.Instance) Instance 
 /// Parse a stream of bytes from an Another World polygon resource into a polygon instance,
 /// scaling and positioning it according to the specified center and scale factor.
 pub fn parse(reader: anytype, center: Point.Instance, scale: PolygonScale.Raw, draw_mode: DrawMode.Enum) Error(@TypeOf(reader))!Instance {
-    const scaled_width = PolygonScale.apply(BoundingBox.Dimension, try reader.readByte(), scale);
-    const scaled_height = PolygonScale.apply(BoundingBox.Dimension, try reader.readByte(), scale);
+    const raw_width = try reader.readByte();
+    const raw_height = try reader.readByte();
+    const count = try reader.readByte();
+
+    try validateVertexCount(count);
+
+    const scaled_width = PolygonScale.apply(BoundingBox.Dimension, raw_width, scale);
+    const scaled_height = PolygonScale.apply(BoundingBox.Dimension, raw_height, scale);
+    const bounds = BoundingBox.centeredOn(center, scaled_width, scaled_height);
 
     var self = Instance{
         .draw_mode = draw_mode,
-        .bounds = BoundingBox.centeredOn(center, scaled_width, scaled_height),
-        .count = try reader.readByte(),
+        .bounds = bounds,
+        .count = count,
         .vertices = undefined,
     };
 
-    try validateVertexCount(self.count);
-
+    const origin = bounds.origin();
     var index: usize = 0;
     while (index < self.count) : (index += 1) {
-        self.vertices[index] = .{
-            // TODO: add tests for wrap-on-overflow
-            .x = PolygonScale.apply(Point.Coordinate, try reader.readByte(), scale) +% self.bounds.x.min,
-            .y = PolygonScale.apply(Point.Coordinate, try reader.readByte(), scale) +% self.bounds.y.min,
-        };
+        const raw_x = try reader.readByte();
+        const raw_y = try reader.readByte();
+
+        self.vertices[index] = origin.adding(.{
+            .x = PolygonScale.apply(Point.Coordinate, raw_x, scale),
+            .y = PolygonScale.apply(Point.Coordinate, raw_y, scale),
+        });
     }
 
-    try validateVertices(self.vertices[0..self.count]);
+    try validateVertices(self.vertices[0..count]);
 
     return self;
 }
