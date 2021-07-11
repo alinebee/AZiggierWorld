@@ -6,6 +6,7 @@ const ColorID = @import("../values/color_id.zig");
 const Point = @import("../values/point.zig");
 const Range = @import("../values/range.zig");
 const BoundingBox = @import("../values/bounding_box.zig");
+const FixedPrecision = @import("../values/fixed_precision.zig");
 const DrawMode = @import("../values/draw_mode.zig");
 const Font = @import("../assets/font.zig");
 const Polygon = @import("polygon.zig");
@@ -191,39 +192,6 @@ pub fn Instance(comptime StorageFn: anytype, comptime width: usize, comptime hei
     };
 }
 
-/// A signed fixed-point number with 16 bits of precision for the whole part
-/// and 16 bits of precision for the fraction.
-const FixedPrecision = struct {
-    raw: i32,
-
-    const Self = @This();
-
-    /// Create a new fixed precision value from a whole number.
-    fn new(_whole: i16) Self {
-        return .{ .raw = @as(i32, _whole) << 16 };
-    }
-
-    /// The whole component of the number.
-    fn whole(self: Self) i16 {
-        return @truncate(i16, self.raw >> 16);
-    }
-
-    /// The fractional component of the number.
-    fn fraction(self: Self) u16 {
-        return @truncate(u16, self.raw);
-    }
-
-    /// Set a new fractional component of the number.
-    fn setFraction(self: *Self, _fraction: u16) void {
-        self.raw = @bitCast(i32, (@bitCast(u32, self.raw) & 0xFFFF_0000) | _fraction);
-    }
-
-    /// Add two fixed-precision numbers together.
-    fn add(self: *Self, other: Self) void {
-        self.raw +%= other.raw;
-    }
-};
-
 // -- Precomputed slopes --
 
 const VerticalDelta = u10;
@@ -249,7 +217,7 @@ const precomputed_slopes = init: {
 
 /// Given an {x, y} vector, calculates the step to add to x for each unit of y
 /// to draw a slope along that vector.
-fn stepDistance(delta_x: Point.Coordinate, delta_y: VerticalDelta) FixedPrecision {
+fn stepDistance(delta_x: Point.Coordinate, delta_y: VerticalDelta) FixedPrecision.Instance {
     const slope = precomputed_slopes[delta_y];
 
     return .{
