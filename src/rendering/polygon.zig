@@ -26,15 +26,55 @@ pub const Instance = struct {
     pub fn isDot(self: Instance) bool {
         return self.count == min_vertices and self.bounds.isUnit();
     }
+
+    /// Validates that the polygon has a legal number of vertices and the expected
+    /// relationship of vertical distances.
+    /// Only used by tests; VideoBuffer.drawPolygon does a more restricted set of checks
+    /// when rasterizing polygon data.
+    pub fn validate(self: Instance) ValidationError!void {
+        // Polygons must contain an even number of vertices
+        if (@rem(self.count, 2) != 0) return error.VertexCountUneven;
+
+        // Polygons must contain at least 4 and at most 50 vertices
+        if (self.count < min_vertices) return error.VertexCountTooLow;
+        if (self.count > max_vertices) return error.VertexCountTooHigh;
+
+        var clockwise_index: usize = 0;
+        var counterclockwise_index: usize = self.count - 1;
+
+        while (clockwise_index < counterclockwise_index) {
+            const current_y = self.vertices[clockwise_index].y;
+
+            // Vertex pairs must be aligned horizontally.
+            if (current_y != self.vertices[counterclockwise_index].y) {
+                return error.VerticesMisaligned;
+            }
+
+            if (clockwise_index > 0) {
+                const previous_y = self.vertices[clockwise_index - 1].y;
+                const delta_y = current_y - previous_y;
+
+                // Each vertex must always be below the previous one.
+                if (delta_y < min_vertical_span) {
+                    return error.VerticesBacktracked;
+                }
+
+                // No two vertices can be more than 1023 units vertically apart.
+                if (delta_y > max_vertical_span) {
+                    return error.VerticesTooFarApart;
+                }
+            }
+
+            clockwise_index += 1;
+            counterclockwise_index -= 1;
+        }
+    }
 };
 
 /// Construct a valid polygon instance with the specified vertices.
 /// Intended for testing purposes and does not make use of actual game data.
 /// Precondition: vertices must have > 0 and <= 50 entries.
 pub fn new(draw_mode: DrawMode.Enum, vertices: []const Point.Instance) Instance {
-    if (vertices.len < min_vertices) @panic("Not enough vertices!");
-    if (vertices.len > max_vertices) @panic("Too many vertices!");
-
     var self = Instance{
         .draw_mode = draw_mode,
         .count = vertices.len,
@@ -61,12 +101,14 @@ pub fn new(draw_mode: DrawMode.Enum, vertices: []const Point.Instance) Instance 
 
 /// Parse a stream of bytes from an Another World polygon resource into a polygon instance,
 /// scaling and positioning it according to the specified center and scale factor.
-pub fn parse(reader: anytype, center: Point.Instance, scale: PolygonScale.Raw, draw_mode: DrawMode.Enum) Error(@TypeOf(reader))!Instance {
+pub fn parse(reader: anytype, center: Point.Instance, scale: PolygonScale.Raw, draw_mode: DrawMode.Enum) ParseError(@TypeOf(reader))!Instance {
     const raw_width = try reader.readByte();
     const raw_height = try reader.readByte();
     const count = try reader.readByte();
 
-    try validateVertexCount(count);
+    if (count > max_vertices) {
+        return error.VertexCountTooHigh;
+    }
 
     const scaled_width = PolygonScale.apply(BoundingBox.Dimension, raw_width, scale);
     const scaled_height = PolygonScale.apply(BoundingBox.Dimension, raw_height, scale);
@@ -91,15 +133,7 @@ pub fn parse(reader: anytype, center: Point.Instance, scale: PolygonScale.Raw, d
         });
     }
 
-    try validateVertices(self.vertices[0..count]);
-
     return self;
-}
-
-/// The errors that can be returned by a call to `parse`.
-pub fn Error(comptime Reader: type) type {
-    const ReadError = introspection.ErrorType(Reader.readByte);
-    return ReadError || ValidationError;
 }
 
 pub const min_vertices = 4;
@@ -108,7 +142,14 @@ pub const max_vertices = 50;
 const min_vertical_span = 0;
 const max_vertical_span = 1023;
 
-const ValidationError = error{
+pub fn ParseError(comptime Reader: type) type {
+    const ReaderError = introspection.ErrorType(Reader.readByte);
+    return ReaderError || error{
+        VertexCountTooHigh,
+    };
+}
+
+pub const ValidationError = error{
     /// The polygon specified an odd number of vertices.
     VertexCountUneven,
     /// The polygon contained too few vertices.
@@ -122,49 +163,6 @@ const ValidationError = error{
     /// A subsequent vertex was higher up than the one preceding it.
     VerticesBacktracked,
 };
-
-/// Validate that the vertex count of a polygon definition is correct.
-fn validateVertexCount(count: usize) ValidationError!void {
-    // Polygons must contain an even number of vertices
-    if (@rem(count, 2) != 0) return error.VertexCountUneven;
-
-    // Polygons must contain at least 4 and at most 50 vertices
-    if (count < min_vertices) return error.VertexCountTooLow;
-    if (count > max_vertices) return error.VertexCountTooHigh;
-}
-
-/// Validate that the relationships between vertices in a polygon definition are correct.
-fn validateVertices(vertices: []const Point.Instance) ValidationError!void {
-    var clockwise_index: usize = 0;
-    var counterclockwise_index: usize = vertices.len - 1;
-
-    while (clockwise_index < counterclockwise_index) {
-        const current_y = vertices[clockwise_index].y;
-
-        // Vertex pairs must be aligned horizontally.
-        if (current_y != vertices[counterclockwise_index].y) {
-            return error.VerticesMisaligned;
-        }
-
-        if (clockwise_index > 0) {
-            const previous_y = vertices[clockwise_index - 1].y;
-            const delta_y = current_y - previous_y;
-
-            // Each vertex must always be below the previous one.
-            if (delta_y < min_vertical_span) {
-                return error.VerticesBacktracked;
-            }
-
-            // No two vertices can be more than 1023 units vertically apart.
-            if (delta_y > max_vertical_span) {
-                return error.VerticesTooFarApart;
-            }
-        }
-
-        clockwise_index += 1;
-        counterclockwise_index -= 1;
-    }
-}
 
 // -- Data examples --
 
@@ -200,9 +198,17 @@ pub const DataExamples = struct {
         5, 0,  // 6
     };
 
-    const vertex_count_too_low = [_]u8 { 0, 1, 2 };
+    const vertex_count_too_low = [_]u8 { 0, 1, 2, 0, 0, 0, 0 };
     const vertex_count_too_high = [_]u8 { 0, 1, 52 };
-    const vertex_count_uneven = [_]u8 { 0, 1, 5 };
+    const vertex_count_uneven = [_]u8 {
+        0, 1,
+        5,
+        0, 0,
+        0, 0,
+        0, 0,
+        0, 0,
+        0, 0,
+    };
 
     const vertices_misaligned = [_]u8 {
         10, 10,
@@ -285,49 +291,39 @@ test "parse correctly parses and scales pentagon" {
 }
 // zig fmt: on
 
-test "parse returns error.VertexCountTooLow when count is too low" {
-    const reader = fixedBufferStream(&DataExamples.vertex_count_too_low).reader();
-    try testing.expectError(
-        error.VertexCountTooLow,
-        parse(reader, Point.zero, PolygonScale.default, .highlight),
-    );
-}
-
 test "parse returns error.VertexCountTooHigh when count is too high" {
     const reader = fixedBufferStream(&DataExamples.vertex_count_too_high).reader();
-    try testing.expectError(
-        error.VertexCountTooHigh,
-        parse(reader, Point.zero, PolygonScale.default, .highlight),
-    );
+    try testing.expectError(error.VertexCountTooHigh, parse(reader, Point.zero, PolygonScale.default, .highlight));
 }
 
-test "parse returns error.VertexCountUneven when count is uneven" {
+test "validate returns error.VertexCountTooLow when count is too low" {
+    const reader = fixedBufferStream(&DataExamples.vertex_count_too_low).reader();
+    const polygon = try parse(reader, Point.zero, PolygonScale.default, .highlight);
+    try testing.expectError(error.VertexCountTooLow, polygon.validate());
+}
+
+test "validate returns error.VertexCountUneven when count is uneven" {
     const reader = fixedBufferStream(&DataExamples.vertex_count_uneven).reader();
-    try testing.expectError(error.VertexCountUneven, parse(reader, Point.zero, PolygonScale.default, .highlight));
+    const polygon = try parse(reader, Point.zero, PolygonScale.default, .highlight);
+    try testing.expectError(error.VertexCountUneven, polygon.validate());
 }
 
-test "parse returns error.VerticesMisaligned when vertex pairs are not aligned horizontally" {
+test "validate returns error.VerticesMisaligned when vertex pairs are not aligned horizontally" {
     const reader = fixedBufferStream(&DataExamples.vertices_misaligned).reader();
-    try testing.expectError(
-        error.VerticesMisaligned,
-        parse(reader, Point.zero, PolygonScale.default, .highlight),
-    );
+    const polygon = try parse(reader, Point.zero, PolygonScale.default, .highlight);
+    try testing.expectError(error.VerticesMisaligned, polygon.validate());
 }
 
-test "parse returns error.VerticesBacktracked when a clockwise vertex is above the one before it" {
+test "validate returns error.VerticesBacktracked when a clockwise vertex is above the one before it" {
     const reader = fixedBufferStream(&DataExamples.vertices_backtracked).reader();
-    try testing.expectError(
-        error.VerticesBacktracked,
-        parse(reader, Point.zero, PolygonScale.default, .highlight),
-    );
+    const polygon = try parse(reader, Point.zero, PolygonScale.default, .highlight);
+    try testing.expectError(error.VerticesBacktracked, polygon.validate());
 }
 
-test "parse returns error.VerticesTooFarApart when a clockwise vertex is more than 1023 units below the one before it" {
+test "validate returns error.VerticesTooFarApart when a clockwise vertex is more than 1023 units below the one before it" {
     const reader = fixedBufferStream(&DataExamples.vertices_too_far_apart).reader();
-    try testing.expectError(
-        error.VerticesTooFarApart,
-        parse(reader, Point.zero, 258, .highlight),
-    );
+    const polygon = try parse(reader, Point.zero, 258, .highlight);
+    try testing.expectError(error.VerticesTooFarApart, polygon.validate());
 }
 
 test "new creates polygon with expected bounding box and vertices" {

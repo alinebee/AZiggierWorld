@@ -141,7 +141,7 @@ pub fn Instance(comptime StorageFn: anytype, comptime width: usize, comptime hei
                 const clockwise_delta = polygon.vertices[clockwise_vertex].x - polygon.vertices[clockwise_vertex - 1].x;
                 const counterclockwise_delta = polygon.vertices[counterclockwise_vertex].x - polygon.vertices[counterclockwise_vertex + 1].x;
                 const vertical_delta = math.cast(VerticalDelta, polygon.vertices[clockwise_vertex].y - polygon.vertices[clockwise_vertex - 1].y) catch {
-                    return Error.InvalidVerticalDelta;
+                    return error.InvalidVerticalDelta;
                 };
 
                 const clockwise_step = stepDistance(clockwise_delta, vertical_delta);
@@ -396,6 +396,61 @@ fn runTests(comptime Storage: anytype) void {
 
             try buffer.drawPolygon(poly, &mask_buffer);
             try expectPixels(expected, buffer.storage);
+        }
+
+        test "drawPolygon with too few vertices returns error.InvalidVertexCount" {
+            const poly = Polygon.new(.highlight, &.{
+                .{ .x = 3, .y = 6 },
+                .{ .x = 4, .y = 7 },
+                .{ .x = 2, .y = 10 },
+            });
+
+            var buffer = new(Storage, 6, 6);
+            const mask_buffer = new(Storage, 6, 6);
+
+            try testing.expectError(error.InvalidVertexCount, buffer.drawPolygon(poly, &mask_buffer));
+        }
+
+        test "drawPolygon with too many vertices returns error.InvalidVertexCount" {
+            var poly = Polygon.new(.highlight, &.{
+                .{ .x = 3, .y = 6 },
+                .{ .x = 4, .y = 7 },
+                .{ .x = 2, .y = 10 },
+            });
+            poly.count = 51;
+
+            var buffer = new(Storage, 6, 6);
+            const mask_buffer = new(Storage, 6, 6);
+
+            try testing.expectError(error.InvalidVertexCount, buffer.drawPolygon(poly, &mask_buffer));
+        }
+
+        test "drawPolygon with vertices too far apart returns error.InvalidVertexDelta" {
+            const poly = Polygon.new(.highlight, &.{
+                .{ .x = 1, .y = 0 },
+                .{ .x = 1, .y = 16384 },
+                .{ .x = 0, .y = 16384 },
+                .{ .x = 0, .y = 0 },
+            });
+
+            var buffer = new(Storage, 6, 6);
+            const mask_buffer = new(Storage, 6, 6);
+
+            try testing.expectError(error.InvalidVerticalDelta, buffer.drawPolygon(poly, &mask_buffer));
+        }
+
+        test "drawPolygon with backtracked vertices returns error.InvalidVertexDelta" {
+            const poly = Polygon.new(.highlight, &.{
+                .{ .x = 1, .y = 0 },
+                .{ .x = 1, .y = -1 },
+                .{ .x = 0, .y = -1 },
+                .{ .x = 0, .y = 0 },
+            });
+
+            var buffer = new(Storage, 6, 6);
+            const mask_buffer = new(Storage, 6, 6);
+
+            try testing.expectError(error.InvalidVerticalDelta, buffer.drawPolygon(poly, &mask_buffer));
         }
     };
 }

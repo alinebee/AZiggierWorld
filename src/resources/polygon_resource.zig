@@ -98,24 +98,31 @@ pub const Instance = struct {
     }
 };
 
-/// The possible errors that can occur when reading polygon data on behalf of a specified visitor.
-pub fn Error(comptime Visitor: type) type {
-    const VisitError = introspection.ErrorType(introspection.BaseType(Visitor).visit);
-    return VisitError || ParseError;
-}
-
 const ReaderType = @import("std").io.FixedBufferStream([]const u8).Reader;
 
-/// The possible errors that can occur when parsing polygon data.
-const ParseError = Polygon.Error(ReaderType) || error{
-    /// The requested polygon address was out of range, or one of the polygon subentries
-    /// within the resource pointed to an address that was out of range.
-    InvalidAddress,
-    /// A polygon entry had a type code that was not recognized.
-    UnknownPolygonEntryType,
-    /// The resource contained recursive polygon data that looped back on itself or was nested too deeply.
-    PolygonRecursionDepthExceeded,
-};
+/// The possible errors that can be produced by iteratePolygons when reading polygon data
+/// on behalf of a visitor of the specified type.
+pub fn Error(comptime Visitor: type) type {
+    // Note: Zig is unable to infer the error type because iteratePolygons calls itself recursively.
+    const VisitError = introspection.ErrorType(introspection.BaseType(Visitor).visit);
+
+    return VisitError || Polygon.ParseError(ReaderType) || ParseError(ReaderType);
+}
+
+/// The possible errors that can occur when parsing polygon data using the specified reader.
+fn ParseError(comptime Reader: type) type {
+    const ReaderError = introspection.ErrorType(Reader.readByte);
+
+    return ReaderError || error{
+        /// The requested polygon address was out of range, or one of the polygon subentries
+        /// within the resource pointed to an address that was out of range.
+        InvalidAddress,
+        /// A polygon entry had a type code that was not recognized.
+        UnknownPolygonEntryType,
+        /// The resource contained recursive polygon data that looped back on itself or was nested too deeply.
+        PolygonRecursionDepthExceeded,
+    };
+}
 
 // -- Helper types --
 
@@ -131,7 +138,7 @@ const EntryHeader = union(enum) {
     /// Parses an entry header from a byte stream containing polygon resource data.
     /// Consumes 1-4 bytes from the reader.
     /// Fails with an error if there are not enough bytes in the stream or the header was an unrecognized type.
-    fn parse(reader: anytype) ParseError!EntryHeader {
+    fn parse(reader: anytype) !EntryHeader {
         // Adapted from the reference implementation:
         // - If the top 2 bits of the control code byte are both set: treat the following bytes
         //   as a single polygon, and the remaining 6 bits of the control code as the draw mode
@@ -613,7 +620,6 @@ test "iteratePolygons fails with error.InvalidAddress if requested address does 
 
     try testing.expectError(error.InvalidAddress, resource.iteratePolygons(address, origin, PolygonScale.default, &visitor));
     try testing.expectEqual(0, visitor.polygons.items.len);
-
 }
 
 test "iteratePolygons fails with error.InvalidAddress if entry pointer within data points to address that does not exist" {

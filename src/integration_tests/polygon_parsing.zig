@@ -110,6 +110,7 @@ const PolygonVisitor = struct {
 
     pub fn visit(self: *PolygonVisitor, polygon: Polygon.Instance) !bool {
         self.count += 1;
+        try polygon.validate();
         return true;
     }
 };
