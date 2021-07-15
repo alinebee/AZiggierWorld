@@ -64,8 +64,8 @@ pub fn Instance(comptime StorageFn: anytype, comptime width: usize, comptime hei
                     // draw the current span of lit pixels and start a new span.
                     if (pixel_lit == false or remaining_pixels == 0) {
                         if (span_width > 0) {
-                            const x_range = Range.new(Point.Coordinate, span_start, span_start + span_width - 1);
-                            self.storage.uncheckedDrawSpan(x_range, cursor.y, operation);
+                            const span_end = span_start + span_width - 1;
+                            self.storage.uncheckedDrawSpan(.{ .min = span_start, .max = span_end }, cursor.y, operation);
 
                             span_start += span_width;
                             span_width = 0;
@@ -156,12 +156,7 @@ pub fn Instance(comptime StorageFn: anytype, comptime width: usize, comptime hei
                         // Don't draw parts of the polygon that are outside the buffer,
                         // but still accumulate their changes to x.
                         if (Self.bounds.y.contains(y)) {
-                            const x1 = clockwise_x.whole();
-                            const x2 = counterclockwise_x.whole();
-
-                            // Flip the span if needed to ensure it always runs from left to right.
-                            // This handles vertices that cross in the middle.
-                            const x_range: Range.Instance(Point.Coordinate) = if (x1 < x2) .{ .min = x1, .max = x2 } else .{ .min = x2, .max = x1 };
+                            const x_range = Range.new(Point.Coordinate, clockwise_x.whole(), counterclockwise_x.whole());
 
                             // Only draw if the resulting span is within the buffer's bounds
                             if (Self.bounds.x.intersection(x_range)) |clamped_range| {

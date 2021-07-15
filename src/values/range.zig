@@ -1,10 +1,19 @@
 const math = @import("std").math;
 
 /// Defines a closed range of integers from a minimum up to *and including* a maximum value.
-/// Precondition:
-/// `min` must be <= `max`. Specifying `min` > `max` will result in undefined behaviour.
-pub fn new(comptime Integer: type, min: Integer, max: Integer) Instance(Integer) {
-    return Instance(Integer){ .min = min, .max = max };
+/// `min` and `max will be flipped if necessary to enforce that `min` <= `max`.
+pub fn new(comptime Integer: type, min: anytype, max: Integer) Instance(Integer) {
+    if (min <= max) {
+        return .{ .min = min, .max = max };
+    } else {
+        return .{ .min = max, .max = min };
+    }
+}
+
+/// Defines a closed range of integers from a minimum up to *and including* a maximum value.
+/// Unlike `new`, this does not enforce that `min <= max`.
+pub fn unchecked(comptime Integer: type, min: Integer, max: Integer) Instance(Integer) {
+    return .{ .min = min, .max = max };
 }
 
 /// Defines the type for a range of integers from a minimum up to and including a maximum value.
@@ -69,6 +78,18 @@ test "new returns range of expected type with expected values" {
     try testing.expectEqual(10, range.max);
     try testing.expectEqual(isize, @TypeOf(range.min));
     try testing.expectEqual(isize, @TypeOf(range.max));
+}
+
+test "new reverses order of operands to ensure min < max" {
+    const range = new(isize, 10, -10);
+    try testing.expectEqual(-10, range.min);
+    try testing.expectEqual(10, range.max);
+}
+
+test "unchecked leaves order of operands alone" {
+    const range = unchecked(isize, 10, -10);
+    try testing.expectEqual(10, range.min);
+    try testing.expectEqual(-10, range.max);
 }
 
 test "contains returns true for values within range and false for values outside it" {
