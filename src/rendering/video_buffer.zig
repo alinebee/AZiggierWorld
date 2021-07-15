@@ -81,14 +81,10 @@ pub fn Instance(comptime StorageFn: anytype, comptime width: usize, comptime hei
 
         /// Draws a single polygon into the buffer using the position and draw mode specified in the polygon's data.
         /// Returns an error if:
-        /// - polygon.count < 4 or > 50.
+        /// - the polygon contains < 4 vertices.
         /// - any vertex along the right-hand side of the polygon is higher than the previous vertex.
         /// - any vertex along the right-hand side of the polygon is > 1023 units below the previous vertex.
         pub fn drawPolygon(self: *Self, polygon: Polygon.Instance, mask_buffer: *const Self) Error!void {
-            if (polygon.count < Polygon.min_vertices or polygon.count > Polygon.max_vertices) {
-                return error.InvalidVertexCount;
-            }
-
             // Skip if none of the polygon is on-screen
             if (Self.bounds.intersects(polygon.bounds) == false) {
                 return;
@@ -103,14 +99,20 @@ pub fn Instance(comptime StorageFn: anytype, comptime width: usize, comptime hei
                 return;
             }
 
+            const vertices = polygon.vertices();
+            // Sanity check: we need at least 4 vertices to draw anything.
+            // Invalid polygons would have been caught earlier when parsing,
+            // but this method cannot prove that it hasn't received one.
+            if (vertices.len < Polygon.min_vertices) return error.VertexCountTooLow;
+
             // Another World polygons are stored as lists of vertices clockwise from the top
             // of the polygon back up to the top. Each vertex is vertically aligned with a pair
             // at the other end of the vertex list.
             // To render the polygon, we walk the list of vertices from the start (clockwise)
-            // and end (counterclockwise), pairing up the vertices and forming a quadrilateral
-            // out of the two edges between that pair of vertices and the pair before them.
-            var clockwise_vertex: usize = 0;
-            var counterclockwise_vertex: usize = polygon.count - 1;
+            // and end (counterclockwise), pairing up the vertices and forming a trapezoid
+            // out of the edges between each pair of vertices and the pair before them.
+            var cw_vertex: usize = 0;
+            var ccw_vertex: usize = vertices.len - 1;
 
             // 16.16 fixed-point math ahoy!
             // The reference implementation tracked the X coordinates of the polygon as 32-bit values:
@@ -119,44 +121,43 @@ pub fn Instance(comptime StorageFn: anytype, comptime width: usize, comptime hei
             // as the routine traverses the edges of the polygon.
             //
             // (We could rewrite all of this to use floating-point math instead but where's the fun in that?)
-            var clockwise_x = FixedPrecision.new(polygon.vertices[clockwise_vertex].x);
-            var counterclockwise_x = FixedPrecision.new(polygon.vertices[counterclockwise_vertex].x);
-            var y = polygon.vertices[clockwise_vertex].y;
+            var x1 = FixedPrecision.new(vertices[cw_vertex].x);
+            var x2 = FixedPrecision.new(vertices[ccw_vertex].x);
+            var y = vertices[cw_vertex].y;
 
-            clockwise_vertex += 1;
-            counterclockwise_vertex -= 1;
+            cw_vertex += 1;
+            ccw_vertex -= 1;
 
             // Walk through each pair of vertices, drawing spans of pixels between them.
-            while (clockwise_vertex < counterclockwise_vertex) {
+            while (cw_vertex < ccw_vertex) {
                 // When calculating X offsets for this pair of edges, carry over the whole-number X coordinates
                 // from the previous edges but wipe out any accumulated fractions.
                 // DOCUMENT ME: What's up with these magic numbers for the fraction?
                 // Why aren't they the same for each?
-                clockwise_x.setFraction(0x8000);
-                counterclockwise_x.setFraction(0x7FFF);
+                x1.setFraction(0x8000);
+                x2.setFraction(0x7FFF);
 
                 // For each pair of edges, determine the number of rows to draw,
                 // and calculate the slope of each edge as a step value representing
                 // how much to change X between each row.
-                const clockwise_delta = polygon.vertices[clockwise_vertex].x - polygon.vertices[clockwise_vertex - 1].x;
-                const counterclockwise_delta = polygon.vertices[counterclockwise_vertex].x - polygon.vertices[counterclockwise_vertex + 1].x;
-                const vertical_delta = math.cast(VerticalDelta, polygon.vertices[clockwise_vertex].y - polygon.vertices[clockwise_vertex - 1].y) catch {
+                const x1_delta = vertices[cw_vertex].x - vertices[cw_vertex - 1].x;
+                const x2_delta = vertices[ccw_vertex].x - vertices[ccw_vertex + 1].x;
+                const y_delta = math.cast(VerticalDelta, vertices[cw_vertex].y - vertices[cw_vertex - 1].y) catch {
                     return error.InvalidVerticalDelta;
                 };
 
-                const clockwise_step = stepDistance(clockwise_delta, vertical_delta);
-                const counterclockwise_step = stepDistance(counterclockwise_delta, vertical_delta);
+                const x1_step = stepDistance(x1_delta, y_delta);
+                const x2_step = stepDistance(x2_delta, y_delta);
 
                 // If there's a vertical change between vertices,
                 // draw a horizontal span for each unit of vertical difference.
-                if (vertical_delta > 0) {
-                    var rows_remaining = vertical_delta;
-
+                if (y_delta > 0) {
+                    var rows_remaining = y_delta;
                     while (rows_remaining > 0) : (rows_remaining -= 1) {
                         // Don't draw parts of the polygon that are outside the buffer,
                         // but still accumulate their changes to x.
                         if (Self.bounds.y.contains(y)) {
-                            const x_range = Range.new(Point.Coordinate, clockwise_x.whole(), counterclockwise_x.whole());
+                            const x_range = Range.new(Point.Coordinate, x1.whole(), x2.whole());
 
                             // Only draw if the resulting span is within the buffer's bounds
                             if (Self.bounds.x.intersection(x_range)) |clamped_range| {
@@ -170,18 +171,18 @@ pub fn Instance(comptime StorageFn: anytype, comptime width: usize, comptime hei
                         if (y > Self.bounds.y.max) return;
 
                         // Otherwise, accumulate the step changes and move down to the next row.
-                        clockwise_x.add(clockwise_step);
-                        counterclockwise_x.add(counterclockwise_step);
+                        x1.add(x1_step);
+                        x2.add(x2_step);
                     }
                 } else {
                     // If there has been no vertical change (i.e. the edges are horizontal), don't draw a span:
                     // just accumulate any changes to the x offsets, which will apply to the next pair of edges.
-                    clockwise_x.add(clockwise_step);
-                    counterclockwise_x.add(counterclockwise_step);
+                    x1.add(x1_step);
+                    x2.add(x2_step);
                 }
 
-                clockwise_vertex += 1;
-                counterclockwise_vertex -= 1;
+                cw_vertex += 1;
+                ccw_vertex -= 1;
             }
         }
     };
@@ -224,9 +225,12 @@ fn stepDistance(delta_x: Point.Coordinate, delta_y: VerticalDelta) FixedPrecisio
 
 /// The possible errors from buffer render operations.
 pub const Error = error{
+    /// Attempted to draw a glyph partially or entirely outside the buffer.
     GlyphOutOfBounds,
+    /// Attempted to draw a polygon with not enough vertices.
+    VertexCountTooLow,
+    /// Attempted to draw a polygon whose vertices were too far apart vertically.
     InvalidVerticalDelta,
-    InvalidVertexCount,
 };
 
 // -- Testing --
@@ -393,31 +397,17 @@ fn runTests(comptime Storage: anytype) void {
             try expectPixels(expected, buffer.storage);
         }
 
-        test "drawPolygon with too few vertices returns error.InvalidVertexCount" {
+        test "drawPolygon with too few vertices returns error.VertexCountTooLow" {
             const poly = Polygon.new(.highlight, &.{
-                .{ .x = 3, .y = 6 },
-                .{ .x = 4, .y = 7 },
-                .{ .x = 2, .y = 10 },
+                .{ .x = 3, .y = 0 },
+                .{ .x = 4, .y = 1 },
+                .{ .x = 2, .y = 2 },
             });
 
             var buffer = new(Storage, 6, 6);
             const mask_buffer = new(Storage, 6, 6);
 
-            try testing.expectError(error.InvalidVertexCount, buffer.drawPolygon(poly, &mask_buffer));
-        }
-
-        test "drawPolygon with too many vertices returns error.InvalidVertexCount" {
-            var poly = Polygon.new(.highlight, &.{
-                .{ .x = 3, .y = 6 },
-                .{ .x = 4, .y = 7 },
-                .{ .x = 2, .y = 10 },
-            });
-            poly.count = 51;
-
-            var buffer = new(Storage, 6, 6);
-            const mask_buffer = new(Storage, 6, 6);
-
-            try testing.expectError(error.InvalidVertexCount, buffer.drawPolygon(poly, &mask_buffer));
+            try testing.expectError(error.VertexCountTooLow, buffer.drawPolygon(poly, &mask_buffer));
         }
 
         test "drawPolygon with vertices too far apart returns error.InvalidVertexDelta" {

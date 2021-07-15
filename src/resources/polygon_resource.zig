@@ -579,21 +579,21 @@ test "iteratePolygons correctly visits all polygons in group" {
     try testing.expectEqual(1000 - 1 + 11, polygon_1.bounds.x.min);
     try testing.expectEqual(2000 - 1 + 11, polygon_1.bounds.y.min);
     try testing.expectEqual(.{ .solid_color = 0xA }, polygon_1.draw_mode);
-    try testing.expectEqual(4, polygon_1.count);
+    try testing.expectEqual(4, polygon_1.vertices().len);
 
     const polygon_2 = visitor.polygons.items[1];
     // [origin] - [group 1 offset] + [group 1 pointer 2 offset]
     try testing.expectEqual(1000 - 1 + 12, polygon_2.bounds.x.min);
     try testing.expectEqual(2000 - 1 + 12, polygon_2.bounds.y.min);
     try testing.expectEqual(.highlight, polygon_2.draw_mode);
-    try testing.expectEqual(4, polygon_2.count);
+    try testing.expectEqual(4, polygon_2.vertices().len);
 
     const polygon_3 = visitor.polygons.items[2];
     // [origin] - [group 1 offset] + [group 1 pointer 3 offset] - [group 2 offset] + [group 2 pointer 1 offset]
     try testing.expectEqual(1000 - 1 + 13 - 2 + 21, polygon_3.bounds.x.min);
     try testing.expectEqual(2000 - 1 + 13 - 2 + 21, polygon_3.bounds.y.min);
     try testing.expectEqual(.mask, polygon_3.draw_mode);
-    try testing.expectEqual(4, polygon_3.count);
+    try testing.expectEqual(4, polygon_3.vertices().len);
 }
 
 test "iteratePolygons fails with error.PolygonRecursionDepthExceeded on circular reference in polygon data" {

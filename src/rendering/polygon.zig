@@ -1,3 +1,24 @@
+//! Another World stored polygon shapes as lists of X,Y vertices going clockwise from the top right of the shape,
+//! down the right edge and around to the top left.
+//!
+//! To simplify its drawing algorithm, Another World constrained polygons so that:
+//!
+//! - Polygons have always have an even number of vertices between 4 and 50;
+//! - Going clockwise, each vertex is aligned horizontally with the same-numbered vertex going counterclockwise;
+//! - After scaling, the Y coordinate of each vertex must be between 0-1023 units below the one preceding it.
+//!
+//! These constraints meant that a polygon can be drawn as a vertical sequence of horizontally aligned rhombuses:
+//! where each rhombus is made up of two pairs of vertices, the top and bottom edges of each rhombus are aligned
+//! to a row of pixels, and no rhombus is more than 1023 pixels tall.
+//!
+//! This allows drawing to be optimized as runs of horizontal pixels between two slopes: where the slopes
+//! are precalculated and stored in a lookup table of 1023 possible values suitable for fixed-precision math.
+//!
+//! Another optimization was to draw polygons with 4 vertices that were 1 pixel tall and wide after scaling
+//! as single-pixel dots.
+//!
+//! (See video_buffer.zig for the draw algorithm.)
+
 const Point = @import("../values/point.zig");
 const DrawMode = @import("../values/draw_mode.zig");
 const PolygonScale = @import("../values/polygon_scale.zig");
@@ -14,17 +35,24 @@ pub const Instance = struct {
     /// The scaled bounding box of this polygon in screen coordinates.
     bounds: BoundingBox.Instance,
 
-    /// The number of vertices in this polygon.
-    count: usize,
+    /// Raw polygon vertex data that should not be accessed directly: use `vertices()` instead.
+    _raw: struct {
+        /// The number of vertices in this polygon.
+        count: usize,
 
-    /// The vertices making up this polygon in screen coordinates.
-    /// Only the first `count` entries contain valid data.
-    /// Usage: polygon.vertices[0..polygon.count]
-    vertices: [max_vertices]Point.Instance,
+        /// The vertices making up this polygon in screen coordinates.
+        /// Only the first `count` entries contain valid data.
+        vertices: [max_vertices]Point.Instance,
+    },
+
+    /// Returns a bounds-checked list of the vertices in this polygon.
+    pub fn vertices(self: Instance) []const Point.Instance {
+        return self._raw.vertices[0..self._raw.count];
+    }
 
     /// Whether this polygon represents a single-pixel dot.
     pub fn isDot(self: Instance) bool {
-        return self.count == min_vertices and self.bounds.isUnit();
+        return self._raw.count == min_vertices and self.bounds.isUnit();
     }
 
     /// Validates that the polygon has a legal number of vertices and the expected
@@ -33,25 +61,27 @@ pub const Instance = struct {
     /// when rasterizing polygon data.
     pub fn validate(self: Instance) ValidationError!void {
         // Polygons must contain an even number of vertices
-        if (@rem(self.count, 2) != 0) return error.VertexCountUneven;
+        if (@rem(self._raw.count, 2) != 0) return error.VertexCountUneven;
 
         // Polygons must contain at least 4 and at most 50 vertices
-        if (self.count < min_vertices) return error.VertexCountTooLow;
-        if (self.count > max_vertices) return error.VertexCountTooHigh;
+        if (self._raw.count < min_vertices) return error.VertexCountTooLow;
+        if (self._raw.count > max_vertices) return error.VertexCountTooHigh;
+
+        const verts = self.vertices();
 
         var clockwise_index: usize = 0;
-        var counterclockwise_index: usize = self.count - 1;
+        var counterclockwise_index: usize = verts.len - 1;
 
         while (clockwise_index < counterclockwise_index) {
-            const current_y = self.vertices[clockwise_index].y;
+            const current_y = verts[clockwise_index].y;
 
             // Vertex pairs must be aligned horizontally.
-            if (current_y != self.vertices[counterclockwise_index].y) {
+            if (current_y != verts[counterclockwise_index].y) {
                 return error.VerticesMisaligned;
             }
 
             if (clockwise_index > 0) {
-                const previous_y = self.vertices[clockwise_index - 1].y;
+                const previous_y = verts[clockwise_index - 1].y;
                 const delta_y = current_y - previous_y;
 
                 // Each vertex must always be below the previous one.
@@ -77,8 +107,10 @@ pub const Instance = struct {
 pub fn new(draw_mode: DrawMode.Enum, vertices: []const Point.Instance) Instance {
     var self = Instance{
         .draw_mode = draw_mode,
-        .count = vertices.len,
-        .vertices = undefined,
+        ._raw = .{
+            .count = vertices.len,
+            .vertices = undefined,
+        },
         .bounds = undefined,
     };
 
@@ -88,7 +120,7 @@ pub fn new(draw_mode: DrawMode.Enum, vertices: []const Point.Instance) Instance 
     var max_y: ?Point.Coordinate = null;
 
     for (vertices) |vertex, index| {
-        self.vertices[index] = vertex;
+        self._raw.vertices[index] = vertex;
         min_x = if (min_x) |current| math.min(current, vertex.x) else vertex.x;
         max_x = if (max_x) |current| math.max(current, vertex.x) else vertex.x;
         min_y = if (min_y) |current| math.min(current, vertex.y) else vertex.y;
@@ -117,17 +149,19 @@ pub fn parse(reader: anytype, center: Point.Instance, scale: PolygonScale.Raw, d
     var self = Instance{
         .draw_mode = draw_mode,
         .bounds = bounds,
-        .count = count,
-        .vertices = undefined,
+        ._raw = .{
+            .count = count,
+            .vertices = undefined,
+        },
     };
 
     const origin = bounds.origin();
     var index: usize = 0;
-    while (index < self.count) : (index += 1) {
+    while (index < count) : (index += 1) {
         const raw_x = try reader.readByte();
         const raw_y = try reader.readByte();
 
-        self.vertices[index] = origin.adding(.{
+        self._raw.vertices[index] = origin.adding(.{
             .x = PolygonScale.apply(Point.Coordinate, raw_x, scale),
             .y = PolygonScale.apply(Point.Coordinate, raw_y, scale),
         });
@@ -258,13 +292,14 @@ test "parse correctly parses 4-vertex dot polygon" {
     try testing.expectEqual(320, polygon.bounds.x.max);
     try testing.expectEqual(201, polygon.bounds.y.max);
 
-    try testing.expectEqual(4, polygon.count);
+    const vertices = polygon.vertices();
+    try testing.expectEqual(4, vertices.len);
     try testing.expectEqual(true, polygon.isDot());
 
-    try testing.expectEqual(.{ .x = 320, .y = 200 }, polygon.vertices[0]);
-    try testing.expectEqual(.{ .x = 320, .y = 201 }, polygon.vertices[1]);
-    try testing.expectEqual(.{ .x = 320, .y = 201 }, polygon.vertices[2]);
-    try testing.expectEqual(.{ .x = 320, .y = 200 }, polygon.vertices[3]);
+    try testing.expectEqual(.{ .x = 320, .y = 200 }, vertices[0]);
+    try testing.expectEqual(.{ .x = 320, .y = 201 }, vertices[1]);
+    try testing.expectEqual(.{ .x = 320, .y = 201 }, vertices[2]);
+    try testing.expectEqual(.{ .x = 320, .y = 200 }, vertices[3]);
 }
 
 // zig fmt: off
@@ -279,15 +314,16 @@ test "parse correctly parses and scales pentagon" {
     try testing.expectEqual(10, polygon.bounds.x.max);
     try testing.expectEqual(10, polygon.bounds.y.max);
 
-    try testing.expectEqual(6, polygon.count);
+    const vertices = polygon.vertices();
+    try testing.expectEqual(6, vertices.len);
     try testing.expectEqual(false, polygon.isDot());
 
-    try testing.expectEqual(.{ .x = 0,      .y = -10 }, polygon.vertices[0]);
-    try testing.expectEqual(.{ .x = 10,     .y = -2 },  polygon.vertices[1]);
-    try testing.expectEqual(.{ .x = 4,      .y = 10 },  polygon.vertices[2]);
-    try testing.expectEqual(.{ .x = -4,     .y = 10 },  polygon.vertices[3]);
-    try testing.expectEqual(.{ .x = -10,    .y = -2 },  polygon.vertices[4]);
-    try testing.expectEqual(.{ .x = 0,      .y = -10 }, polygon.vertices[5]);
+    try testing.expectEqual(.{ .x = 0,      .y = -10 }, vertices[0]);
+    try testing.expectEqual(.{ .x = 10,     .y = -2 },  vertices[1]);
+    try testing.expectEqual(.{ .x = 4,      .y = 10 },  vertices[2]);
+    try testing.expectEqual(.{ .x = -4,     .y = 10 },  vertices[3]);
+    try testing.expectEqual(.{ .x = -10,    .y = -2 },  vertices[4]);
+    try testing.expectEqual(.{ .x = 0,      .y = -10 }, vertices[5]);
 }
 // zig fmt: on
 
@@ -337,8 +373,8 @@ test "new creates polygon with expected bounding box and vertices" {
     const polygon = new(.mask, &vertices);
 
     try testing.expectEqual(.mask, polygon.draw_mode);
-    try testing.expectEqual(4, polygon.count);
-    try testing.expectEqualSlices(Point.Instance, &vertices, polygon.vertices[0..4]);
+    try testing.expectEqual(4, polygon.vertices().len);
+    try testing.expectEqualSlices(Point.Instance, &vertices, polygon.vertices());
 
     try testing.expectEqual(1, polygon.bounds.x.min);
     try testing.expectEqual(1, polygon.bounds.x.max);
