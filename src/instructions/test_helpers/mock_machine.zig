@@ -80,7 +80,7 @@ fn MockMachine(comptime Implementation: type) type {
             Implementation.copyVideoBuffer(source, destination, vertical_offset);
         }
 
-        pub fn renderVideoBuffer(self: *Self, buffer_id: BufferID.Enum, delay: Video.FrameDelay) void {
+        pub fn renderVideoBuffer(self: *Self, buffer_id: BufferID.Enum, delay: Video.Milliseconds) void {
             self.call_counts.renderVideoBuffer += 1;
             Implementation.renderVideoBuffer(buffer_id, delay);
         }
@@ -223,7 +223,7 @@ test "MockMachine calls copyVideoBuffer correctly on stub implementation" {
 
 test "MockMachine calls renderVideoBuffer correctly on stub implementation" {
     var mock = new(struct {
-        fn renderVideoBuffer(buffer_id: BufferID.Enum, delay: Video.FrameDelay) void {
+        fn renderVideoBuffer(buffer_id: BufferID.Enum, delay: Video.Milliseconds) void {
             testing.expectEqual(.back_buffer, buffer_id) catch {
                 unreachable;
             };

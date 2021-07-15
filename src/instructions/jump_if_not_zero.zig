@@ -10,7 +10,7 @@ pub const Error = Program.Error;
 /// if the value in that register is not yet zero. Likely used for loop counters.
 pub const Instance = struct {
     /// The register storing the counter to decrement.
-    register: RegisterID.Raw,
+    register_id: RegisterID.Raw,
     /// The address to jump to if the register value is non-zero.
     address: Address.Raw,
 
@@ -19,10 +19,10 @@ pub const Instance = struct {
         // (The standard `-=` would trap on underflow, which would probably indicate
         // a bytecode bug, but the Another World VM assumed C-style integer wrapping
         // and we should respect that.)
-        machine.registers[self.register] -%= 1;
+        machine.registers[self.register_id] -%= 1;
 
         // If the counter register is still not zero, jump.
-        if (machine.registers[self.register] != 0) {
+        if (machine.registers[self.register_id] != 0) {
             try machine.program.jump(self.address);
         }
     }
@@ -33,7 +33,7 @@ pub const Instance = struct {
 /// Returns an error if the bytecode could not be read or contained an invalid instruction.
 pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instance {
     return Instance{
-        .register = try program.read(RegisterID.Raw),
+        .register_id = try program.read(RegisterID.Raw),
         .address = try program.read(Address.Raw),
     };
 }
@@ -54,13 +54,13 @@ const expectParse = @import("test_helpers/parse.zig").expectParse;
 
 test "parse parses instruction from valid bytecode and consumes 4 bytes" {
     const instruction = try expectParse(parse, &BytecodeExamples.valid, 4);
-    try testing.expectEqual(1, instruction.register);
+    try testing.expectEqual(1, instruction.register_id);
     try testing.expectEqual(0xDEAD, instruction.address);
 }
 
 test "execute decrements register and jumps to new address if register is still non-zero" {
     const instruction = Instance{
-        .register = 255,
+        .register_id = 255,
         .address = 9,
     };
 
@@ -80,7 +80,7 @@ test "execute decrements register and jumps to new address if register is still 
 
 test "execute decrements register but does not jump if register reaches zero" {
     const instruction = Instance{
-        .register = 255,
+        .register_id = 255,
         .address = 9,
     };
 
@@ -100,7 +100,7 @@ test "execute decrements register but does not jump if register reaches zero" {
 
 test "execute decrement wraps around on underflow" {
     const instruction = Instance{
-        .register = 255,
+        .register_id = 255,
         .address = 9,
     };
 
@@ -117,7 +117,7 @@ test "execute decrement wraps around on underflow" {
 
 test "execute returns error.InvalidAddress on jump when address is out of range" {
     const instruction = Instance{
-        .register = 255,
+        .register_id = 255,
         .address = 1000,
     };
 

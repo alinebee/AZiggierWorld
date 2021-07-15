@@ -12,7 +12,7 @@ const Video = @import("../rendering/video.zig");
 const english = @import("../assets/english.zig");
 
 pub const PolygonSource = Video.PolygonSource;
-pub const FrameDelay = Video.FrameDelay;
+pub const Milliseconds = usize;
 pub const PolygonAddress = @import("../resources/polygon_resource.zig").Address;
 
 const log_unimplemented = @import("../utils/logging.zig").log_unimplemented;
@@ -67,7 +67,7 @@ pub const Interface = struct {
     }
 
     /// Render the contents of the specified buffer to the host screen after the specified delay.
-    pub fn renderVideoBuffer(self: *Machine.Instance, buffer_id: BufferID.Enum, delay: FrameDelay) void {
+    pub fn renderVideoBuffer(self: *Machine.Instance, buffer_id: BufferID.Enum, delay: Milliseconds) void {
         log_unimplemented("Video.renderVideoBuffer: {} delay:{}", .{
             buffer_id,
             delay,

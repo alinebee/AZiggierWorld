@@ -26,11 +26,8 @@ pub const PolygonSource = enum {
     animations,
 };
 
-/// The length of time to leave a frame on screen.
-/// FIXME: Determine the range of this value in actual bytecode.
-/// This is read from a register, but the type should be more constrained than that
-/// (e.g. negative values are likely illegal.)
-pub const FrameDelay = RegisterValue;
+/// The length of time in milliseconds to leave a frame on screen.
+pub const Milliseconds = usize;
 
 const Buffer = VideoBuffer.Instance(PackedStorage.Instance, 320, 200);
 
@@ -127,7 +124,7 @@ pub const Instance = struct {
     }
 
     /// Render the contents of a video buffer to the host screen using the current palette.
-    pub fn renderBuffer(self: *Self, buffer_id: BufferID.Enum, delay: FrameDelay, host: anytype) void {
+    pub fn renderBuffer(self: *Self, buffer_id: BufferID.Enum, delay: Milliseconds, host: anytype) void {
         const resolved_id = self.resolvedBufferID(buffer_id);
         const buffer = &self.buffers[resolved_id];
 

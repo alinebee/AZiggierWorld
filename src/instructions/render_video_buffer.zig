@@ -5,6 +5,14 @@ const Video = @import("../machine/video.zig");
 const BufferID = @import("../values/buffer_id.zig");
 const RegisterID = @import("../values/register_id.zig");
 
+/// This instruction reads a variable from a specific register to decide how long to leave
+/// the previous frame on screen before displaying the next one.
+/// That register's value is a number of abstract frame units and needs to be multiplied
+/// by this constant to get the delay in milliseconds.
+const milliseconds_per_frame_unit: Video.Milliseconds = 20;
+
+const RawFrameDelay = u16;
+
 /// Renders the contents of a video buffer to the host screen.
 pub const Instance = struct {
     /// The buffer to render.
@@ -17,16 +25,17 @@ pub const Instance = struct {
 
     // Private implementation is generic to allow tests to use mocks.
     fn _execute(self: Instance, machine: anytype) void {
-        // DOCUMENTME: How many tics? to leave the previous frame on screen before rendering this one.
-        // According to the reference implementation this will be a value from 1-5.
-        // https://github.com/fabiensanglard/Another-World-Bytecode-Interpreter/blob/8afc0f7d7d47f7700ad2e7d1cad33200ad29b17f/src/vm.cpp#L274-L296
-        const delay = @as(Video.FrameDelay, machine.registers[RegisterID.frame_duration]);
+        // In Another World's original bytecode, the delay is typically set to between 1-11 units (20-220 ms).
+        const delay_in_frame_units = @bitCast(RawFrameDelay, machine.registers[RegisterID.frame_duration]);
+        const delay_in_milliseconds = @as(Video.Milliseconds, delay_in_frame_units) * milliseconds_per_frame_unit;
 
-        // DOCUMENTME: Copypasta from reference implementation.
-        // Unclear what this means or what it will do if we change it.
+        // Copypasta from reference implementation.
+        // From examining Another World's bytecode, nothing else ever writes to this register;
+        // since 0 is the initial value of all registers, this code effectively does nothing.
+        // Some instructions do read from this register, so changing this value may have some effect.
         machine.registers[RegisterID.render_video_buffer_UNKNOWN] = 0;
 
-        machine.renderVideoBuffer(self.buffer_id, delay);
+        machine.renderVideoBuffer(self.buffer_id, delay_in_milliseconds);
     }
 };
 
@@ -79,11 +88,11 @@ test "execute calls renderVideoBuffer with correct parameters" {
     };
 
     var machine = MockMachine.new(struct {
-        pub fn renderVideoBuffer(buffer_id: BufferID.Enum, delay: Video.FrameDelay) void {
+        pub fn renderVideoBuffer(buffer_id: BufferID.Enum, delay: Video.Milliseconds) void {
             testing.expectEqual(.back_buffer, buffer_id) catch {
                 unreachable;
             };
-            testing.expectEqual(5, delay) catch {
+            testing.expectEqual(100, delay) catch {
                 unreachable;
             };
         }
