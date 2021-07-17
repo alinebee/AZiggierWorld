@@ -4,6 +4,9 @@
 /// An "on" bit indicates to draw a pixel at that X, Y position.
 pub const Glyph = [8]u8;
 
+pub const glyph_width: usize = 8;
+pub const glyph_height: usize = 8;
+
 /// Given a UTF-8 character, returns the glyph bitmap associated with that character.
 /// returns `error.InvalidCharacter` if that character is not supported.
 pub fn glyph(character: u8) Error!Glyph {

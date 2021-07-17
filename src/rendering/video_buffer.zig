@@ -39,16 +39,35 @@ pub fn Instance(comptime StorageFn: anytype, comptime width: usize, comptime hei
             self.storage.copy(&other.storage, y);
         }
 
+        /// Draw a single or multiline string in the specified color,
+        /// positioning the top left corner of the text at the specified origin point.
+        pub fn drawString(self: *Self, string: []const u8, color: ColorID.Trusted, origin: Point.Instance) !void {
+            const operation = Storage.DrawOperation.solidColor(color);
+
+            var cursor = origin;
+            for (string) |char| {
+                switch (char) {
+                    '\n' => {
+                        cursor.x = origin.x;
+                        cursor.y += Font.glyph_height;
+                    },
+                    else => {
+                        const glyph = try Font.glyph(char);
+                        try self.drawGlyph(glyph, cursor, operation);
+                        cursor.x += Font.glyph_width;
+                    },
+                }
+            }
+        }
+
         /// Draws the specified 8x8 glyph in a solid color, positioning its top left corner at the specified point.
         /// Returns error.GlyphOutOfBounds if the glyph's bounds do not lie fully inside the buffer.
-        pub fn drawGlyph(self: *Self, glyph: Font.Glyph, origin: Point.Instance, color: ColorID.Trusted) Error!void {
-            const glyph_bounds = BoundingBox.new(origin.x, origin.y, origin.x + 8, origin.y + 8);
+        fn drawGlyph(self: *Self, glyph: Font.Glyph, origin: Point.Instance, operation: Storage.DrawOperation) Error!void {
+            const glyph_bounds = BoundingBox.new(origin.x, origin.y, origin.x + Font.glyph_width, origin.y + Font.glyph_height);
 
             if (Self.bounds.encloses(glyph_bounds) == false) {
                 return error.GlyphOutOfBounds;
             }
-
-            const operation = Storage.DrawOperation.solidColor(color);
 
             var cursor = origin;
 
@@ -305,35 +324,47 @@ fn runTests(comptime Storage: anytype) void {
             try expectPixels(expected, destination.storage);
         }
 
-        test "drawGlyph renders pixels of glyph at specified position in buffer" {
-            var buffer = new(Storage, 10, 10);
+        test "drawString renders pixels of glyph at specified position in buffer" {
+            var buffer = new(Storage, 42, 18);
 
-            const glyph = try Font.glyph('Q');
-            try buffer.drawGlyph(glyph, .{ .x = 1, .y = 1 }, 0x1);
+            const string = "Hello\nWorld";
+            try buffer.drawString(string, 0x1, .{ .x = 1, .y = 1 });
 
             const expected =
-                \\0000000000
-                \\0011110000
-                \\0100001000
-                \\0100001000
-                \\0100001000
-                \\0100001000
-                \\0100011000
-                \\0011111000
-                \\0000000110
-                \\0000000000
+                \\000000000000000000000000000000000000000000
+                \\010000100000000000001000000010000000000000
+                \\010000100000000000001000000010000000000000
+                \\010000100001110000001000000010000001110000
+                \\011111100010001000001000000010000010001000
+                \\010000100011111000001000000010000010001000
+                \\010000100010000000001000000010000010001000
+                \\010000100001111000001000000010000001110000
+                \\000000000000000000000000000000000000000000
+                \\010000010000000000000000000010000000001000
+                \\010000010000000000000000000010000000001000
+                \\010000010001110000100110000010000001111000
+                \\010000010010001000111000000010000010001000
+                \\010010010010001000100000000010000010001000
+                \\010101010010001000100000000010000010001000
+                \\011000110001110000100000000010000001111000
+                \\000000000000000000000000000000000000000000
+                \\000000000000000000000000000000000000000000
             ;
 
             try expectPixels(expected, buffer.storage);
         }
 
-        test "drawGlyph returns error.OutOfBounds for glyphs that are not fully inside the buffer" {
+        test "drawString returns error.OutOfBounds for glyphs that are not fully inside the buffer" {
             var buffer = new(Storage, 10, 10);
 
-            const glyph = try Font.glyph('K');
+            try testing.expectError(error.GlyphOutOfBounds, buffer.drawString("_", 0xB, .{ .x = -1, .y = -2 }));
+            try testing.expectError(error.GlyphOutOfBounds, buffer.drawString("_", 0xB, .{ .x = 312, .y = 192 }));
+        }
 
-            try testing.expectError(error.GlyphOutOfBounds, buffer.drawGlyph(glyph, .{ .x = -1, .y = -2 }, 11));
-            try testing.expectError(error.GlyphOutOfBounds, buffer.drawGlyph(glyph, .{ .x = 312, .y = 192 }, 11));
+        test "drawString returns error.InvalidCharacter for characters that don't have glyphs defined" {
+            var buffer = new(Storage, 10, 10);
+
+            try testing.expectError(error.InvalidCharacter, buffer.drawString("\u{0}", 0xB, .{ .x = 1, .y = 1 }));
         }
 
         test "drawPolygon draws a single-unit square polygon as a dot" {

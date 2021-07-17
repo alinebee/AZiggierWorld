@@ -50,18 +50,18 @@ pub const Instance = struct {
     palette_id: PaletteID.Trusted,
 
     /// The index of the buffer in `buffers` that draw instructions will render into.
-    target_buffer_id: BufferID.Specific,
-
-    /// The index of the buffer in `buffers` that was rendered to the host screen last frame.
-    front_buffer_id: BufferID.Specific,
+    target_buffer_id: BufferID.Specific = 2,
 
     /// The index of the buffer in `buffers` that will be rendered to the host screen on the next frame.
-    back_buffer_id: BufferID.Specific,
+    back_buffer_id: BufferID.Specific = 1,
 
-    const Self = @This();
+    /// The index of the buffer in `buffers` that was rendered to the host screen on the previous frame.
+    front_buffer_id: BufferID.Specific = 2,
 
     /// Masked drawing operations always read the mask from buffer 0.
     const mask_buffer_id: BufferID.Specific = 0;
+
+    const Self = @This();
 
     // - Public methods -
 
@@ -110,12 +110,7 @@ pub const Instance = struct {
         // TODO: allow different localizations at runtime.
         const string = try english.find(string_id);
 
-        log_unimplemented("Video.drawString: draw #{s} color:{} at x:{} y:{}", .{
-            string,
-            color_id,
-            point.x,
-            point.y,
-        });
+        try buffer.drawString(string, color_id, point);
     }
 
     /// Render the contents of a video buffer to the host screen using the current palette.
