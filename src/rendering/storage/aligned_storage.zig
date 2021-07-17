@@ -6,10 +6,12 @@ const DrawMode = @import("../../values/draw_mode.zig");
 const IndexedBitmap = @import("../test_helpers/indexed_bitmap.zig");
 
 const mem = @import("std").mem;
+const math = @import("std").math;
 
 /// Returns a video buffer storage that stores a single pixel per byte.
 pub fn Instance(comptime width: usize, comptime height: usize) type {
-    comptime const Data = [height][width]ColorID.Trusted;
+    comptime const Row = [width]ColorID.Trusted;
+    comptime const Data = [height]Row;
 
     return struct {
         data: Data = mem.zeroes(Data),
@@ -99,6 +101,50 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
             // but that doesn't work on multidimensional arrays.
             for (self.data) |*row| {
                 mem.set(ColorID.Trusted, row, color);
+            }
+        }
+
+        /// Copy the contents of the specified storage into this one,
+        /// positioning the top left of the destination at the specified Y offset.
+        pub fn copy(self: *Self, other: *const Self, y: Point.Coordinate) void {
+            // Early-out: if no offset is specified, just replace the destination with the source.
+            if (y == 0) {
+                return mem.copy(Row, &self.data, &other.data);
+            }
+
+            // Otherwise, copy the appropriate slice of the source into the appropriate slice of the destination.
+            comptime const max_y = @intCast(isize, height - 1);
+            if (y < -max_y or y > max_y) return;
+
+            comptime const top: usize = 0;
+            comptime const bottom = self.data.len;
+            const offset_from_top = @as(usize, math.absCast(y));
+            const offset_from_bottom = bottom - offset_from_top;
+
+            if (y > 0) {
+                //  Destination               Source
+                //  +----------+- 0           +----------+ - 0
+                //  |unmodified|              |//////////|
+                //  |----------+- y           |//copied//|
+                //  |//////////|              |//////////|
+                //  |/replaced/|              |----------+- height - y
+                //  |//////////|              |  unread  |
+                //  +----------+- height      +----------+- height
+                const source = other.data[top..offset_from_bottom];
+                const destination = self.data[offset_from_top..bottom];
+                mem.copy(Row, destination, source);
+            } else {
+                //  Destination               Source
+                //  +----------+- 0           +----------+ - 0
+                //  |//////////|              |  unread  |
+                //  |/replaced/|              |----------+- y
+                //  |//////////|              |//////////|
+                //  |----------+- height - y  |//copied//|
+                //  |unmodified|              |//////////|
+                //  +----------+- height      +----------+- height
+                const source = other.data[offset_from_top..bottom];
+                const destination = self.data[top..offset_from_bottom];
+                mem.copy(Row, destination, source);
             }
         }
 

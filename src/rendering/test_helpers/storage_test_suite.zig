@@ -153,5 +153,132 @@ pub fn runTests(comptime Instance: anytype) void {
             ;
             try expectPixels(expected, storage);
         }
+
+        test "copy replaces contents of destination buffer when offset is 0" {
+            comptime const Storage = Instance(4, 4);
+            var source = Storage{};
+            var destination = Storage{};
+
+            source.fillFromString(
+                \\0123
+                \\4567
+                \\89AB
+                \\CDEF
+            );
+
+            destination.fill(0x7);
+            destination.copy(&source, 0);
+
+            const expected =
+                \\0123
+                \\4567
+                \\89AB
+                \\CDEF
+            ;
+
+            try expectPixels(expected, destination);
+        }
+
+        test "copy copies contents of destination buffer into correct positive offset" {
+            comptime const Storage = Instance(4, 4);
+            var source = Storage{};
+            var destination = Storage{};
+
+            source.fillFromString(
+                \\0123
+                \\4567
+                \\89AB
+                \\CDEF
+            );
+
+            destination.fill(0x7);
+
+            destination.copy(&source, 3);
+
+            const expected =
+                \\7777
+                \\7777
+                \\7777
+                \\0123
+            ;
+
+            try expectPixels(expected, destination);
+        }
+
+        test "copy copies contents of destination buffer into correct negative offset" {
+            comptime const Storage = Instance(4, 4);
+            var source = Storage{};
+            var destination = Storage{};
+
+            source.fillFromString(
+                \\0123
+                \\4567
+                \\89AB
+                \\CDEF
+            );
+
+            destination.fill(0x7);
+
+            destination.copy(&source, -3);
+
+            const expected =
+                \\CDEF
+                \\7777
+                \\7777
+                \\7777
+            ;
+
+            try expectPixels(expected, destination);
+        }
+
+        test "copy copies does nothing when offset is too far above the top of the buffer" {
+            comptime const Storage = Instance(4, 4);
+            var source = Storage{};
+            var destination = Storage{};
+
+            source.fillFromString(
+                \\0123
+                \\4567
+                \\89AB
+                \\CDEF
+            );
+
+            destination.fill(0x7);
+
+            destination.copy(&source, -4);
+            const expected =
+                \\7777
+                \\7777
+                \\7777
+                \\7777
+            ;
+
+            try expectPixels(expected, destination);
+        }
+
+        test "copy copies does nothing when offset is too far below the bottom of the buffer" {
+            comptime const Storage = Instance(4, 4);
+            var source = Storage{};
+            var destination = Storage{};
+
+            source.fillFromString(
+                \\0123
+                \\4567
+                \\89AB
+                \\CDEF
+            );
+
+            destination.fill(0x7);
+
+            destination.copy(&source, 4);
+            const expected =
+                \\7777
+                \\7777
+                \\7777
+                \\7777
+            ;
+
+            try expectPixels(expected, destination);
+        }
     };
 }

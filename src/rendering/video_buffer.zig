@@ -34,6 +34,11 @@ pub fn Instance(comptime StorageFn: anytype, comptime width: usize, comptime hei
             self.storage.fill(color);
         }
 
+        /// Copy the contents of another buffer into this one at the specified Y offset.
+        pub fn copy(self: *Self, other: *const Self, y: Point.Coordinate) void {
+            self.storage.copy(&other.storage, y);
+        }
+
         /// Draws the specified 8x8 glyph in a solid color, positioning its top left corner at the specified point.
         /// Returns error.GlyphOutOfBounds if the glyph's bounds do not lie fully inside the buffer.
         pub fn drawGlyph(self: *Self, glyph: Font.Glyph, origin: Point.Instance, color: ColorID.Trusted) Error!void {
@@ -274,6 +279,30 @@ fn runTests(comptime Storage: anytype) void {
             ;
 
             try expectPixels(expected, buffer.storage);
+        }
+
+        test "copy copies contents of destination at specified offset" {
+            var destination = new(Storage, 4, 4);
+            destination.fill(0xF);
+
+            var source = new(Storage, 4, 4);
+            source.storage.fillFromString(
+                \\0123
+                \\4567
+                \\89AB
+                \\CDEF
+            );
+
+            destination.copy(&source, 2);
+
+            const expected =
+                \\FFFF
+                \\FFFF
+                \\0123
+                \\4567
+            ;
+
+            try expectPixels(expected, destination.storage);
         }
 
         test "drawGlyph renders pixels of glyph at specified position in buffer" {

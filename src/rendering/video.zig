@@ -83,16 +83,11 @@ pub const Instance = struct {
 
     /// Copy the contents of one buffer into another at the specified vertical offset.
     /// Does nothing if the vertical offset is out of bounds.
-    pub fn copyBuffer(self: *Self, source_id: BufferID.Enum, destination_id: BufferID.Enum, vertical_offset: Point.Coordinate) void {
+    pub fn copyBuffer(self: *Self, source_id: BufferID.Enum, destination_id: BufferID.Enum, y: Point.Coordinate) void {
         const source = self.resolvedBuffer(source_id);
         var destination = self.resolvedBuffer(destination_id);
 
-        // That's as far as we can get for now.
-        log_unimplemented("Video.copyVideoBuffer: source:{} destination:{} vertical_offset:{}", .{
-            source_id,
-            destination_id,
-            vertical_offset,
-        });
+        destination.copy(source, y);
     }
 
     /// Render a polygon from the specified source and address at the specified screen position and scale.

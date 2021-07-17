@@ -12,7 +12,8 @@ const math = std.math;
 /// Returns a video buffer storage that packs 2 pixels into a single byte,
 /// like the original Another World's buffers did.
 pub fn Instance(comptime width: usize, comptime height: usize) type {
-    comptime const bytes_required = try math.divCeil(usize, width * height, 2);
+    comptime const stride = try math.divCeil(usize, width, 2);
+    comptime const bytes_required = height * stride;
     comptime const Data = [bytes_required]NativeColor;
 
     return struct {
@@ -152,6 +153,50 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
             mem.set(NativeColor, &self.data, native_color);
         }
 
+        /// Copy the contents of the specified storage into this one,
+        /// positioning the top left of the destination at the specified Y offset.
+        pub fn copy(self: *Self, other: *const Self, y: Point.Coordinate) void {
+            // Early-out: if no offset is specified, replace the contents of the destination with the source.
+            if (y == 0) {
+                return mem.copy(NativeColor, &self.data, &other.data);
+            }
+
+            // Otherwise, copy the appropriate segment of the source into the appropriate segment of the destination.
+            comptime const max_y = @intCast(isize, height - 1);
+            if (y < -max_y or y > max_y) return;
+
+            comptime const top: usize = 0;
+            comptime const bottom = self.data.len;
+            const offset_from_top = @as(usize, math.absCast(y)) * stride;
+            const offset_from_bottom = bottom - offset_from_top;
+
+            if (y > 0) {
+                //  Destination               Source
+                //  +----------+- 0           +----------+ - 0
+                //  |unmodified|              |//////////|
+                //  |----------+- y           |//copied//|
+                //  |//////////|              |//////////|
+                //  |/replaced/|              |----------+- height - y
+                //  |//////////|              |  unread  |
+                //  +----------+- height      +----------+- height
+                const source = other.data[top..offset_from_bottom];
+                const destination = self.data[offset_from_top..bottom];
+                mem.copy(NativeColor, destination, source);
+            } else {
+                //  Destination               Source
+                //  +----------+- 0           +----------+ - 0
+                //  |//////////|              |  unread  |
+                //  |/replaced/|              |----------+- y
+                //  |//////////|              |//////////|
+                //  |----------+- height - y  |//copied//|
+                //  |unmodified|              |//////////|
+                //  +----------+- height      +----------+- height
+                const source = other.data[offset_from_top..bottom];
+                const destination = self.data[top..offset_from_bottom];
+                mem.copy(NativeColor, destination, source);
+            }
+        }
+
         /// Fill a horizontal line using the specified draw operation.
         /// This is not bounds-checked: specifying a span outside the buffer, or with a negative length,
         /// results in undefined behaviour.
@@ -248,7 +293,6 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
 /// The unit in which the buffer will read and write pixel color values.
 /// Two 4-bit colors are packed into a single byte: Zig packed structs
 /// have endianness-dependent field order so we must flip based on endianness.
-/// q.v.:
 const NativeColor = if (std.Target.current.cpu.arch.endian() == .Big)
     packed struct {
         left: ColorID.Trusted,
@@ -301,9 +345,10 @@ test "Instance produces storage of the expected size filled with zeroes." {
     try testing.expectEqual(expected_data, storage.data);
 }
 
-test "Instance rounds up storage size for uneven pixel counts." {
+test "Instance rounds up storage size for uneven widths." {
     const storage = Instance(319, 199){};
-    try testing.expectEqual(31_741, storage.data.len);
+    const expected = 31_840; // 160 x 199
+    try testing.expectEqual(31_840, storage.data.len);
 }
 
 test "Instance handles 0 width or height gracefully" {
