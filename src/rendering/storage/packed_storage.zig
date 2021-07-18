@@ -4,6 +4,7 @@ const Range = @import("../../values/range.zig");
 const DrawMode = @import("../../values/draw_mode.zig");
 
 const IndexedBitmap = @import("../test_helpers/indexed_bitmap.zig");
+const PlanarBitmapResource = @import("../../resources/planar_bitmap_resource.zig");
 
 const std = @import("std");
 const mem = std.mem;
@@ -194,6 +195,19 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
                 const source = other.data[offset_from_top..bottom];
                 const destination = self.data[top..offset_from_bottom];
                 mem.copy(NativeColor, destination, source);
+            }
+        }
+
+        /// Load the contents of an Another World bitmap resource into this buffer,
+        /// replacing all existing pixels.
+        pub fn loadBitmapResource(self: *Self, bitmap_data: []const u8) PlanarBitmapResource.Error!void {
+            var reader = try PlanarBitmapResource.new(width, height, bitmap_data);
+
+            for (self.data) |*native_color| {
+                native_color.* = .{
+                    .left = try reader.readColor(),
+                    .right = try reader.readColor(),
+                };
             }
         }
 

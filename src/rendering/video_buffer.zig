@@ -39,6 +39,12 @@ pub fn Instance(comptime StorageFn: anytype, comptime width: usize, comptime hei
             self.storage.copy(&other.storage, y);
         }
 
+        /// Load the contents of an Another World bitmap resource into this buffer,
+        /// replacing all existing pixels.
+        pub fn loadBitmapResource(self: *Self, bitmap_data: []const u8) !void {
+            try self.storage.loadBitmapResource(bitmap_data);
+        }
+
         /// Draw a single or multiline string in the specified color,
         /// positioning the top left corner of the text at the specified origin point.
         pub fn drawString(self: *Self, string: []const u8, color: ColorID.Trusted, origin: Point.Instance) !void {

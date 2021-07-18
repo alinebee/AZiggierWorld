@@ -148,6 +148,18 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
             }
         }
 
+        /// Load the contents of an Another World bitmap resource into this buffer,
+        /// replacing all existing pixels.
+        pub fn loadBitmapResource(self: *Self, bitmap_data: []const u8) PlanarBitmapResource.Error!void {
+            var reader = try PlanarBitmapResource.new(width, height, bitmap_data);
+
+            for (self.data) |*row| {
+                for (row.*) |*color| {
+                    color.* = try reader.readColor();
+                }
+            }
+        }
+
         /// Fill a horizontal line with colors using the specified draw mode.
         /// This is not bounds-checked: specifying a span outside the buffer, or with a negative length,
         /// results in undefined behaviour.

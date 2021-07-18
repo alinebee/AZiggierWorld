@@ -61,6 +61,9 @@ pub const Instance = struct {
     /// Masked drawing operations always read the mask from buffer 0.
     const mask_buffer_id: BufferID.Specific = 0;
 
+    /// Bitmaps are always loaded into buffer 0.
+    const bitmap_buffer_id: BufferID.Specific = 0;
+
     const Self = @This();
 
     // - Public methods -
@@ -88,6 +91,12 @@ pub const Instance = struct {
         var destination = self.resolvedBuffer(destination_id);
 
         destination.copy(source, y);
+    }
+
+    /// Loads the specified bitmap resource into the default destination buffer for bitmaps.
+    pub fn loadBitmapResource(self: *Self, bitmap_data: []const u8) !void {
+        const buffer = &self.buffers[bitmap_buffer_id];
+        try buffer.loadBitmapResource(bitmap_data);
     }
 
     /// Render a polygon from the specified source and address at the specified screen position and scale.
