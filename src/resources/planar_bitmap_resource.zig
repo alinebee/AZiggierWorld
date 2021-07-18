@@ -27,13 +27,13 @@ pub fn Reader(comptime width: usize, comptime height: usize) type {
     const stride = try math.divCeil(usize, width, 2);
     const bytes_required = height * stride;
     // Buffers must contain at least 4 bytes for the algorithm to work.
-    debug.assert(bytes_required >= plane_count);
+    comptime debug.assert(bytes_required >= plane_count);
 
     const plane_length = @divExact(bytes_required, plane_count);
 
     const Plane = [plane_length]u8;
     const Planes = *const [plane_count]Plane;
-    debug.assert(@sizeOf(@typeInfo(Planes).Pointer.child) == bytes_required);
+    comptime debug.assert(@sizeOf(@typeInfo(Planes).Pointer.child) == bytes_required);
 
     return struct {
         /// The source bitmap data divided into 4 planes.

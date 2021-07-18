@@ -22,9 +22,9 @@ pub fn new(comptime Integer: type, bits: Integer) Instance(Integer) {
 fn Instance(comptime Integer: type) type {
     comptime assert(trait.isUnsignedInt(Integer));
 
-    comptime const ShiftType = introspection.ShiftType(Integer);
-    comptime const bit_count = introspection.bitCount(Integer);
-    comptime const max_shift: ShiftType = bit_count - 1;
+    const ShiftType = introspection.ShiftType(Integer);
+    const bit_count = introspection.bitCount(Integer);
+    const max_shift: ShiftType = bit_count - 1;
 
     return struct {
         const Self = @This();

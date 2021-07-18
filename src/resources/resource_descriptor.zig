@@ -32,7 +32,7 @@ pub const Instance = struct {
 };
 
 pub fn Error(comptime Reader: type) type {
-    comptime const ReaderError = introspection.ErrorType(Reader.readNoEof);
+    const ReaderError = introspection.ErrorType(Reader.readNoEof);
 
     return ReaderError || ResourceType.Error || error{
         /// A resource defined a compressed size that was larger than its uncompressed size.

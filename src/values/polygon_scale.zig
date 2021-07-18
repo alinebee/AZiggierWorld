@@ -25,11 +25,10 @@ pub fn apply(comptime Int: type, value: Int, scale: Raw) Int {
     // in cases where the raw scale value was large enough to flow into the sign bit of an i16;
     // that could theoretically happen since scale values from registers are 16 bits,
     // but I expect that it never occurred in the original game.
-    comptime const fullwidth_type = if (trait.isUnsignedInt(Int)) usize else isize;
-    comptime const fullwidth_divisor = @as(fullwidth_type, default);
-
-    const fullwidth_value = @as(fullwidth_type, value);
-    const fullwidth_scale = @as(fullwidth_type, scale);
+    const FullwidthInt = comptime if (trait.isUnsignedInt(Int)) usize else isize;
+    const fullwidth_divisor = @as(FullwidthInt, default);
+    const fullwidth_value = @as(FullwidthInt, value);
+    const fullwidth_scale = @as(FullwidthInt, scale);
     const fullwidth_scaled_value = @divTrunc(fullwidth_value *% fullwidth_scale, fullwidth_divisor);
 
     return @truncate(Int, fullwidth_scaled_value);

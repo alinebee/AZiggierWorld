@@ -45,7 +45,7 @@ pub fn runTests(comptime Instance: anytype) void {
         }
 
         test "uncheckedDrawSpan with byte-aligned span sets solid color in slice" {
-            comptime const Storage = Instance(10, 3);
+            const Storage = Instance(10, 3);
             var storage = Storage{};
 
             const operation = Storage.DrawOperation.solidColor(0xD);
@@ -61,7 +61,7 @@ pub fn runTests(comptime Instance: anytype) void {
         }
 
         test "uncheckedDrawSpan with non-byte-aligned start sets start pixel correctly" {
-            comptime const Storage = Instance(10, 3);
+            const Storage = Instance(10, 3);
             var storage = Storage{};
 
             const operation = Storage.DrawOperation.solidColor(0xC);
@@ -77,7 +77,7 @@ pub fn runTests(comptime Instance: anytype) void {
         }
 
         test "uncheckedDrawSpan with non-byte-aligned end sets end pixel correctly" {
-            comptime const Storage = Instance(10, 3);
+            const Storage = Instance(10, 3);
             var storage = Storage{};
 
             const operation = Storage.DrawOperation.solidColor(0x3);
@@ -93,7 +93,7 @@ pub fn runTests(comptime Instance: anytype) void {
         }
 
         test "uncheckedDrawSpan with non-byte-aligned start and end sets start and end pixels correctly" {
-            comptime const Storage = Instance(10, 3);
+            const Storage = Instance(10, 3);
             var storage = Storage{};
 
             const operation = Storage.DrawOperation.solidColor(0x7);
@@ -109,7 +109,7 @@ pub fn runTests(comptime Instance: anytype) void {
         }
 
         test "uncheckedDrawSpan highlights colors in slice" {
-            comptime const Storage = Instance(16, 3);
+            const Storage = Instance(16, 3);
             var storage = Storage{};
             storage.fillFromString(
                 \\0123456789ABCDEF
@@ -132,7 +132,7 @@ pub fn runTests(comptime Instance: anytype) void {
         }
 
         test "uncheckedDrawSpan replaces colors in slice with mask" {
-            comptime const Storage = Instance(10, 3);
+            const Storage = Instance(10, 3);
             var storage = Storage{};
 
             var mask_storage = Storage{};
@@ -155,7 +155,7 @@ pub fn runTests(comptime Instance: anytype) void {
         }
 
         test "copy replaces contents of destination buffer when offset is 0" {
-            comptime const Storage = Instance(4, 4);
+            const Storage = Instance(4, 4);
             var source = Storage{};
             var destination = Storage{};
 
@@ -180,7 +180,7 @@ pub fn runTests(comptime Instance: anytype) void {
         }
 
         test "copy copies contents of destination buffer into correct positive offset" {
-            comptime const Storage = Instance(4, 4);
+            const Storage = Instance(4, 4);
             var source = Storage{};
             var destination = Storage{};
 
@@ -206,7 +206,7 @@ pub fn runTests(comptime Instance: anytype) void {
         }
 
         test "copy copies contents of destination buffer into correct negative offset" {
-            comptime const Storage = Instance(4, 4);
+            const Storage = Instance(4, 4);
             var source = Storage{};
             var destination = Storage{};
 
@@ -232,7 +232,7 @@ pub fn runTests(comptime Instance: anytype) void {
         }
 
         test "copy copies does nothing when offset is too far above the top of the buffer" {
-            comptime const Storage = Instance(4, 4);
+            const Storage = Instance(4, 4);
             var source = Storage{};
             var destination = Storage{};
 
@@ -257,7 +257,7 @@ pub fn runTests(comptime Instance: anytype) void {
         }
 
         test "copy copies does nothing when offset is too far below the bottom of the buffer" {
-            comptime const Storage = Instance(4, 4);
+            const Storage = Instance(4, 4);
             var source = Storage{};
             var destination = Storage{};
 

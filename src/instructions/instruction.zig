@@ -189,8 +189,8 @@ fn execute(comptime Instruction: type, raw_opcode: Opcode.Raw, program: *Program
     const instruction = try Instruction.parse(raw_opcode, program);
 
     // You'd think there'd be an easier way to express "try the function if necessary, otherwise just call it".
-    comptime const ReturnType = introspection.ReturnType(instruction.execute);
-    comptime const returns_error = @typeInfo(ReturnType) == .ErrorUnion;
+    const ReturnType = introspection.ReturnType(instruction.execute);
+    const returns_error = @typeInfo(ReturnType) == .ErrorUnion;
     const payload = if (returns_error)
         try instruction.execute(machine)
     else
@@ -198,7 +198,7 @@ fn execute(comptime Instruction: type, raw_opcode: Opcode.Raw, program: *Program
 
     // Check whether this instruction returned a specific thread action to take after executing.
     // Most instructions just return void; assume their action will be .Continue.
-    comptime const returns_action = @TypeOf(payload) == Action.Enum;
+    const returns_action = @TypeOf(payload) == Action.Enum;
     if (returns_action) {
         return payload;
     } else {

@@ -29,7 +29,7 @@ pub const Instance = struct {
     pub fn read(self: *Instance, comptime Integer: type) Error!Integer {
         // readIntSliceBig uses this construction internally.
         // @sizeOf would be nicer, but may include padding bytes.
-        comptime const byte_width = @divExact(introspection.bitCount(Integer), 8);
+        const byte_width = comptime @divExact(introspection.bitCount(Integer), 8);
 
         const upper_bound = self.counter + byte_width;
         if (upper_bound > self.bytecode.len) {

@@ -13,9 +13,10 @@ const math = std.math;
 /// Returns a video buffer storage that packs 2 pixels into a single byte,
 /// like the original Another World's buffers did.
 pub fn Instance(comptime width: usize, comptime height: usize) type {
-    comptime const stride = try math.divCeil(usize, width, 2);
-    comptime const bytes_required = height * stride;
-    comptime const Data = [bytes_required]NativeColor;
+    const signed_width = @intCast(isize, width);
+    const stride = comptime try math.divCeil(usize, width, 2);
+    const bytes_required = comptime height * stride;
+    const Data = [bytes_required]NativeColor;
 
     return struct {
         data: Data = mem.zeroes(Data),
@@ -137,7 +138,6 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
         /// Given an X,Y point, returns the index of the byte within `data` containing that point's pixel.
         /// This is not bounds-checked: specifying a point outside the buffer results in undefined behaviour.
         fn uncheckedIndexOf(point: Point.Instance) Index {
-            comptime const signed_width = @intCast(isize, width);
             const signed_offset = @divFloor(point.x + (point.y * signed_width), 2);
 
             return .{
@@ -163,11 +163,11 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
             }
 
             // Otherwise, copy the appropriate segment of the source into the appropriate segment of the destination.
-            comptime const max_y = @intCast(isize, height - 1);
+            const max_y = comptime @intCast(isize, height - 1);
             if (y < -max_y or y > max_y) return;
 
-            comptime const top: usize = 0;
-            comptime const bottom = self.data.len;
+            const top: usize = 0;
+            const bottom = self.data.len;
             const offset_from_top = @as(usize, math.absCast(y)) * stride;
             const offset_from_bottom = bottom - offset_from_top;
 

@@ -7,7 +7,8 @@ const mem = std.mem;
 /// Stores a 16-color bitmap with the specified width and height, and converts its contents
 /// to and from a multiline string representation. Intended for unit-testing the contents of a draw buffer.
 pub fn Instance(comptime width: usize, comptime height: usize) type {
-    comptime const Data = [height][width]ColorID.Trusted;
+    const Data = [height][width]ColorID.Trusted;
+
     return struct {
         data: Data = mem.zeroes(Data),
 

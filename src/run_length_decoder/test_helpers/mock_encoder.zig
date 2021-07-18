@@ -86,10 +86,10 @@ const Instance = struct {
 
     /// Add the specified bits to the end of the payload, starting from the most significant bit of the first byte.
     fn writeBits(self: *Instance, bits: anytype) !void {
-        comptime const Integer = @TypeOf(bits);
+        const Integer = @TypeOf(bits);
         comptime assert(trait.isUnsignedInt(Integer));
-        comptime const bit_count = introspection.bitCount(Integer);
-        comptime const ShiftType = introspection.ShiftType(Integer);
+        const bit_count = introspection.bitCount(Integer);
+        const ShiftType = introspection.ShiftType(Integer);
 
         var bits_remaining: usize = bit_count;
         while (bits_remaining > 0) : (bits_remaining -= 1) {
