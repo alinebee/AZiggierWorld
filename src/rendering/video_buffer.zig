@@ -270,6 +270,7 @@ const expectPixels = @import("test_helpers/storage_test_suite.zig").expectPixels
 
 const AlignedStorage = @import("storage/aligned_storage.zig");
 const PackedStorage = @import("storage/packed_storage.zig");
+const PlanarBitmapResource = @import("../resources/planar_bitmap_resource.zig");
 
 // -- Public draw method tests --
 
@@ -328,6 +329,22 @@ fn runTests(comptime Storage: anytype) void {
             ;
 
             try expectPixels(expected, destination.storage);
+        }
+
+        test "loadBitmapResource correctly parses planar bitmap data" {
+            const data = &PlanarBitmapResource.DataExamples.valid_16px;
+
+            var buffer = new(Storage, 4, 4);
+            try buffer.loadBitmapResource(data);
+
+            const expected =
+                \\1919
+                \\5D5D
+                \\E6E6
+                \\A2A2
+            ;
+
+            try expectPixels(expected, buffer.storage);
         }
 
         test "drawString renders pixels of glyph at specified position in buffer" {

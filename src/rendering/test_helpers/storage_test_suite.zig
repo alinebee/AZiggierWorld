@@ -1,4 +1,5 @@
 const expectBitmap = @import("indexed_bitmap.zig").expectBitmap;
+const PlanarBitmapResource = @import("../../resources/planar_bitmap_resource.zig");
 
 // -- Test helpers --
 
@@ -279,6 +280,23 @@ pub fn runTests(comptime Instance: anytype) void {
             ;
 
             try expectPixels(expected, destination);
+        }
+
+        test "loadBitmapResource correctly parses planar bitmap data" {
+            const data = &PlanarBitmapResource.DataExamples.valid_16px;
+            const Storage = Instance(4, 4);
+
+            var buffer = Storage{};
+            try buffer.loadBitmapResource(data);
+
+            const expected =
+                \\1919
+                \\5D5D
+                \\E6E6
+                \\A2A2
+            ;
+
+            try expectPixels(expected, buffer);
         }
     };
 }

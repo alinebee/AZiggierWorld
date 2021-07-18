@@ -118,10 +118,10 @@ pub const Error = error{
 
 // -- Examples --
 
-const DataExamples = struct {
+pub const DataExamples = struct {
     // zig fmt: off
     /// A planar image containing 16 pixels @ 2 pixels per byte, 2 bytes per plane, 4 planes.
-    const valid_16px = [_]u8 {
+    pub const valid_16px = [_]u8 {
         // Read from bottom to top, left to right to get the final pixel values.
         //01234567    89ABCDEF
         0b11111111, 0b00000000, // Plane 0

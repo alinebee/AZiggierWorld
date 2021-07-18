@@ -4,6 +4,7 @@ const Range = @import("../../values/range.zig");
 const DrawMode = @import("../../values/draw_mode.zig");
 
 const IndexedBitmap = @import("../test_helpers/indexed_bitmap.zig");
+const PlanarBitmapResource = @import("../../resources/planar_bitmap_resource.zig");
 
 const mem = @import("std").mem;
 const math = @import("std").math;
