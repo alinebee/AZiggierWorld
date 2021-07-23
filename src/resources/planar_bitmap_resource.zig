@@ -1,12 +1,19 @@
 //! This file defines a parser that extracts image pixels from Another World's bitmap resource data.
 //!
-//! Another World's bitmap resources encoded a 320x200 image in a bitplane format,
+//! Another World's bitmap resources encoded a 320x200 16-color image in a bitplane format,
 //! where the 4 bits that made up a single destination pixel were split across
 //! 4 separate regions (planes) of the source bitmap, one plane after the other.
 //!
 //! Since Another World was programmed on an Amiga 500, this may have been done
 //! to match the planar layout of the Amiga 500's framebuffer, documented here:
 //! http://fabiensanglard.net/another_world_polygons_amiga500/index.html
+//!
+//! (Speculation: the Amiga architecture may have used bitplanes to support its 32-color (5-bit)
+//! and 64-color (6-bit) palettes. A 16-color (4-bit) indexed image can be stored cleanly into
+//! a byte buffer by packing 2 color indexes into each byte; but 5- or 6- bit color indexes
+//! would either waste a lot of space in order to stay byte-aligned, or else be spread across
+//! byte boundaries and need to be masked in awkward ways. Planes allow arbitrary index sizes
+//! to be stored efficiently.)
 
 const ColorID = @import("../values/color_id.zig");
 
@@ -168,8 +175,6 @@ test "Parses planar data properly" {
     for (actual) |*color| {
         color.* = try reader.readColor();
     }
-
-    // print("\n{b:0<4}\n", .{actual});
 
     try testing.expectEqual(true, reader.isAtEnd());
     try testing.expectEqualSlices(ColorID.Trusted, &expected, &actual);

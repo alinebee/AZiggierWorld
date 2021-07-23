@@ -13,8 +13,6 @@ const RegisterValue = @import("../machine/machine.zig").RegisterValue;
 
 const english = @import("../assets/english.zig");
 
-const log_unimplemented = @import("../utils/logging.zig").log_unimplemented;
-
 /// Defines where to read polygon from for a polygon draw operation.
 /// Another World's polygons may be stored in one of two locations:
 /// - polygons: A game-part-specific resource containing scene backgrounds and incidental animations.
