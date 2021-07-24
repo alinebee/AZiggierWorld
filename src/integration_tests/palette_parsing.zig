@@ -23,7 +23,7 @@ test "Parse all palettes in original game files" {
     for (loader.resource_descriptors) |descriptor| {
         if (descriptor.type != .palettes) continue;
 
-        const data = try loader.readResource(testing.allocator, descriptor);
+        const data = try loader.allocReadResource(testing.allocator, descriptor);
         defer testing.allocator.free(data);
 
         var stream = countingReader(fixedBufferStream(data).reader());

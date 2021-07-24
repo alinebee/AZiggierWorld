@@ -52,18 +52,18 @@ fn findPolygonDrawInstructions(allocator: *std.mem.Allocator, bytecode: []const 
 fn parsePolygonInstructionsForGamePart(allocator: *std.mem.Allocator, loader: ResourceLoader.Instance, game_part: GamePart.Enum) !usize {
     const resource_ids = game_part.resourceIDs();
 
-    const bytecode = try loader.readResourceByID(allocator, resource_ids.bytecode);
+    const bytecode = try loader.allocReadResourceByID(allocator, resource_ids.bytecode);
     defer allocator.free(bytecode);
 
     const instructions = try findPolygonDrawInstructions(allocator, bytecode);
     defer allocator.free(instructions);
 
-    const polygons = PolygonResource.new(try loader.readResourceByID(allocator, resource_ids.polygons));
+    const polygons = PolygonResource.new(try loader.allocReadResourceByID(allocator, resource_ids.polygons));
     defer allocator.free(polygons.data);
 
     const maybe_animations: ?PolygonResource.Instance = init: {
         if (resource_ids.animations) |id| {
-            const data = try loader.readResourceByID(allocator, id);
+            const data = try loader.allocReadResourceByID(allocator, id);
             break :init PolygonResource.new(data);
         } else {
             break :init null;

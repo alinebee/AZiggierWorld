@@ -65,7 +65,7 @@ test "parseNextInstruction parses all programs in fixture bytecode" {
     for (loader.resource_descriptors) |descriptor, index| {
         if (descriptor.type != .bytecode) continue;
 
-        const data = try loader.readResource(testing.allocator, descriptor);
+        const data = try loader.allocReadResource(testing.allocator, descriptor);
         defer testing.allocator.free(data);
 
         var program = Program.new(data);

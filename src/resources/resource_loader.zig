@@ -1,3 +1,6 @@
+//! This file defines a type for loading resources from a filesystem directory
+//! that contains Another World game files.
+
 const ResourceDescriptor = @import("resource_descriptor.zig");
 const ResourceID = @import("../values/resource_id.zig");
 const Filename = @import("filename.zig");
@@ -20,12 +23,19 @@ pub fn new(allocator: *mem.Allocator, game_path: []const u8) !Instance {
 }
 
 pub const Instance = struct {
-    allocator: *mem.Allocator,
-    resource_descriptors: []const ResourceDescriptor.Instance,
+    /// The absolute path of the directory from which game data will be loaded.
     path: []const u8,
+    /// The list of resources parsed from the MEMLIST.BIN manifest located in `path`.
+    resource_descriptors: []const ResourceDescriptor.Instance,
+    /// The allocator used for constructing filesystem paths and storing the list of resources.
+    /// This allocator is not used for loading the contents of game resources themselves;
+    /// that must be provided on each call to readResourceAlloc and readResourceByIDAlloc.
+    allocator: *mem.Allocator,
 
-    /// Creates a new resource loader that reads from the specified base path.
+    /// Initializes a new resource loader that reads from the specified base path.
     /// Call `deinit` to deinitialize.
+    /// Returns an error if the specific allocator failed to allocate memory or the specified path
+    /// did not contain the expected game data files.
     fn init(self: *Instance, allocator: *mem.Allocator, path: []const u8) !void {
         self.allocator = allocator;
 
@@ -42,18 +52,24 @@ pub const Instance = struct {
     }
 
     /// Free the memory used by the loader itself.
-    /// Any data that was returned by `readResource` is not owned and must be freed separately.
-    /// After calling this function, it is an error to use the loader.
+    /// Any data that was returned by `readResource` et al is not owned and must be freed separately.
+    /// After calling this function, attempting to use the loader will result in undefined behavior.
     pub fn deinit(self: Instance) void {
         self.allocator.free(self.path);
         self.allocator.free(self.resource_descriptors);
     }
 
-    /// Read the specified resource from the appropriate BANKXX file,
-    /// and return a slice that contains the decompressed resource data.
-    /// Caller owns the returned slice and must free it with `data_allocator.free`.
-    /// Returns an error if the data could not be read or decompressed.
-    pub fn readResource(self: Instance, data_allocator: *mem.Allocator, descriptor: ResourceDescriptor.Instance) ![]const u8 {
+    /// Read the specified resource from the appropriate BANKXX file into the provided buffer.
+    /// Returns a slice representing the portion of `buffer` that contains resource data.
+    /// Returns an error if `buffer` was not large enough to hold the data or if the data
+    /// could not be read or decompressed.
+    /// In the event of an error, `buffer` may contain partially-loaded game data.
+    pub fn bufReadResource(self: Instance, buffer: []u8, descriptor: ResourceDescriptor.Instance) ![]const u8 {
+        if (buffer.len < descriptor.uncompressed_size) {
+            return error.BufferTooSmall;
+        }
+        const destination = buffer[0..descriptor.uncompressed_size];
+
         const bank_path = try resourcePath(self.allocator, self.path, .{ .bank = descriptor.bank_id });
         defer self.allocator.free(bank_path);
 
@@ -64,30 +80,42 @@ pub const Instance = struct {
 
         try file.seekTo(descriptor.bank_offset);
 
-        // Create a buffer large enough to decompress the resource into.
-        var uncompressed_data = try data_allocator.alloc(u8, descriptor.uncompressed_size);
-        errdefer data_allocator.free(uncompressed_data);
+        try readAndDecompress(file.reader(), destination, descriptor.compressed_size);
+        return destination;
+    }
 
-        try bufReadResource(file.reader(), uncompressed_data, descriptor.compressed_size);
-        return uncompressed_data;
+    /// Allocate a buffer and read the specified resource from the appropriate BANKXX file into it.
+    /// Returns a slice that contains the decompressed resource data.
+    /// Caller owns the returned slice and must free it with `data_allocator.free`.
+    /// Returns an error if the allocator failed to allocate memory or if the data could not be read
+    /// or decompressed.
+    pub fn allocReadResource(self: Instance, data_allocator: *mem.Allocator, descriptor: ResourceDescriptor.Instance) ![]const u8 {
+        // Create a buffer just large enough to decompress the resource into.
+        var destination = try data_allocator.alloc(u8, descriptor.uncompressed_size);
+        errdefer data_allocator.free(destination);
+
+        return try self.bufReadResource(destination, descriptor);
     }
 
     /// Read the resource with the specified ID from the appropriate BANKXX file,
     /// and return a slice that contains the decompressed resource data.
     /// Caller owns the returned slice and must free it with `data_allocator.free`.
     /// Returns an error if the data could not be read or decompressed.
-    pub fn readResourceByID(self: Instance, data_allocator: *mem.Allocator, id: ResourceID.Raw) ![]const u8 {
+    pub fn allocReadResourceByID(self: Instance, data_allocator: *mem.Allocator, id: ResourceID.Raw) ![]const u8 {
         if (id >= self.resource_descriptors.len) {
             return error.InvalidResourceID;
         }
         const descriptor = self.resource_descriptors[id];
-        return self.readResource(data_allocator, descriptor);
+        return self.allocReadResource(data_allocator, descriptor);
     }
 };
 
-pub const ReadResourceIDError = error{
+pub const Error = error{
     /// The resource ID does not exist in the game's resource list.
     InvalidResourceID,
+
+    /// The provided buffer is not large enough to load the requested resource.
+    BufferTooSmall,
 };
 
 /// The number of descriptors expected in an Another World MEMLIST.BIN file.
@@ -154,7 +182,7 @@ fn ResourceError(comptime Reader: type) type {
 /// Read resource data from a reader into the specified buffer, decompressing it if necessary.
 /// On success, `buffer` will be filled with uncompressed data.
 /// If reading fails, `buffer`'s contents should be treated as invalid.
-fn bufReadResource(reader: anytype, buffer: []u8, compressed_size: usize) ResourceError(@TypeOf(reader))!void {
+fn readAndDecompress(reader: anytype, buffer: []u8, compressed_size: usize) ResourceError(@TypeOf(reader))!void {
     // Normally this error case will be caught earlier when parsing resource descriptors:
     // See ResourceDescriptor.iterator.next.
     if (compressed_size > buffer.len) {
@@ -219,21 +247,21 @@ test "resourcePath returns error.OutOfMemory if memory could not be allocated" {
     );
 }
 
-test "bufReadResource reads uncompressed data into buffer" {
+test "readAndDecompress reads uncompressed data into buffer" {
     const source = [_]u8{ 0xDE, 0xAD, 0xBE, 0xEF };
     const reader = io.fixedBufferStream(&source).reader();
 
     var destination: [4]u8 = undefined;
-    try bufReadResource(reader, &destination, source.len);
+    try readAndDecompress(reader, &destination, source.len);
 
     try testing.expectEqualSlices(u8, &source, &destination);
 }
 
-test "bufReadResource reads compressed data into buffer" {
+test "readAndDecompress reads compressed data into buffer" {
     // TODO: we need valid fixture data for this
 }
 
-test "bufReadResource returns error.InvalidCompressedData if data could not be decompressed" {
+test "readAndDecompress returns error.InvalidCompressedData if data could not be decompressed" {
     const source = [_]u8{ 0xDE, 0xAD, 0xBE };
     const reader = io.fixedBufferStream(&source).reader();
 
@@ -241,11 +269,11 @@ test "bufReadResource returns error.InvalidCompressedData if data could not be d
 
     try testing.expectError(
         error.InvalidCompressedData,
-        bufReadResource(reader, &destination, source.len),
+        readAndDecompress(reader, &destination, source.len),
     );
 }
 
-test "bufReadResource returns error.InvalidResourceSize on mismatched compressed size" {
+test "readAndDecompress returns error.InvalidResourceSize on mismatched compressed size" {
     const source = [_]u8{ 0xDE, 0xAD, 0xBE, 0xEF };
     const reader = io.fixedBufferStream(&source).reader();
 
@@ -253,11 +281,11 @@ test "bufReadResource returns error.InvalidResourceSize on mismatched compressed
 
     try testing.expectError(
         error.InvalidResourceSize,
-        bufReadResource(reader, &destination, source.len),
+        readAndDecompress(reader, &destination, source.len),
     );
 }
 
-test "bufReadResource returns error.EndOfStream when source data is truncated" {
+test "readAndDecompress returns error.EndOfStream when source data is truncated" {
     const source = [_]u8{ 0xDE, 0xAD, 0xBE };
     const reader = io.fixedBufferStream(&source).reader();
 
@@ -265,7 +293,7 @@ test "bufReadResource returns error.EndOfStream when source data is truncated" {
 
     try testing.expectError(
         error.EndOfStream,
-        bufReadResource(reader, &destination, destination.len),
+        readAndDecompress(reader, &destination, destination.len),
     );
 }
 

@@ -18,14 +18,14 @@ test "ResourceLoader loads all game resources" {
 
     // For each resource, test that it can be parsed and decompressed without errors.
     for (loader.resource_descriptors) |descriptor| {
-        const data = try loader.readResource(testing.allocator, descriptor);
+        const data = try loader.allocReadResource(testing.allocator, descriptor);
         defer testing.allocator.free(data);
 
         try testing.expectEqual(descriptor.uncompressed_size, data.len);
     }
 }
 
-test "Instance.readResource returns error.OutOfMemory if it runs out of memory when loading a non-empty resource" {
+test "Instance.readResourceAlloc returns error.OutOfMemory if it runs out of memory when loading a non-empty resource" {
     const game_path = validFixturePath(testing.allocator) catch return;
     defer testing.allocator.free(game_path);
 
@@ -43,11 +43,11 @@ test "Instance.readResource returns error.OutOfMemory if it runs out of memory w
 
     try testing.expectError(
         error.OutOfMemory,
-        loader.readResource(testing.failing_allocator, non_empty_descriptor),
+        loader.allocReadResource(testing.failing_allocator, non_empty_descriptor),
     );
 }
 
-test "Instance.readResourceByID returns error.InvalidResourceID when given a resource ID that is out of range" {
+test "Instance.allocReadResourceByID returns error.InvalidResourceID when given a resource ID that is out of range" {
     const game_path = validFixturePath(testing.allocator) catch return;
     defer testing.allocator.free(game_path);
 
@@ -56,6 +56,6 @@ test "Instance.readResourceByID returns error.InvalidResourceID when given a res
 
     try testing.expectError(
         error.InvalidResourceID,
-        loader.readResourceByID(testing.allocator, @intCast(ResourceID.Raw, loader.resource_descriptors.len)),
+        loader.allocReadResourceByID(testing.allocator, @intCast(ResourceID.Raw, loader.resource_descriptors.len)),
     );
 }
