@@ -13,7 +13,6 @@
 //! http://fabiensanglard.net/another_world_polygons_amiga500/index.html
 
 const PaletteID = @import("../values/palette_id.zig");
-const ColorID = @import("../values/color_id.zig");
 const Color = @import("../values/color.zig");
 
 const math = @import("std").math;
@@ -24,11 +23,15 @@ pub const palette_count = 32;
 /// The number of colors inside a palette.
 pub const color_count = 16;
 
+/// A 16-color palette parsed from Another World game data.
 pub const Palette = [color_count]Color.Instance;
 
+/// A set of 32 palettes parsed from Another World game data.
 pub const Instance = [palette_count]Palette;
 
+/// The size in bytes of an individual palette within an Another World palette resource.
 pub const palette_size = @sizeOf(Color.Raw) * color_count; // 32 bytes
+/// The size in bytes of an Another World palette resource.
 pub const resource_size = palette_size * palette_count; // 1024 bytes
 
 /// Parse an Another World palette resource into 32 16-color RGB palettes.

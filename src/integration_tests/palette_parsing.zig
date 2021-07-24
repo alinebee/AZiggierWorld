@@ -4,7 +4,6 @@
 
 const PaletteResource = @import("../resources/palette_resource.zig");
 const ResourceLoader = @import("../resources/resource_loader.zig");
-const ResourceID = @import("../values/resource_id.zig");
 
 const validFixturePath = @import("helpers.zig").validFixturePath;
 
@@ -21,11 +20,10 @@ test "Parse all palettes in original game files" {
     defer loader.deinit();
 
     // For each resource, test that it can be parsed and decompressed without errors.
-    for (loader.resource_descriptors) |descriptor, index| {
+    for (loader.resource_descriptors) |descriptor| {
         if (descriptor.type != .palettes) continue;
 
-        const id = @intCast(ResourceID.Raw, index);
-        const data = try loader.readResourceByID(testing.allocator, id);
+        const data = try loader.readResource(testing.allocator, descriptor);
         defer testing.allocator.free(data);
 
         var stream = countingReader(fixedBufferStream(data).reader());
@@ -34,7 +32,7 @@ test "Parse all palettes in original game files" {
         // Note: the original Another World DOS resources contained 32 palettes of 32 bytes each,
         // for 1024 bytes in total, but the resources were 2048 bytes large. It seems they store
         // the VGA palettes in the first 1024 bytes and the EGA palettes in the second.
-        // We only use the first half of the palettes, and don't even bother reading the other half.
+        // We only use the first half of the palettes, and don't bother even reading the other half.
         // Reference: https://github.com/fabiensanglard/Another-World-Bytecode-Interpreter/blob/master/src/resource.h#L74
         try testing.expectEqual(PaletteResource.resource_size, stream.bytes_read);
     }

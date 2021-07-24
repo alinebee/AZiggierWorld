@@ -61,12 +61,14 @@ fn parsePolygonInstructionsForGamePart(allocator: *std.mem.Allocator, loader: Re
     const polygons = PolygonResource.new(try loader.readResourceByID(allocator, resource_ids.polygons));
     defer allocator.free(polygons.data);
 
-    var maybe_animations: ?PolygonResource.Instance = undefined;
-    if (resource_ids.animations) |id| {
-        maybe_animations = PolygonResource.new(try loader.readResourceByID(allocator, id));
-    } else {
-        maybe_animations = null;
-    }
+    const maybe_animations: ?PolygonResource.Instance = init: {
+        if (resource_ids.animations) |id| {
+            const data = try loader.readResourceByID(allocator, id);
+            break :init PolygonResource.new(data);
+        } else {
+            break :init null;
+        }
+    };
 
     defer {
         if (maybe_animations) |animations| {

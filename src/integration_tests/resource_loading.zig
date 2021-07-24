@@ -17,9 +17,8 @@ test "ResourceLoader loads all game resources" {
     try testing.expectEqual(146, loader.resource_descriptors.len);
 
     // For each resource, test that it can be parsed and decompressed without errors.
-    for (loader.resource_descriptors) |descriptor, index| {
-        const id = @intCast(ResourceID.Raw, index);
-        const data = try loader.readResourceByID(testing.allocator, id);
+    for (loader.resource_descriptors) |descriptor| {
+        const data = try loader.readResource(testing.allocator, descriptor);
         defer testing.allocator.free(data);
 
         try testing.expectEqual(descriptor.uncompressed_size, data.len);

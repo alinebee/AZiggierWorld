@@ -7,6 +7,7 @@ const log = std.log;
 pub const relative_fixture_path = "fixtures/dos/";
 
 /// Validates that game files have been added to the fixture directory and returns the path to them.
+/// Caller owns the returned path and must free it using the same allocator.
 /// If game files are missing, returns an error.
 ///
 /// Intended usage:
@@ -20,7 +21,7 @@ pub fn validFixturePath(allocator: *mem.Allocator) ![]const u8 {
     defer allocator.free(memlist_path);
 
     // Test if MEMLIST.BIN exists in the fixture directory;
-    // if it does not, it means the user hasn't been populated it with game files yet.
+    // if it does not, it means it hasn't been populated it with game files yet.
     try fs.cwd().access(memlist_path, .{ .read = true });
 
     return fixture_path;
