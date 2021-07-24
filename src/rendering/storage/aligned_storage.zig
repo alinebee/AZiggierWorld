@@ -1,3 +1,10 @@
+//! This file defines a video buffer storage type that stores each 16-color pixel as a separate byte.
+//! Since pixels are aligned to byte boundaries, individual pixels can be addressed by indexing
+//! into a two-dimensional byte array, greatly simplifying draw routines compared to packed_storage.zig.
+//!
+//! As a tradeoff, storage takes twice the bytes: a 320x200 buffer takes 64,000 bytes,
+//! versus 32,000 for the packed storage implementation.
+
 const ColorID = @import("../../values/color_id.zig");
 const Point = @import("../../values/point.zig");
 const Range = @import("../../values/range.zig");
@@ -8,11 +15,18 @@ const PlanarBitmapResource = @import("../../resources/planar_bitmap_resource.zig
 
 const mem = @import("std").mem;
 const math = @import("std").math;
+const debug = @import("std").debug;
 
 /// Returns a video buffer storage that stores a single pixel per byte.
 pub fn Instance(comptime width: usize, comptime height: usize) type {
+    // Store pixel data in a two-dimensional array
     const Row = [width]ColorID.Trusted;
     const Data = [height]Row;
+
+    // We sometimes also address pixels as a 1D array, e.g. for fills
+    const bytes_required = width * height;
+    const RawData = [bytes_required]ColorID.Trusted;
+    comptime debug.assert(@sizeOf(Data) == @sizeOf(RawData));
 
     return struct {
         data: Data = mem.zeroes(Data),
@@ -98,11 +112,8 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
 
         /// Fill the entire buffer with the specified color.
         pub fn fill(self: *Self, color: ColorID.Trusted) void {
-            // It would be nice to use mem.set on self.data as a whole,
-            // but that doesn't work on multidimensional arrays.
-            for (self.data) |*row| {
-                mem.set(ColorID.Trusted, row, color);
-            }
+            const raw_bytes = @ptrCast(*RawData, &self.data);
+            mem.set(ColorID.Trusted, raw_bytes, color);
         }
 
         /// Copy the contents of the specified storage into this one,

@@ -40,10 +40,11 @@ pub fn Reader(comptime width: usize, comptime height: usize) type {
 
     const Plane = [plane_length]u8;
     const Planes = *const [plane_count]Plane;
+
     comptime debug.assert(@sizeOf(@typeInfo(Planes).Pointer.child) == bytes_required);
 
     return struct {
-        /// The source bitmap data divided into 4 planes.
+        /// The source bitmap data divided into 4 sequential planes.
         planes: Planes,
         /// The current chunk of 4 bytes (one from each plane) that the reader is reading bits from.
         current_chunk: [plane_count]u8 = undefined,

@@ -1,3 +1,15 @@
+//! This file defines a video buffer storage type that matches the original Another World
+//! memory-saving technique of packing 2 16-color pixels into each byte of the buffer:
+//! This makes a 320x200 buffer only requires 32,000 bytes instead of 64,0000.
+//!
+//! Since pixels don't fall on byte boundaries, masking must be used to address individual pixels,
+//! which complicates some of the draw routines: e.g. efficient span-drawing for polygon fills
+//! must take into account whether the start and end of the span fall on byte boundaries.
+//!
+//! (This Zig implementation takes advantage of Zig's packed structs and sub-byte integer sizes,
+//! addressing both pixels of a byte using a byte-length struct with two fields. Behind the scenes
+//! Zig takes care of the masking for us.)
+
 const ColorID = @import("../../values/color_id.zig");
 const Point = @import("../../values/point.zig");
 const Range = @import("../../values/range.zig");
@@ -304,9 +316,11 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
     };
 }
 
-/// The unit in which the buffer will read and write pixel color values.
-/// Two 4-bit colors are packed into a single byte: Zig packed structs
-/// have endianness-dependent field order so we must flip based on endianness.
+// -- Helper types --
+
+/// The unit in which the buffer will read and write color values for individual pixels.
+/// Two 4-bit colors are packed into a single byte: Zig packed structs have
+/// endianness-dependent field order so we must flip based on endianness.
 const NativeColor = if (std.Target.current.cpu.arch.endian() == .Big)
     packed struct {
         left: ColorID.Trusted,

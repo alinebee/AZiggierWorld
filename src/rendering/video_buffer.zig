@@ -1,6 +1,12 @@
-//! Another World uses 320x200-pixel video buffers, where each pixel is a 16-bit color index in the current palette.
-//! This VideoBuffer type abstracts away the storage mechanism of those pixels: it implements the draw operations
-//! needed to render polygons and font glyphs, and defers pixel-level read and write operations to its backing storage.
+//! Another World uses 320x200-pixel video buffers, where each pixel is a 16-bit color index
+//! in the current palette.
+//!
+//! The type defined in this file represents a 16-color buffer with arbitrary width and height.
+//! It implements high-level draw operations to render polygons and text, but abstracts away
+//! the storage of pixels to an encapsulated backing storage type, and defers pixel-level read
+//! and write operations to that type.
+//!
+//! See packed_storage.zig and aligned_storage.zig for two storage implementations.
 
 const ColorID = @import("../values/color_id.zig");
 const Point = @import("../values/point.zig");
