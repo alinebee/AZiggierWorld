@@ -60,5 +60,5 @@ fn returnError() Error!void {
 }
 
 test "expectError passes through correctly" {
-    try expectError(Error.FakeError, returnError());
+    try expectError(error.FakeError, returnError());
 }

@@ -91,21 +91,21 @@ test "parse parses valid bytecode and consumes 4 bytes" {
     try testing.expectEqual(.Deactivate, instruction.operation);
 }
 
-test "parse returns Error.InvalidThreadID and consumes 4 bytes when start thread ID is invalid" {
+test "parse returns error.InvalidThreadID and consumes 4 bytes when start thread ID is invalid" {
     try testing.expectError(
-        Error.InvalidThreadID,
+        error.InvalidThreadID,
         expectParse(parse, &BytecodeExamples.invalid_start_thread_id, 4),
     );
 }
 
-test "parse returns Error.InvalidThreadID and consumes 4 bytes when end thread ID is invalid" {
+test "parse returns error.InvalidThreadID and consumes 4 bytes when end thread ID is invalid" {
     try testing.expectError(
         error.InvalidThreadID,
         expectParse(parse, &BytecodeExamples.invalid_end_thread_id, 4),
     );
 }
 
-test "parse returns Error.InvalidThreadRange and consumes 4 bytes when thread range is transposed" {
+test "parse returns error.InvalidThreadRange and consumes 4 bytes when thread range is transposed" {
     try testing.expectError(
         error.InvalidThreadRange,
         expectParse(parse, &BytecodeExamples.transposed_thread_ids, 4),
