@@ -9,8 +9,7 @@ pub const RegisterValue = i16;
 pub const register_count = 256;
 pub const Registers = [register_count]RegisterValue;
 
-pub const thread_count = 64;
-pub const Threads = [thread_count]Thread.Instance;
+pub const Threads = [ThreadID.count]Thread.Instance;
 
 pub const Instance = struct {
     /// The current state of the VM's 64 threads.
@@ -37,7 +36,7 @@ const empty_program = [0]u8{};
 
 pub fn new() Instance {
     var machine = Instance{
-        .threads = [_]Thread.Instance{.{}} ** thread_count,
+        .threads = [_]Thread.Instance{.{}} ** ThreadID.count,
         .registers = [_]RegisterValue{0} ** register_count,
         .stack = Stack.Instance{},
         .program = Program.new(&empty_program),

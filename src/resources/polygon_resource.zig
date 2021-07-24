@@ -29,6 +29,8 @@ const fixedBufferStream = @import("std").io.fixedBufferStream;
 pub const Address = u16;
 
 /// Create a new resource instance that will load data from the specified buffer.
+/// The instance does not take ownership of the buffer; the caller must ensure
+/// the buffer stays valid for as long as the instance is in scope.
 pub fn new(data: []const u8) Instance {
     return .{ .data = data };
 }

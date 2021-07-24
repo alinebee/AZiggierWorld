@@ -1,6 +1,6 @@
 //! Types for parsing video buffer IDs from Another World bytecode instructions.
 
-const math = @import("std").math;
+const maxInt = @import("std").math.maxInt;
 
 /// A raw video buffer identifier as represented in Another World's bytecode.
 pub const Raw = u8;
@@ -8,8 +8,8 @@ pub const Raw = u8;
 /// A specific buffer ID from 0 to 3. This is guaranteed to be valid.
 pub const Specific = u2;
 
-/// The number of buffers.
-pub const count = math.maxInt(Specific);
+/// 4, the number of buffers addressible by a Specific buffer ID.
+pub const count = maxInt(Specific) + 1;
 
 /// The ID of the front buffer as represented in bytecode.
 pub const raw_front_buffer: Raw = 0xFE;

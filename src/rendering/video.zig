@@ -5,6 +5,7 @@ const BufferID = @import("../values/buffer_id.zig");
 const PaletteID = @import("../values/palette_id.zig");
 const PolygonScale = @import("../values/polygon_scale.zig");
 const PolygonResource = @import("../resources/polygon_resource.zig");
+const PaletteResource = @import("../resources/palette_resource.zig");
 const Polygon = @import("../rendering/polygon.zig");
 const VideoBuffer = @import("../rendering/video_buffer.zig");
 const PackedStorage = @import("../rendering/storage/packed_storage.zig");
@@ -24,7 +25,7 @@ pub const PolygonSource = enum {
     animations,
 };
 
-/// The length of time in milliseconds to leave a frame on screen.
+/// A length of time in milliseconds to leave a frame on screen.
 pub const Milliseconds = usize;
 
 const Buffer = VideoBuffer.Instance(PackedStorage.Instance, 320, 200);
@@ -34,14 +35,14 @@ pub const Instance = struct {
     /// The set of 4 buffers used for rendering.
     buffers: [BufferID.count]Buffer,
 
-    /// TODO: make this an array of palette data.
-    palettes: void,
-
     /// The resource from which part-specific polygon data will be read.
     polygons: PolygonResource.Instance,
 
     /// The resource from which global animation data will be read.
     animations: PolygonResource.Instance,
+
+    /// The palettes used to render frames to the host screen.
+    palettes: PaletteResource.Instance,
 
     /// The index of the currently selected palette in `palette_resource`.
     /// Frames will be rendered to the host screen using this palette.
@@ -167,8 +168,8 @@ const PolygonVisitor = struct {
     mask_buffer: *const Buffer,
 
     /// Draw a single polygon into the target buffer, using the mask buffer to read from if necessary.
-    pub fn visit(visitor: @This(), polygon: Polygon.Instance) VideoBuffer.Error!bool {
-        try visitor.target_buffer.drawPolygon(polygon, visitor.mask_buffer);
+    pub fn visit(self: @This(), polygon: Polygon.Instance) VideoBuffer.Error!bool {
+        try self.target_buffer.drawPolygon(polygon, self.mask_buffer);
         return true;
     }
 };

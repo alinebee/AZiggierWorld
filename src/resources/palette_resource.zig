@@ -12,16 +12,13 @@
 //! color space of the original Amiga hardware that the game was developed on, documented here:
 //! http://fabiensanglard.net/another_world_polygons_amiga500/index.html
 
-const PaletteID = @import("../values/palette_id.zig");
 const Color = @import("../values/color.zig");
 
-const math = @import("std").math;
-
 /// The number of palettes inside a palette resource.
-pub const palette_count = 32;
+const palette_count = @import("../values/palette_id.zig").count;
 
 /// The number of colors inside a palette.
-pub const color_count = 16;
+const color_count = @import("../values/color_id.zig").count;
 
 /// A 16-color palette parsed from Another World game data.
 pub const Palette = [color_count]Color.Instance;

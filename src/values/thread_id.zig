@@ -1,7 +1,11 @@
 const intCast = @import("../utils/introspection.zig").intCast;
+const maxInt = @import("std").math.maxInt;
 
 /// The ID of a thread as a value from 0-63. This is guaranteed to be valid.
 pub const Trusted = u6;
+
+/// 64, the number of threads addressible by a trusted Thread ID.
+pub const count = maxInt(Trusted) + 1;
 
 /// The raw ID of a thread as stored in bytecode as an 8-bit unsigned integer.
 /// This can potentially be out of range.
