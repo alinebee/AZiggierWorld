@@ -13,8 +13,7 @@ pub const Instance = struct {
     string_id: StringID.Raw,
     /// The color to draw the string in.
     color_id: ColorID.Trusted,
-    /// The point in screen space at which to draw the string.
-    /// TODO: document which point in the string this is relative to: top left?
+    /// The point in screen space at which to draw the string, relative to the top left corner of the screen.
     point: Point.Instance,
 
     // Public implementation is constrained to concrete type so that instruction.zig can infer errors.

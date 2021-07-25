@@ -93,6 +93,7 @@ pub const Instance = struct {
     }
 
     /// Loads the specified bitmap resource into the default destination buffer for bitmaps.
+    /// Returns an error if the specified bitmap data was the wrong size for the buffer.
     pub fn loadBitmapResource(self: *Self, bitmap_data: []const u8) !void {
         const buffer = &self.buffers[bitmap_buffer_id];
         try buffer.loadBitmapResource(bitmap_data);
@@ -111,7 +112,8 @@ pub const Instance = struct {
     }
 
     /// Render a string from the English string table at the specified screen position
-    /// in the specified color. Returns an error if the string could not be found.
+    /// in the specified color. Returns an error if the string ID was not found
+    /// or the string contained unsupported characters.
     pub fn drawString(self: *Self, string_id: StringID.Raw, color_id: ColorID.Trusted, point: Point.Instance) !void {
         var buffer = &self.buffers[self.target_buffer_id];
 
@@ -168,7 +170,7 @@ const PolygonVisitor = struct {
     mask_buffer: *const Buffer,
 
     /// Draw a single polygon into the target buffer, using the mask buffer to read from if necessary.
-    pub fn visit(self: @This(), polygon: Polygon.Instance) VideoBuffer.Error!bool {
+    pub fn visit(self: @This(), polygon: Polygon.Instance) !bool {
         try self.target_buffer.drawPolygon(polygon, self.mask_buffer);
         return true;
     }

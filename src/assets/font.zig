@@ -1,11 +1,17 @@
+//! This file defines the 8x8 fixed-width bitmap font used by Another World for displaying text.
+//! The font bitmaps are taken from the original Another World MS-DOS release, and support
+//! a subset of the full ASCII character set.
+
+/// The width in pixels of each glyph.
+pub const glyph_width: usize = @bitSizeOf(u8);
+/// The height in pixels of each glyph.
+pub const glyph_height: usize = 8;
+
 /// An 8x8 pixel bitmap representing a single character in the font.
 /// Glyphs are stored as arrays of 8 bytes, where each byte is a row along the Y axis
 /// and each bit is a column along the X axis.
 /// An "on" bit indicates to draw a pixel at that X, Y position.
-pub const Glyph = [8]u8;
-
-pub const glyph_width: usize = 8;
-pub const glyph_height: usize = 8;
+pub const Glyph = [glyph_height]u8;
 
 /// Given a UTF-8 character, returns the glyph bitmap associated with that character.
 /// returns `error.InvalidCharacter` if that character is not supported.
@@ -30,7 +36,13 @@ const max_character: u8 = '~'; // 126 in UTF8/ASCII
 
 // -- Glyph definitions --
 
+/// An array of all supported glyph bitmaps from 32 to 126.
+/// These are indexed by their ASCII codepoint - 32,
+/// so the glyph for ' ' (32 in ASCII) is at index 0.
 const all_glyphs = [_]Glyph{
+    // These are not strings, but references to actual constants declared below.
+    // @"constant_name" is Zig's syntax for referring to constants and variables
+    // whose names contain illegal characters.
     @" ",
     @"!",
     @"\"",
@@ -127,6 +139,10 @@ const all_glyphs = [_]Glyph{
     @"}",
     @"~",
 };
+
+// These bitmaps were translated from the hardcoded hex values in the reference implementation:
+// https://github.com/fabiensanglard/Another-World-Bytecode-Interpreter/blob/master/src/staticres.cpp#L71
+// (One of the joys of binary notation is making the pixel data squintably readable.)
 
 const @" " = Glyph{
     0b00000000,
