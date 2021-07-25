@@ -1,3 +1,10 @@
+//! This file defines functions to parse and execute the instructions in Another World's bytecode programs.
+//! Each instruction is modelled as its own separate Zig type; the functions in this file parse raw bytes
+//! into the appropriate instruction type (and then execute it).
+//!
+//! Right now this file feels like a mess; there is a lot of copypasta that could probably
+//! be cleaned up with some Zig compile-time code generation.
+
 const Program = @import("../machine/program.zig");
 const Opcode = @import("../values/opcode.zig");
 const Machine = @import("../machine/machine.zig");
@@ -35,41 +42,72 @@ const Yield = @import("yield.zig");
 
 const introspection = @import("../utils/introspection.zig");
 
-// zig fmt: off
-pub const Error =
-    ActivateThread.Error ||
-    Call.Error ||
-    ControlMusic.Error ||
-    ControlResources.Error ||
-    ControlSound.Error ||
-    ControlThreads.Error ||
-    CopyVideoBuffer.Error ||
-    DrawBackgroundPolygon.Error ||
-    DrawSpritePolygon.Error ||
-    DrawString.Error ||
-    FillVideoBuffer.Error ||
-    Jump.Error ||
-    JumpConditional.Error ||
-    JumpIfNotZero.Error ||
-    Kill.Error ||
-    RegisterAdd.Error ||
-    RegisterAddConstant.Error ||
-    RegisterAnd.Error ||
-    RegisterCopy.Error ||
-    RegisterOr.Error ||
-    RegisterSet.Error ||
-    RegisterShiftLeft.Error ||
-    RegisterShiftRight.Error ||
-    RegisterSubtract.Error ||
-    Return.Error ||
-    SelectPalette.Error ||
-    SelectVideoBuffer.Error ||
-    Yield.Error ||
-    Opcode.Error ||
-    Program.Error;
-// zig fmt: on
+/// Parse and execute the next instruction from a bytecode program on the specified virtual machine.
+/// Returns an enum indicating whether execution should continue or stop as a result of that instruction.
+/// Returns an error if the bytecode could not be interpreted as an instruction.
+pub fn executeNextInstruction(program: *Program.Instance, machine: *Machine.Instance) !Action.Enum {
+    const raw_opcode = try program.read(Opcode.Raw);
+    const opcode = try Opcode.parse(raw_opcode);
 
-/// A union type that wraps all possible bytecode instructions.
+    return switch (opcode) {
+        .ActivateThread => execute(ActivateThread, raw_opcode, program, machine),
+        .Call => execute(Call, raw_opcode, program, machine),
+        .ControlMusic => execute(ControlMusic, raw_opcode, program, machine),
+        .ControlResources => execute(ControlResources, raw_opcode, program, machine),
+        .ControlSound => execute(ControlSound, raw_opcode, program, machine),
+        .ControlThreads => execute(ControlThreads, raw_opcode, program, machine),
+        .CopyVideoBuffer => execute(CopyVideoBuffer, raw_opcode, program, machine),
+        .DrawBackgroundPolygon => execute(DrawBackgroundPolygon, raw_opcode, program, machine),
+        .DrawSpritePolygon => execute(DrawSpritePolygon, raw_opcode, program, machine),
+        .DrawString => execute(DrawString, raw_opcode, program, machine),
+        .FillVideoBuffer => execute(FillVideoBuffer, raw_opcode, program, machine),
+        .Jump => execute(Jump, raw_opcode, program, machine),
+        .JumpConditional => execute(JumpConditional, raw_opcode, program, machine),
+        .JumpIfNotZero => execute(JumpIfNotZero, raw_opcode, program, machine),
+        .Kill => execute(Kill, raw_opcode, program, machine),
+        .RegisterAdd => execute(RegisterAdd, raw_opcode, program, machine),
+        .RegisterAddConstant => execute(RegisterAddConstant, raw_opcode, program, machine),
+        .RegisterAnd => execute(RegisterAnd, raw_opcode, program, machine),
+        .RegisterCopy => execute(RegisterCopy, raw_opcode, program, machine),
+        .RegisterOr => execute(RegisterOr, raw_opcode, program, machine),
+        .RegisterSet => execute(RegisterSet, raw_opcode, program, machine),
+        .RegisterShiftLeft => execute(RegisterShiftLeft, raw_opcode, program, machine),
+        .RegisterShiftRight => execute(RegisterShiftRight, raw_opcode, program, machine),
+        .RegisterSubtract => execute(RegisterSubtract, raw_opcode, program, machine),
+        .RenderVideoBuffer => execute(RenderVideoBuffer, raw_opcode, program, machine),
+        .Return => execute(Return, raw_opcode, program, machine),
+        .SelectPalette => execute(SelectPalette, raw_opcode, program, machine),
+        .SelectVideoBuffer => execute(SelectVideoBuffer, raw_opcode, program, machine),
+        .Yield => execute(Yield, raw_opcode, program, machine),
+    };
+}
+
+fn execute(comptime Instruction: type, raw_opcode: Opcode.Raw, program: *Program.Instance, machine: *Machine.Instance) !Action.Enum {
+    const instruction = try Instruction.parse(raw_opcode, program);
+
+    // Zig 0.8.0 does not have a way to express "try this function if it returns an error set,
+    // otherwise call it normally", hence we must check the return type at compile time and branch.
+    const ReturnType = introspection.ReturnType(instruction.execute);
+    const returns_error = @typeInfo(ReturnType) == .ErrorUnion;
+    const result = if (returns_error)
+        try instruction.execute(machine)
+    else
+        instruction.execute(machine);
+
+    // Check whether this instruction returned a specific action to take after executing.
+    // Most instructions just return void - assume their action will be .Continue.
+    const returns_action = @TypeOf(result) == Action.Enum;
+    if (returns_action) {
+        return result;
+    } else {
+        return .Continue;
+    }
+}
+
+/// A union that represents the set of all possible bytecode instructions, indexed by opcode.
+/// This wrapped type is intended for introspection and reverse engineering of Another World
+/// bytecode programs, and is not used directly in the emulator; during normal emulator flow,
+/// individual instructions are executed immediately after being parsed.
 pub const Wrapped = union(Opcode.Enum) {
     ActivateThread: ActivateThread.Instance,
     Call: Call.Instance,
@@ -104,7 +142,7 @@ pub const Wrapped = union(Opcode.Enum) {
 
 /// Parse the next instruction from a bytecode program and wrap it in a Wrapped union type.
 /// Returns the wrapped instruction or an error if the bytecode could not be interpreted as an instruction.
-pub fn parseNextInstruction(program: *Program.Instance) Error!Wrapped {
+pub fn parseNextInstruction(program: *Program.Instance) !Wrapped {
     const raw_opcode = try program.read(Opcode.Raw);
     const opcode = try Opcode.parse(raw_opcode);
 
@@ -143,67 +181,8 @@ pub fn parseNextInstruction(program: *Program.Instance) Error!Wrapped {
 
 /// Parse an instruction of the specified type from the program,
 /// and wrap it in a Wrapped union type initialized to the appropriate field.
-fn wrap(comptime field_name: []const u8, comptime Instruction: type, raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Wrapped {
+fn wrap(comptime field_name: []const u8, comptime Instruction: type, raw_opcode: Opcode.Raw, program: *Program.Instance) !Wrapped {
     return @unionInit(Wrapped, field_name, try Instruction.parse(raw_opcode, program));
-}
-
-/// Parse and execute the next instruction from a bytecode program on the specified virtual machine.
-pub fn executeNextInstruction(program: *Program.Instance, machine: *Machine.Instance) Error!Action.Enum {
-    const raw_opcode = try program.read(Opcode.Raw);
-    const opcode = try Opcode.parse(raw_opcode);
-
-    return switch (opcode) {
-        .ActivateThread => execute(ActivateThread, raw_opcode, program, machine),
-        .Call => execute(Call, raw_opcode, program, machine),
-        .ControlMusic => execute(ControlMusic, raw_opcode, program, machine),
-        .ControlResources => execute(ControlResources, raw_opcode, program, machine),
-        .ControlSound => execute(ControlSound, raw_opcode, program, machine),
-        .ControlThreads => execute(ControlThreads, raw_opcode, program, machine),
-        .CopyVideoBuffer => execute(CopyVideoBuffer, raw_opcode, program, machine),
-        .DrawBackgroundPolygon => execute(DrawBackgroundPolygon, raw_opcode, program, machine),
-        .DrawSpritePolygon => execute(DrawSpritePolygon, raw_opcode, program, machine),
-        .DrawString => execute(DrawString, raw_opcode, program, machine),
-        .FillVideoBuffer => execute(FillVideoBuffer, raw_opcode, program, machine),
-        .Jump => execute(Jump, raw_opcode, program, machine),
-        .JumpConditional => execute(JumpConditional, raw_opcode, program, machine),
-        .JumpIfNotZero => execute(JumpIfNotZero, raw_opcode, program, machine),
-        .Kill => execute(Kill, raw_opcode, program, machine),
-        .RegisterAdd => execute(RegisterAdd, raw_opcode, program, machine),
-        .RegisterAddConstant => execute(RegisterAddConstant, raw_opcode, program, machine),
-        .RegisterAnd => execute(RegisterAnd, raw_opcode, program, machine),
-        .RegisterCopy => execute(RegisterCopy, raw_opcode, program, machine),
-        .RegisterOr => execute(RegisterOr, raw_opcode, program, machine),
-        .RegisterSet => execute(RegisterSet, raw_opcode, program, machine),
-        .RegisterShiftLeft => execute(RegisterShiftLeft, raw_opcode, program, machine),
-        .RegisterShiftRight => execute(RegisterShiftRight, raw_opcode, program, machine),
-        .RegisterSubtract => execute(RegisterSubtract, raw_opcode, program, machine),
-        .RenderVideoBuffer => execute(RenderVideoBuffer, raw_opcode, program, machine),
-        .Return => execute(Return, raw_opcode, program, machine),
-        .SelectPalette => execute(SelectPalette, raw_opcode, program, machine),
-        .SelectVideoBuffer => execute(SelectVideoBuffer, raw_opcode, program, machine),
-        .Yield => execute(Yield, raw_opcode, program, machine),
-    };
-}
-
-fn execute(comptime Instruction: type, raw_opcode: Opcode.Raw, program: *Program.Instance, machine: *Machine.Instance) Error!Action.Enum {
-    const instruction = try Instruction.parse(raw_opcode, program);
-
-    // You'd think there'd be an easier way to express "try the function if necessary, otherwise just call it".
-    const ReturnType = introspection.ReturnType(instruction.execute);
-    const returns_error = @typeInfo(ReturnType) == .ErrorUnion;
-    const payload = if (returns_error)
-        try instruction.execute(machine)
-    else
-        instruction.execute(machine);
-
-    // Check whether this instruction returned a specific thread action to take after executing.
-    // Most instructions just return void; assume their action will be .Continue.
-    const returns_action = @TypeOf(payload) == Action.Enum;
-    if (returns_action) {
-        return payload;
-    } else {
-        return .Continue;
-    }
 }
 
 // -- Test helpers --

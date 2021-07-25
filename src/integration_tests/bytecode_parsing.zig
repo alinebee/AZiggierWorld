@@ -17,9 +17,9 @@ const ParseFailure = struct {
     offset: usize,
     parsed_bytes: [8]u8,
     parsed_count: usize,
-    err: Instruction.Error,
+    err: anyerror,
 
-    fn init(resource_id: usize, program: *Program.Instance, offset: usize, err: Instruction.Error) ParseFailure {
+    fn init(resource_id: usize, program: *Program.Instance, offset: usize, err: anyerror) ParseFailure {
         const parsed_bytes = program.bytecode[offset..program.counter];
 
         var self = ParseFailure{
