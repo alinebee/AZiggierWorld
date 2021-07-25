@@ -23,7 +23,7 @@ pub const Instance = struct {
     operation: Operation.Enum,
 
     pub fn execute(self: Instance, machine: *Machine.Instance) void {
-        var id = self.start_thread_id;
+        var id: usize = self.start_thread_id;
         while (id <= self.end_thread_id) : (id += 1) {
             var thread = &machine.threads[id];
 
@@ -170,4 +170,18 @@ test "execute with deactivate operation schedules specified threads to deactivat
     try testing.expectEqual(.inactive, machine.threads[1].scheduled_execution_state);
     try testing.expectEqual(.inactive, machine.threads[2].scheduled_execution_state);
     try testing.expectEqual(.inactive, machine.threads[3].scheduled_execution_state);
+}
+
+const math = @import("std").math;
+
+test "execute safely iterates full range of threads" {
+    const instruction = Instance{
+        .start_thread_id = math.minInt(ThreadID.Trusted),
+        .end_thread_id = math.maxInt(ThreadID.Trusted),
+        .operation = .Resume,
+    };
+
+    var machine = Machine.new();
+
+    instruction.execute(&machine);
 }
