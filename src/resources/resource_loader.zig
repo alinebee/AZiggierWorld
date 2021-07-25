@@ -84,11 +84,12 @@ pub const Instance = struct {
         return destination;
     }
 
-    /// Allocate a buffer and read the specified resource from the appropriate BANKXX file into it.
+    /// Allocate a buffer and read the specified resource from the appropriate
+    /// BANKXX file into it.
     /// Returns a slice that contains the decompressed resource data.
     /// Caller owns the returned slice and must free it with `data_allocator.free`.
-    /// Returns an error if the allocator failed to allocate memory or if the data could not be read
-    /// or decompressed.
+    /// Returns an error if the allocator failed to allocate memory or if the data
+    /// could not be read or decompressed.
     pub fn allocReadResource(self: Instance, data_allocator: *mem.Allocator, descriptor: ResourceDescriptor.Instance) ![]const u8 {
         // Create a buffer just large enough to decompress the resource into.
         var destination = try data_allocator.alloc(u8, descriptor.uncompressed_size);
@@ -97,16 +98,31 @@ pub const Instance = struct {
         return try self.bufReadResource(destination, descriptor);
     }
 
-    /// Read the resource with the specified ID from the appropriate BANKXX file,
-    /// and return a slice that contains the decompressed resource data.
+    /// Read the specified resource with the specified ID from the appropriate BANKXX file
+    /// into the provided buffer.
+    /// Returns a slice representing the portion of `buffer` that contains resource data.
+    /// Returns an error if the resource ID was invalid, the `buffer` was not large enough
+    /// to hold the data, or the data could not be read or decompressed.
+    /// In the event of an error, `buffer` may contain partially-loaded game data.
+    pub fn bufReadResourceByID(self: Instance, buffer: []u8, id: ResourceID.Raw) ![]const u8 {
+        return self.bufReadResource(buffer, try self.descriptor(id));
+    }
+
+    /// Allocate a buffer and read the resource with the specified ID
+    /// from the appropriate BANKXX file into it.
+    /// Returns a slice that contains the decompressed resource data.
     /// Caller owns the returned slice and must free it with `data_allocator.free`.
-    /// Returns an error if the data could not be read or decompressed.
+    /// Returns an error if the resource ID was invalid, the allocator failed
+    /// to allocate memory, or the data could not be read or decompressed.
     pub fn allocReadResourceByID(self: Instance, data_allocator: *mem.Allocator, id: ResourceID.Raw) ![]const u8 {
+        return self.allocReadResource(data_allocator, try self.descriptor(id));
+    }
+
+    pub fn descriptor(self: Instance, id: ResourceID.Raw) !ResourceDescriptor.Instance {
         if (id >= self.resource_descriptors.len) {
             return error.InvalidResourceID;
         }
-        const descriptor = self.resource_descriptors[id];
-        return self.allocReadResource(data_allocator, descriptor);
+        return self.resource_descriptors[id];
     }
 };
 
