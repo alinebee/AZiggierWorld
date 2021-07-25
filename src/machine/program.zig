@@ -1,3 +1,12 @@
+//! This file defines a seekable reader for Another World bytecode programs,
+//! which contains a counter that reflects the current position within the program.
+//! This reader is used by instruction types for parsing instruction data; instructions
+//! may also update the program counter to jump to different parts of the program.
+//!
+//! This is essentially a read-only version of Zig's own IO readers, but with a more
+//! limited and prescriptive API. The main difference between this and `fixedBufferStream.seekableStream`
+//! is that this does bounds-checking on seek (jump/skip) operations, not just on read.
+
 const readIntSliceBig = @import("std").mem.readIntSliceBig;
 const introspection = @import("../utils/introspection.zig");
 
@@ -12,9 +21,6 @@ pub const Error = error{
 
 /// An Another World bytecode program, which maintains a counter to the next instruction to execute.
 pub const Instance = struct {
-    // This is essentially a read-only `FixedBufferStream` with a more limited
-    // and prescriptive API; the only behavioural difference is that it does
-    // bounds-checking on seek (jump/skip) operations, not just on read.
     /// The bytecode making up the program.
     bytecode: []const u8,
 

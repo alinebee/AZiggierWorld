@@ -1,14 +1,14 @@
-//! This file defines a video buffer storage type that matches the original Another World
+//! This file defines a video buffer storage type that matches the reference implementation's
 //! memory-saving technique of packing 2 16-color pixels into each byte of the buffer:
-//! This makes a 320x200 buffer only requires 32,000 bytes instead of 64,0000.
+//! This makes a 320x200 buffer only require 32,000 bytes instead of 64,0000.
 //!
 //! Since pixels don't fall on byte boundaries, masking must be used to address individual pixels,
 //! which complicates some of the draw routines: e.g. efficient span-drawing for polygon fills
 //! must take into account whether the start and end of the span fall on byte boundaries.
 //!
 //! (This Zig implementation takes advantage of Zig's packed structs and sub-byte integer sizes,
-//! addressing both pixels of a byte using a byte-length struct with two fields. Behind the scenes
-//! Zig takes care of the masking for us.)
+//! addressing both pixels of a byte using a byte-length struct containing two 4-bit fields.
+//! Behind the scenes Zig takes care of the masking for us.)
 
 const ColorID = @import("../../values/color_id.zig");
 const Point = @import("../../values/point.zig");
@@ -109,27 +109,27 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
                 }
             }
 
-            fn drawSolidColorPixel(self: DrawOperation, buffer: *Self, index: Index) void {
-                fillPixel(buffer, index, self.context.solid_color);
+            fn drawSolidColorPixel(operation: DrawOperation, buffer: *Self, index: Index) void {
+                fillPixel(buffer, index, operation.context.solid_color);
             }
 
-            fn drawHighlightPixel(self: DrawOperation, buffer: *Self, index: Index) void {
+            fn drawHighlightPixel(operation: DrawOperation, buffer: *Self, index: Index) void {
                 const highlighted_color = highlightedColor(buffer.data[index.offset]);
                 fillPixel(buffer, index, highlighted_color);
             }
 
-            fn drawMaskPixel(self: DrawOperation, buffer: *Self, index: Index) void {
-                const mask_color = self.context.mask.data[index.offset];
+            fn drawMaskPixel(operation: DrawOperation, buffer: *Self, index: Index) void {
+                const mask_color = operation.context.mask.data[index.offset];
                 fillPixel(buffer, index, mask_color);
             }
 
-            fn drawSolidColorRange(self: DrawOperation, buffer: *Self, range: Range.Instance(usize)) void {
+            fn drawSolidColorRange(operation: DrawOperation, buffer: *Self, range: Range.Instance(usize)) void {
                 const destination_slice = buffer.data[range.min..range.max];
 
-                mem.set(NativeColor, destination_slice, self.context.solid_color);
+                mem.set(NativeColor, destination_slice, operation.context.solid_color);
             }
 
-            fn drawHighlightRange(self: DrawOperation, buffer: *Self, range: Range.Instance(usize)) void {
+            fn drawHighlightRange(operation: DrawOperation, buffer: *Self, range: Range.Instance(usize)) void {
                 const destination_slice = buffer.data[range.min..range.max];
 
                 for (destination_slice) |*byte| {
@@ -137,9 +137,9 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
                 }
             }
 
-            fn drawMaskRange(self: DrawOperation, buffer: *Self, range: Range.Instance(usize)) void {
+            fn drawMaskRange(operation: DrawOperation, buffer: *Self, range: Range.Instance(usize)) void {
                 const destination_slice = buffer.data[range.min..range.max];
-                const mask_slice = self.context.mask.data[range.min..range.max];
+                const mask_slice = operation.context.mask.data[range.min..range.max];
 
                 mem.copy(NativeColor, destination_slice, mask_slice);
             }
@@ -251,7 +251,7 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
                 end_index.offset -= 1;
             }
 
-            // If there are any full bytes left between the start and end, fill them using a fast range operation.
+            // If there are any full bytes left between the start and end, fill them using a fast copy operation.
             if (start_index.offset <= end_index.offset) {
                 const range = .{
                     .min = start_index.offset,
@@ -351,7 +351,7 @@ const Handedness = enum(u1) {
     }
 };
 
-/// The storage index for a pixel at a given point.
+/// The storage index for a pixel at a given X,Y point.
 const Index = struct {
     /// The offset of the byte containing the pixel.
     offset: usize,

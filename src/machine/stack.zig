@@ -1,20 +1,26 @@
+//! This file defines a type for managing the state of the program execution stack.
+//!
+//! As an Another World program calls subroutines, the stack will be incremented
+//! with the return address for that subroutine; as each subroutine returns,
+//! the stack will be decremented and program execution will resume from the return address.
+//!
+//! In Another World's VM, the stack is thread-specific and will be cleared between threads.
+
 const Address = @import("../values/address.zig");
 
 /// The maximum number of subroutines that can be on the stack.
+/// This matches the reference implementation:
+/// https://github.com/fabiensanglard/Another-World-Bytecode-Interpreter/blob/master/src/vm.h#L81
 pub const max_depth = 64;
 
-/// Represents the program execution stack.
-///
-/// As the program calls subroutines, the stack will be incremented with the return address
-/// for that subroutine; as each subroutine returns, the stack will be decremented
-/// and program execution will resume from that address.
-///
-/// In Another World's VM, the stack is thread-specific and will be cleared between threads.
+/// Represents the state of the program execution stack.
 pub const Instance = struct {
     /// The addresses currently on the stack.
     return_addresses: [max_depth]Address.Native = [_]Address.Native{0} ** max_depth,
+    /// The current depth on the stack, between 0 and 63.
     depth: usize = 0,
 
+    /// Add a new return address onto the stack.
     pub fn push(self: *Instance, address: Address.Native) Error!void {
         if (self.depth >= self.return_addresses.len) {
             return error.StackOverflow;
@@ -23,6 +29,7 @@ pub const Instance = struct {
         self.depth += 1;
     }
 
+    /// Decrement the stack and return the last return address that was on the stack.
     pub fn pop(self: *Instance) Error!Address.Native {
         if (self.depth == 0) {
             return error.StackUnderflow;
@@ -31,6 +38,7 @@ pub const Instance = struct {
         return self.return_addresses[self.depth];
     }
 
+    /// Empty the stack.
     pub fn clear(self: *Instance) void {
         self.depth = 0;
     }
