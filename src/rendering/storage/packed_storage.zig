@@ -25,9 +25,8 @@ const math = std.math;
 /// Returns a video buffer storage that packs 2 pixels into a single byte,
 /// like the original Another World's buffers did.
 pub fn Instance(comptime width: usize, comptime height: usize) type {
-    const signed_width = @intCast(isize, width);
-    const stride = comptime try math.divCeil(usize, width, 2);
-    const bytes_required = comptime height * stride;
+    const bytes_per_row = comptime try math.divCeil(usize, width, 2);
+    const bytes_required = comptime height * bytes_per_row;
     const Data = [bytes_required]NativeColor;
 
     return struct {
@@ -150,11 +149,13 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
         /// Given an X,Y point, returns the index of the byte within `data` containing that point's pixel.
         /// This is not bounds-checked: specifying a point outside the buffer results in undefined behaviour.
         fn uncheckedIndexOf(point: Point.Instance) Index {
-            const signed_offset = @divFloor(point.x + (point.y * signed_width), 2);
+            const unsigned_x = @intCast(usize, point.x);
+            const unsigned_y = @intCast(usize, point.y);
+            const offset_of_row = unsigned_y * bytes_per_row;
 
             return .{
-                .offset = @intCast(usize, signed_offset),
-                .hand = Handedness.of(point.x),
+                .offset = offset_of_row + (unsigned_x / 2),
+                .hand = if (unsigned_x % 2 == 0) .left else .right,
             };
         }
 
@@ -180,7 +181,7 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
 
             const top: usize = 0;
             const bottom = self.data.len;
-            const offset_from_top = @as(usize, math.absCast(y)) * stride;
+            const offset_from_top = @as(usize, math.absCast(y)) * bytes_per_row;
             const offset_from_bottom = bottom - offset_from_top;
 
             if (y > 0) {
@@ -332,31 +333,25 @@ const NativeColor = switch (std.Target.current.cpu.arch.endian()) {
     },
 };
 
+/// Given a single 4-bit color, returns a pair of pixels that are both that color.
 fn filledColor(color: ColorID.Trusted) NativeColor {
     return .{ .left = color, .right = color };
 }
 
+/// Given a pair of colors, returns both of those colors highlighted.
 fn highlightedColor(color: NativeColor) NativeColor {
     return @bitCast(NativeColor, ColorID.highlightByte(@bitCast(u8, color)));
 }
-
-/// Whether a pixel is the "left" (top 4 bits) or "right" (bottom 4 bits) of the byte.
-const Handedness = enum(u1) {
-    left,
-    right,
-
-    /// Given an X coordinate, returns whether it falls into the left or right of the byte.
-    fn of(x: Point.Coordinate) Handedness {
-        return if (@rem(x, 2) == 0) .left else .right;
-    }
-};
 
 /// The storage index for a pixel at a given X,Y point.
 const Index = struct {
     /// The offset of the byte containing the pixel.
     offset: usize,
-    /// Whether this pixel is the "left" (top 4 bits) or "right" (bottom 4 bits) of the byte.
-    hand: Handedness,
+    /// Whether this pixel is the "left" (top 4 bits) or "right" (bottom 4 bits) of its byte.
+    hand: enum {
+        left,
+        right,
+    },
 };
 
 // -- Tests --
