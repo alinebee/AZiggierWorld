@@ -321,16 +321,16 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
 /// The unit in which the buffer will read and write color values for individual pixels.
 /// Two 4-bit colors are packed into a single byte: Zig packed structs have
 /// endianness-dependent field order so we must flip based on endianness.
-const NativeColor = if (std.Target.current.cpu.arch.endian() == .Big)
-    packed struct {
+const NativeColor = switch (std.Target.current.cpu.arch.endian()) {
+    .Big => packed struct {
         left: ColorID.Trusted,
         right: ColorID.Trusted,
-    }
-else
-    packed struct {
+    },
+    .Little => packed struct {
         right: ColorID.Trusted,
         left: ColorID.Trusted,
-    };
+    },
+};
 
 fn filledColor(color: ColorID.Trusted) NativeColor {
     return .{ .left = color, .right = color };
