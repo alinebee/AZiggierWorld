@@ -15,7 +15,7 @@ const DrawBackgroundPolygon = @import("../instructions/draw_background_polygon.z
 const DrawSpritePolygon = @import("../instructions/draw_sprite_polygon.zig");
 
 const testing = @import("../utils/testing.zig");
-const validFixturePath = @import("helpers.zig").validFixturePath;
+const validFixtureDir = @import("helpers.zig").validFixtureDir;
 const std = @import("std");
 
 const PolygonDrawInstruction = union(enum) {
@@ -118,11 +118,10 @@ const PolygonVisitor = struct {
 };
 
 test "Parse polygon instructions for every game part" {
-    const game_path = validFixturePath(testing.allocator) catch return;
-    defer testing.allocator.free(game_path);
+    var game_dir = validFixtureDir() catch return;
+    defer game_dir.close();
 
-    var loader = try ResourceLoader.new(game_path);
-    defer loader.deinit();
+    const loader = try ResourceLoader.new(&game_dir);
 
     var count: usize = 0;
     for (GamePart.Enum.all) |game_part| {

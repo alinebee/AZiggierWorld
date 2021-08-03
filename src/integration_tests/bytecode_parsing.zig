@@ -8,7 +8,7 @@ const ResourceLoader = @import("../resources/resource_loader.zig");
 
 const testing = @import("../utils/testing.zig");
 const instrospection = @import("../utils/introspection.zig");
-const validFixturePath = @import("helpers.zig").validFixturePath;
+const validFixtureDir = @import("helpers.zig").validFixtureDir;
 const std = @import("std");
 
 /// Records and prints the details of a bytecode instruction that could not be parsed.
@@ -53,11 +53,10 @@ const ParseFailure = struct {
 };
 
 test "parseNextInstruction parses all programs in fixture bytecode" {
-    const game_path = validFixturePath(testing.allocator) catch return;
-    defer testing.allocator.free(game_path);
+    var game_dir = validFixtureDir() catch return;
+    defer game_dir.close();
 
-    var loader = try ResourceLoader.new(game_path);
-    defer loader.deinit();
+    const loader = try ResourceLoader.new(&game_dir);
 
     var failures = std.ArrayList(ParseFailure).init(testing.allocator);
     defer failures.deinit();

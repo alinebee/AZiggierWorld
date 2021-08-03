@@ -5,14 +5,13 @@ const ResourceLoader = @import("../resources/resource_loader.zig");
 const ResourceID = @import("../values/resource_id.zig");
 
 const testing = @import("../utils/testing.zig");
-const validFixturePath = @import("helpers.zig").validFixturePath;
+const validFixtureDir = @import("helpers.zig").validFixtureDir;
 
 test "ResourceLoader loads all game resources" {
-    const game_path = validFixturePath(testing.allocator) catch return;
-    defer testing.allocator.free(game_path);
+    var game_dir = validFixtureDir() catch return;
+    defer game_dir.close();
 
-    var loader = try ResourceLoader.new(game_path);
-    defer loader.deinit();
+    const loader = try ResourceLoader.new(&game_dir);
 
     try testing.expectEqual(146, loader.resourceDescriptors().len);
 
@@ -26,11 +25,10 @@ test "ResourceLoader loads all game resources" {
 }
 
 test "Instance.readResourceAlloc returns error.OutOfMemory if it runs out of memory when loading a non-empty resource" {
-    const game_path = validFixturePath(testing.allocator) catch return;
-    defer testing.allocator.free(game_path);
+    var game_dir = validFixtureDir() catch return;
+    defer game_dir.close();
 
-    var loader = try ResourceLoader.new(game_path);
-    defer loader.deinit();
+    const loader = try ResourceLoader.new(&game_dir);
 
     // Some resources are zero-length; testing.failing_allocator would not fail if the memory required is 0.
     const non_empty_descriptor = for (loader.resourceDescriptors()) |descriptor| {
@@ -48,11 +46,10 @@ test "Instance.readResourceAlloc returns error.OutOfMemory if it runs out of mem
 }
 
 test "Instance.allocReadResourceByID returns error.InvalidResourceID when given a resource ID that is out of range" {
-    const game_path = validFixturePath(testing.allocator) catch return;
-    defer testing.allocator.free(game_path);
+    var game_dir = validFixtureDir() catch return;
+    defer game_dir.close();
 
-    var loader = try ResourceLoader.new(game_path);
-    defer loader.deinit();
+    const loader = try ResourceLoader.new(&game_dir);
 
     try testing.expectError(
         error.InvalidResourceID,

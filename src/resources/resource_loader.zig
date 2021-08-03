@@ -19,29 +19,34 @@ const io = std.io;
 const max_descriptors = 150;
 
 /// Create a new resource loader that expects to find game resources in the specified directory.
-/// Caller owns the returned loader and must free it by calling `deinit`.
-/// Returns an error if the specified path is inaccessible or is missing the expected MEMLIST.BIN file.
-pub fn new(game_path: []const u8) !Instance {
-    return try Instance.init(game_path);
+/// The handle must have been opened with `.access_sub_paths = true` (the default).
+/// The loader does not take ownership of the directory handle; the calling context
+/// must ensure the handle stays open for the scope of the resource loader.
+/// Returns an error if the directory did not contain the expected game data files.
+pub fn new(dir: *const fs.Dir) !Instance {
+    return try Instance.init(dir);
 }
 
 pub const Instance = struct {
     /// An handle for the directory that the will load files from.
-    /// The resource loader keeps this handle open until deinit is called.
-    dir: fs.Dir,
+    /// The resource loader does not own this handle; the parent context is expected to keep it open
+    /// for as long as the resource loader is in scope.
+    dir: *const fs.Dir,
+
     /// The list of resources parsed from the MEMLIST.BIN manifest located in `dir`.
     /// Access this via resourceDescriptors() instead of directly.
     _raw_descriptors: FixedBuffer.Instance(max_descriptors, ResourceDescriptor.Instance),
 
-    /// Initializes a new resource loader that reads from the specified base path.
-    /// Call `deinit` to deinitialize.
-    /// Returns an error if the specific allocator failed to allocate memory or the specified path
-    /// did not contain the expected game data files.
-    fn init(game_path: []const u8) !Instance {
-        var self: Instance = undefined;
-
-        self.dir = try fs.openDirAbsolute(game_path, .{});
-        errdefer self.dir.close();
+    /// Initializes a new resource loader that reads game data from the specified directory handle.
+    /// The handle must have been opened with `.access_sub_paths = true` (the default).
+    /// The loader does not take ownership of the directory handle; the calling context
+    /// must ensure the handle stays open for the scope of the resource loader.
+    /// Returns an error if the directory did not contain the expected game data files.
+    fn init(dir: *const fs.Dir) !Instance {
+        var self: Instance = .{
+            .dir = dir,
+            ._raw_descriptors = undefined,
+        };
 
         const list_file = try self.openFile(.resource_list);
         defer list_file.close();
@@ -49,13 +54,6 @@ pub const Instance = struct {
         self._raw_descriptors.len = try readResourceList(&self._raw_descriptors.items, list_file.reader());
 
         return self;
-    }
-
-    /// Free the memory used by the loader itself.
-    /// Any data that was returned by `readResource` et al is not owned and must be freed separately.
-    /// After calling this function, attempting to use the loader will result in undefined behavior.
-    pub fn deinit(self: *Instance) void {
-        self.dir.close();
     }
 
     /// Read the specified resource from the appropriate BANKXX file into the provided buffer.
@@ -120,7 +118,8 @@ pub const Instance = struct {
         return self._raw_descriptors.constSlice();
     }
 
-    /// Returns the descriptor matching the specified ID
+    /// Returns the descriptor matching the specified ID.
+    /// Returns an InvalidResourceID error if the ID was out of range.
     pub fn resourceDescriptor(self: Instance, id: ResourceID.Raw) !ResourceDescriptor.Instance {
         if (id >= self._raw_descriptors.len) {
             return error.InvalidResourceID;
@@ -130,7 +129,8 @@ pub const Instance = struct {
 
     // - Private methods -
 
-    /// Given an Another World filename, opens the corresponding file in the game directory for reading.
+    /// Given the filename of an Another World data file, opens the corresponding file
+    /// in the game directory for reading.
     /// Returns an open file handle, or an error if the file could not be opened.
     fn openFile(self: Instance, filename: Filename.Instance) !fs.File {
         var buffer: Filename.Buffer = undefined;

@@ -5,7 +5,7 @@
 const PaletteResource = @import("../resources/palette_resource.zig");
 const ResourceLoader = @import("../resources/resource_loader.zig");
 
-const validFixturePath = @import("helpers.zig").validFixturePath;
+const validFixtureDir = @import("helpers.zig").validFixtureDir;
 
 const testing = @import("../utils/testing.zig");
 const std = @import("std");
@@ -13,11 +13,10 @@ const fixedBufferStream = std.io.fixedBufferStream;
 const countingReader = std.io.countingReader;
 
 test "Parse all palettes in original game files" {
-    const game_path = validFixturePath(testing.allocator) catch return;
-    defer testing.allocator.free(game_path);
+    var game_dir = validFixtureDir() catch return;
+    defer game_dir.close();
 
-    var loader = try ResourceLoader.new(game_path);
-    defer loader.deinit();
+    const loader = try ResourceLoader.new(&game_dir);
 
     // For each resource, test that it can be parsed and decompressed without errors.
     for (loader.resourceDescriptors()) |descriptor| {
