@@ -11,13 +11,13 @@ test "ResourceLoader loads all game resources" {
     const game_path = validFixturePath(testing.allocator) catch return;
     defer testing.allocator.free(game_path);
 
-    const loader = try ResourceLoader.new(testing.allocator, game_path);
+    var loader = try ResourceLoader.new(game_path);
     defer loader.deinit();
 
-    try testing.expectEqual(146, loader.resource_descriptors.len);
+    try testing.expectEqual(146, loader.resourceDescriptors().len);
 
     // For each resource, test that it can be parsed and decompressed without errors.
-    for (loader.resource_descriptors) |descriptor| {
+    for (loader.resourceDescriptors()) |descriptor| {
         const data = try loader.allocReadResource(testing.allocator, descriptor);
         defer testing.allocator.free(data);
 
@@ -29,11 +29,11 @@ test "Instance.readResourceAlloc returns error.OutOfMemory if it runs out of mem
     const game_path = validFixturePath(testing.allocator) catch return;
     defer testing.allocator.free(game_path);
 
-    const loader = try ResourceLoader.new(testing.allocator, game_path);
+    var loader = try ResourceLoader.new(game_path);
     defer loader.deinit();
 
     // Some resources are zero-length; testing.failing_allocator would not fail if the memory required is 0.
-    const non_empty_descriptor = for (loader.resource_descriptors) |descriptor| {
+    const non_empty_descriptor = for (loader.resourceDescriptors()) |descriptor| {
         if (descriptor.uncompressed_size > 0) {
             break descriptor;
         }
@@ -51,11 +51,11 @@ test "Instance.allocReadResourceByID returns error.InvalidResourceID when given 
     const game_path = validFixturePath(testing.allocator) catch return;
     defer testing.allocator.free(game_path);
 
-    const loader = try ResourceLoader.new(testing.allocator, game_path);
+    var loader = try ResourceLoader.new(game_path);
     defer loader.deinit();
 
     try testing.expectError(
         error.InvalidResourceID,
-        loader.allocReadResourceByID(testing.allocator, @intCast(ResourceID.Raw, loader.resource_descriptors.len)),
+        loader.allocReadResourceByID(testing.allocator, @intCast(ResourceID.Raw, loader.resourceDescriptors().len)),
     );
 }

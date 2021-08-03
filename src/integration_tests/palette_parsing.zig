@@ -16,11 +16,11 @@ test "Parse all palettes in original game files" {
     const game_path = validFixturePath(testing.allocator) catch return;
     defer testing.allocator.free(game_path);
 
-    const loader = try ResourceLoader.new(testing.allocator, game_path);
+    var loader = try ResourceLoader.new(game_path);
     defer loader.deinit();
 
     // For each resource, test that it can be parsed and decompressed without errors.
-    for (loader.resource_descriptors) |descriptor| {
+    for (loader.resourceDescriptors()) |descriptor| {
         if (descriptor.type != .palettes) continue;
 
         const data = try loader.allocReadResource(testing.allocator, descriptor);
