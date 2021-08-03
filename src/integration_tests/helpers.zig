@@ -27,8 +27,6 @@ pub fn validFixtureDir() !fs.Dir {
 
 // -- Tests --
 
-const testing = std.testing;
-
 test "Integration test fixture directory has been populated with game data" {
     var game_dir = validFixtureDir() catch |err| {
         if (err == error.FileNotFound) {

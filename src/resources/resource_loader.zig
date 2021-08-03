@@ -175,7 +175,10 @@ fn ResourceListError(comptime Reader: type) type {
     };
 }
 
-/// Read resource data from a reader into the specified buffer, decompressing it if necessary.
+/// Read resource data from a reader into the specified buffer, which is expected
+/// to be exactly large enough to hold the data once it is decompressed.
+/// If `buffer.len` is larger than `compressed_size`, the data will be decompressed
+/// in place to fill the buffer.
 /// On success, `buffer` will be filled with uncompressed data.
 /// If reading fails, `buffer`'s contents should be treated as invalid.
 fn readAndDecompress(reader: anytype, buffer: []u8, compressed_size: usize) ReadAndDecompressError(@TypeOf(reader))!void {
