@@ -24,6 +24,7 @@ const DrawMode = @import("../values/draw_mode.zig");
 const PolygonScale = @import("../values/polygon_scale.zig");
 const BoundingBox = @import("../values/bounding_box.zig");
 
+const FixedBuffer = @import("../utils/fixed_buffer.zig");
 const introspection = @import("../utils/introspection.zig");
 const math = @import("std").math;
 
@@ -35,24 +36,18 @@ pub const Instance = struct {
     /// The scaled bounding box of this polygon in screen coordinates.
     bounds: BoundingBox.Instance,
 
-    /// Raw polygon vertex data that should not be accessed directly: use `vertices()` instead.
-    _raw: struct {
-        /// The number of vertices in this polygon.
-        count: usize,
+    /// The vertices making up this polygon in screen coordinates.
+    /// Access via `vertices` instead of directly.
+    _raw_vertices: FixedBuffer.Instance(max_vertices, Point.Instance),
 
-        /// The vertices making up this polygon in screen coordinates.
-        /// Only the first `count` entries contain valid data.
-        vertices: [max_vertices]Point.Instance,
-    },
-
-    /// Returns a bounds-checked list of the vertices in this polygon.
+    /// Returns a bounds-checked slice of the vertices in this polygon.
     pub fn vertices(self: Instance) []const Point.Instance {
-        return self._raw.vertices[0..self._raw.count];
+        return self._raw_vertices.constSlice();
     }
 
     /// Whether this polygon represents a single-pixel dot.
     pub fn isDot(self: Instance) bool {
-        return self._raw.count == min_vertices and self.bounds.isUnit();
+        return self._raw_vertices.len == min_vertices and self.bounds.isUnit();
     }
 
     /// Validates that the polygon has a legal number of vertices and the expected
@@ -61,11 +56,11 @@ pub const Instance = struct {
     /// when rasterizing polygon data.
     pub fn validate(self: Instance) ValidationError!void {
         // Polygons must contain an even number of vertices
-        if (@rem(self._raw.count, 2) != 0) return error.VertexCountUneven;
+        if (@rem(self._raw_vertices.len, 2) != 0) return error.VertexCountUneven;
 
         // Polygons must contain at least 4 and at most 50 vertices
-        if (self._raw.count < min_vertices) return error.VertexCountTooLow;
-        if (self._raw.count > max_vertices) return error.VertexCountTooHigh;
+        if (self._raw_vertices.len < min_vertices) return error.VertexCountTooLow;
+        if (self._raw_vertices.len > max_vertices) return error.VertexCountTooHigh;
 
         const verts = self.vertices();
 
@@ -107,9 +102,9 @@ pub const Instance = struct {
 pub fn new(draw_mode: DrawMode.Enum, vertices: []const Point.Instance) Instance {
     var self = Instance{
         .draw_mode = draw_mode,
-        ._raw = .{
-            .count = vertices.len,
-            .vertices = undefined,
+        ._raw_vertices = .{
+            .len = vertices.len,
+            .items = undefined,
         },
         .bounds = undefined,
     };
@@ -120,7 +115,7 @@ pub fn new(draw_mode: DrawMode.Enum, vertices: []const Point.Instance) Instance 
     var max_y: ?Point.Coordinate = null;
 
     for (vertices) |vertex, index| {
-        self._raw.vertices[index] = vertex;
+        self._raw_vertices.items[index] = vertex;
         min_x = if (min_x) |current| math.min(current, vertex.x) else vertex.x;
         max_x = if (max_x) |current| math.max(current, vertex.x) else vertex.x;
         min_y = if (min_y) |current| math.min(current, vertex.y) else vertex.y;
@@ -149,9 +144,9 @@ pub fn parse(reader: anytype, center: Point.Instance, scale: PolygonScale.Raw, d
     var self = Instance{
         .draw_mode = draw_mode,
         .bounds = bounds,
-        ._raw = .{
-            .count = count,
-            .vertices = undefined,
+        ._raw_vertices = .{
+            .len = count,
+            .items = undefined,
         },
     };
 
@@ -161,7 +156,7 @@ pub fn parse(reader: anytype, center: Point.Instance, scale: PolygonScale.Raw, d
         const raw_x = try reader.readByte();
         const raw_y = try reader.readByte();
 
-        self._raw.vertices[index] = origin.adding(.{
+        self._raw_vertices.items[index] = origin.adding(.{
             .x = PolygonScale.apply(Point.Coordinate, raw_x, scale),
             .y = PolygonScale.apply(Point.Coordinate, raw_y, scale),
         });
