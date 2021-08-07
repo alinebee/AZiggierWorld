@@ -26,8 +26,8 @@ pub const Instance = union(enum) {
     /// for this file. Returns the slice of `buffer` that contains the entire filename.
     pub fn dosName(self: Instance, buffer: *Buffer) []const u8 {
         return switch (self) {
-            // unreachable because we know at compile time that the Buffer type
-            // will always be large enough to contain the formatted name.
+            // Use catch unreachable because we know at compile time that the Buffer type
+            // will be large enough to contain the formatted name.
             .resource_list => fmt.bufPrint(buffer, "MEMLIST.BIN", .{}) catch unreachable,
             .bank => |id| fmt.bufPrint(buffer, "BANK{X:0>2}", .{id}) catch unreachable,
         };

@@ -81,13 +81,13 @@ pub const Instance = struct {
     /// Allocate a buffer and read the specified resource from the appropriate
     /// BANKXX file into it.
     /// Returns a slice that contains the decompressed resource data.
-    /// Caller owns the returned slice and must free it with `data_allocator.free`.
+    /// Caller owns the returned slice and must free it with `allocator.free`.
     /// Returns an error if the allocator failed to allocate memory or if the data
     /// could not be read or decompressed.
-    pub fn allocReadResource(self: Instance, data_allocator: *mem.Allocator, descriptor: ResourceDescriptor.Instance) ![]const u8 {
+    pub fn allocReadResource(self: Instance, allocator: *mem.Allocator, descriptor: ResourceDescriptor.Instance) ![]const u8 {
         // Create a buffer just large enough to decompress the resource into.
-        var destination = try data_allocator.alloc(u8, descriptor.uncompressed_size);
-        errdefer data_allocator.free(destination);
+        var destination = try allocator.alloc(u8, descriptor.uncompressed_size);
+        errdefer allocator.free(destination);
 
         return try self.bufReadResource(destination, descriptor);
     }
@@ -105,11 +105,11 @@ pub const Instance = struct {
     /// Allocate a buffer and read the resource with the specified ID
     /// from the appropriate BANKXX file into it.
     /// Returns a slice that contains the decompressed resource data.
-    /// Caller owns the returned slice and must free it with `data_allocator.free`.
+    /// Caller owns the returned slice and must free it with `allocator.free`.
     /// Returns an error if the resource ID was invalid, the allocator failed
     /// to allocate memory, or the data could not be read or decompressed.
-    pub fn allocReadResourceByID(self: Instance, data_allocator: *mem.Allocator, id: ResourceID.Raw) ![]const u8 {
-        return self.allocReadResource(data_allocator, try self.resourceDescriptor(id));
+    pub fn allocReadResourceByID(self: Instance, allocator: *mem.Allocator, id: ResourceID.Raw) ![]const u8 {
+        return self.allocReadResource(allocator, try self.resourceDescriptor(id));
     }
 
     /// Returns a list of all valid resource descriptors,
