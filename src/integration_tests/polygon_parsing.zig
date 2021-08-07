@@ -110,10 +110,9 @@ const Error = error{
 const PolygonVisitor = struct {
     count: usize = 0,
 
-    pub fn visit(self: *PolygonVisitor, polygon: Polygon.Instance) !bool {
+    pub fn visit(self: *PolygonVisitor, polygon: Polygon.Instance) !void {
         self.count += 1;
         try polygon.validate();
-        return true;
     }
 };
 

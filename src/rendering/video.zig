@@ -170,9 +170,8 @@ const PolygonVisitor = struct {
     mask_buffer: *const Buffer,
 
     /// Draw a single polygon into the target buffer, using the mask buffer to read from if necessary.
-    pub fn visit(self: @This(), polygon: Polygon.Instance) !bool {
+    pub fn visit(self: @This(), polygon: Polygon.Instance) !void {
         try self.target_buffer.drawPolygon(polygon, self.mask_buffer);
-        return true;
     }
 };
 

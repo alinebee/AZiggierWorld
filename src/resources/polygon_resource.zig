@@ -37,6 +37,8 @@ pub fn new(data: []const u8) Instance {
 
 pub const Instance = struct {
     /// Raw polygon data read from Another World's resource files.
+    /// The instance does not own this buffer; the parent context must ensure
+    /// the buffer stays valid for as long as the instance is in scope.
     data: []const u8,
 
     /// Polygon resources are stored recursively. To prevent infinite recursion
@@ -46,15 +48,14 @@ pub const Instance = struct {
     /// Reads polygons from the specified address within the polygon data, and calls `visitor.visit` with each polygon.
     /// Polygons are positioned and scaled according to the `origin` and `scale` parameters.
     ///
-    /// `visitor.visit` must have the signature: fn (Polygon.Instance) !bool and must return true to continue iteration
-    /// or false to stop iterating.
+    /// `visitor.visit` must have the signature: fn (Polygon.Instance) !void.
     ///
     /// Returns one of Error if the address is invalid, if malformed data is encountered when reading polygon data,
     /// or if `visitor.visit` returns an error.
     ///
     /// Precondition:
     /// Address must be known in advance to point to the start of a polygon or group definition within the data.
-    /// Addresses cannot be validated, so it is possible to start parsing from e.g. the middle of a polygon or group;
+    /// Addresses cannot be validated, so it is possible to start parsing from e.g. the middle of a polygon or group.
     /// At best this will result in an error; at worst, silently succeeding but producing garbage polygon data.
     pub fn iteratePolygons(self: Instance, address: Address, origin: Point.Instance, scale: PolygonScale.Raw, visitor: anytype) Error(@TypeOf(visitor))!void {
         try self.recursivelyParseEntry(address, origin, scale, null, 0, visitor);
@@ -78,9 +79,7 @@ pub const Instance = struct {
                 const final_draw_mode = draw_mode orelse default_draw_mode;
                 const polygon = try Polygon.parse(reader, origin, scale, final_draw_mode);
 
-                const should_continue = try visitor.visit(polygon);
-
-                if (should_continue == false) return;
+                try visitor.visit(polygon);
             },
             .group => {
                 const group_header = try GroupHeader.parse(reader, scale);
@@ -557,9 +556,8 @@ const TestVisitor = struct {
         self.polygons.deinit();
     }
 
-    fn visit(self: *TestVisitor, polygon: Polygon.Instance) !bool {
+    fn visit(self: *TestVisitor, polygon: Polygon.Instance) !void {
         try self.polygons.append(polygon);
-        return true;
     }
 };
 
