@@ -28,7 +28,8 @@ pub const PolygonSource = enum {
 /// A length of time in milliseconds to leave a frame on screen.
 pub const Milliseconds = usize;
 
-const Buffer = VideoBuffer.Instance(PackedStorage.Instance, 320, 200);
+/// The type used for buffer storage.
+pub const Buffer = VideoBuffer.Instance(PackedStorage.Instance, 320, 200);
 
 /// The video subsystem responsible for handling draw calls and sending frames to the host screen.
 pub const Instance = struct {
@@ -39,7 +40,7 @@ pub const Instance = struct {
     polygons: PolygonResource.Instance,
 
     /// The resource from which global animation data will be read.
-    animations: PolygonResource.Instance,
+    animations: ?PolygonResource.Instance,
 
     /// The palettes used to render frames to the host screen.
     palettes: PaletteResource.Instance,
@@ -95,7 +96,7 @@ pub const Instance = struct {
     /// Loads the specified bitmap resource into the default destination buffer for bitmaps.
     /// Returns an error if the specified bitmap data was the wrong size for the buffer.
     pub fn loadBitmapResource(self: *Self, bitmap_data: []const u8) !void {
-        const buffer = &self.buffers[bitmap_buffer_id];
+        var buffer = &self.buffers[bitmap_buffer_id];
         try buffer.loadBitmapResource(bitmap_data);
     }
 
@@ -107,7 +108,7 @@ pub const Instance = struct {
             .mask_buffer = &self.buffers[mask_buffer_id],
         };
 
-        const resource = self.resolvedPolygonSource(source);
+        const resource = try self.resolvedPolygonSource(source);
         try resource.iteratePolygons(address, point, scale, visitor);
     }
 
@@ -154,12 +155,23 @@ pub const Instance = struct {
         return &self.buffers[self.resolvedBufferID(buffer_id)];
     }
 
-    fn resolvedPolygonSource(self: *Self, source: PolygonSource) *PolygonResource.Instance {
-        return switch (source) {
-            .polygons => &self.polygons,
-            .animations => &self.animations,
-        };
+    fn resolvedPolygonSource(self: *Self, source: PolygonSource) !*PolygonResource.Instance {
+        switch (source) {
+            .polygons => return &self.polygons,
+            .animations => {
+                if (self.animations) |*resource| {
+                    return resource;
+                } else {
+                    return error.AnimationsNotLoaded;
+                }
+            },
+        }
     }
+};
+
+pub const Error = error{
+    /// Attempted to render polygons from the animation when it was not loaded by the current game part.
+    AnimationsNotLoaded,
 };
 
 /// Used by `Instance.drawPolygon` to loop over polygons parsed from a resource.
