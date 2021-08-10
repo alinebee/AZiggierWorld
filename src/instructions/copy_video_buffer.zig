@@ -40,7 +40,7 @@ pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instance 
     const raw_destination = try program.read(BufferID.Raw);
 
     // When copying from a specific buffer, rather than from the front or back buffer,
-    // The top bit of the raw source ID in the instruction flags whether to respect (1)
+    // the top bit of the raw source ID in the instruction flags whether to respect (1)
     // or ignore (0) the current vertical scroll offset.
     // This is derived from some squirrely masking logic in the reference implementation:
     // https://github.com/fabiensanglard/Another-World-Bytecode-Interpreter/blob/30b29209214cbf3d3d179b85a7f2bc47ba4a8730/src/video.cpp#L498

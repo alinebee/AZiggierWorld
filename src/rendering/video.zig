@@ -12,6 +12,8 @@ const PackedStorage = @import("../rendering/storage/packed_storage.zig");
 
 const RegisterValue = @import("../machine/machine.zig").RegisterValue;
 
+const static_limits = @import("../static_limits.zig");
+
 const english = @import("../assets/english.zig");
 
 /// Defines where to read polygon from for a polygon draw operation.
@@ -34,7 +36,7 @@ pub const Buffer = VideoBuffer.Instance(PackedStorage.Instance, 320, 200);
 /// The video subsystem responsible for handling draw calls and sending frames to the host screen.
 pub const Instance = struct {
     /// The set of 4 buffers used for rendering.
-    buffers: [BufferID.count]Buffer,
+    buffers: [static_limits.buffer_count]Buffer,
 
     /// The resource from which part-specific polygon data will be read.
     polygons: PolygonResource.Instance,

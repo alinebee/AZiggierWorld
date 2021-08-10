@@ -26,6 +26,8 @@ const BoundingBox = @import("../values/bounding_box.zig");
 
 const FixedBuffer = @import("../utils/fixed_buffer.zig");
 const introspection = @import("../utils/introspection.zig");
+
+const static_limits = @import("../static_limits.zig");
 const math = @import("std").math;
 
 /// Defines a scaled polygon in screen space, with between 4 and 50 vertices.
@@ -166,10 +168,10 @@ pub fn parse(reader: anytype, center: Point.Instance, scale: PolygonScale.Raw, d
 }
 
 pub const min_vertices = 4;
-pub const max_vertices = 50;
+pub const max_vertices = static_limits.max_polygon_vertices;
 
 const min_vertical_span = 0;
-const max_vertical_span = 1023;
+const max_vertical_span = static_limits.precomputed_slope_count - 1;
 
 pub fn ParseError(comptime Reader: type) type {
     const ReaderError = introspection.ErrorType(Reader.readByte);

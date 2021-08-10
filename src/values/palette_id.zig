@@ -3,13 +3,9 @@
 //! The game swapped between palettes from screen to screen or to do effects like lightning or fades.
 
 const intCast = @import("../utils/introspection.zig").intCast;
-const maxInt = @import("std").math.maxInt;
 
-/// A palette index from 0-31. This is guaranteed to be valid.
+/// A palette index from 0-31. Guaranteed at compile-time to be valid.
 pub const Trusted = u5;
-
-/// 32, the maximum number of palettes that can be addressed by a Trusted palette ID.
-pub const count = maxInt(Trusted) + 1;
 
 /// A raw palette index stored in bytecode as an 8-bit unsigned integer.
 /// This can potentially be out of range: converted to a Trusted ID with `parse`.
@@ -29,6 +25,11 @@ pub fn parse(raw_id: Raw) Error!Trusted {
 // -- Tests --
 
 const testing = @import("../utils/testing.zig");
+const static_limits = @import("../static_limits.zig");
+
+test "Trusted covers range of legal palette IDs" {
+    try static_limits.validateTrustedType(Trusted, static_limits.palette_count);
+}
 
 test "parse succeeds for in-bounds integers" {
     try testing.expectEqual(0, parse(0b0000_0000));

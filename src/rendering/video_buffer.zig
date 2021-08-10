@@ -181,7 +181,7 @@ pub fn Instance(comptime StorageFn: anytype, comptime width: usize, comptime hei
                 // how much to change X between each row.
                 const x1_delta = vertices[cw_vertex].x - vertices[cw_vertex - 1].x;
                 const x2_delta = vertices[ccw_vertex].x - vertices[ccw_vertex + 1].x;
-                const y_delta = math.cast(VerticalDelta, vertices[cw_vertex].y - vertices[cw_vertex - 1].y) catch {
+                const y_delta = math.cast(TrustedVerticalDelta, vertices[cw_vertex].y - vertices[cw_vertex - 1].y) catch {
                     return error.InvalidVerticalDelta;
                 };
 
@@ -229,20 +229,21 @@ pub fn Instance(comptime StorageFn: anytype, comptime width: usize, comptime hei
 
 // -- Precomputed slopes --
 
-const VerticalDelta = u10;
-const max_vertical_delta = math.maxInt(VerticalDelta);
+/// Delta y values in the polygon draw routine are cast to this type to enforce that they are within
+/// the legal range for an index in the `precomputed_slopes` table.
+const TrustedVerticalDelta = u10;
 
 /// A lookup table of fixed-point x/y ratios for slopes of heights between 0 and `max_vertical_delta`.
 /// The values in this table will be multiplied by the x component of a vector to calculate the x step
 /// for each unit of y along the vector of {x,y}.
 const precomputed_slopes = init: {
-    var table: [max_vertical_delta]u16 = undefined;
+    var table: [static_limits.precomputed_slope_count]u16 = undefined;
 
     const base = 1 << 14;
     table[0] = base;
     var index: u16 = 1;
 
-    @setEvalBranchQuota(max_vertical_delta);
+    @setEvalBranchQuota(table.len);
     while (index < table.len) : (index += 1) {
         table[index] = base / index;
     }
@@ -252,7 +253,7 @@ const precomputed_slopes = init: {
 
 /// Given an {x, y} vector, calculates the step to add to x for each unit of y
 /// to draw a slope along that vector.
-fn stepDistance(delta_x: Point.Coordinate, delta_y: VerticalDelta) FixedPrecision.Instance {
+fn stepDistance(delta_x: Point.Coordinate, delta_y: TrustedVerticalDelta) FixedPrecision.Instance {
     const slope = precomputed_slopes[delta_y];
 
     return .{
@@ -280,6 +281,12 @@ const expectPixels = @import("test_helpers/storage_test_suite.zig").expectPixels
 const AlignedStorage = @import("storage/aligned_storage.zig");
 const PackedStorage = @import("storage/packed_storage.zig");
 const PlanarBitmapResource = @import("../resources/planar_bitmap_resource.zig");
+
+const static_limits = @import("../static_limits.zig");
+
+test "TrustedVerticalDelta covers range of legal vertical deltas" {
+    try static_limits.validateTrustedType(TrustedVerticalDelta, static_limits.precomputed_slope_count);
+}
 
 // -- Public draw method tests --
 

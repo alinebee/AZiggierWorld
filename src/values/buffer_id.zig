@@ -1,15 +1,12 @@
 //! Types for parsing video buffer IDs from Another World bytecode instructions.
 
-const maxInt = @import("std").math.maxInt;
+const math = @import("std").math;
 
 /// A raw video buffer identifier as represented in Another World's bytecode.
 pub const Raw = u8;
 
-/// A specific buffer ID from 0 to 3. This is guaranteed to be valid.
+/// A specific buffer ID from 0 to 3. Guaranteed at compile-time to be valid.
 pub const Specific = u2;
-
-/// 4, the number of buffers addressible by a Specific buffer ID.
-pub const count = maxInt(Specific) + 1;
 
 /// The ID of the front buffer as represented in bytecode.
 pub const raw_front_buffer: Raw = 0xFE;
@@ -33,7 +30,7 @@ pub const Error = error{
 
 pub fn parse(raw: Raw) Error!Enum {
     return switch (raw) {
-        0...3 => .{ .specific = @truncate(Specific, raw) },
+        0...math.maxInt(Specific) => .{ .specific = @truncate(Specific, raw) },
         raw_front_buffer => .front_buffer,
         raw_back_buffer => .back_buffer,
         else => error.InvalidBufferID,
@@ -43,6 +40,11 @@ pub fn parse(raw: Raw) Error!Enum {
 // -- Tests --
 
 const testing = @import("../utils/testing.zig");
+const static_limits = @import("../static_limits.zig");
+
+test "Specific covers range of legal buffer IDs" {
+    try static_limits.validateTrustedType(Specific, static_limits.buffer_count);
+}
 
 test "parse correctly parses raw buffer ID" {
     try testing.expectEqual(.{ .specific = 0 }, parse(0));

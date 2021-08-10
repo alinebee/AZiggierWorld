@@ -1,4 +1,5 @@
 /// A raw register identifier as represented in Another World's bytecode.
+/// Guaranteed at compile-time to be valid.
 pub const Raw = u8;
 
 // -- Known register ID constants --
@@ -23,3 +24,11 @@ pub const frame_duration: Raw = 0xFF;
 
 /// UNKNOWN: Reset to 0 by render_video_buffer right before a new frame is rendered.
 pub const render_video_buffer_UNKNOWN: Raw = 0xF7;
+
+// -- Tests --
+
+const static_limits = @import("../static_limits.zig");
+
+test "Raw type matches range of legal register IDs" {
+    try static_limits.validateTrustedType(Raw, static_limits.register_count);
+}

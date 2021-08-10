@@ -2,13 +2,9 @@
 //! These color IDs appear in bytecode, polygon resources and video buffers.
 
 const intCast = @import("../utils/introspection.zig").intCast;
-const maxInt = @import("std").math.maxInt;
 
-/// A color index from 0-15. This is guaranteed to be valid.
+/// A color index from 0-15. Guaranteed at compile-time to be valid.
 pub const Trusted = u4;
-
-/// 16, the maximum number of colors that can be addressed by a Trusted color ID.
-pub const count = maxInt(Trusted) + 1;
 
 /// A raw color index stored in bytecode as an 8-bit unsigned integer.
 /// This can potentially be out of range: converted to a Trusted ID with `parse`.
@@ -41,6 +37,11 @@ pub fn highlightByte(color_byte: u8) u8 {
 // -- Tests --
 
 const testing = @import("../utils/testing.zig");
+const static_limits = @import("../static_limits.zig");
+
+test "Trusted covers range of legal color IDs" {
+    try static_limits.validateTrustedType(Trusted, static_limits.color_count);
+}
 
 test "parse succeeds for in-bounds integer" {
     try testing.expectEqual(0, parse(0b0000_0000));

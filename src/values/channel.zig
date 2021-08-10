@@ -1,6 +1,6 @@
 const intCast = @import("../utils/introspection.zig").intCast;
 
-/// The identifier of an audio channel as a value from 0-3. This is guaranteed to be valid.
+/// The identifier of an audio channel as a value from 0-3. Guaranteed at compile-time to be valid.
 pub const Trusted = u2;
 
 /// A raw audio channel identifier as represented in Another World's bytecode.
@@ -18,6 +18,11 @@ pub fn parse(raw: Raw) Error!Trusted {
 // -- Tests --
 
 const testing = @import("../utils/testing.zig");
+const static_limits = @import("../static_limits.zig");
+
+test "Trusted type covers range of legal channels" {
+    try static_limits.validateTrustedType(Trusted, static_limits.channel_count);
+}
 
 test "parse returns expected enum cases" {
     try testing.expectEqual(0, parse(0));

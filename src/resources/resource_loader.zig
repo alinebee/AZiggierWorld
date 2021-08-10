@@ -9,6 +9,8 @@ const decode = @import("../run_length_decoder/decode.zig").decode;
 const FixedBuffer = @import("../utils/fixed_buffer.zig");
 const introspection = @import("../utils/introspection.zig");
 
+const static_limits = @import("../static_limits.zig");
+
 const std = @import("std");
 const mem = std.mem;
 const fs = std.fs;
@@ -16,7 +18,7 @@ const io = std.io;
 
 /// The maximum number of resource descriptors that will be parsed from the MEMLIST.BIN file
 /// in an Another World game directory.
-const max_descriptors = 150;
+pub const max_resource_descriptors = static_limits.max_resource_descriptors;
 
 /// Create a new resource loader that expects to find game resources in the specified directory.
 /// The handle must have been opened with `.access_sub_paths = true` (the default).
@@ -35,7 +37,7 @@ pub const Instance = struct {
 
     /// The list of resources parsed from the MEMLIST.BIN manifest located in `dir`.
     /// Access this via resourceDescriptors() instead of directly.
-    _raw_descriptors: FixedBuffer.Instance(max_descriptors, ResourceDescriptor.Instance),
+    _raw_descriptors: FixedBuffer.Instance(max_resource_descriptors, ResourceDescriptor.Instance),
 
     /// Initializes a new resource loader that reads game data from the specified directory handle.
     /// The handle must have been opened with `.access_sub_paths = true` (the default).
@@ -217,7 +219,7 @@ fn ReadAndDecompressError(comptime Reader: type) type {
 
 const ResourceListExamples = struct {
     const valid = ResourceDescriptor.FileExamples.valid;
-    const too_many_descriptors = ResourceDescriptor.DescriptorExamples.valid_data ** (max_descriptors + 1);
+    const too_many_descriptors = ResourceDescriptor.DescriptorExamples.valid_data ** (max_resource_descriptors + 1);
 };
 
 // -- Tests --
@@ -277,7 +279,7 @@ test "readAndDecompress returns error.EndOfStream when source data is truncated"
 test "readResourceList parses all descriptors from a stream" {
     var reader = io.fixedBufferStream(&ResourceListExamples.valid).reader();
 
-    var buffer: [max_descriptors]ResourceDescriptor.Instance = undefined;
+    var buffer: [max_resource_descriptors]ResourceDescriptor.Instance = undefined;
     const count = try readResourceList(&buffer, reader);
 
     try testing.expectEqual(3, count);
@@ -286,7 +288,7 @@ test "readResourceList parses all descriptors from a stream" {
 test "readResourceList returns error.BufferTooSmall when stream contains too many descriptors for the buffer" {
     var reader = io.fixedBufferStream(&ResourceListExamples.too_many_descriptors).reader();
 
-    var buffer: [max_descriptors]ResourceDescriptor.Instance = undefined;
+    var buffer: [max_resource_descriptors]ResourceDescriptor.Instance = undefined;
     try testing.expectError(error.BufferTooSmall, readResourceList(&buffer, reader));
 }
 
