@@ -123,10 +123,15 @@ pub const Instance = struct {
     /// Returns the descriptor matching the specified ID.
     /// Returns an InvalidResourceID error if the ID was out of range.
     pub fn resourceDescriptor(self: Instance, id: ResourceID.Raw) !ResourceDescriptor.Instance {
+        try self.validateResourceID(id);
+        return self._raw_descriptors.items[id];
+    }
+
+    /// Returns an error if the specified resource ID is out of range for this game directory.
+    pub fn validateResourceID(self: Instance, id: ResourceID.Raw) !void {
         if (id >= self._raw_descriptors.len) {
             return error.InvalidResourceID;
         }
-        return self._raw_descriptors.items[id];
     }
 
     // - Private methods -
