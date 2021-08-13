@@ -5,7 +5,7 @@
 //! This file defines the structure of these resource descriptors, along with methods
 //! to parse them from a MEMLIST.BIN file.
 
-const ResourceType = @import("resource_type.zig");
+const ResourceType = @import("../values/resource_type.zig");
 const Filename = @import("filename.zig");
 
 const introspection = @import("../utils/introspection.zig");
