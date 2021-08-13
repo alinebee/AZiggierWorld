@@ -31,7 +31,7 @@ pub const PolygonSource = enum {
 pub const Milliseconds = usize;
 
 /// The type used for buffer storage.
-pub const Buffer = VideoBuffer.Instance(PackedStorage.Instance, 320, 200);
+pub const Buffer = VideoBuffer.Instance(PackedStorage.Instance, static_limits.virtual_screen_width, static_limits.virtual_screen_height);
 
 /// The video subsystem responsible for handling draw calls and sending frames to the host screen.
 pub const Instance = struct {
