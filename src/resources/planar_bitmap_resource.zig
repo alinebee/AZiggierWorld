@@ -27,12 +27,18 @@ pub fn new(comptime width: usize, comptime height: usize, data: []const u8) Erro
     return Reader(width, height).init(data);
 }
 
+/// Returns the number of bytes required for storing a planar bitmap resource
+/// with the specified pixel width and height.
+pub fn bytesRequiredForSize(comptime width: usize, comptime height: usize) usize {
+    const stride = try math.divCeil(usize, width, 2);
+    return height * stride;
+}
+
 /// Returns a reader suitable for reading a planar bitmap resource of the specified pixel width and height.
 pub fn Reader(comptime width: usize, comptime height: usize) type {
     const plane_count = 4;
+    const bytes_required = bytesRequiredForSize(width, height);
 
-    const stride = try math.divCeil(usize, width, 2);
-    const bytes_required = height * stride;
     // Buffers must contain at least 4 bytes for the algorithm to work.
     comptime debug.assert(bytes_required >= plane_count);
 
