@@ -1,23 +1,23 @@
-//! Tests that ResourceLoader correctly parses real game files from the original Another World.
+//! Tests that ResourceDirectory correctly parses real game files from the original Another World.
 //! Requires that the `fixtures/dos` folder contains Another World DOS game files.
 
-const ResourceLoader = @import("../resources/resource_loader.zig");
+const ResourceDirectory = @import("../resources/resource_directory.zig");
 const ResourceID = @import("../values/resource_id.zig");
 
 const testing = @import("../utils/testing.zig");
 const validFixtureDir = @import("helpers.zig").validFixtureDir;
 
-test "ResourceLoader loads all game resources" {
+test "ResourceDirectory reads all game resources" {
     var game_dir = validFixtureDir() catch return;
     defer game_dir.close();
 
-    const loader = try ResourceLoader.new(&game_dir);
+    const resource_directory = try ResourceDirectory.new(&game_dir);
 
-    try testing.expectEqual(146, loader.resourceDescriptors().len);
+    try testing.expectEqual(146, resource_directory.resourceDescriptors().len);
 
     // For each resource, test that it can be parsed and decompressed without errors.
-    for (loader.resourceDescriptors()) |descriptor| {
-        const data = try loader.allocReadResource(testing.allocator, descriptor);
+    for (resource_directory.resourceDescriptors()) |descriptor| {
+        const data = try resource_directory.allocReadResource(testing.allocator, descriptor);
         defer testing.allocator.free(data);
 
         try testing.expectEqual(descriptor.uncompressed_size, data.len);
@@ -28,10 +28,10 @@ test "Instance.readResourceAlloc returns error.OutOfMemory if it runs out of mem
     var game_dir = validFixtureDir() catch return;
     defer game_dir.close();
 
-    const loader = try ResourceLoader.new(&game_dir);
+    const resource_directory = try ResourceDirectory.new(&game_dir);
 
     // Some resources are zero-length; testing.failing_allocator would not fail if the memory required is 0.
-    const non_empty_descriptor = for (loader.resourceDescriptors()) |descriptor| {
+    const non_empty_descriptor = for (resource_directory.resourceDescriptors()) |descriptor| {
         if (descriptor.uncompressed_size > 0) {
             break descriptor;
         }
@@ -41,7 +41,7 @@ test "Instance.readResourceAlloc returns error.OutOfMemory if it runs out of mem
 
     try testing.expectError(
         error.OutOfMemory,
-        loader.allocReadResource(testing.failing_allocator, non_empty_descriptor),
+        resource_directory.allocReadResource(testing.failing_allocator, non_empty_descriptor),
     );
 }
 
@@ -49,10 +49,11 @@ test "Instance.allocReadResourceByID returns error.InvalidResourceID when given 
     var game_dir = validFixtureDir() catch return;
     defer game_dir.close();
 
-    const loader = try ResourceLoader.new(&game_dir);
+    const resource_directory = try ResourceDirectory.new(&game_dir);
 
+    const invalid_id = @intCast(ResourceID.Raw, resource_directory.resourceDescriptors().len);
     try testing.expectError(
         error.InvalidResourceID,
-        loader.allocReadResourceByID(testing.allocator, @intCast(ResourceID.Raw, loader.resourceDescriptors().len)),
+        resource_directory.allocReadResourceByID(testing.allocator, invalid_id),
     );
 }

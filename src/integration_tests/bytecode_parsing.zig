@@ -4,7 +4,7 @@
 const Instruction = @import("../instructions/instruction.zig");
 const Opcode = @import("../values/opcode.zig");
 const Program = @import("../machine/program.zig");
-const ResourceLoader = @import("../resources/resource_loader.zig");
+const ResourceDirectory = @import("../resources/resource_directory.zig");
 
 const testing = @import("../utils/testing.zig");
 const instrospection = @import("../utils/introspection.zig");
@@ -56,15 +56,15 @@ test "parseNextInstruction parses all programs in fixture bytecode" {
     var game_dir = validFixtureDir() catch return;
     defer game_dir.close();
 
-    const loader = try ResourceLoader.new(&game_dir);
+    const resource_directory = try ResourceDirectory.new(&game_dir);
 
     var failures = std.ArrayList(ParseFailure).init(testing.allocator);
     defer failures.deinit();
 
-    for (loader.resourceDescriptors()) |descriptor, index| {
+    for (resource_directory.resourceDescriptors()) |descriptor, index| {
         if (descriptor.type != .bytecode) continue;
 
-        const data = try loader.allocReadResource(testing.allocator, descriptor);
+        const data = try resource_directory.allocReadResource(testing.allocator, descriptor);
         defer testing.allocator.free(data);
 
         var program = Program.new(data);

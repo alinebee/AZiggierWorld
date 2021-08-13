@@ -20,29 +20,29 @@ const io = std.io;
 /// in an Another World game directory.
 pub const max_resource_descriptors = static_limits.max_resource_descriptors;
 
-/// Create a new resource loader that expects to find game resources in the specified directory.
+/// Creates a new instance that reads game data from the specified directory handle.
 /// The handle must have been opened with `.access_sub_paths = true` (the default).
-/// The loader does not take ownership of the directory handle; the calling context
-/// must ensure the handle stays open for the scope of the resource loader.
+/// The instance does not take ownership of the directory handle; the calling context
+/// must ensure the handle stays open for the scope of the instance.
 /// Returns an error if the directory did not contain the expected game data files.
 pub fn new(dir: *const fs.Dir) !Instance {
     return try Instance.init(dir);
 }
 
 pub const Instance = struct {
-    /// An handle for the directory that the will load files from.
-    /// The resource loader does not own this handle; the parent context is expected to keep it open
-    /// for as long as the resource loader is in scope.
+    /// An handle for the directory that the instance will load files from.
+    /// The instance does not own this handle; the parent context is expected to keep it open
+    /// for as long as the instance is in scope.
     dir: *const fs.Dir,
 
     /// The list of resources parsed from the MEMLIST.BIN manifest located in `dir`.
     /// Access this via resourceDescriptors() instead of directly.
     _raw_descriptors: FixedBuffer.Instance(max_resource_descriptors, ResourceDescriptor.Instance),
 
-    /// Initializes a new resource loader that reads game data from the specified directory handle.
+    /// Initializes a new instance that reads game data from the specified directory handle.
     /// The handle must have been opened with `.access_sub_paths = true` (the default).
-    /// The loader does not take ownership of the directory handle; the calling context
-    /// must ensure the handle stays open for the scope of the resource loader.
+    /// The instance does not take ownership of the directory handle; the calling context
+    /// must ensure the handle stays open for the scope of the instance.
     /// Returns an error if the directory did not contain the expected game data files.
     fn init(dir: *const fs.Dir) !Instance {
         var self: Instance = .{
