@@ -37,8 +37,8 @@ pub fn new(data: []const u8) Instance {
 
 pub const Instance = struct {
     /// Raw polygon data read from Another World's resource files.
-    /// The instance does not own this buffer; the parent context must ensure
-    /// the buffer stays valid for as long as the instance is in scope.
+    /// The instance does not own this data; the parent context must ensure
+    /// the slice stays valid for as long as the instance is in scope.
     data: []const u8,
 
     /// Polygon resources are stored recursively. To prevent infinite recursion

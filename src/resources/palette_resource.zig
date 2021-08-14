@@ -13,7 +13,10 @@
 //! http://fabiensanglard.net/another_world_polygons_amiga500/index.html
 
 const Color = @import("../values/color.zig");
+const PaletteID = @import("../values/palette_id.zig");
+
 const static_limits = @import("../static_limits.zig");
+const mem = @import("std").mem;
 
 /// The number of palettes inside a palette resource.
 const palette_count = static_limits.palette_count;
@@ -24,33 +27,48 @@ const color_count = static_limits.color_count;
 /// A 16-color palette parsed from Another World game data.
 pub const Palette = [color_count]Color.Instance;
 
-/// A set of 32 palettes parsed from Another World game data.
-pub const Instance = [palette_count]Palette;
-
 /// The size in bytes of an individual palette within an Another World palette resource.
-pub const palette_size = @sizeOf(Color.Raw) * color_count; // 32 bytes
-/// The size in bytes of an Another World palette resource.
-pub const resource_size = palette_size * palette_count; // 1024 bytes
+const raw_palette_size = @sizeOf(Color.Raw) * color_count; // 32 bytes
 
-/// Parse an Another World palette resource into 32 16-color RGB palettes.
-pub fn parse(reader: anytype) !Instance {
-    var self: Instance = undefined;
+pub const Instance = struct {
+    /// Raw palette data read from Another World's resource files.
+    /// The instance does not own this data; the parent context must ensure
+    /// the slice stays valid for as long as the instance is in scope.
+    data: []const u8,
 
-    var offset: usize = 0;
-    for (self) |*palette| {
-        for (palette.*) |*color| {
-            color.* = Color.parse(try reader.readInt(Color.Raw, .Big));
+    const Self = @This();
+
+    /// Returns the palette at the specified ID.
+    /// Returns error.EndOfStream if the palette resource data was truncated.
+    pub fn palette(self: Self, palette_id: PaletteID.Trusted) !Palette {
+        const start = @as(usize, palette_id) * raw_palette_size;
+        const end = start + raw_palette_size;
+
+        if (end > self.data.len) return error.EndOfStream;
+        const raw_palette = @bitCast([]const [2]u8, self.data[start..end]);
+
+        var pal: Palette = undefined;
+        for (pal) |*color, index| {
+            const raw_color = mem.readIntBig(Color.Raw, &raw_palette[index]);
+            color.* = Color.parse(raw_color);
         }
+        return pal;
     }
+};
 
-    return self;
+pub fn new(data: []const u8) Instance {
+    return .{ .data = data };
 }
+
+pub const Error = error{
+    EndOfStream,
+};
 
 // -- Examples --
 
 const DataExamples = struct {
     // zig fmt: off
-    const palette = [palette_size]u8 {
+    const palette = [raw_palette_size]u8 {
         0x00, 0x00, // color 0
         0x01, 0x11, // color 1
         0x02, 0x22, // color 2
@@ -69,7 +87,7 @@ const DataExamples = struct {
         0x0F, 0xFF, // color 15
     };
 
-    const resource: [resource_size]u8 = palette ** palette_count;
+    const resource = palette ** palette_count;
     // zig fmt: on
 };
 
@@ -79,7 +97,7 @@ const testing = @import("../utils/testing.zig");
 const fixedBufferStream = @import("std").io.fixedBufferStream;
 const countingReader = @import("std").io.countingReader;
 
-test "parse parses expected palettes from resource" {
+test "Instance.at returns expected palettes from resource" {
     // zig fmt: off
     const expected_palette = Palette {
         .{ .r = 0,      .g = 0,     .b = 0 },    // color 0
@@ -102,20 +120,20 @@ test "parse parses expected palettes from resource" {
     // zig fmt: on
 
     const data = &DataExamples.resource;
-    var stream = countingReader(fixedBufferStream(data).reader());
+    const palettes = new(data);
 
-    const actual = try parse(stream.reader());
+    var idx: usize = 0;
+    while (idx < palette_count) : (idx += 1) {
+        const palette_id = @intCast(PaletteID.Trusted, idx);
+        const palette = try palettes.palette(palette_id);
 
-    for (actual) |palette| {
         try testing.expectEqualSlices(Color.Instance, &expected_palette, &palette);
     }
-
-    try testing.expectEqual(1024, stream.bytes_read);
 }
 
-test "parse returns error.EndOfStream on truncated data" {
+test "Instance.at returns error.EndOfStream on truncated data" {
     const data = DataExamples.resource[0..1023];
-    var stream = countingReader(fixedBufferStream(data).reader());
-    try testing.expectError(error.EndOfStream, parse(stream.reader()));
-    try testing.expectEqual(1023, stream.bytes_read);
+    const palettes = new(data);
+
+    try testing.expectError(error.EndOfStream, palettes.palette(31));
 }
