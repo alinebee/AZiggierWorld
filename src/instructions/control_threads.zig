@@ -23,10 +23,10 @@ pub const Instance = struct {
     operation: Operation.Enum,
 
     pub fn execute(self: Instance, machine: *Machine.Instance) void {
-        var id: usize = self.start_thread_id;
-        while (id <= self.end_thread_id) : (id += 1) {
-            var thread = &machine.threads[id];
+        const start = self.start_thread_id;
+        const end = @as(usize, self.end_thread_id) + 1;
 
+        for (machine.threads[start..end]) |*thread| {
             switch (self.operation) {
                 .Resume => thread.scheduleResume(),
                 .Suspend => thread.scheduleSuspend(),
@@ -120,16 +120,17 @@ test "execute with resume operation schedules specified threads to resume" {
     };
 
     var machine = Machine.new();
-
-    try testing.expectEqual(null, machine.threads[1].scheduled_suspend_state);
-    try testing.expectEqual(null, machine.threads[2].scheduled_suspend_state);
-    try testing.expectEqual(null, machine.threads[3].scheduled_suspend_state);
+    for (machine.threads) |thread| {
+        try testing.expectEqual(null, thread.scheduled_suspend_state);
+    }
 
     instruction.execute(&machine);
-
-    try testing.expectEqual(.running, machine.threads[1].scheduled_suspend_state);
-    try testing.expectEqual(.running, machine.threads[2].scheduled_suspend_state);
-    try testing.expectEqual(.running, machine.threads[3].scheduled_suspend_state);
+    for (machine.threads) |thread, index| {
+        switch (index) {
+            1...3 => try testing.expectEqual(.running, thread.scheduled_suspend_state),
+            else => try testing.expectEqual(null, thread.scheduled_suspend_state),
+        }
+    }
 }
 
 test "execute with suspend operation schedules specified threads to suspend" {
@@ -140,16 +141,17 @@ test "execute with suspend operation schedules specified threads to suspend" {
     };
 
     var machine = Machine.new();
-
-    try testing.expectEqual(null, machine.threads[1].scheduled_suspend_state);
-    try testing.expectEqual(null, machine.threads[2].scheduled_suspend_state);
-    try testing.expectEqual(null, machine.threads[3].scheduled_suspend_state);
+    for (machine.threads) |thread| {
+        try testing.expectEqual(null, thread.scheduled_suspend_state);
+    }
 
     instruction.execute(&machine);
-
-    try testing.expectEqual(.suspended, machine.threads[1].scheduled_suspend_state);
-    try testing.expectEqual(.suspended, machine.threads[2].scheduled_suspend_state);
-    try testing.expectEqual(.suspended, machine.threads[3].scheduled_suspend_state);
+    for (machine.threads) |thread, index| {
+        switch (index) {
+            1...3 => try testing.expectEqual(.suspended, thread.scheduled_suspend_state),
+            else => try testing.expectEqual(null, thread.scheduled_suspend_state),
+        }
+    }
 }
 
 test "execute with deactivate operation schedules specified threads to deactivate" {
@@ -160,16 +162,17 @@ test "execute with deactivate operation schedules specified threads to deactivat
     };
 
     var machine = Machine.new();
-
-    try testing.expectEqual(null, machine.threads[1].scheduled_execution_state);
-    try testing.expectEqual(null, machine.threads[2].scheduled_execution_state);
-    try testing.expectEqual(null, machine.threads[3].scheduled_execution_state);
+    for (machine.threads) |thread| {
+        try testing.expectEqual(null, thread.scheduled_execution_state);
+    }
 
     instruction.execute(&machine);
-
-    try testing.expectEqual(.inactive, machine.threads[1].scheduled_execution_state);
-    try testing.expectEqual(.inactive, machine.threads[2].scheduled_execution_state);
-    try testing.expectEqual(.inactive, machine.threads[3].scheduled_execution_state);
+    for (machine.threads) |thread, index| {
+        switch (index) {
+            1...3 => try testing.expectEqual(.inactive, thread.scheduled_execution_state),
+            else => try testing.expectEqual(null, thread.scheduled_execution_state),
+        }
+    }
 }
 
 const math = @import("std").math;
@@ -182,6 +185,12 @@ test "execute safely iterates full range of threads" {
     };
 
     var machine = Machine.new();
+    for (machine.threads) |thread| {
+        try testing.expectEqual(null, thread.scheduled_suspend_state);
+    }
 
     instruction.execute(&machine);
+    for (machine.threads) |thread| {
+        try testing.expectEqual(.running, thread.scheduled_suspend_state);
+    }
 }
