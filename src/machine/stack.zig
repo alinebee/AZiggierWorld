@@ -17,7 +17,7 @@ pub const max_depth = static_limits.max_stack_depth;
 /// Represents the state of the program execution stack.
 pub const Instance = struct {
     /// The addresses currently on the stack.
-    return_addresses: [max_depth]Address.Native = [_]Address.Native{0} ** max_depth,
+    return_addresses: [max_depth]Address.Native = undefined,
     /// The current depth on the stack, between 0 and 63.
     depth: usize = 0,
 

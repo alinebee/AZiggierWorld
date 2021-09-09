@@ -132,9 +132,9 @@ pub const Instance = struct {
                     // once the next thread clears the stack.
                     // When this thread resumes executing the function next tic, any Return
                     // instruction within that function would then result in error.StackUnderflow.
-                    // We're treating this as a programmer error, but it's possible that that
-                    // original game's code contains functions that only yield and
-                    // never return. If so, I'll remove this safety check.
+                    // We're treating this as a programmer error, but it's possible that
+                    // the original game's code contains functions that only yield
+                    // and never return. If so, I'll remove this safety check.
                     if (machine.stack.depth > 0) {
                         return error.InvalidYield;
                     }

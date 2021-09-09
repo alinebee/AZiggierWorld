@@ -92,6 +92,7 @@ pub fn Instance(comptime StorageFn: anytype, comptime width: usize, comptime hei
                 var span_start: Point.Coordinate = cursor.x;
                 var span_width: Point.Coordinate = 0;
 
+                // Stop drawing the line as soon as there are no more lit pixels in it.
                 while (remaining_pixels != 0) {
                     const pixel_lit = (remaining_pixels & 0b1000_0000) != 0;
                     remaining_pixels <<= 1;
@@ -198,7 +199,7 @@ pub fn Instance(comptime StorageFn: anytype, comptime width: usize, comptime hei
                         if (Self.bounds.y.contains(y)) {
                             const x_range = Range.new(Point.Coordinate, x1.whole(), x2.whole());
 
-                            // Only draw if the resulting span is within the buffer's bounds
+                            // Only draw the row if the resulting span is within the buffer's bounds.
                             if (Self.bounds.x.intersection(x_range)) |clamped_range| {
                                 self.storage.uncheckedDrawSpan(clamped_range, y, operation);
                             }
