@@ -1,4 +1,5 @@
 zig-cache/
+zig-out/
 # Integration tests rely on copyrighted game files - prevent them from being committed by mistake
 fixtures/
 # Scratchpad for local testing
