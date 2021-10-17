@@ -19,6 +19,7 @@ pub const expect = testing.expect;
 pub const expectError = testing.expectError;
 pub const expectEqualSlices = testing.expectEqualSlices;
 pub const expectEqualStrings = testing.expectEqualStrings;
+pub const refAllDecls = testing.refAllDecls;
 
 pub const allocator = testing.allocator;
 pub const failing_allocator = testing.failing_allocator;

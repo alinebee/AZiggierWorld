@@ -94,16 +94,6 @@ pub const Instance = struct {
         return try self.bufReadResource(destination, descriptor);
     }
 
-    /// Read the specified resource with the specified ID from the appropriate BANKXX file
-    /// into the provided buffer.
-    /// Returns a slice representing the portion of `buffer` that contains resource data.
-    /// Returns an error if the resource ID was invalid, the `buffer` was not large enough
-    /// to hold the data, or the data could not be read or decompressed.
-    /// In the event of an error, `buffer` may contain partially-loaded game data.
-    pub fn bufReadResourceByID(self: Instance, buffer: []u8, id: ResourceID.Raw) ![]const u8 {
-        return self.bufReadResource(buffer, try self.resourceDescriptor(id));
-    }
-
     /// Allocate a buffer and read the resource with the specified ID
     /// from the appropriate BANKXX file into it.
     /// Returns a slice that contains the decompressed resource data.
