@@ -86,6 +86,143 @@ pub const Instance = struct {
     }
 };
 
+// -- Resource descriptor fixture data --
+
+pub const FixtureData = struct {
+    const empty_descriptor = ResourceDescriptor.Instance{
+        .type = .sound_or_empty,
+        .bank_id = 0,
+        .bank_offset = 0,
+        .compressed_size = 0,
+        .uncompressed_size = 0,
+    };
+
+    const sfx_descriptor = ResourceDescriptor.Instance{
+        .type = .sound_or_empty,
+        .bank_id = 0,
+        .bank_offset = 0,
+        .compressed_size = 100,
+        .uncompressed_size = 100,
+    };
+
+    const music_descriptor = ResourceDescriptor.Instance{
+        .type = .music,
+        .bank_id = 0,
+        .bank_offset = 0,
+        .compressed_size = 100,
+        .uncompressed_size = 100,
+    };
+
+    const bitmap_descriptor = ResourceDescriptor.Instance{
+        .type = .bitmap,
+        .bank_id = 0,
+        .bank_offset = 0,
+        .compressed_size = 32_000,
+        .uncompressed_size = 32_000,
+    };
+
+    const palettes_descriptor = ResourceDescriptor.Instance{
+        .type = .palettes,
+        .bank_id = 0,
+        .bank_offset = 0,
+        .compressed_size = 1024,
+        .uncompressed_size = 1024,
+    };
+
+    const bytecode_descriptor = ResourceDescriptor.Instance{
+        .type = .bytecode,
+        .bank_id = 0,
+        .bank_offset = 0,
+        .compressed_size = 2000,
+        .uncompressed_size = 2000,
+    };
+
+    const polygons_descriptor = ResourceDescriptor.Instance{
+        .type = .polygons,
+        .bank_id = 0,
+        .bank_offset = 0,
+        .compressed_size = 2000,
+        .uncompressed_size = 2000,
+    };
+
+    const sprite_polygons_descriptor = ResourceDescriptor.Instance{
+        .type = .sprite_polygons,
+        .bank_id = 0,
+        .bank_offset = 0,
+        .compressed_size = 2000,
+        .uncompressed_size = 2000,
+    };
+
+    pub const sfx_resource_id = 0x01;
+    pub const music_resource_id = 0x02;
+    pub const bitmap_resource_id = 0x03;
+    pub const bitmap_resource_id_2 = 0x04;
+
+    /// A list of fake descriptors with realistic values for resources that are referenced in game parts.
+    pub const descriptors = block: {
+        const max_resource_id = 0x7F;
+        var d = [_]ResourceDescriptor.Instance{empty_descriptor} ** (max_resource_id + 1);
+
+        // Drop in individually loadable resources at known offsets
+        d[sfx_resource_id] = sfx_descriptor;
+        d[music_resource_id] = music_descriptor;
+        d[bitmap_resource_id] = bitmap_descriptor;
+        d[bitmap_resource_id_2] = bitmap_descriptor;
+
+        // Animation data shared by all game parts
+        d[0x11] = sprite_polygons_descriptor;
+
+        // Part-specific data: see game_part.zig
+
+        // GamePart.Enum.copy_protection
+        d[0x14] = palettes_descriptor;
+        d[0x15] = bytecode_descriptor;
+        d[0x16] = polygons_descriptor;
+
+        // GamePart.Enum.intro_cinematic
+        d[0x17] = palettes_descriptor;
+        d[0x18] = bytecode_descriptor;
+        d[0x19] = polygons_descriptor;
+
+        // GamePart.Enum.gameplay1
+        d[0x1A] = palettes_descriptor;
+        d[0x1B] = bytecode_descriptor;
+        d[0x1C] = polygons_descriptor;
+
+        // GamePart.Enum.gameplay2
+        d[0x1D] = palettes_descriptor;
+        d[0x1E] = bytecode_descriptor;
+        d[0x1F] = polygons_descriptor;
+
+        // GamePart.Enum.gameplay3
+        d[0x20] = palettes_descriptor;
+        d[0x21] = bytecode_descriptor;
+        d[0x22] = polygons_descriptor;
+
+        // GamePart.Enum.arena_cinematic
+        d[0x23] = palettes_descriptor;
+        d[0x24] = bytecode_descriptor;
+        d[0x25] = polygons_descriptor;
+
+        // GamePart.Enum.gameplay4
+        d[0x26] = palettes_descriptor;
+        d[0x27] = bytecode_descriptor;
+        d[0x28] = polygons_descriptor;
+
+        // GamePart.Enum.gameplay5
+        d[0x29] = palettes_descriptor;
+        d[0x2A] = bytecode_descriptor;
+        d[0x2B] = polygons_descriptor;
+
+        // GamePart.Enum.password_entry
+        d[0x7D] = palettes_descriptor;
+        d[0x7E] = bytecode_descriptor;
+        d[0x7F] = polygons_descriptor;
+
+        break :block d;
+    };
+};
+
 // -- Tests --
 
 const testing = @import("../utils/testing.zig");
@@ -125,6 +262,30 @@ test "bufReadResource returns error.BufferTooSmall if buffer is too small for re
     defer testing.allocator.free(buffer);
 
     try testing.expectError(error.BufferTooSmall, repository.bufReadResource(buffer, example_descriptor));
+}
+
+test "resourceDescriptors returns expected descriptors" {
+    const repository = Instance.init(&FixtureData.descriptors, null);
+
+    try testing.expectEqualSlices(ResourceDescriptor.Instance, repository.resourceDescriptors(), &FixtureData.descriptors);
+}
+
+test "resourceDescriptor returns expected descriptor by ID" {
+    const repository = Instance.init(&FixtureData.descriptors, null);
+
+    try testing.expectEqual(FixtureData.sprite_polygons_descriptor, repository.resourceDescriptor(0x11));
+}
+
+test "validateResourceDescriptor returns no error for resource ID in range" {
+    const repository = Instance.init(&FixtureData.descriptors, null);
+
+    try repository.validateResourceID(FixtureData.descriptors.len - 1);
+}
+
+test "validateResourceDescriptor returns no error for resource ID in range" {
+    const repository = Instance.init(&FixtureData.descriptors, null);
+
+    try testing.expectError(error.InvalidResourceID, repository.validateResourceID(FixtureData.descriptors.len));
 }
 
 test "Ensure everything compiles" {
