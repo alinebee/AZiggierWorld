@@ -10,8 +10,6 @@ const Polygon = @import("../rendering/polygon.zig");
 const VideoBuffer = @import("../rendering/video_buffer.zig");
 const PackedStorage = @import("../rendering/storage/packed_storage.zig");
 
-const RegisterValue = @import("../machine/machine.zig").RegisterValue;
-
 const static_limits = @import("../static_limits.zig");
 
 const english = @import("../assets/english.zig");

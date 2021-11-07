@@ -1,15 +1,13 @@
 const Thread = @import("thread.zig");
 const ThreadID = @import("../values/thread_id.zig");
+const Register = @import("../values/register.zig");
 const Stack = @import("stack.zig");
 const Program = @import("program.zig");
 
 const static_limits = @import("../static_limits.zig");
 
-/// Register values are interpreted as signed 16-bit integers.
-pub const RegisterValue = i16;
-
 const register_count = static_limits.register_count;
-pub const Registers = [register_count]RegisterValue;
+pub const Registers = [register_count]Register.Signed;
 
 const thread_count = static_limits.thread_count;
 pub const Threads = [thread_count]Thread.Instance;
@@ -40,7 +38,7 @@ const empty_program = [0]u8{};
 pub fn new() Instance {
     var machine = Instance{
         .threads = [_]Thread.Instance{.{}} ** thread_count,
-        .registers = [_]RegisterValue{0} ** register_count,
+        .registers = [_]Register.Signed{0} ** register_count,
         .stack = Stack.Instance{},
         .program = Program.new(&empty_program),
     };

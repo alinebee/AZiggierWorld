@@ -1,4 +1,5 @@
 const Opcode = @import("../values/opcode.zig");
+const Register = @import("../values/register.zig");
 const Program = @import("../machine/program.zig");
 const Machine = @import("../machine/machine.zig");
 const Comparison = @import("comparison.zig");
@@ -13,7 +14,7 @@ pub const Instance = struct {
 
     /// The register or constant to use for the right-hand side of the condition.
     rhs: union(enum) {
-        constant: Machine.RegisterValue,
+        constant: Register.Signed,
         register: RegisterID.Raw,
     },
 
@@ -65,9 +66,9 @@ pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instance 
 
     self.lhs = try program.read(RegisterID.Raw);
     self.rhs = switch (raw_source) {
-        // Even though 16-bit constants are signed, the reference implementation treats 8-bit constants as unsigned.
+        // Even though 16-bit registers are signed, the reference implementation treats 8-bit constants as unsigned.
         0b00 => .{ .constant = try program.read(u8) },
-        0b01 => .{ .constant = try program.read(Machine.RegisterValue) },
+        0b01 => .{ .constant = try program.read(Register.Signed) },
         0b10, 0b11 => .{ .register = try program.read(RegisterID.Raw) },
     };
 

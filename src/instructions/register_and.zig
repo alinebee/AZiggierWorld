@@ -1,9 +1,8 @@
 const Opcode = @import("../values/opcode.zig");
+const Register = @import("../values/register.zig");
+const RegisterID = @import("../values/register_id.zig");
 const Program = @import("../machine/program.zig");
 const Machine = @import("../machine/machine.zig");
-const RegisterID = @import("../values/register_id.zig");
-
-const RegisterMask = u16;
 
 /// Applies a bitwise-AND mask to the value in a register.
 pub const Instance = struct {
@@ -11,13 +10,13 @@ pub const Instance = struct {
     destination: RegisterID.Raw,
 
     /// The mask to apply to the value in the register.
-    value: RegisterMask,
+    value: Register.Mask,
 
     pub fn execute(self: Instance, machine: *Machine.Instance) void {
         // Register values are signed 16-bit values, but must be treated as unsigned in order to mask them.
         const original_value = machine.registers[self.destination];
-        const masked_value = @bitCast(RegisterMask, original_value) & self.value;
-        machine.registers[self.destination] = @bitCast(Machine.RegisterValue, masked_value);
+        const masked_value = @bitCast(Register.Mask, original_value) & self.value;
+        machine.registers[self.destination] = @bitCast(Register.Signed, masked_value);
     }
 };
 
@@ -27,7 +26,7 @@ pub const Instance = struct {
 pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instance {
     return Instance{
         .destination = try program.read(RegisterID.Raw),
-        .value = try program.read(RegisterMask),
+        .value = try program.read(Register.Mask),
     };
 }
 
@@ -56,9 +55,11 @@ test "parse parses valid bytecode and consumes 3 bytes" {
 
 // zig fmt: off
 test "execute masks destination register" {
-    const original_value: RegisterMask  = 0b1010_0101_1010_0101;
-    const mask: RegisterMask            = 0b1100_0011_1111_0000;
-    const expected_value: RegisterMask  = 0b1000_0001_1010_0000;
+
+    // zig fmt: off
+    const original_value    = @bitCast(Register.Signed, @as(Register.Unsigned, 0b1010_0101_1010_0101));
+    const mask              = @bitCast(Register.Mask,   @as(Register.Unsigned, 0b1100_0011_1111_0000));
+    const expected_value    = @bitCast(Register.Signed, @as(Register.Unsigned, 0b1000_0001_1010_0000));
 
     const instruction = Instance{
         .destination = 16,
@@ -66,10 +67,10 @@ test "execute masks destination register" {
     };
 
     var machine = Machine.new();
-    machine.registers[16] = @bitCast(Machine.RegisterValue, original_value);
+    machine.registers[16] = original_value;
 
     instruction.execute(&machine);
 
-    try testing.expectEqual(expected_value, @bitCast(RegisterMask, machine.registers[16]));
+    try testing.expectEqual(expected_value, machine.registers[16]);
 }
 // zig fmt: on

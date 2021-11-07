@@ -1,7 +1,8 @@
 const Opcode = @import("../values/opcode.zig");
+const Register = @import("../values/register.zig");
+const RegisterID = @import("../values/register_id.zig");
 const Program = @import("../machine/program.zig");
 const Machine = @import("../machine/machine.zig");
-const RegisterID = @import("../values/register_id.zig");
 
 /// Set a specific register to a constant value.
 pub const Instance = struct {
@@ -9,7 +10,7 @@ pub const Instance = struct {
     destination: RegisterID.Raw,
 
     /// The constant value to set the register to.
-    value: Machine.RegisterValue,
+    value: Register.Signed,
 
     pub fn execute(self: Instance, machine: *Machine.Instance) void {
         machine.registers[self.destination] = self.value;
@@ -22,7 +23,7 @@ pub const Instance = struct {
 pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instance {
     return Instance{
         .destination = try program.read(RegisterID.Raw),
-        .value = try program.read(Machine.RegisterValue),
+        .value = try program.read(Register.Signed),
     };
 }
 

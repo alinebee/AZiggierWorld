@@ -1,5 +1,4 @@
-const RegisterValue = @import("../machine/machine.zig").RegisterValue;
-
+const Register = @import("../values/register.zig");
 const intToEnum = @import("../utils/introspection.zig").intToEnum;
 
 /// A raw JumpConditional comparison as it is represented in bytecode.
@@ -14,7 +13,7 @@ pub const Enum = enum(Raw) {
     less_than,
     less_than_or_equal_to,
 
-    pub fn compare(self: Enum, lhs: RegisterValue, rhs: RegisterValue) bool {
+    pub fn compare(self: Enum, lhs: Register.Signed, rhs: Register.Signed) bool {
         return switch (self) {
             .equal => lhs == rhs,
             .not_equal => lhs != rhs,

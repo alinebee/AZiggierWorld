@@ -1,11 +1,10 @@
 const Opcode = @import("../values/opcode.zig");
+const Register = @import("../values/register.zig");
 const Program = @import("../machine/program.zig");
 const Machine = @import("../machine/machine.zig");
 const RegisterID = @import("../values/register_id.zig");
 
 const introspection = @import("../utils/introspection.zig");
-
-const RegisterShift = introspection.ShiftType(Machine.RegisterValue);
 
 /// Left-shift (<<) the bits in a register's value by a specified distance.
 pub const Instance = struct {
@@ -13,7 +12,7 @@ pub const Instance = struct {
     destination: RegisterID.Raw,
 
     /// The distance to shift the value by.
-    shift: RegisterShift,
+    shift: Register.Shift,
 
     pub fn execute(self: Instance, machine: *Machine.Instance) void {
         // Unlike || or && operations, Zig is happy to << and >> signed values without respecting their sign bit:
@@ -35,7 +34,7 @@ pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instance 
     // the register to 0 on execution.
     const raw_shift = try program.read(u16);
 
-    const trusted_shift = introspection.intCast(RegisterShift, raw_shift) catch {
+    const trusted_shift = introspection.intCast(Register.Shift, raw_shift) catch {
         return error.ShiftTooLarge;
     };
 
@@ -81,9 +80,11 @@ test "parse returns error.ShiftTooLarge and consumes 4 bytes on invalid shift di
 }
 
 test "execute shifts destination register" {
-    const original_value: u16 = 0b0000_1111_1111_0000;
-    const shift = 3;
-    const expected_value: u16 = 0b0111_1111_1000_0000;
+    // zig fmt: off
+    const original_value    = @as(Register.Signed, 0b0000_1111_1111_0000);
+    const shift             = @as(Register.Shift, 3);
+    const expected_value    = @as(Register.Signed, 0b0111_1111_1000_0000);
+    // zig fmt: on
 
     const instruction = Instance{
         .destination = 16,
@@ -91,9 +92,9 @@ test "execute shifts destination register" {
     };
 
     var machine = Machine.new();
-    machine.registers[16] = @bitCast(Machine.RegisterValue, original_value);
+    machine.registers[16] = original_value;
 
     instruction.execute(&machine);
 
-    try testing.expectEqual(expected_value, @bitCast(u16, machine.registers[16]));
+    try testing.expectEqual(expected_value, machine.registers[16]);
 }
