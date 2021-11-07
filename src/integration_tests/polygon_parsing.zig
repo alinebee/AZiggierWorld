@@ -10,7 +10,6 @@ const PolygonScale = @import("../values/polygon_scale.zig");
 const Point = @import("../values/point.zig");
 const ResourceDirectory = @import("../resources/resource_directory.zig");
 const GamePart = @import("../values/game_part.zig");
-const Video = @import("../rendering/video.zig");
 const DrawBackgroundPolygon = @import("../instructions/draw_background_polygon.zig");
 const DrawSpritePolygon = @import("../instructions/draw_sprite_polygon.zig");
 
