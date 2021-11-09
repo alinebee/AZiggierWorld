@@ -247,24 +247,30 @@ const EntryPointer = struct {
             const raw_draw_mode = try reader.readByte();
             _ = try reader.readByte();
 
-            // The original C implementation didn't have nice Optional types like Zig, so for pointers that don't
-            // override the draw mode it apparently used the top bit of the draw mode parameter as a sentinel meaning
-            // "use the polygon's default draw mode".
-            // For pointers that do override the draw mode, it masked off the top bit when parsing the draw mode byte,
-            // to prevent the custom value from accidentally matching the sentinel.
+            // In the reference C implementation, pointers that don't want to override the polygon's default draw mode
+            // would send the polygon-drawing function a draw mode parameter with the top bit set. The polygon-drawing
+            // function treated that bit as a sentinel to mean "fall back on the polygon's default draw mode".
             //
-            // We have optionals in Zig so we don't need to worry about the custom value colliding with the sentinel;
-            // but we still need to mask off that top bit, since a lot of the pointers in the original DOS game data
-            // did leave it set. Otherwise, the top bit would change the type of draw mode from `solid_color` or `highlight`
-            // to `mask`. (See draw_mode.zig for how raw draw mode values are interpreted.)
+            // For pointers that do want to override the draw mode, the reference implementation would mask off the top bit
+            // when parsing the draw mode byte, to prevent the overridden value from accidentally being treated as the sentinel.
             //
-            // (It's possible that top bit had some special meaning for overridden draw modes, like the bit pattern
-            // in the padding byte; if so, it likewise went unused in the reference implementation.)
+            // We have optionals in Zig, so we don't need to overload the draw mode parameter with a sentinel bit anymore;
+            // we can just send `nil`. But we still need to mask off that sentinel bit when we parse the draw mode, since
+            // a lot of the pointers in the original DOS game data left it set for some reason. Otherwise, the sentinel bit
+            // would change the type of draw mode from `solid_color` or `highlight` to `mask`.
+            // (See draw_mode.zig for how raw draw mode values are interpreted.)
+            //
+            // It's possible that the top bit originally had some special meaning for overridden draw modes,
+            // to explain why it would show up as set in the game data; if so, it went unused in the reference implementation.
             //
             // The original pointer parsing code is here:
             // https://github.com/fabiensanglard/Another-World-Bytecode-Interpreter/blob/dea6914a82f493cb329188bcffa46b9d0b234ea6/src/video.cpp#L228
-            // And the original code that consumed the draw mode is here:
+            // (note that `color` defaults to 0b1111_1111, with the top bit set, unless the pointer overrides the value.)
+            //
+            // The original code that consumed the draw mode is here:
             // https://github.com/fabiensanglard/Another-World-Bytecode-Interpreter/blob/dea6914a82f493cb329188bcffa46b9d0b234ea6/src/video.cpp#L91-L93
+            // (note that it checks the high bit of `color` and ignores the rest of the value if it's set,
+            // instead parsing the draw mode from the rest of the polygon's header byte.)
             self.draw_mode = DrawMode.parse(raw_draw_mode & 0b0111_1111);
         } else {
             self.draw_mode = null;
