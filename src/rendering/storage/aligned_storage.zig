@@ -29,7 +29,7 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
     comptime debug.assert(@sizeOf(Data) == @sizeOf(RawData));
 
     return struct {
-        data: Data = mem.zeroes(Data),
+        data: Data = undefined,
 
         const Self = @This();
 

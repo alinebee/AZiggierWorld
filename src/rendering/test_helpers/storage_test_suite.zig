@@ -24,30 +24,22 @@ pub fn runTests(comptime Instance: anytype) void {
     _ = struct {
         test "fill replaces all bytes in buffer with specified color" {
             var storage = Instance(4, 4){};
-            const expected_before =
-                \\0000
-                \\0000
-                \\0000
-                \\0000
-            ;
-
-            try expectPixels(expected_before, storage);
-
             storage.fill(0xA);
 
-            const expected_after =
+            const expected =
                 \\AAAA
                 \\AAAA
                 \\AAAA
                 \\AAAA
             ;
 
-            try expectPixels(expected_after, storage);
+            try expectPixels(expected, storage);
         }
 
         test "uncheckedDrawSpan with byte-aligned span sets solid color in slice" {
             const Storage = Instance(10, 3);
             var storage = Storage{};
+            storage.fill(0x0);
 
             const operation = Storage.DrawOperation.solidColor(0xD);
 
@@ -64,6 +56,7 @@ pub fn runTests(comptime Instance: anytype) void {
         test "uncheckedDrawSpan with non-byte-aligned start sets start pixel correctly" {
             const Storage = Instance(10, 3);
             var storage = Storage{};
+            storage.fill(0x0);
 
             const operation = Storage.DrawOperation.solidColor(0xC);
 
@@ -80,6 +73,7 @@ pub fn runTests(comptime Instance: anytype) void {
         test "uncheckedDrawSpan with non-byte-aligned end sets end pixel correctly" {
             const Storage = Instance(10, 3);
             var storage = Storage{};
+            storage.fill(0x0);
 
             const operation = Storage.DrawOperation.solidColor(0x3);
 
@@ -96,6 +90,7 @@ pub fn runTests(comptime Instance: anytype) void {
         test "uncheckedDrawSpan with non-byte-aligned start and end sets start and end pixels correctly" {
             const Storage = Instance(10, 3);
             var storage = Storage{};
+            storage.fill(0x0);
 
             const operation = Storage.DrawOperation.solidColor(0x7);
 
@@ -135,6 +130,7 @@ pub fn runTests(comptime Instance: anytype) void {
         test "uncheckedDrawSpan replaces colors in slice with mask" {
             const Storage = Instance(10, 3);
             var storage = Storage{};
+            storage.fill(0x0);
 
             var mask_storage = Storage{};
             mask_storage.fillFromString(

@@ -366,6 +366,7 @@ fn runTests(comptime Storage: anytype) void {
 
         test "drawString renders pixels of glyph at specified position in buffer" {
             var buffer = new(Storage, 42, 18);
+            buffer.fill(0x0);
 
             const string = "Hello\nWorld";
             try buffer.drawString(string, 0x1, .{ .x = 1, .y = 1 });
@@ -421,6 +422,8 @@ fn runTests(comptime Storage: anytype) void {
 
             var buffer = new(Storage, 4, 4);
             var mask_buffer = new(Storage, 4, 4);
+
+            buffer.fill(0x0);
             mask_buffer.fill(0xF);
 
             const expected =
@@ -449,6 +452,8 @@ fn runTests(comptime Storage: anytype) void {
 
             var buffer = new(Storage, 6, 6);
             var mask_buffer = new(Storage, 6, 6);
+
+            buffer.fill(0x0);
             mask_buffer.fill(0xF);
 
             const expected =
@@ -482,6 +487,8 @@ fn runTests(comptime Storage: anytype) void {
 
             var buffer = new(Storage, 6, 6);
             var mask_buffer = new(Storage, 6, 6);
+
+            buffer.fill(0x0);
             mask_buffer.fill(0xF);
 
             const expected =

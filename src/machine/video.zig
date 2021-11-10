@@ -36,9 +36,6 @@ pub const Buffer = VideoBuffer.Instance(PackedStorage.Instance, static_limits.vi
 
 /// The video subsystem responsible for handling draw calls and sending frames to the host screen.
 pub const Instance = struct {
-    /// The set of 4 buffers used for rendering.
-    buffers: [static_limits.buffer_count]Buffer,
-
     /// The resource from which part-specific polygon data will be read.
     polygons: PolygonResource.Instance,
 
@@ -48,9 +45,14 @@ pub const Instance = struct {
     /// The palettes used to render frames to the host screen.
     palettes: PaletteResource.Instance,
 
+    /// The set of 4 buffers used for rendering.
+    /// These will be filled with garbage data when the instance is first created;
+    /// it is expected that the game program will initialize them with an explicit fill command.
+    buffers: [static_limits.buffer_count]Buffer = .{.{}} ** static_limits.buffer_count,
+
     /// The index of the currently selected palette in `palette_resource`.
     /// Frames will be rendered to the host screen using this palette.
-    palette_id: PaletteID.Trusted,
+    palette_id: PaletteID.Trusted = 0,
 
     /// The index of the buffer in `buffers` that draw instructions will render into.
     target_buffer_id: BufferID.Specific = 2,

@@ -30,7 +30,7 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
     const Data = [bytes_required]NativeColor;
 
     return struct {
-        data: Data = mem.zeroes(Data),
+        data: Data = undefined,
 
         const Self = @This();
 
