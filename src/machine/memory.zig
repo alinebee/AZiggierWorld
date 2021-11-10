@@ -347,8 +347,44 @@ test "loadIndividualResource does not allocate additional memory when loading bi
 
     const resource_id = MockRepository.FixtureData.bitmap_resource_id;
     _ = try memory.loadIndividualResource(resource_id);
+}
 
+test "loadIndividualResource avoids reloading already-loaded audio resources" {
+    var counted_repository = MockRepository.Instance.init(test_descriptors, null);
 
+    var memory = try new(testing.allocator, &counted_repository);
+    defer memory.deinit();
+
+    try testing.expectEqual(0, counted_repository.read_count);
+
+    const resource_id = MockRepository.FixtureData.music_resource_id;
+    const location_of_first_load = try memory.loadIndividualResource(resource_id);
+
+    try testing.expectEqual(1, counted_repository.read_count);
+
+    const location_of_second_load = try memory.loadIndividualResource(resource_id);
+
+    try testing.expectEqual(location_of_first_load, location_of_second_load);
+    try testing.expectEqual(1, counted_repository.read_count);
+}
+
+test "loadIndividualResource always reloads bitmap resources" {
+    var counted_repository = MockRepository.Instance.init(test_descriptors, null);
+
+    var memory = try new(testing.allocator, &counted_repository);
+    defer memory.deinit();
+
+    try testing.expectEqual(0, counted_repository.read_count);
+
+    const resource_id = MockRepository.FixtureData.bitmap_resource_id;
+    const location_of_first_load = try memory.loadIndividualResource(resource_id);
+
+    try testing.expectEqual(1, counted_repository.read_count);
+
+    const location_of_second_load = try memory.loadIndividualResource(resource_id);
+
+    try testing.expectEqual(location_of_first_load, location_of_second_load);
+    try testing.expectEqual(2, counted_repository.read_count);
 }
 
 // -- loadGamePart tests --
