@@ -56,6 +56,13 @@ pub const IndividualResourceLocation = union(enum) {
 /// The location of a resource in memory, or null if the resource is not loaded.
 pub const PossibleResourceLocation = ?[]const u8;
 
+const bitmap_region_size = PlanarBitmapResource.bytesRequiredForSize(
+    static_limits.virtual_screen_width,
+    static_limits.virtual_screen_height,
+);
+
+const BitmapRegion = [bitmap_region_size]u8;
+
 /// Creates a new instance that uses the specified allocator for allocating memory
 /// and loads game data from the specified repository.
 /// All resources will begin initially unloaded.
@@ -66,12 +73,6 @@ pub fn new(allocator: *mem.Allocator, repository: anytype) !Instance(@TypeOf(rep
 
 pub fn Instance(comptime Repository: type) type {
     return struct {
-        const bitmap_region_size = PlanarBitmapResource.bytesRequiredForSize(
-            static_limits.virtual_screen_width,
-            static_limits.virtual_screen_height,
-        );
-        const BitmapRegion = [bitmap_region_size]u8;
-
         /// The allocator used for loading resources into memory.
         allocator: *mem.Allocator,
         /// The data source to load resource data from: typically a directory on the local filesystem.
@@ -214,6 +215,7 @@ pub const Error = error{
 
 const testing = @import("../utils/testing.zig");
 const MockRepository = @import("../resources/mock_repository.zig");
+const FailingAllocator = @import("std").testing.FailingAllocator;
 
 const test_descriptors = &MockRepository.FixtureData.descriptors;
 const test_repository = MockRepository.Instance.init(test_descriptors, null);
@@ -327,6 +329,28 @@ test "loadIndividualResource returns load error from repository" {
     try testing.expectError(error.ChecksumFailed, memory.loadIndividualResource(resource_id));
 }
 
+test "loadIndividualResource returns error.OutOfMemory if allocation fails" {
+    var fail_on_second_allocation_allocator = FailingAllocator.init(testing.allocator, 1);
+
+    var memory = try new(&fail_on_second_allocation_allocator.allocator, test_repository);
+    defer memory.deinit();
+
+    const resource_id = MockRepository.FixtureData.music_resource_id;
+    try testing.expectError(error.OutOfMemory, memory.loadIndividualResource(resource_id));
+}
+
+test "loadIndividualResource does not allocate additional memory when loading bitmaps" {
+    var fail_on_second_allocation_allocator = FailingAllocator.init(testing.allocator, 1);
+
+    var memory = try new(&fail_on_second_allocation_allocator.allocator, test_repository);
+    defer memory.deinit();
+
+    const resource_id = MockRepository.FixtureData.bitmap_resource_id;
+    _ = try memory.loadIndividualResource(resource_id);
+
+
+}
+
 // -- loadGamePart tests --
 
 test "loadGamePart loads expected resources for game part with animations" {
@@ -421,6 +445,15 @@ test "loadGamePart returns load error from repository" {
     defer memory.deinit();
 
     try testing.expectError(error.ChecksumFailed, memory.loadGamePart(.copy_protection));
+}
+
+test "loadGamePart returns error.OutOfMemory if allocation fails" {
+    var fail_on_second_allocation_allocator = FailingAllocator.init(testing.allocator, 1);
+
+    var memory = try new(&fail_on_second_allocation_allocator.allocator, test_repository);
+    defer memory.deinit();
+
+    try testing.expectError(error.OutOfMemory, memory.loadGamePart(.copy_protection));
 }
 
 // -- unloadAllIndividualResources tests --
