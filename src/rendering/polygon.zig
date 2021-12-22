@@ -24,11 +24,13 @@ const DrawMode = @import("../values/draw_mode.zig");
 const PolygonScale = @import("../values/polygon_scale.zig");
 const BoundingBox = @import("../values/bounding_box.zig");
 
-const FixedBuffer = @import("../utils/fixed_buffer.zig");
 const introspection = @import("../utils/introspection.zig");
 
 const static_limits = @import("../static_limits.zig");
 const math = @import("std").math;
+const BoundedArray = @import("std").BoundedArray;
+
+const VertexStorage = BoundedArray(Point.Instance, max_vertices);
 
 /// Defines a scaled polygon in screen space, with between 4 and 50 vertices.
 pub const Instance = struct {
@@ -40,7 +42,7 @@ pub const Instance = struct {
 
     /// The vertices making up this polygon in screen coordinates.
     /// Access via `vertices` instead of directly.
-    _raw_vertices: FixedBuffer.Instance(max_vertices, Point.Instance),
+    _raw_vertices: VertexStorage,
 
     /// Returns a bounds-checked slice of the vertices in this polygon.
     pub fn vertices(self: Instance) []const Point.Instance {
@@ -104,10 +106,7 @@ pub const Instance = struct {
 pub fn new(draw_mode: DrawMode.Enum, vertices: []const Point.Instance) Instance {
     var self = Instance{
         .draw_mode = draw_mode,
-        ._raw_vertices = .{
-            .len = vertices.len,
-            .items = undefined,
-        },
+        ._raw_vertices = VertexStorage.init(vertices.len) catch unreachable,
         .bounds = undefined,
     };
 
@@ -117,7 +116,7 @@ pub fn new(draw_mode: DrawMode.Enum, vertices: []const Point.Instance) Instance 
     var max_y: ?Point.Coordinate = null;
 
     for (vertices) |vertex, index| {
-        self._raw_vertices.items[index] = vertex;
+        self._raw_vertices.set(index, vertex);
         min_x = if (min_x) |current| math.min(current, vertex.x) else vertex.x;
         max_x = if (max_x) |current| math.max(current, vertex.x) else vertex.x;
         min_y = if (min_y) |current| math.min(current, vertex.y) else vertex.y;
@@ -146,10 +145,7 @@ pub fn parse(reader: anytype, center: Point.Instance, scale: PolygonScale.Raw, d
     var self = Instance{
         .draw_mode = draw_mode,
         .bounds = bounds,
-        ._raw_vertices = .{
-            .len = count,
-            .items = undefined,
-        },
+        ._raw_vertices = VertexStorage.init(count) catch unreachable,
     };
 
     const origin = bounds.origin();
@@ -158,10 +154,10 @@ pub fn parse(reader: anytype, center: Point.Instance, scale: PolygonScale.Raw, d
         const raw_x = try reader.readByte();
         const raw_y = try reader.readByte();
 
-        self._raw_vertices.items[index] = origin.adding(.{
+        self._raw_vertices.set(index, origin.adding(.{
             .x = PolygonScale.apply(Point.Coordinate, raw_x, scale),
             .y = PolygonScale.apply(Point.Coordinate, raw_y, scale),
-        });
+        }));
     }
 
     return self;

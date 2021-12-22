@@ -6,7 +6,6 @@ const ResourceID = @import("../values/resource_id.zig");
 const Filename = @import("filename.zig");
 const decode = @import("../run_length_decoder/decode.zig").decode;
 
-const FixedBuffer = @import("../utils/fixed_buffer.zig");
 const introspection = @import("../utils/introspection.zig");
 
 const static_limits = @import("../static_limits.zig");
@@ -19,6 +18,7 @@ const io = std.io;
 /// The maximum number of resource descriptors that will be parsed from the MEMLIST.BIN file
 /// in an Another World game directory.
 pub const max_resource_descriptors = static_limits.max_resource_descriptors;
+const DescriptorStorage = std.BoundedArray(ResourceDescriptor.Instance, max_resource_descriptors);
 
 /// Creates a new instance that reads game data from the specified directory handle.
 /// The handle must have been opened with `.access_sub_paths = true` (the default).
@@ -37,7 +37,7 @@ pub const Instance = struct {
 
     /// The list of resources parsed from the MEMLIST.BIN manifest located in `dir`.
     /// Access this via resourceDescriptors() instead of directly.
-    _raw_descriptors: FixedBuffer.Instance(max_resource_descriptors, ResourceDescriptor.Instance),
+    _raw_descriptors: DescriptorStorage,
 
     /// Initializes a new instance that reads game data from the specified directory handle.
     /// The handle must have been opened with `.access_sub_paths = true` (the default).
@@ -53,7 +53,7 @@ pub const Instance = struct {
         const list_file = try self.openFile(.resource_list);
         defer list_file.close();
 
-        self._raw_descriptors.len = try readResourceList(&self._raw_descriptors.items, list_file.reader());
+        self._raw_descriptors.len = try readResourceList(&self._raw_descriptors.buffer, list_file.reader());
 
         return self;
     }
@@ -114,7 +114,7 @@ pub const Instance = struct {
     /// Returns an InvalidResourceID error if the ID was out of range.
     pub fn resourceDescriptor(self: Instance, id: ResourceID.Raw) !ResourceDescriptor.Instance {
         try self.validateResourceID(id);
-        return self._raw_descriptors.items[id];
+        return self._raw_descriptors.buffer[id];
     }
 
     /// Returns an error if the specified resource ID is out of range for this game directory.

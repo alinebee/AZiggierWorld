@@ -8,18 +8,19 @@
 
 const ResourceDescriptor = @import("resource_descriptor.zig");
 const ResourceID = @import("../values/resource_id.zig");
-const FixedBuffer = @import("../utils/fixed_buffer.zig");
 
 const static_limits = @import("../static_limits.zig");
 
 const mem = @import("std").mem;
+const BoundedArray = @import("std").BoundedArray;
 
 pub const max_resource_descriptors = static_limits.max_resource_descriptors;
+const DescriptorStorage = BoundedArray(ResourceDescriptor.Instance, max_resource_descriptors);
 
 pub const Instance = struct {
     /// The list of resources vended by this mock repository.
     /// Access this via resourceDescriptors() instead of directly.
-    _raw_descriptors: FixedBuffer.Instance(max_resource_descriptors, ResourceDescriptor.Instance),
+    _raw_descriptors: DescriptorStorage,
 
     /// An optional error returned by `bufReadResource` to simulate file-reading or decompression errors.
     /// If `null`, `bufReadResource` will return a success response.
@@ -33,7 +34,7 @@ pub const Instance = struct {
     /// a resource load method is called.
     pub fn init(descriptors: []const ResourceDescriptor.Instance, read_error: ?anyerror) Instance {
         return Instance{
-            ._raw_descriptors = FixedBuffer.new(max_resource_descriptors, ResourceDescriptor.Instance, descriptors),
+            ._raw_descriptors = DescriptorStorage.fromSlice(descriptors) catch unreachable,
             .read_error = read_error,
         };
     }
