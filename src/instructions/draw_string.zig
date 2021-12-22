@@ -30,7 +30,7 @@ pub const Instance = struct {
 /// Parse the next instruction from a bytecode program.
 /// Consumes 6 bytes from the bytecode on success, including the opcode.
 /// Returns an error if the bytecode could not be read or contained an invalid instruction.
-pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instance {
+pub fn parse(_: Opcode.Raw, program: *Program.Instance) Error!Instance {
     const string_id = try program.read(StringID.Raw);
 
     const raw_x = try program.read(u8);
@@ -121,7 +121,7 @@ test "execute passes along error.InvalidStringID if machine cannot find appropri
     };
 
     var machine = MockMachine.new(struct {
-        pub fn drawString(string_id: StringID.Raw, color_id: ColorID.Trusted, point: Point.Instance) !void {
+        pub fn drawString(_: StringID.Raw, _: ColorID.Trusted, _: Point.Instance) !void {
             return error.InvalidStringID;
         }
     });

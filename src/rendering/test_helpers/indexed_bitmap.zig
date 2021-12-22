@@ -63,7 +63,7 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
 
         /// Dumps the contents of the bitmap as a multiline string of uppercase hexadecimal color values,
         /// with newlines between each row of pixels.
-        pub fn format(self: Self, comptime _format: []const u8, options: fmt.FormatOptions, writer: anytype) !void {
+        pub fn format(self: Self, comptime _: []const u8, options: fmt.FormatOptions, writer: anytype) !void {
             for (self.data) |row, index| {
                 for (row) |color| {
                     try fmt.formatIntValue(color, "X", options, writer);
@@ -156,13 +156,12 @@ test "expectBitmap compares bitmaps correctly" {
 }
 
 test "Malformed strings cause panic" {
-    const invalid_format =
-        \\012
-        \\4567
-        \\89AB
-        \\CDEF
-    ;
-
     // Uncomment to panic
+    // const invalid_format =
+    //     \\012
+    //     \\4567
+    //     \\89AB
+    //     \\CDEF
+    // ;
     //_ = Instance(4, 4).fromString(invalid_format);
 }

@@ -41,7 +41,7 @@ pub const Error = Program.Error || Channel.Error;
 /// Parse the next instruction from a bytecode program.
 /// Consumes 6 bytes from the bytecode on success, including the opcode.
 /// Returns an error if the bytecode could not be read or contained an invalid instruction.
-pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instance {
+pub fn parse(_: Opcode.Raw, program: *Program.Instance) Error!Instance {
     const resource_id = try program.read(ResourceID.Raw);
     const frequency = try program.read(Audio.Frequency);
     const volume = try program.read(Audio.Volume);
@@ -125,7 +125,7 @@ test "execute with play instruction calls playSound with correct parameters" {
             try testing.expectEqual(0, frequency);
         }
 
-        pub fn stopChannel(channel: Channel.Trusted) void {
+        pub fn stopChannel(_: Channel.Trusted) void {
             unreachable;
         }
     });
@@ -138,7 +138,7 @@ test "execute with stop instruction runs on machine without errors" {
     const instruction = Instance{ .stop = 1 };
 
     var machine = MockMachine.new(struct {
-        pub fn playSound(resource_id: ResourceID.Raw, channel: Channel.Trusted, volume: Audio.Volume, frequency: Audio.Frequency) !void {
+        pub fn playSound(_: ResourceID.Raw, _: Channel.Trusted, _: Audio.Volume, _: Audio.Frequency) !void {
             unreachable;
         }
 

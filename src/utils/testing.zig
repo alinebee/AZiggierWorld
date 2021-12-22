@@ -1,5 +1,5 @@
 const testing = @import("std").testing;
-const TagType = @import("std").meta.TagType;
+const Tag = @import("std").meta.Tag;
 
 /// Wrap to provide better type inference.
 /// With the default std.testing implementation, `actual` is constrained to the type of `expected`:
@@ -11,8 +11,8 @@ pub fn expectEqual(expected: anytype, actual: anytype) !void {
 
 /// Test that a tagged union value has the expected tag.
 pub fn expectEqualTags(expected: anytype, actual: anytype) !void {
-    const Tag = TagType(@TypeOf(actual));
-    return testing.expectEqual(@as(Tag, expected), @as(Tag, actual));
+    const tag = Tag(@TypeOf(actual));
+    return testing.expectEqual(@as(tag, expected), @as(tag, actual));
 }
 
 pub const expect = testing.expect;

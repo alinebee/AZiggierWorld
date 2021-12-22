@@ -18,7 +18,8 @@ pub fn new() Instance {
 pub const Instance = struct {
     last_instruction: ?Instruction,
 
-    pub fn writeFromSource(self: *Instance, reader: anytype, count: usize) !void {
+    pub fn writeFromSource(self: *Instance, _: anytype, count: usize) !void {
+        // TODO: actually consume from the provided reader.
         self.last_instruction = .{ .write_from_source = count };
     }
 

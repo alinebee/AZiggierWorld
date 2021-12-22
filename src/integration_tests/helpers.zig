@@ -16,7 +16,8 @@ pub const test_filename = "MEMLIST.BIN";
 /// Caller owns the returned handle and must close it using fs.close().
 /// If game files are missing, returns an error.
 pub fn validFixtureDir() !fs.Dir {
-    const dir = try fs.cwd().openDir(relative_fixture_path, .{});
+    var dir = try fs.cwd().openDir(relative_fixture_path, .{});
+    errdefer dir.close();
 
     // Test if MEMLIST.BIN exists in the fixture directory; if it does not,
     // the user hasn't populated the directory with game files yet.

@@ -24,7 +24,7 @@ pub const Error = Program.Error || PaletteID.Error;
 /// Parse the next instruction from a bytecode program.
 /// Consumes 3 bytes from the bytecode on success, including the opcode.
 /// Returns an error if the bytecode could not be read or contained an invalid instruction.
-pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instance {
+pub fn parse(_: Opcode.Raw, program: *Program.Instance) Error!Instance {
     const raw_id = try program.read(PaletteID.Raw);
     // The reference implementation consumes 16 bits but only uses the top 8 for the palette ID,
     // ignoring the bottom 8. It's unclear why two bytes were used in the original bytecode.

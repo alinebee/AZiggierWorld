@@ -36,12 +36,12 @@ const ParseFailure = struct {
     fn opcodeName(self: ParseFailure) []const u8 {
         if (instrospection.intToEnum(Opcode.Enum, self.parsed_bytes[0])) |value| {
             return @tagName(value);
-        } else |err| {
+        } else |_| {
             return "Unknown";
         }
     }
 
-    pub fn format(self: ParseFailure, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
+    pub fn format(self: ParseFailure, comptime _: []const u8, _: std.fmt.FormatOptions, writer: anytype) !void {
         try std.fmt.format(writer, "Resource #{} at {}\nOpcode: {s}\nBytes: {s}\nError: {s}", .{
             self.resource_id,
             self.offset,

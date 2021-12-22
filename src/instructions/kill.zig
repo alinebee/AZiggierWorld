@@ -7,7 +7,7 @@ pub const Error = Program.Error;
 
 /// Deactivates the current thread and immediately moves execution to the next thread.
 pub const Instance = struct {
-    pub fn execute(self: Instance, machine: *Machine.Instance) Action.Enum {
+    pub fn execute(_: Instance, _: *Machine.Instance) Action.Enum {
         return .DeactivateThread;
     }
 };
@@ -15,7 +15,7 @@ pub const Instance = struct {
 /// Parse the next instruction from a bytecode program.
 /// Consumes 1 byte from the bytecode on success, including the opcode.
 /// Returns an error if the bytecode could not be read or contained an invalid instruction.
-pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instance {
+pub fn parse(_: Opcode.Raw, _: *Program.Instance) Error!Instance {
     return Instance{};
 }
 

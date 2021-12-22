@@ -7,7 +7,7 @@ pub const Error = Program.Error || Stack.Error;
 
 /// Return from the current subroutine and decrement the program execution stack.
 pub const Instance = struct {
-    pub fn execute(self: Instance, machine: *Machine.Instance) !void {
+    pub fn execute(_: Instance, machine: *Machine.Instance) !void {
         const return_address = try machine.stack.pop();
         try machine.program.jump(return_address);
     }
@@ -15,7 +15,7 @@ pub const Instance = struct {
 
 /// Parse the next instruction from a bytecode program.
 /// Consumes 1 byte from the bytecode on success, including the opcode.
-pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instance {
+pub fn parse(_: Opcode.Raw, _: *Program.Instance) Error!Instance {
     return Instance{};
 }
 

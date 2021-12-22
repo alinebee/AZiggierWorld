@@ -122,8 +122,6 @@ test "intersects returns true for ranges that intersect and false for ranges tha
 }
 
 test "intersects returns true for ranges that completely enclose another and false otherwise" {
-    const range = new(isize, -10, 10);
-
     try testing.expectEqual(true, Examples.reference.encloses(Examples.reference));
     try testing.expectEqual(true, Examples.reference.encloses(Examples.enclosed));
 
@@ -142,8 +140,6 @@ fn expectIntersection(expectation: anytype, range1: anytype, range2: @TypeOf(ran
 }
 
 test "intersection returns intersection of two ranges or null for disjoint ranges" {
-    const range = new(isize, -10, 10);
-
     try expectIntersection(Examples.reference, Examples.reference, Examples.reference);
     try expectIntersection(Examples.enclosed, Examples.reference, Examples.enclosed);
     try expectIntersection(Examples.reference, Examples.reference, Examples.enclosing);

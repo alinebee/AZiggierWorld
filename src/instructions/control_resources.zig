@@ -1,7 +1,6 @@
 const Opcode = @import("../values/opcode.zig");
 const Program = @import("../machine/program.zig");
 const Machine = @import("../machine/machine.zig");
-const Resources = @import("../machine/resources.zig");
 const ResourceID = @import("../values/resource_id.zig");
 const GamePart = @import("../values/game_part.zig");
 
@@ -36,14 +35,14 @@ pub const Error = Program.Error;
 /// Parse the next instruction from a bytecode program.
 /// Consumes 3 bytes from the bytecode on success, including the opcode.
 /// Returns an error if the bytecode could not be read or contained an invalid instruction.
-pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instance {
+pub fn parse(_: Opcode.Raw, program: *Program.Instance) Error!Instance {
     const resource_id_or_game_part = try program.read(ResourceID.Raw);
 
     if (resource_id_or_game_part == 0) {
         return .unload_all;
     } else if (GamePart.parse(resource_id_or_game_part)) |game_part| {
         return Instance{ .start_game_part = game_part };
-    } else |_err| {
+    } else |_| {
         // If the value doesn't match any game part, assume it's a resource ID
         return Instance{ .load_resource = resource_id_or_game_part };
     }
@@ -90,11 +89,11 @@ test "execute with unload_all instruction calls unloadAllResources with correct 
     const instruction: Instance = .unload_all;
 
     var machine = MockMachine.new(struct {
-        pub fn startGamePart(game_part: GamePart.Enum) !void {
+        pub fn startGamePart(_: GamePart.Enum) !void {
             unreachable;
         }
 
-        pub fn loadResource(resource_id: ResourceID.Raw) !void {
+        pub fn loadResource(_: ResourceID.Raw) !void {
             unreachable;
         }
 
@@ -113,7 +112,7 @@ test "execute with start_game_part instruction calls startGamePart with correct 
             try testing.expectEqual(.arena_cinematic, game_part);
         }
 
-        pub fn loadResource(resource_id: ResourceID.Raw) !void {
+        pub fn loadResource(_: ResourceID.Raw) !void {
             unreachable;
         }
 
@@ -130,7 +129,7 @@ test "execute with load_resource instruction calls loadResource with correct par
     const instruction = Instance{ .load_resource = 0xBEEF };
 
     var machine = MockMachine.new(struct {
-        pub fn startGamePart(game_part: GamePart.Enum) !void {
+        pub fn startGamePart(_: GamePart.Enum) !void {
             unreachable;
         }
 

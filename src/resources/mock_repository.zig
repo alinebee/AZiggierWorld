@@ -55,7 +55,7 @@ pub const Instance = struct {
     /// Allocate and return a buffer large enough to store the specified resource.
     /// This buffer will be filled with garbage rather than parseable resource data.
     /// Returns an error if the allocator could not allocate memory for the buffer.
-    pub fn allocReadResource(self: *Instance, allocator: *mem.Allocator, descriptor: ResourceDescriptor.Instance) ![]const u8 {
+    pub fn allocReadResource(self: *Instance, allocator: mem.Allocator, descriptor: ResourceDescriptor.Instance) ![]const u8 {
         // Create a buffer just large enough to decompress the resource into.
         var destination = try allocator.alloc(u8, descriptor.uncompressed_size);
         errdefer allocator.free(destination);
@@ -66,7 +66,7 @@ pub const Instance = struct {
     /// Allocate and return a buffer large enough to store the resource with the specified ID.
     /// This buffer will be filled with garbage rather than parseable resource data.
     /// Returns an error if the resource ID was invalid.
-    pub fn allocReadResourceByID(self: *Instance, allocator: *mem.Allocator, id: ResourceID.Raw) ![]const u8 {
+    pub fn allocReadResourceByID(self: *Instance, allocator: mem.Allocator, id: ResourceID.Raw) ![]const u8 {
         return self.allocReadResource(allocator, try self.resourceDescriptor(id));
     }
 

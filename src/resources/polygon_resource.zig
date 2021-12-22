@@ -552,7 +552,7 @@ const Allocator = @import("std").mem.Allocator;
 const TestVisitor = struct {
     polygons: ArrayList(Polygon.Instance),
 
-    fn init(allocator: *Allocator) TestVisitor {
+    fn init(allocator: Allocator) TestVisitor {
         return .{
             .polygons = ArrayList(Polygon.Instance).init(allocator),
         };

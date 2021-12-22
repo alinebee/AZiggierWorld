@@ -112,7 +112,7 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
                 fillPixel(buffer, index, operation.context.solid_color);
             }
 
-            fn drawHighlightPixel(operation: DrawOperation, buffer: *Self, index: Index) void {
+            fn drawHighlightPixel(_: DrawOperation, buffer: *Self, index: Index) void {
                 const highlighted_color = highlightedColor(buffer.data[index.offset]);
                 fillPixel(buffer, index, highlighted_color);
             }
@@ -128,7 +128,7 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
                 mem.set(NativeColor, destination_slice, operation.context.solid_color);
             }
 
-            fn drawHighlightRange(operation: DrawOperation, buffer: *Self, range: Range.Instance(usize)) void {
+            fn drawHighlightRange(_: DrawOperation, buffer: *Self, range: Range.Instance(usize)) void {
                 const destination_slice = buffer.data[range.min..range.max];
 
                 for (destination_slice) |*byte| {
@@ -322,7 +322,7 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
 /// The unit in which the buffer will read and write color values for individual pixels.
 /// Two 4-bit colors are packed into a single byte: Zig packed structs have
 /// endianness-dependent field order so we must flip based on endianness.
-const NativeColor = switch (std.Target.current.cpu.arch.endian()) {
+const NativeColor = switch (@import("builtin").target.cpu.arch.endian()) {
     .Big => packed struct {
         left: ColorID.Trusted,
         right: ColorID.Trusted,
@@ -371,7 +371,7 @@ test "Instance produces storage of the expected size filled with zeroes." {
 test "Instance rounds up storage size for uneven widths." {
     const storage = Instance(319, 199){};
     const expected = 31_840; // 160 x 199
-    try testing.expectEqual(31_840, storage.data.len);
+    try testing.expectEqual(expected, storage.data.len);
 }
 
 test "Instance handles 0 width or height gracefully" {

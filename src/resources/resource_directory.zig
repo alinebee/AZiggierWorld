@@ -86,7 +86,7 @@ pub const Instance = struct {
     /// Caller owns the returned slice and must free it with `allocator.free`.
     /// Returns an error if the allocator failed to allocate memory or if the data
     /// could not be read or decompressed.
-    pub fn allocReadResource(self: Instance, allocator: *mem.Allocator, descriptor: ResourceDescriptor.Instance) ![]const u8 {
+    pub fn allocReadResource(self: Instance, allocator: mem.Allocator, descriptor: ResourceDescriptor.Instance) ![]const u8 {
         // Create a buffer just large enough to decompress the resource into.
         var destination = try allocator.alloc(u8, descriptor.uncompressed_size);
         errdefer allocator.free(destination);
@@ -100,7 +100,7 @@ pub const Instance = struct {
     /// Caller owns the returned slice and must free it with `allocator.free`.
     /// Returns an error if the resource ID was invalid, the allocator failed
     /// to allocate memory, or the data could not be read or decompressed.
-    pub fn allocReadResourceByID(self: Instance, allocator: *mem.Allocator, id: ResourceID.Raw) ![]const u8 {
+    pub fn allocReadResourceByID(self: Instance, allocator: mem.Allocator, id: ResourceID.Raw) ![]const u8 {
         return self.allocReadResource(allocator, try self.resourceDescriptor(id));
     }
 
@@ -186,7 +186,7 @@ fn readAndDecompress(reader: anytype, buffer: []u8, compressed_size: usize) Read
     }
 
     var compressed_region = buffer[0..compressed_size];
-    const bytes_read = try reader.readNoEof(compressed_region);
+    try reader.readNoEof(compressed_region);
 
     // If the data was compressed, decompress it in place.
     if (compressed_size < buffer.len) {

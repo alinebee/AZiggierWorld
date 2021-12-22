@@ -316,7 +316,7 @@ test "execute with register scale value interprets value as unsigned" {
     };
 
     var machine = MockMachine.new(struct {
-        pub fn drawPolygon(_source: Video.PolygonSource, _address: Video.PolygonAddress, _point: Point.Instance, scale: PolygonScale.Raw) !void {
+        pub fn drawPolygon(_: Video.PolygonSource, _: Video.PolygonAddress, _: Point.Instance, scale: PolygonScale.Raw) !void {
             try testing.expectEqual(46635, scale);
         }
     });

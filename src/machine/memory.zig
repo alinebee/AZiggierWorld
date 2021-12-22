@@ -67,14 +67,14 @@ const BitmapRegion = [bitmap_region_size]u8;
 /// and loads game data from the specified repository.
 /// All resources will begin initially unloaded.
 /// The returned instance must be destroyed by calling `deinit`.
-pub fn new(allocator: *mem.Allocator, repository: anytype) !Instance(@TypeOf(repository)) {
+pub fn new(allocator: mem.Allocator, repository: anytype) !Instance(@TypeOf(repository)) {
     return Instance(@TypeOf(repository)).init(allocator, repository);
 }
 
 pub fn Instance(comptime Repository: type) type {
     return struct {
         /// The allocator used for loading resources into memory.
-        allocator: *mem.Allocator,
+        allocator: mem.Allocator,
         /// The data source to load resource data from: typically a directory on the local filesystem.
         repository: Repository,
         /// The current location of each resource ID in memory, or null if that resource ID is not loaded.
@@ -89,7 +89,7 @@ pub fn Instance(comptime Repository: type) type {
         /// and loads game data from the specified repository.
         /// All resources will begin initially unloaded.
         /// The returned instance must be destroyed by calling `deinit`.
-        pub fn init(allocator: *mem.Allocator, repository: Repository) !Self {
+        pub fn init(allocator: mem.Allocator, repository: Repository) !Self {
             return Self{
                 .allocator = allocator,
                 .repository = repository,

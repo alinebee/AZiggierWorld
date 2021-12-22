@@ -42,7 +42,7 @@ pub const Error = Program.Error;
 /// Parse the next instruction from a bytecode program.
 /// Consumes 6 bytes from the bytecode on success, including the opcode.
 /// Returns an error if the bytecode could not be read or contained an invalid instruction.
-pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instance {
+pub fn parse(_: Opcode.Raw, program: *Program.Instance) Error!Instance {
     const resource_id = try program.read(ResourceID.Raw);
     const delay = try program.read(Audio.Delay);
     const offset = try program.read(Audio.Offset);
@@ -123,7 +123,7 @@ test "execute with play instruction calls playMusic with correct parameters" {
             try testing.expectEqual(0xF00D, delay);
         }
 
-        pub fn setMusicDelay(delay: Audio.Delay) void {
+        pub fn setMusicDelay(_: Audio.Delay) void {
             unreachable;
         }
 
@@ -140,7 +140,7 @@ test "execute with set_delay instruction calls setMusicDelay with correct parame
     const instruction: Instance = .{ .set_delay = 0xF00D };
 
     var machine = MockMachine.new(struct {
-        pub fn playMusic(resource_id: ResourceID.Raw, offset: Audio.Offset, delay: Audio.Delay) !void {
+        pub fn playMusic(_: ResourceID.Raw, _: Audio.Offset, _: Audio.Delay) !void {
             unreachable;
         }
 
@@ -163,11 +163,11 @@ test "execute with stop instruction calls stopMusic with correct parameters" {
     const instruction: Instance = .stop;
 
     var machine = MockMachine.new(struct {
-        pub fn playMusic(resource_id: ResourceID.Raw, offset: Audio.Offset, delay: Audio.Delay) !void {
+        pub fn playMusic(_: ResourceID.Raw, _: Audio.Offset, _: Audio.Delay) !void {
             unreachable;
         }
 
-        pub fn setMusicDelay(delay: Audio.Delay) void {
+        pub fn setMusicDelay(_: Audio.Delay) void {
             unreachable;
         }
 

@@ -25,7 +25,7 @@ const PolygonDrawInstruction = union(enum) {
 /// Parses an Another World bytecode program to find all the draw instructions in it.
 /// Returns an array of draw instructions which is owned by the caller.
 /// Returns an error if parsing or memory allocation failed.
-fn findPolygonDrawInstructions(allocator: *std.mem.Allocator, bytecode: []const u8) ![]const PolygonDrawInstruction {
+fn findPolygonDrawInstructions(allocator: std.mem.Allocator, bytecode: []const u8) ![]const PolygonDrawInstruction {
     var instructions = std.ArrayList(PolygonDrawInstruction).init(allocator);
     errdefer instructions.deinit();
 
@@ -48,7 +48,7 @@ fn findPolygonDrawInstructions(allocator: *std.mem.Allocator, bytecode: []const 
 /// Parses all polygon draw instructions from the bytecode for a given game part,
 /// then parses the polygons themselves from the respective polygon or animation resource for that game part.
 /// Returns the total number of polygons parsed, or an error if parsing or memory allocation failed.
-fn parsePolygonInstructionsForGamePart(allocator: *std.mem.Allocator, resource_directory: ResourceDirectory.Instance, game_part: GamePart.Enum) !usize {
+fn parsePolygonInstructionsForGamePart(allocator: std.mem.Allocator, resource_directory: ResourceDirectory.Instance, game_part: GamePart.Enum) !usize {
     const resource_ids = game_part.resourceIDs();
 
     const bytecode = try resource_directory.allocReadResourceByID(allocator, resource_ids.bytecode);

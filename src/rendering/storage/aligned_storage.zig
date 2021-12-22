@@ -94,7 +94,7 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
                 mem.set(NativeColor, destination_slice, self.context.solid_color);
             }
 
-            fn drawHighlightRange(self: DrawOperation, buffer: *Self, row: usize, start_column: usize, end_column: usize) void {
+            fn drawHighlightRange(_: DrawOperation, buffer: *Self, row: usize, start_column: usize, end_column: usize) void {
                 var destination_slice = buffer.data[row][start_column..end_column];
                 for (destination_slice) |*pixel| {
                     pixel.* = ColorID.highlight(pixel.*);

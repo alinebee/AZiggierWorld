@@ -7,7 +7,7 @@ const assert = std.debug.assert;
 const trait = std.meta.trait;
 const introspection = @import("../../utils/introspection.zig");
 
-pub fn new(allocator: *mem.Allocator) Instance {
+pub fn new(allocator: mem.Allocator) Instance {
     return Instance.init(allocator);
 }
 
@@ -20,7 +20,7 @@ const Instance = struct {
 
     /// Create a new empty encoder.
     /// Caller owns the returned encoder and must free it by calling `deinit`.
-    fn init(allocator: *mem.Allocator) Instance {
+    fn init(allocator: mem.Allocator) Instance {
         return .{
             .payload = ArrayList(u8).init(allocator),
             .bits_written = 0,
@@ -108,11 +108,11 @@ const Instance = struct {
 
     /// Convert the encoded instructions into valid compressed data with the proper CRC and uncompressed size chunks.
     /// Caller owns the returned slice and must deallocate it using `allocator`.
-    pub fn finalize(self: *Instance, allocator: *mem.Allocator) ![]u8 {
+    pub fn finalize(self: *Instance, allocator: mem.Allocator) ![]u8 {
         var output = ArrayList(u8).init(allocator);
         errdefer output.deinit();
 
-        try output.ensureCapacity(self.compressedSize());
+        try output.ensureTotalCapacity(self.compressedSize());
 
         var writer = output.writer();
 

@@ -88,7 +88,7 @@ test "ReturnType gets return type of bound function" {
     const Struct = struct {
         const Self = @This();
 
-        fn boundExample(self: Self) void {}
+        fn boundExample(_: Self) void {}
     };
 
     const foo = Struct{};
@@ -142,11 +142,11 @@ test "ErrorType gets return type of function that returns an error union" {
 }
 
 test "ErrorType returns compile error when given function that does not return an error union" {
-    const Namespace = struct {
-        fn example() void {}
-    };
-
     // Uncomment to trigger a compile-time error!
+    // const Namespace = struct {
+    //     fn example() void {}
+    // };
+
     //_ = ErrorType(Namespace.example);
 }
 
