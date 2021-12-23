@@ -1,7 +1,7 @@
-//! Defines a reader that reads a source buffer of RLE-encoded data with methods to consume individual bits,
+//! Defines a reader that reads from a slice of RLE-encoded data, with methods to consume individual bits,
 //! bytes or integers of arbitrary size from the source.
 //!
-//! Internally, this reader parses data backwards from the end of the buffer in chunks of 4 bytes,
+//! Internally, this reader parses data backwards from the end of the slice in chunks of 4 bytes,
 //! and maintains a checksum of the chunks it has read. Once reading is complete, the checksum
 //! can be validated to determine that the source data was free of errors.
 //!
@@ -12,19 +12,19 @@ const mem = std.mem;
 
 const ReaderMethods = @import("reader_methods.zig");
 
-/// Returns a new reader that consumes the specified source buffer, assumed to contain data encoded
+/// Returns a new reader that consumes the specified source slice, assumed to contain data encoded
 /// using Another World's RLE algorithm.
-/// Returns `error.SourceExhausted` if the source buffer is too short to be a valid compressed.
+/// Returns `error.SourceExhausted` if the source data is too short to contain valid compressed data.
 pub fn new(source: []const u8) Error!Instance {
     return try Instance.init(source);
 }
 
 const Instance = struct {
-    /// The source buffer to read from.
+    /// The source slice to read from.
     source: []const u8,
 
     /// The current position of the reader within `source`.
-    /// The reader works backward from the end of the source buffer, 4 bytes at a time.
+    /// The reader works backward from the end of the source data, 4 bytes at a time.
     cursor: usize,
 
     /// The expected uncompressed size of the compressed data, read from the last byte of the data.
@@ -41,7 +41,7 @@ const Instance = struct {
     crc: u32,
 
     /// Create and initialize a reader to consume the specified source data.
-    /// Returns error.SourceExhausted if the source buffer does not contain enough bytes to initialize the reader.
+    /// Returns error.SourceExhausted if the source slice does not contain enough bytes to initialize the reader.
     fn init(source: []const u8) Error!Instance {
         var self: Instance = undefined;
 
@@ -191,7 +191,7 @@ const DataExamples = struct {
 const testing = @import("../utils/testing.zig");
 const io = std.io;
 
-test "init() reads unpacked size, initial checksum and first chunk from end of source buffer" {
+test "init() reads unpacked size, initial checksum and first chunk from end of source data" {
     const source = DataExamples.valid;
 
     var reader = try Instance.init(&source);
@@ -204,7 +204,7 @@ test "init() reads unpacked size, initial checksum and first chunk from end of s
     try testing.expectEqual(expected_crc, reader.crc);
 }
 
-test "new() returns `error.SourceExhausted` when source buffer is too small" {
+test "new() returns `error.SourceExhausted` when source data is too small" {
     const source = [_]u8{0};
 
     try testing.expectError(error.SourceExhausted, new(&source));
