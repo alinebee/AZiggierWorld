@@ -39,14 +39,17 @@ pub const Instance = struct {
     /// The currently-running program.
     program: Program.Instance,
 
+    /// The next game part that has been scheduled to be started by a program instruction.
+    /// Null if no game part is scheduled.
+    scheduled_game_part: ?GamePart.Enum = null,
+
     const Self = @This();
 
     // -- Resource subsystem interface --
 
-    /// Load the resources for the specified game part and begin executing its program.
-    /// Returns an error if one or more resources do not exist or could not be loaded.
-    pub fn startGamePart(_: *Self, game_part: GamePart.Enum) !void {
-        log_unimplemented("Resources.startGamePart: load game part {s}", .{@tagName(game_part)});
+    /// Schedule the specified game part to begin on the next run loop.
+    pub fn scheduleGamePart(self: *Self, game_part: GamePart.Enum) void {
+        self.scheduled_game_part = game_part;
     }
 
     /// Load the specified resource if it is not already loaded.

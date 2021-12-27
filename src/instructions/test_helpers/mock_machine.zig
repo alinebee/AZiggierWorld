@@ -32,7 +32,7 @@ const CallCounts = struct {
     fillVideoBuffer: usize,
     copyVideoBuffer: usize,
     renderVideoBuffer: usize,
-    startGamePart: usize,
+    scheduleGamePart: usize,
     loadResource: usize,
     unloadAllResources: usize,
     playMusic: usize,
@@ -85,9 +85,9 @@ fn MockMachine(comptime Implementation: type) type {
             Implementation.renderVideoBuffer(buffer_id, delay);
         }
 
-        pub fn startGamePart(self: *Self, game_part: GamePart.Enum) !void {
-            self.call_counts.startGamePart += 1;
-            try Implementation.startGamePart(game_part);
+        pub fn scheduleGamePart(self: *Self, game_part: GamePart.Enum) void {
+            self.call_counts.scheduleGamePart += 1;
+            Implementation.scheduleGamePart(game_part);
         }
 
         pub fn loadResource(self: *Self, resource_id: ResourceID.Raw) !void {
@@ -237,15 +237,15 @@ test "MockMachine calls renderVideoBuffer correctly on stub implementation" {
     try testing.expectEqual(1, mock.call_counts.renderVideoBuffer);
 }
 
-test "MockMachine calls startGamePart correctly on stub implementation" {
+test "MockMachine calls scheduleGamePart correctly on stub implementation" {
     var mock = new(struct {
-        fn startGamePart(game_part: GamePart.Enum) !void {
-            try testing.expectEqual(.copy_protection, game_part);
+        fn scheduleGamePart(game_part: GamePart.Enum) void {
+            testing.expectEqual(.copy_protection, game_part) catch unreachable;
         }
     });
 
-    try mock.startGamePart(.copy_protection);
-    try testing.expectEqual(1, mock.call_counts.startGamePart);
+    mock.scheduleGamePart(.copy_protection);
+    try testing.expectEqual(1, mock.call_counts.scheduleGamePart);
 }
 
 test "MockMachine calls loadResource correctly on stub implementation" {

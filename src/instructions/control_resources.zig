@@ -24,7 +24,7 @@ pub const Instance = union(enum) {
     fn _execute(self: Instance, machine: anytype) !void {
         switch (self) {
             .unload_all => machine.unloadAllResources(),
-            .start_game_part => |game_part| try machine.startGamePart(game_part),
+            .start_game_part => |game_part| machine.scheduleGamePart(game_part),
             .load_resource => |resource_id| try machine.loadResource(resource_id),
         }
     }
@@ -89,7 +89,7 @@ test "execute with unload_all instruction calls unloadAllResources with correct 
     const instruction: Instance = .unload_all;
 
     var machine = MockMachine.new(struct {
-        pub fn startGamePart(_: GamePart.Enum) !void {
+        pub fn scheduleGamePart(_: GamePart.Enum) void {
             unreachable;
         }
 
@@ -104,12 +104,12 @@ test "execute with unload_all instruction calls unloadAllResources with correct 
     try testing.expectEqual(1, machine.call_counts.unloadAllResources);
 }
 
-test "execute with start_game_part instruction calls startGamePart with correct parameters" {
+test "execute with start_game_part instruction calls scheduleGamePart with correct parameters" {
     const instruction = Instance{ .start_game_part = .arena_cinematic };
 
     var machine = MockMachine.new(struct {
-        pub fn startGamePart(game_part: GamePart.Enum) !void {
-            try testing.expectEqual(.arena_cinematic, game_part);
+        pub fn scheduleGamePart(game_part: GamePart.Enum) void {
+            testing.expectEqual(.arena_cinematic, game_part) catch unreachable;
         }
 
         pub fn loadResource(_: ResourceID.Raw) !void {
@@ -122,14 +122,14 @@ test "execute with start_game_part instruction calls startGamePart with correct 
     });
 
     try instruction._execute(&machine);
-    try testing.expectEqual(1, machine.call_counts.startGamePart);
+    try testing.expectEqual(1, machine.call_counts.scheduleGamePart);
 }
 
 test "execute with load_resource instruction calls loadResource with correct parameters" {
     const instruction = Instance{ .load_resource = 0xBEEF };
 
     var machine = MockMachine.new(struct {
-        pub fn startGamePart(_: GamePart.Enum) !void {
+        pub fn scheduleGamePart(_: GamePart.Enum) void {
             unreachable;
         }
 
