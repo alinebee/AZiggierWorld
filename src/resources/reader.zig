@@ -3,10 +3,16 @@
 
 const ResourceDescriptor = @import("resource_descriptor.zig");
 const ResourceID = @import("../values/resource_id.zig");
+const MockRepository = @import("mock_repository.zig");
 
 const std = @import("std");
 const mem = std.mem;
 const assert = std.debug.assert;
+
+/// A reader for a test repository that can safely load any game part,
+/// albeit with garbage data. Should only be used in tests.
+pub const test_reader = test_repository.reader();
+var test_repository = MockRepository.Instance.init(&MockRepository.FixtureData.descriptors, null);
 
 /// A generic interface for enumerating available resources and loading resource data into buffers.
 /// This is passed around as a 'fat pointer', following zig 0.9.0's polymorphic allocator pattern.
@@ -121,7 +127,10 @@ const example_descriptor = ResourceDescriptor.Instance{
 
 const example_descriptors = [_]ResourceDescriptor.Instance{example_descriptor};
 
-const MockImplementation = struct {
+/// Fake repository used solely for testing the interface's dynamic dispatch.
+/// Not intended for use outside this file: instead see mock_repository.zig,
+/// which is more full-featured.
+const CountedRepository = struct {
     call_counts: struct {
         bufReadResource: usize,
         resourceDescriptors: usize,
@@ -130,20 +139,22 @@ const MockImplementation = struct {
         .resourceDescriptors = 0,
     },
 
-    fn _bufReadResource(self: *MockImplementation, buffer: []u8, descriptor: ResourceDescriptor.Instance) ![]const u8 {
+    const Self = @This();
+
+    pub fn reader(self: *Self) Interface {
+        return Interface.init(self, bufReadResource, resourceDescriptors);
+    }
+
+    fn bufReadResource(self: *Self, buffer: []u8, descriptor: ResourceDescriptor.Instance) ![]const u8 {
         self.call_counts.bufReadResource += 1;
 
         testing.expectEqual(example_descriptor, descriptor) catch unreachable;
         return buffer;
     }
 
-    fn _resourceDescriptors(self: *MockImplementation) []const ResourceDescriptor.Instance {
+    fn resourceDescriptors(self: *Self) []const ResourceDescriptor.Instance {
         self.call_counts.resourceDescriptors += 1;
         return &example_descriptors;
-    }
-
-    pub fn reader(self: *MockImplementation) Interface {
-        return Interface.init(self, _bufReadResource, _resourceDescriptors);
     }
 };
 
@@ -156,7 +167,7 @@ test "Ensure everything compiles" {
 }
 
 test "bufReadResource calls underlying implementation" {
-    var repository = MockImplementation{};
+    var repository = CountedRepository{};
 
     var buffer: [16]u8 = undefined;
     const data = try repository.reader().bufReadResource(&buffer, example_descriptor);
@@ -166,7 +177,7 @@ test "bufReadResource calls underlying implementation" {
 }
 
 test "resourceDescriptors calls underlying implementation" {
-    var repository = MockImplementation{};
+    var repository = CountedRepository{};
 
     const descriptors = repository.reader().resourceDescriptors();
     try testing.expectEqual(1, repository.call_counts.resourceDescriptors);
@@ -175,7 +186,7 @@ test "resourceDescriptors calls underlying implementation" {
 }
 
 test "allocReadResource calls bufReadResource with suitably sized buffer" {
-    var repository = MockImplementation{};
+    var repository = CountedRepository{};
     const data = try repository.reader().allocReadResource(testing.allocator, example_descriptor);
     defer testing.allocator.free(data);
 
@@ -183,14 +194,14 @@ test "allocReadResource calls bufReadResource with suitably sized buffer" {
 }
 
 test "allocReadResource returns error when memory cannot be allocated" {
-    var repository = MockImplementation{};
+    var repository = CountedRepository{};
 
     try testing.expectEqual(error.OutOfMemory, repository.reader().allocReadResource(testing.failing_allocator, example_descriptor));
     try testing.expectEqual(0, repository.call_counts.bufReadResource);
 }
 
 test "allocReadResourceByID calls bufReadResource with suitably sized buffer for id" {
-    var repository = MockImplementation{};
+    var repository = CountedRepository{};
     const data = try repository.reader().allocReadResourceByID(testing.allocator, 0);
     defer testing.allocator.free(data);
 
@@ -199,30 +210,30 @@ test "allocReadResourceByID calls bufReadResource with suitably sized buffer for
 }
 
 test "allocReadResourceByID returns error on out of range ID" {
-    var repository = MockImplementation{};
+    var repository = CountedRepository{};
     try testing.expectError(error.InvalidResourceID, repository.reader().allocReadResourceByID(testing.allocator, 1));
 }
 
 test "resourceDescriptor returns expected descriptor" {
-    var repository = MockImplementation{};
+    var repository = CountedRepository{};
 
     try testing.expectEqual(example_descriptor, repository.reader().resourceDescriptor(0));
     try testing.expectEqual(2, repository.call_counts.resourceDescriptors);
 }
 
 test "resourceDescriptor returns error on out of range ID" {
-    var repository = MockImplementation{};
+    var repository = CountedRepository{};
     try testing.expectError(error.InvalidResourceID, repository.reader().resourceDescriptor(1));
 }
 
 test "validateResourceID returns no error for valid ID" {
-    var repository = MockImplementation{};
+    var repository = CountedRepository{};
     try repository.reader().validateResourceID(0);
     try testing.expectEqual(1, repository.call_counts.resourceDescriptors);
 }
 
 test "validateResourceID returns error for invalid ID" {
-    var repository = MockImplementation{};
+    var repository = CountedRepository{};
     try testing.expectError(error.InvalidResourceID, repository.reader().validateResourceID(1));
     try testing.expectEqual(1, repository.call_counts.resourceDescriptors);
 }
