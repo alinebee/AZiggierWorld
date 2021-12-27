@@ -1,4 +1,4 @@
-//! Provides a standard interface for accessing Another World resource data from a data source,
+//! Provides a standard interface for accessing Another World resource data from a repository,
 //! e.g. a directory on the local filesystem.
 
 const ResourceDescriptor = @import("resource_descriptor.zig");
@@ -21,8 +21,8 @@ pub const Interface = struct {
         resourceDescriptors: fn (self: *anyopaque) []const ResourceDescriptor.Instance,
     };
 
-    /// Create a new type-erased "fat pointer" to a repository of Another World game data.
-    /// Intended to be called by implementors of the repository interface; should not be used directly.
+    /// Create a new type-erased "fat pointer" that reads from a repository of Another World game data.
+    /// Intended to be called by repositories to create a reader interface; should not be used directly.
     pub fn init(implementation_ptr: anytype, comptime bufReadResourceFn: fn (self: @TypeOf(implementation_ptr), buffer: []u8, descriptor: ResourceDescriptor.Instance) anyerror![]const u8, comptime resourceDescriptorsFn: fn (self: @TypeOf(implementation_ptr)) []const ResourceDescriptor.Instance) Interface {
         const Implementation = @TypeOf(implementation_ptr);
         const ptr_info = @typeInfo(Implementation);
@@ -100,7 +100,7 @@ pub const Interface = struct {
         return self.resourceDescriptors()[id];
     }
 
-    /// Returns an error if the specified resource ID is out of range for the repository.
+    /// Returns an error if the specified resource ID is out of range for the underlying repository.
     pub fn validateResourceID(self: Self, id: ResourceID.Raw) !void {
         const descriptors = self.resourceDescriptors();
         if (id >= descriptors.len) {
@@ -142,7 +142,7 @@ const MockImplementation = struct {
         return &example_descriptors;
     }
 
-    pub fn repository(self: *MockImplementation) Interface {
+    pub fn reader(self: *MockImplementation) Interface {
         return Interface.init(self, _bufReadResource, _resourceDescriptors);
     }
 };
@@ -156,73 +156,73 @@ test "Ensure everything compiles" {
 }
 
 test "bufReadResource calls underlying implementation" {
-    var parent = MockImplementation{};
+    var repository = MockImplementation{};
 
     var buffer: [16]u8 = undefined;
-    const data = try parent.repository().bufReadResource(&buffer, example_descriptor);
+    const data = try repository.reader().bufReadResource(&buffer, example_descriptor);
 
     try testing.expectEqual(&buffer, data);
-    try testing.expectEqual(1, parent.call_counts.bufReadResource);
+    try testing.expectEqual(1, repository.call_counts.bufReadResource);
 }
 
 test "resourceDescriptors calls underlying implementation" {
-    var parent = MockImplementation{};
+    var repository = MockImplementation{};
 
-    const descriptors = parent.repository().resourceDescriptors();
-    try testing.expectEqual(1, parent.call_counts.resourceDescriptors);
+    const descriptors = repository.reader().resourceDescriptors();
+    try testing.expectEqual(1, repository.call_counts.resourceDescriptors);
     try testing.expectEqual(1, descriptors.len);
     try testing.expectEqual(example_descriptor, descriptors[0]);
 }
 
 test "allocReadResource calls bufReadResource with suitably sized buffer" {
-    var parent = MockImplementation{};
-    const data = try parent.repository().allocReadResource(testing.allocator, example_descriptor);
+    var repository = MockImplementation{};
+    const data = try repository.reader().allocReadResource(testing.allocator, example_descriptor);
     defer testing.allocator.free(data);
 
     try testing.expectEqual(example_descriptor.uncompressed_size, data.len);
 }
 
 test "allocReadResource returns error when memory cannot be allocated" {
-    var parent = MockImplementation{};
+    var repository = MockImplementation{};
 
-    try testing.expectEqual(error.OutOfMemory, parent.repository().allocReadResource(testing.failing_allocator, example_descriptor));
-    try testing.expectEqual(0, parent.call_counts.bufReadResource);
+    try testing.expectEqual(error.OutOfMemory, repository.reader().allocReadResource(testing.failing_allocator, example_descriptor));
+    try testing.expectEqual(0, repository.call_counts.bufReadResource);
 }
 
 test "allocReadResourceByID calls bufReadResource with suitably sized buffer for id" {
-    var parent = MockImplementation{};
-    const data = try parent.repository().allocReadResourceByID(testing.allocator, 0);
+    var repository = MockImplementation{};
+    const data = try repository.reader().allocReadResourceByID(testing.allocator, 0);
     defer testing.allocator.free(data);
 
     try testing.expectEqual(example_descriptor.uncompressed_size, data.len);
-    try testing.expectEqual(1, parent.call_counts.bufReadResource);
+    try testing.expectEqual(1, repository.call_counts.bufReadResource);
 }
 
 test "allocReadResourceByID returns error on out of range ID" {
-    var parent = MockImplementation{};
-    try testing.expectError(error.InvalidResourceID, parent.repository().allocReadResourceByID(testing.allocator, 1));
+    var repository = MockImplementation{};
+    try testing.expectError(error.InvalidResourceID, repository.reader().allocReadResourceByID(testing.allocator, 1));
 }
 
 test "resourceDescriptor returns expected descriptor" {
-    var parent = MockImplementation{};
+    var repository = MockImplementation{};
 
-    try testing.expectEqual(example_descriptor, parent.repository().resourceDescriptor(0));
-    try testing.expectEqual(2, parent.call_counts.resourceDescriptors);
+    try testing.expectEqual(example_descriptor, repository.reader().resourceDescriptor(0));
+    try testing.expectEqual(2, repository.call_counts.resourceDescriptors);
 }
 
 test "resourceDescriptor returns error on out of range ID" {
-    var parent = MockImplementation{};
-    try testing.expectError(error.InvalidResourceID, parent.repository().resourceDescriptor(1));
+    var repository = MockImplementation{};
+    try testing.expectError(error.InvalidResourceID, repository.reader().resourceDescriptor(1));
 }
 
 test "validateResourceID returns no error for valid ID" {
-    var parent = MockImplementation{};
-    try parent.repository().validateResourceID(0);
-    try testing.expectEqual(1, parent.call_counts.resourceDescriptors);
+    var repository = MockImplementation{};
+    try repository.reader().validateResourceID(0);
+    try testing.expectEqual(1, repository.call_counts.resourceDescriptors);
 }
 
 test "validateResourceID returns error for invalid ID" {
-    var parent = MockImplementation{};
-    try testing.expectError(error.InvalidResourceID, parent.repository().validateResourceID(1));
-    try testing.expectEqual(1, parent.call_counts.resourceDescriptors);
+    var repository = MockImplementation{};
+    try testing.expectError(error.InvalidResourceID, repository.reader().validateResourceID(1));
+    try testing.expectEqual(1, repository.call_counts.resourceDescriptors);
 }

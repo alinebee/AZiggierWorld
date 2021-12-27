@@ -13,14 +13,14 @@ test "ResourceDirectory reads all game resources" {
     defer game_dir.close();
 
     var resource_directory = try ResourceDirectory.new(&game_dir);
-    const repository = resource_directory.repository();
+    const reader = resource_directory.reader();
 
-    const descriptors = repository.resourceDescriptors();
+    const descriptors = reader.resourceDescriptors();
     try testing.expectEqual(146, descriptors.len);
 
     // For each resource, test that it can be parsed and decompressed without errors.
     for (descriptors) |descriptor| {
-        const data = try repository.allocReadResource(testing.allocator, descriptor);
+        const data = try reader.allocReadResource(testing.allocator, descriptor);
         defer testing.allocator.free(data);
 
         try testing.expectEqual(descriptor.uncompressed_size, data.len);
@@ -32,10 +32,10 @@ test "Instance.readResourceAlloc returns error.OutOfMemory if it runs out of mem
     defer game_dir.close();
 
     var resource_directory = try ResourceDirectory.new(&game_dir);
-    const repository = resource_directory.repository();
+    const reader = resource_directory.reader();
 
     // Some resources are zero-length; testing.failing_allocator would not fail if the memory required is 0.
-    const non_empty_descriptor = for (repository.resourceDescriptors()) |descriptor| {
+    const non_empty_descriptor = for (reader.resourceDescriptors()) |descriptor| {
         if (descriptor.uncompressed_size > 0) {
             break descriptor;
         }
@@ -46,7 +46,7 @@ test "Instance.readResourceAlloc returns error.OutOfMemory if it runs out of mem
 
     try testing.expectError(
         error.OutOfMemory,
-        repository.allocReadResource(testing.failing_allocator, non_empty_descriptor),
+        reader.allocReadResource(testing.failing_allocator, non_empty_descriptor),
     );
 }
 
@@ -55,11 +55,11 @@ test "Instance.allocReadResourceByID returns error.InvalidResourceID when given 
     defer game_dir.close();
 
     var resource_directory = try ResourceDirectory.new(&game_dir);
-    const repository = resource_directory.repository();
+    const reader = resource_directory.reader();
 
-    const invalid_id = @intCast(ResourceID.Raw, repository.resourceDescriptors().len);
+    const invalid_id = @intCast(ResourceID.Raw, reader.resourceDescriptors().len);
     try testing.expectError(
         error.InvalidResourceID,
-        repository.allocReadResourceByID(testing.allocator, invalid_id),
+        reader.allocReadResourceByID(testing.allocator, invalid_id),
     );
 }

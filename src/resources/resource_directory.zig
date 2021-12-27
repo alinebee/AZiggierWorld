@@ -1,16 +1,20 @@
 //! A type representing a filesystem directory that contains Another World game files.
-//! Use the `repository()` method to get a standard Repository interface for loading game data.
-//! See repository.zig for the available methods on that interface.
+//! An instance of this type is intended to be created at game launch and kept around
+//! for the lifetime of the game. It will keep its directory open until `deinit` is called on it.
+//!
+//! Use the `reader()` method to get a Reader interface for loading game data.
+//! See reader.zig for the available methods on that interface.
 //!
 //! Usage:
 //! ------
 //! const game_dir = try std.fs.openDirAbsolute("/path/to/another/world/", .{});
-//! var directory = try ResourceDirectory.new(game_dir);
-//! const repository = directory.repository();
-//! const first_resource_descriptor = try repository.resourceDescriptor(0);
-//! const game_data = try repository.allocReadResource(my_allocator, first_resource_descriptor);
+//! defer game_dir.close();
+//! var repository = try ResourceDirectory.new(game_dir);
+//! const reader = repository.reader();
+//! const first_resource_descriptor = try reader.resourceDescriptor(0);
+//! const game_data = try reader.allocReadResource(my_allocator, first_resource_descriptor);
 
-const Repository = @import("repository.zig");
+const Reader = @import("reader.zig");
 const ResourceDescriptor = @import("resource_descriptor.zig");
 const ResourceID = @import("../values/resource_id.zig");
 const Filename = @import("filename.zig");
@@ -68,8 +72,9 @@ pub const Instance = struct {
         return self;
     }
 
-    pub fn repository(self: *Instance) Repository.Interface {
-        return Repository.Interface.init(self, bufReadResource, resourceDescriptors);
+    /// Returns a reader interface for loading game data from this repository.
+    pub fn reader(self: *Instance) Reader.Interface {
+        return Reader.Interface.init(self, bufReadResource, resourceDescriptors);
     }
 
     // - Private methods -
@@ -122,12 +127,13 @@ pub const Error = error{
 
 // -- Helper functions --
 
-/// Loads a list of resource descriptors from the contents of a MEMLIST.BIN file into the provided buffer.
+/// Loads a list of resource descriptors into the provided buffer, from a byte stream
+/// representing the contents of a MEMLIST.BIN file.
 /// Returns the number of descriptors that were parsed into the buffer.
 /// Returns an error if the stream was too long, contained invalid descriptor data,
 /// or ran out of space in the buffer before parsing completed.
-fn readResourceList(buffer: []ResourceDescriptor.Instance, reader: anytype) ResourceListError(@TypeOf(reader))!usize {
-    var iterator = ResourceDescriptor.iterator(reader);
+fn readResourceList(buffer: []ResourceDescriptor.Instance, io_reader: anytype) ResourceListError(@TypeOf(io_reader))!usize {
+    var iterator = ResourceDescriptor.iterator(io_reader);
 
     var count: usize = 0;
     while (try iterator.next()) |descriptor| {
@@ -141,8 +147,8 @@ fn readResourceList(buffer: []ResourceDescriptor.Instance, reader: anytype) Reso
 }
 
 /// The type of errors that can be returned from a call to `readResourceList`.
-fn ResourceListError(comptime Reader: type) type {
-    return ResourceDescriptor.Error(Reader) || error{
+fn ResourceListError(comptime IOReader: type) type {
+    return ResourceDescriptor.Error(IOReader) || error{
         /// The provided buffer was not large enough to store all the descriptors defined in the file.
         BufferTooSmall,
     };
@@ -175,8 +181,8 @@ fn readAndDecompress(reader: anytype, buffer: []u8, compressed_size: usize) Read
 }
 
 /// The type of errors that can be returned from a call to `readAndDecompress`.
-fn ReadAndDecompressError(comptime Reader: type) type {
-    const ReaderError = introspection.ErrorType(Reader.readNoEof);
+fn ReadAndDecompressError(comptime IOReader: type) type {
+    const ReaderError = introspection.ErrorType(IOReader.readNoEof);
 
     return ReaderError || error{
         /// Attempted to copy a resource's data into a buffer that was too small for it.

@@ -15,7 +15,7 @@ test "Report sizes for each game part" {
     defer game_dir.close();
 
     var resource_directory = try ResourceDirectory.new(&game_dir);
-    const repository = resource_directory.repository();
+    const reader = resource_directory.reader();
 
     var max_bytecode_size: usize = 0;
     var max_palettes_size: usize = 0;
@@ -28,23 +28,23 @@ test "Report sizes for each game part" {
         debugPrint("\nPart: {s}\n----\n", .{@tagName(part)});
 
         var total_size: usize = 0;
-        const bytecode = try repository.resourceDescriptor(resource_ids.bytecode);
+        const bytecode = try reader.resourceDescriptor(resource_ids.bytecode);
         debugPrint("bytecode: #{}, {} bytes\n", .{ resource_ids.bytecode, bytecode.uncompressed_size });
         total_size += bytecode.uncompressed_size;
         max_bytecode_size = math.max(max_bytecode_size, bytecode.uncompressed_size);
 
-        const palettes = try repository.resourceDescriptor(resource_ids.palettes);
+        const palettes = try reader.resourceDescriptor(resource_ids.palettes);
         debugPrint("palette: #{}, {} bytes\n", .{ resource_ids.palettes, palettes.uncompressed_size });
         total_size += palettes.uncompressed_size;
         max_palettes_size = math.max(max_palettes_size, palettes.uncompressed_size);
 
-        const polygons = try repository.resourceDescriptor(resource_ids.polygons);
+        const polygons = try reader.resourceDescriptor(resource_ids.polygons);
         debugPrint("polygons: #{}, {} bytes\n", .{ resource_ids.polygons, polygons.uncompressed_size });
         total_size += polygons.uncompressed_size;
         max_polygons_size = math.max(max_polygons_size, polygons.uncompressed_size);
 
         if (resource_ids.animations) |animation_id| {
-            const animations = try repository.resourceDescriptor(animation_id);
+            const animations = try reader.resourceDescriptor(animation_id);
             debugPrint("animations: #{}, {} bytes\n", .{ animation_id, animations.uncompressed_size });
             total_size += animations.uncompressed_size;
             max_animations_size = math.max(max_animations_size, animations.uncompressed_size);

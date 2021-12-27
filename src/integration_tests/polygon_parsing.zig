@@ -50,20 +50,20 @@ fn findPolygonDrawInstructions(allocator: std.mem.Allocator, bytecode: []const u
 /// Returns the total number of polygons parsed, or an error if parsing or memory allocation failed.
 fn parsePolygonInstructionsForGamePart(allocator: std.mem.Allocator, resource_directory: *ResourceDirectory.Instance, game_part: GamePart.Enum) !usize {
     const resource_ids = game_part.resourceIDs();
-    const repository = resource_directory.repository();
+    const reader = resource_directory.reader();
 
-    const bytecode = try repository.allocReadResourceByID(allocator, resource_ids.bytecode);
+    const bytecode = try reader.allocReadResourceByID(allocator, resource_ids.bytecode);
     defer allocator.free(bytecode);
 
     const instructions = try findPolygonDrawInstructions(allocator, bytecode);
     defer allocator.free(instructions);
 
-    const polygons = PolygonResource.new(try repository.allocReadResourceByID(allocator, resource_ids.polygons));
+    const polygons = PolygonResource.new(try reader.allocReadResourceByID(allocator, resource_ids.polygons));
     defer allocator.free(polygons.data);
 
     const maybe_animations: ?PolygonResource.Instance = init: {
         if (resource_ids.animations) |id| {
-            const data = try repository.allocReadResourceByID(allocator, id);
+            const data = try reader.allocReadResourceByID(allocator, id);
             break :init PolygonResource.new(data);
         } else {
             break :init null;

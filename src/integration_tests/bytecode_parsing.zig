@@ -57,15 +57,15 @@ test "parseNextInstruction parses all programs in fixture bytecode" {
     defer game_dir.close();
 
     var resource_directory = try ResourceDirectory.new(&game_dir);
-    const repository = resource_directory.repository();
+    const reader = resource_directory.reader();
 
     var failures = std.ArrayList(ParseFailure).init(testing.allocator);
     defer failures.deinit();
 
-    for (repository.resourceDescriptors()) |descriptor, index| {
+    for (reader.resourceDescriptors()) |descriptor, index| {
         if (descriptor.type != .bytecode) continue;
 
-        const data = try repository.allocReadResource(testing.allocator, descriptor);
+        const data = try reader.allocReadResource(testing.allocator, descriptor);
         defer testing.allocator.free(data);
 
         var program = Program.new(data);

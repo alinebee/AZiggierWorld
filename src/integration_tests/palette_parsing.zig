@@ -16,13 +16,13 @@ test "Parse all palettes in original game files" {
     defer game_dir.close();
 
     var resource_directory = try ResourceDirectory.new(&game_dir);
-    const repository = resource_directory.repository();
+    const reader = resource_directory.reader();
 
     // For each resource, test that it can be parsed and decompressed without errors.
-    for (repository.resourceDescriptors()) |descriptor| {
+    for (reader.resourceDescriptors()) |descriptor| {
         if (descriptor.type != .palettes) continue;
 
-        const data = try repository.allocReadResource(testing.allocator, descriptor);
+        const data = try reader.allocReadResource(testing.allocator, descriptor);
         defer testing.allocator.free(data);
 
         const palettes = PaletteResource.new(data);

@@ -6,24 +6,24 @@
 //! attempts to load any descriptor will produce either a configurable error,
 //! or a pointer to garbage data of an appropriate length for that resource.
 //!
-//! Use the `repository()` method to get a standard Repository interface for loading game data.
-//! See repository.zig for the available methods on that interface.
+//! Use the `reader()` method to get a Reader interface for loading game data.
+//! See reader.zig for the available methods on that interface.
 //!
 //! Usage:
 //! ------
 //! const resource_descriptors = []ResourceDescriptor.Instance { descriptor1, descriptor2...descriptorN };
 //! const error_to_produce_on_read: ?anyerror = null;
-//! var mock = MockRepository.Instance.init(resource_descriptors, error_to_produce_on_read);
-//! const repository = mock.repository();
+//! var repository = MockRepository.Instance.init(resource_descriptors, error_to_produce_on_read);
+//! const reader = repository.reader();
 //!
-//! const first_resource_descriptor = try repository.resourceDescriptor(0);
-//! try testing.expectEqual(0, mock.read_count);
-//! const garbage_data = try repository.allocReadResource(testing.allocator, first_resource_descriptor);
-//! try testing.expectEqual(1, mock.read_count);
+//! const first_resource_descriptor = try reader.resourceDescriptor(0);
+//! try testing.expectEqual(0, repository.read_count);
+//! const garbage_data = try reader.allocReadResource(testing.allocator, first_resource_descriptor);
+//! try testing.expectEqual(1, repository.read_count);
 
 const ResourceDescriptor = @import("resource_descriptor.zig");
 const ResourceID = @import("../values/resource_id.zig");
-const Repository = @import("repository.zig");
+const Reader = @import("reader.zig");
 
 const static_limits = @import("../static_limits.zig");
 
@@ -34,7 +34,7 @@ const DescriptorStorage = BoundedArray(ResourceDescriptor.Instance, static_limit
 
 pub const Instance = struct {
     /// The list of resources vended by this mock repository.
-    /// Access this via repository().resourceDescriptors() instead of directly.
+    /// Access this via reader().resourceDescriptors() instead of directly.
     _raw_descriptors: DescriptorStorage,
 
     /// An optional error returned by `bufReadResource` to simulate file-reading or decompression errors.
@@ -42,7 +42,7 @@ pub const Instance = struct {
     read_error: ?anyerror,
 
     /// The number of times a resource has been loaded, whether the load succeeded or failed.
-    /// Incremented by calls to repository().bufReadResource() or any of its derived methods.
+    /// Incremented by calls to reader().bufReadResource() or any of its derived methods.
     read_count: usize = 0,
 
     /// Create a new mock repository that exposes the specified resource descriptors,
@@ -55,8 +55,9 @@ pub const Instance = struct {
         };
     }
 
-    pub fn repository(self: *Instance) Repository.Interface {
-        return Repository.Interface.init(self, bufReadResource, resourceDescriptors);
+    /// Returns a reader interface for loading game data from this repository.
+    pub fn reader(self: *Instance) Reader.Interface {
+        return Reader.Interface.init(self, bufReadResource, resourceDescriptors);
     }
 
     /// Leaves the contents of the supplied buffer unchanged, and returns a pointer to the region
@@ -230,44 +231,44 @@ const example_descriptor = ResourceDescriptor.Instance{
 };
 
 test "bufReadResource returns slice of original buffer when buffer is appropriate size" {
-    var instance = Instance.init(&.{example_descriptor}, null);
+    var repository = Instance.init(&.{example_descriptor}, null);
 
     var buffer = try testing.allocator.alloc(u8, example_descriptor.uncompressed_size * 2);
     defer testing.allocator.free(buffer);
 
-    try testing.expectEqual(0, instance.read_count);
-    const result = try instance.repository().bufReadResource(buffer, example_descriptor);
+    try testing.expectEqual(0, repository.read_count);
+    const result = try repository.reader().bufReadResource(buffer, example_descriptor);
     try testing.expectEqual(@ptrToInt(result.ptr), @ptrToInt(buffer.ptr));
     try testing.expectEqual(result.len, example_descriptor.uncompressed_size);
-    try testing.expectEqual(1, instance.read_count);
+    try testing.expectEqual(1, repository.read_count);
 }
 
 test "bufReadResource returns supplied error when buffer is appropriate size" {
-    var instance = Instance.init(&.{example_descriptor}, error.ChecksumFailed);
+    var repository = Instance.init(&.{example_descriptor}, error.ChecksumFailed);
 
     var buffer = try testing.allocator.alloc(u8, example_descriptor.uncompressed_size * 2);
     defer testing.allocator.free(buffer);
 
-    try testing.expectEqual(0, instance.read_count);
-    try testing.expectError(error.ChecksumFailed, instance.repository().bufReadResource(buffer, example_descriptor));
-    try testing.expectEqual(1, instance.read_count);
+    try testing.expectEqual(0, repository.read_count);
+    try testing.expectError(error.ChecksumFailed, repository.reader().bufReadResource(buffer, example_descriptor));
+    try testing.expectEqual(1, repository.read_count);
 }
 
 test "bufReadResource returns error.BufferTooSmall if buffer is too small for resource, even if another error was specified" {
-    var instance = Instance.init(&.{example_descriptor}, error.ChecksumFailed);
+    var repository = Instance.init(&.{example_descriptor}, error.ChecksumFailed);
 
     var buffer = try testing.allocator.alloc(u8, example_descriptor.uncompressed_size / 2);
     defer testing.allocator.free(buffer);
 
-    try testing.expectEqual(0, instance.read_count);
-    try testing.expectError(error.BufferTooSmall, instance.repository().bufReadResource(buffer, example_descriptor));
-    try testing.expectEqual(1, instance.read_count);
+    try testing.expectEqual(0, repository.read_count);
+    try testing.expectError(error.BufferTooSmall, repository.reader().bufReadResource(buffer, example_descriptor));
+    try testing.expectEqual(1, repository.read_count);
 }
 
 test "resourceDescriptors returns expected descriptors" {
-    var instance = Instance.init(&FixtureData.descriptors, null);
+    var repository = Instance.init(&FixtureData.descriptors, null);
 
-    try testing.expectEqualSlices(ResourceDescriptor.Instance, instance.repository().resourceDescriptors(), &FixtureData.descriptors);
+    try testing.expectEqualSlices(ResourceDescriptor.Instance, repository.reader().resourceDescriptors(), &FixtureData.descriptors);
 }
 
 test "Ensure everything compiles" {

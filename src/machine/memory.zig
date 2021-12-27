@@ -18,7 +18,7 @@
 //!   a background video buffer. That same memory location is reused for every bitmap resource
 //!   that is loaded; it is never unloaded nor accessed outside of populating a video buffer.
 
-const Repository = @import("../resources/repository.zig");
+const Reader = @import("../resources/reader.zig");
 const ResourceDirectory = @import("../resources/resource_directory.zig");
 const ResourceID = @import("../values/resource_id.zig");
 const ResourceType = @import("../values/resource_type.zig");
@@ -65,18 +65,18 @@ const bitmap_region_size = PlanarBitmapResource.bytesRequiredForSize(
 const BitmapRegion = [bitmap_region_size]u8;
 
 /// Creates a new instance that uses the specified allocator for allocating memory
-/// and loads game data from the specified repository.
+/// and loads game data from the specified repository reader.
 /// All resources will begin initially unloaded.
 /// The returned instance must be destroyed by calling `deinit`.
-pub fn new(allocator: mem.Allocator, repository: Repository.Interface) !Instance {
-    return Instance.init(allocator, repository);
+pub fn new(allocator: mem.Allocator, reader: Reader.Interface) !Instance {
+    return Instance.init(allocator, reader);
 }
 
 pub const Instance = struct {
     /// The allocator used for loading resources into memory.
     allocator: mem.Allocator,
-    /// The data source to load resource data from: typically a directory on the local filesystem.
-    repository: Repository.Interface,
+    /// A reader for the repository to load resource data from: typically a directory on the local filesystem.
+    reader: Reader.Interface,
     /// The current location of each resource ID in memory, or null if that resource ID is not loaded.
     /// Should not be accessed directly: instead use resourceLocation(id).
     resource_locations: [ResourceDirectory.max_resource_descriptors]PossibleResourceLocation,
@@ -89,10 +89,10 @@ pub const Instance = struct {
     /// and loads game data from the specified repository.
     /// All resources will begin initially unloaded.
     /// The returned instance must be destroyed by calling `deinit`.
-    pub fn init(allocator: mem.Allocator, repository: Repository.Interface) !Self {
+    pub fn init(allocator: mem.Allocator, reader: Reader.Interface) !Self {
         return Self{
             .allocator = allocator,
-            .repository = repository,
+            .reader = reader,
             .resource_locations = .{null} ** ResourceDirectory.max_resource_descriptors,
             .temporary_bitmap_region = try allocator.create(BitmapRegion),
         };
@@ -114,7 +114,7 @@ pub const Instance = struct {
     /// The memory location of the resource with the specified ID, or `null` if the resource is not loaded.
     /// Returns an error if the location is out of range.
     pub fn resourceLocation(self: Self, id: ResourceID.Raw) !PossibleResourceLocation {
-        try self.repository.validateResourceID(id);
+        try self.reader.validateResourceID(id);
         return self.resource_locations[id];
     }
 
@@ -149,14 +149,14 @@ pub const Instance = struct {
     /// could not be read from disk, or the resource is of a type that can only be loaded
     /// by `loadGamePart` (not individually).
     pub fn loadIndividualResource(self: *Self, id: ResourceID.Raw) !IndividualResourceLocation {
-        const descriptor = try self.repository.resourceDescriptor(id);
+        const descriptor = try self.reader.resourceDescriptor(id);
 
         return switch (descriptor.type) {
             .sound_or_empty, .music => IndividualResourceLocation{
                 .audio = try self.loadIfNeeded(id),
             },
             .bitmap => IndividualResourceLocation{
-                .temporary_bitmap = try self.repository.bufReadResource(self.temporary_bitmap_region, descriptor),
+                .temporary_bitmap = try self.reader.bufReadResource(self.temporary_bitmap_region, descriptor),
             },
             .bytecode, .palettes, .polygons, .sprite_polygons => error.GamePartOnlyResourceType,
         };
@@ -166,7 +166,7 @@ pub const Instance = struct {
     /// invalidating any pointers to the memory locations of those resources.
     /// Any resources that are intrinsic to the current game part will remain loaded.
     pub fn unloadAllIndividualResources(self: *Self) void {
-        for (self.repository.resourceDescriptors()) |descriptor, id| {
+        for (self.reader.resourceDescriptors()) |descriptor, id| {
             switch (descriptor.type) {
                 // These resource types can only be loaded by loadIndividualResource(id).
                 .sound_or_empty, .music, .bitmap => self.unload(&self.resource_locations[id]),
@@ -182,12 +182,12 @@ pub const Instance = struct {
     /// Returns an error if the specified resource ID is invalid or the resource with that ID
     /// could not be read from disk.
     fn loadIfNeeded(self: *Self, id: ResourceID.Raw) ![]const u8 {
-        try self.repository.validateResourceID(id);
+        try self.reader.validateResourceID(id);
 
         if (self.resource_locations[id]) |location| {
             return location;
         } else {
-            const location = try self.repository.allocReadResourceByID(self.allocator, id);
+            const location = try self.reader.allocReadResourceByID(self.allocator, id);
             self.resource_locations[id] = location;
             return location;
         }
@@ -216,11 +216,11 @@ const FailingAllocator = @import("std").testing.FailingAllocator;
 
 const test_descriptors = &MockRepository.FixtureData.descriptors;
 
-var test_data_source = MockRepository.Instance.init(test_descriptors, null);
-var failing_data_source = MockRepository.Instance.init(test_descriptors, error.ChecksumFailed);
+var test_repository = MockRepository.Instance.init(test_descriptors, null);
+var failing_repository = MockRepository.Instance.init(test_descriptors, error.ChecksumFailed);
 
-const test_repository = test_data_source.repository();
-const failing_repository = failing_data_source.repository();
+const test_reader = test_repository.reader();
+const failing_reader = failing_repository.reader();
 
 test "Ensure everything compiles" {
     testing.refAllDecls(Instance);
@@ -229,24 +229,24 @@ test "Ensure everything compiles" {
 // -- new tests --
 
 test "new creates an instance with no resources loaded" {
-    var memory = try new(testing.allocator, test_repository);
+    var memory = try new(testing.allocator, test_reader);
     defer memory.deinit();
 
     try testing.expectEqualSlices(PossibleResourceLocation, &(.{null} ** memory.resource_locations.len), &memory.resource_locations);
 }
 
 test "new returns an error if the bitmap region could not be allocated" {
-    try testing.expectError(error.OutOfMemory, new(testing.failing_allocator, test_repository));
+    try testing.expectError(error.OutOfMemory, new(testing.failing_allocator, test_reader));
 }
 
 // -- loadIndividualResource tests --
 
 test "loadIndividualResource loads sound resources into shared memory" {
-    var memory = try new(testing.allocator, test_repository);
+    var memory = try new(testing.allocator, test_reader);
     defer memory.deinit();
 
     const resource_id = MockRepository.FixtureData.sfx_resource_id;
-    const descriptor = try test_repository.resourceDescriptor(resource_id);
+    const descriptor = try test_reader.resourceDescriptor(resource_id);
     try testing.expectEqual(.sound_or_empty, descriptor.type);
 
     const location = try memory.loadIndividualResource(resource_id);
@@ -256,11 +256,11 @@ test "loadIndividualResource loads sound resources into shared memory" {
 }
 
 test "loadIndividualResource loads music resources into shared memory" {
-    var memory = try new(testing.allocator, test_repository);
+    var memory = try new(testing.allocator, test_reader);
     defer memory.deinit();
 
     const resource_id = MockRepository.FixtureData.music_resource_id;
-    const descriptor = try test_repository.resourceDescriptor(resource_id);
+    const descriptor = try test_reader.resourceDescriptor(resource_id);
     try testing.expectEqual(.music, descriptor.type);
 
     const location = try memory.loadIndividualResource(resource_id);
@@ -270,11 +270,11 @@ test "loadIndividualResource loads music resources into shared memory" {
 }
 
 test "loadIndividualResource loads bitmap data into temporary bitmap memory" {
-    var memory = try new(testing.allocator, test_repository);
+    var memory = try new(testing.allocator, test_reader);
     defer memory.deinit();
 
     const resource_id = MockRepository.FixtureData.bitmap_resource_id;
-    const descriptor = try test_repository.resourceDescriptor(resource_id);
+    const descriptor = try test_reader.resourceDescriptor(resource_id);
     try testing.expectEqual(.bitmap, descriptor.type);
 
     const location = try memory.loadIndividualResource(resource_id);
@@ -285,14 +285,14 @@ test "loadIndividualResource loads bitmap data into temporary bitmap memory" {
 }
 
 test "loadIndividualResource clobbers temporary bitmap region when another bitmap is loaded" {
-    var memory = try new(testing.allocator, test_repository);
+    var memory = try new(testing.allocator, test_reader);
     defer memory.deinit();
 
     const bitmap_1_id = MockRepository.FixtureData.bitmap_resource_id;
     const bitmap_2_id = MockRepository.FixtureData.bitmap_resource_id_2;
 
-    try testing.expectEqual(.bitmap, (try test_repository.resourceDescriptor(bitmap_1_id)).type);
-    try testing.expectEqual(.bitmap, (try test_repository.resourceDescriptor(bitmap_2_id)).type);
+    try testing.expectEqual(.bitmap, (try test_reader.resourceDescriptor(bitmap_1_id)).type);
+    try testing.expectEqual(.bitmap, (try test_reader.resourceDescriptor(bitmap_2_id)).type);
 
     const location_1 = try memory.loadIndividualResource(bitmap_1_id);
     try testing.expectEqualTags(.temporary_bitmap, location_1);
@@ -304,15 +304,15 @@ test "loadIndividualResource clobbers temporary bitmap region when another bitma
 }
 
 test "loadIndividualResource returns error.InvalidResourceID on out-of-bounds resource ID" {
-    var memory = try new(testing.allocator, test_repository);
+    var memory = try new(testing.allocator, test_reader);
     defer memory.deinit();
 
-    const invalid_id = @intCast(ResourceID.Raw, test_repository.resourceDescriptors().len);
+    const invalid_id = @intCast(ResourceID.Raw, test_reader.resourceDescriptors().len);
     try testing.expectError(error.InvalidResourceID, memory.loadIndividualResource(invalid_id));
 }
 
 test "loadIndividualResource returns error.GamePartOnlyResourceType on game-part-only resource types" {
-    var memory = try new(testing.allocator, test_repository);
+    var memory = try new(testing.allocator, test_reader);
     defer memory.deinit();
 
     const resource_ids = GamePart.Enum.gameplay1.resourceIDs();
@@ -323,7 +323,7 @@ test "loadIndividualResource returns error.GamePartOnlyResourceType on game-part
 }
 
 test "loadIndividualResource returns load error from repository" {
-    var memory = try new(testing.allocator, failing_repository);
+    var memory = try new(testing.allocator, failing_reader);
     defer memory.deinit();
 
     const resource_id = MockRepository.FixtureData.bitmap_resource_id;
@@ -333,7 +333,7 @@ test "loadIndividualResource returns load error from repository" {
 test "loadIndividualResource returns error.OutOfMemory if allocation fails" {
     var fail_on_second_allocation_allocator = FailingAllocator.init(testing.allocator, 1);
 
-    var memory = try new(fail_on_second_allocation_allocator.allocator(), test_repository);
+    var memory = try new(fail_on_second_allocation_allocator.allocator(), test_reader);
     defer memory.deinit();
 
     const resource_id = MockRepository.FixtureData.music_resource_id;
@@ -343,7 +343,7 @@ test "loadIndividualResource returns error.OutOfMemory if allocation fails" {
 test "loadIndividualResource does not allocate additional memory when loading bitmaps" {
     var fail_on_second_allocation_allocator = FailingAllocator.init(testing.allocator, 1);
 
-    var memory = try new(fail_on_second_allocation_allocator.allocator(), test_repository);
+    var memory = try new(fail_on_second_allocation_allocator.allocator(), test_reader);
     defer memory.deinit();
 
     const resource_id = MockRepository.FixtureData.bitmap_resource_id;
@@ -351,57 +351,57 @@ test "loadIndividualResource does not allocate additional memory when loading bi
 }
 
 test "loadIndividualResource avoids reloading already-loaded audio resources" {
-    var counted_data_source = MockRepository.Instance.init(test_descriptors, null);
+    var counted_repository = MockRepository.Instance.init(test_descriptors, null);
 
-    var memory = try new(testing.allocator, counted_data_source.repository());
+    var memory = try new(testing.allocator, counted_repository.reader());
     defer memory.deinit();
 
-    try testing.expectEqual(0, counted_data_source.read_count);
+    try testing.expectEqual(0, counted_repository.read_count);
 
     const resource_id = MockRepository.FixtureData.music_resource_id;
     const location_of_first_load = try memory.loadIndividualResource(resource_id);
 
-    try testing.expectEqual(1, counted_data_source.read_count);
+    try testing.expectEqual(1, counted_repository.read_count);
 
     const location_of_second_load = try memory.loadIndividualResource(resource_id);
 
     try testing.expectEqual(location_of_first_load, location_of_second_load);
-    try testing.expectEqual(1, counted_data_source.read_count);
+    try testing.expectEqual(1, counted_repository.read_count);
 }
 
 test "loadIndividualResource always reloads bitmap resources" {
-    var counted_data_source = MockRepository.Instance.init(test_descriptors, null);
+    var counted_repository = MockRepository.Instance.init(test_descriptors, null);
 
-    var memory = try new(testing.allocator, counted_data_source.repository());
+    var memory = try new(testing.allocator, counted_repository.reader());
     defer memory.deinit();
 
-    try testing.expectEqual(0, counted_data_source.read_count);
+    try testing.expectEqual(0, counted_repository.read_count);
 
     const resource_id = MockRepository.FixtureData.bitmap_resource_id;
     const location_of_first_load = try memory.loadIndividualResource(resource_id);
 
-    try testing.expectEqual(1, counted_data_source.read_count);
+    try testing.expectEqual(1, counted_repository.read_count);
 
     const location_of_second_load = try memory.loadIndividualResource(resource_id);
 
     try testing.expectEqual(location_of_first_load, location_of_second_load);
-    try testing.expectEqual(2, counted_data_source.read_count);
+    try testing.expectEqual(2, counted_repository.read_count);
 }
 
 // -- loadGamePart tests --
 
 test "loadGamePart loads expected resources for game part with animations" {
-    var memory = try new(testing.allocator, test_repository);
+    var memory = try new(testing.allocator, test_reader);
     defer memory.deinit();
 
     const game_part: GamePart.Enum = .gameplay1;
     const resource_ids = game_part.resourceIDs();
     const locations = try memory.loadGamePart(game_part);
 
-    try testing.expectEqual((try test_repository.resourceDescriptor(resource_ids.palettes)).uncompressed_size, locations.palettes.len);
-    try testing.expectEqual((try test_repository.resourceDescriptor(resource_ids.bytecode)).uncompressed_size, locations.bytecode.len);
-    try testing.expectEqual((try test_repository.resourceDescriptor(resource_ids.polygons)).uncompressed_size, locations.polygons.len);
-    try testing.expectEqual((try test_repository.resourceDescriptor(resource_ids.animations.?)).uncompressed_size, locations.animations.?.len);
+    try testing.expectEqual((try test_reader.resourceDescriptor(resource_ids.palettes)).uncompressed_size, locations.palettes.len);
+    try testing.expectEqual((try test_reader.resourceDescriptor(resource_ids.bytecode)).uncompressed_size, locations.bytecode.len);
+    try testing.expectEqual((try test_reader.resourceDescriptor(resource_ids.polygons)).uncompressed_size, locations.polygons.len);
+    try testing.expectEqual((try test_reader.resourceDescriptor(resource_ids.animations.?)).uncompressed_size, locations.animations.?.len);
 
     try testing.expectEqual(locations.palettes, try memory.resourceLocation(resource_ids.palettes));
     try testing.expectEqual(locations.bytecode, try memory.resourceLocation(resource_ids.bytecode));
@@ -410,7 +410,7 @@ test "loadGamePart loads expected resources for game part with animations" {
 }
 
 test "loadGamePart does not load animations for game part without animations" {
-    var memory = try new(testing.allocator, test_repository);
+    var memory = try new(testing.allocator, test_reader);
     defer memory.deinit();
 
     const game_part: GamePart.Enum = .copy_protection;
@@ -420,7 +420,7 @@ test "loadGamePart does not load animations for game part without animations" {
 }
 
 test "loadGamePart unloads any previously loaded game part's resources" {
-    var memory = try new(testing.allocator, test_repository);
+    var memory = try new(testing.allocator, test_reader);
     defer memory.deinit();
 
     const first_game_part: GamePart.Enum = .intro_cinematic;
@@ -450,7 +450,7 @@ test "loadGamePart unloads any previously loaded game part's resources" {
 }
 
 test "loadGamePart unloads any previously loaded individual resources" {
-    var memory = try new(testing.allocator, test_repository);
+    var memory = try new(testing.allocator, test_reader);
     defer memory.deinit();
 
     const sfx_resource_id = MockRepository.FixtureData.sfx_resource_id;
@@ -470,14 +470,14 @@ test "loadGamePart returns error.InvalidResourceID on out-of-bounds resource ID"
     // Snip off the descriptor list halfway through the resource IDs for the first game part
     var truncated_data_source = MockRepository.Instance.init(test_descriptors[0..0x15], null);
 
-    var memory = try new(testing.allocator, truncated_data_source.repository());
+    var memory = try new(testing.allocator, truncated_data_source.reader());
     defer memory.deinit();
 
     try testing.expectError(error.InvalidResourceID, memory.loadGamePart(.copy_protection));
 }
 
 test "loadGamePart returns load error from repository" {
-    var memory = try new(testing.allocator, failing_repository);
+    var memory = try new(testing.allocator, failing_reader);
     defer memory.deinit();
 
     try testing.expectError(error.ChecksumFailed, memory.loadGamePart(.copy_protection));
@@ -486,7 +486,7 @@ test "loadGamePart returns load error from repository" {
 test "loadGamePart returns error.OutOfMemory if allocation fails" {
     var fail_on_second_allocation_allocator = FailingAllocator.init(testing.allocator, 1);
 
-    var memory = try new(fail_on_second_allocation_allocator.allocator(), test_repository);
+    var memory = try new(fail_on_second_allocation_allocator.allocator(), test_reader);
     defer memory.deinit();
 
     try testing.expectError(error.OutOfMemory, memory.loadGamePart(.copy_protection));
@@ -495,7 +495,7 @@ test "loadGamePart returns error.OutOfMemory if allocation fails" {
 // -- unloadAllIndividualResources tests --
 
 test "unloadAllIndividualResources unloads sound and music resources but leaves game part resources loaded" {
-    var memory = try new(testing.allocator, test_repository);
+    var memory = try new(testing.allocator, test_reader);
     defer memory.deinit();
 
     const game_part: GamePart.Enum = .gameplay1;
