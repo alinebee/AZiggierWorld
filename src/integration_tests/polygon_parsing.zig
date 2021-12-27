@@ -126,5 +126,5 @@ test "Parse polygon instructions for every game part" {
         count += try parsePolygonInstructionsForGamePart(testing.allocator, resource_directory, game_part);
     }
 
-    std.debug.print("\n{} polygon(s) successfully parsed.\n", .{count});
+    //std.debug.print("\n{} polygon(s) successfully parsed.\n", .{count});
 }
