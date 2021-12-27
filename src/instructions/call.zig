@@ -52,8 +52,8 @@ test "execute puts previous address on the stack and jumps to new address" {
 
     const bytecode = [_]u8{0} ** 10;
 
-    var machine = Machine.new();
-    machine.program = Program.new(&bytecode);
+    var machine = Machine.test_machine(&bytecode);
+    defer machine.deinit();
 
     try testing.expectEqual(0, machine.stack.depth);
     try testing.expectEqual(0, machine.program.counter);
@@ -72,8 +72,8 @@ test "execute returns error.StackOverflow when stack is full" {
 
     const bytecode = [_]u8{0} ** 10;
 
-    var machine = Machine.new();
-    machine.program = Program.new(&bytecode);
+    var machine = Machine.test_machine(&bytecode);
+    defer machine.deinit();
 
     var remaining: usize = Stack.max_depth;
     while (remaining > 0) : (remaining -= 1) {
@@ -90,7 +90,8 @@ test "execute returns error.InvalidAddress when address is out of range" {
 
     const bytecode = [_]u8{0} ** 10;
 
-    var machine = Machine.new();
-    machine.program = Program.new(&bytecode);
+    var machine = Machine.test_machine(&bytecode);
+    defer machine.deinit();
+
     try testing.expectError(error.InvalidAddress, instruction.execute(&machine));
 }

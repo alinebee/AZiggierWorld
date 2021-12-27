@@ -72,7 +72,9 @@ test "execute schedules specified thread to jump to specified address" {
         .address = 0xDEAD,
     };
 
-    var machine = Machine.new();
+    var machine = Machine.test_machine(null);
+    defer machine.deinit();
+
     instruction.execute(&machine);
 
     try testing.expectEqual(.{ .active = 0xDEAD }, machine.threads[63].scheduled_execution_state);

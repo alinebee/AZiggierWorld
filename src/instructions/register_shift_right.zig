@@ -91,7 +91,9 @@ test "execute shifts destination register" {
         .shift = shift,
     };
 
-    var machine = Machine.new();
+    var machine = Machine.test_machine(null);
+    defer machine.deinit();
+
     machine.registers[16] = original_value;
 
     instruction.execute(&machine);

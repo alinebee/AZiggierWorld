@@ -56,7 +56,9 @@ test "execute subtracts from destination register and leaves source register alo
         .source = 17,
     };
 
-    var machine = Machine.new();
+    var machine = Machine.test_machine(null);
+    defer machine.deinit();
+
     machine.registers[16] = 125;
     machine.registers[17] = 50;
 
@@ -72,7 +74,9 @@ test "execute wraps on overflow" {
         .source = 17,
     };
 
-    var machine = Machine.new();
+    var machine = Machine.test_machine(null);
+    defer machine.deinit();
+
     machine.registers[16] = 32767;
     machine.registers[17] = -1;
 
@@ -87,7 +91,9 @@ test "execute wraps on underflow" {
         .source = 17,
     };
 
-    var machine = Machine.new();
+    var machine = Machine.test_machine(null);
+    defer machine.deinit();
+
     machine.registers[16] = -32768;
     machine.registers[17] = 1;
 

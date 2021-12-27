@@ -66,8 +66,9 @@ test "execute decrements register and jumps to new address if register is still 
 
     const bytecode = [_]u8{0} ** 10;
 
-    var machine = Machine.new();
-    machine.program = Program.new(&bytecode);
+    var machine = Machine.test_machine(&bytecode);
+    defer machine.deinit();
+
     machine.registers[255] = 2;
 
     try testing.expectEqual(0, machine.program.counter);
@@ -86,8 +87,9 @@ test "execute decrements register but does not jump if register reaches zero" {
 
     const bytecode = [_]u8{0} ** 10;
 
-    var machine = Machine.new();
-    machine.program = Program.new(&bytecode);
+    var machine = Machine.test_machine(&bytecode);
+    defer machine.deinit();
+
     machine.registers[255] = 1;
 
     try testing.expectEqual(0, machine.program.counter);
@@ -106,8 +108,9 @@ test "execute decrement wraps around on underflow" {
 
     const bytecode = [_]u8{0} ** 10;
 
-    var machine = Machine.new();
-    machine.program = Program.new(&bytecode);
+    var machine = Machine.test_machine(&bytecode);
+    defer machine.deinit();
+
     machine.registers[255] = -32768;
 
     try instruction.execute(&machine);
@@ -123,8 +126,9 @@ test "execute returns error.InvalidAddress on jump when address is out of range"
 
     const bytecode = [_]u8{0} ** 10;
 
-    var machine = Machine.new();
-    machine.program = Program.new(&bytecode);
+    var machine = Machine.test_machine(&bytecode);
+    defer machine.deinit();
+
     machine.registers[255] = 2;
 
     try testing.expectError(error.InvalidAddress, instruction.execute(&machine));

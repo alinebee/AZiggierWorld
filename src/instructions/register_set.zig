@@ -56,7 +56,9 @@ test "execute updates specified register with value" {
         .value = -1234,
     };
 
-    var machine = Machine.new();
+    var machine = Machine.test_machine(null);
+    defer machine.deinit();
+
     instruction.execute(&machine);
 
     try testing.expectEqual(-1234, machine.registers[16]);

@@ -73,6 +73,19 @@ pub const Instance = struct {
 
     // - Public methods -
 
+    /// Called when a new game part is loaded to set the sources for polygon and palette data to new memory locations.
+    pub fn setResourceLocations(self: *Self, palettes: []const u8, polygons: []const u8, possible_animations: ?[]const u8) void {
+        self.palettes = PaletteResource.new(palettes);
+        self.polygons = PolygonResource.new(polygons);
+        if (possible_animations) |animations| {
+            self.animations = PolygonResource.new(animations);
+        } else {
+            self.animations = null;
+        }
+        // TODO: reset other aspects of the video state?
+        // (If so, maybe we should just recreate the whole video instance?)
+    }
+
     /// Select the palette used to render the next frame to the host screen.
     pub fn selectPalette(self: *Self, palette_id: PaletteID.Trusted) void {
         self.palette_id = palette_id;

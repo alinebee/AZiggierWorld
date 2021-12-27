@@ -41,6 +41,8 @@ test "parse parses instruction from valid bytecode and consumes 1 byte" {
 test "execute returns YieldToNextThread action" {
     const instruction = Instance{};
 
-    var machine = Machine.new();
+    var machine = Machine.test_machine(null);
+    defer machine.deinit();
+
     try testing.expectEqual(.YieldToNextThread, instruction.execute(&machine));
 }

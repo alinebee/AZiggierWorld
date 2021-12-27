@@ -119,7 +119,9 @@ test "execute with resume operation schedules specified threads to resume" {
         .operation = .Resume,
     };
 
-    var machine = Machine.new();
+    var machine = Machine.test_machine(null);
+    defer machine.deinit();
+
     for (machine.threads) |thread| {
         try testing.expectEqual(null, thread.scheduled_suspend_state);
     }
@@ -140,7 +142,9 @@ test "execute with suspend operation schedules specified threads to suspend" {
         .operation = .Suspend,
     };
 
-    var machine = Machine.new();
+    var machine = Machine.test_machine(null);
+    defer machine.deinit();
+
     for (machine.threads) |thread| {
         try testing.expectEqual(null, thread.scheduled_suspend_state);
     }
@@ -161,7 +165,9 @@ test "execute with deactivate operation schedules specified threads to deactivat
         .operation = .Deactivate,
     };
 
-    var machine = Machine.new();
+    var machine = Machine.test_machine(null);
+    defer machine.deinit();
+
     for (machine.threads) |thread| {
         try testing.expectEqual(null, thread.scheduled_execution_state);
     }
@@ -184,7 +190,9 @@ test "execute safely iterates full range of threads" {
         .operation = .Resume,
     };
 
-    var machine = Machine.new();
+    var machine = Machine.test_machine(null);
+    defer machine.deinit();
+
     for (machine.threads) |thread| {
         try testing.expectEqual(null, thread.scheduled_suspend_state);
     }

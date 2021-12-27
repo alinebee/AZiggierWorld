@@ -15,8 +15,13 @@ const Stack = @import("stack.zig");
 const Program = @import("program.zig");
 const Video = @import("video.zig");
 const Audio = @import("audio.zig");
+const Memory = @import("memory.zig");
+const Reader = @import("../resources/reader.zig");
 
 const static_limits = @import("../static_limits.zig");
+
+const mem = @import("std").mem;
+const fs = @import("std").fs;
 
 const log_unimplemented = @import("../utils/logging.zig").log_unimplemented;
 
@@ -39,11 +44,71 @@ pub const Instance = struct {
     /// The currently-running program.
     program: Program.Instance,
 
+    /// The current state of the video subsystem.
+    video: Video.Instance,
+
+    /// The current state of resources loaded into memory.
+    memory: Memory.Instance,
+
     /// The next game part that has been scheduled to be started by a program instruction.
     /// Null if no game part is scheduled.
     scheduled_game_part: ?GamePart.Enum = null,
 
     const Self = @This();
+
+    /// Create a new virtual machine that uses the specified allocator to allocate memory
+    /// and reads game data from the specified reader. The virtual machine will attempt
+    /// to load the resources for the specified game part.
+    /// On success, returns a machine instance that is ready to simulate.
+    fn init(allocator: mem.Allocator, reader: Reader.Interface, initial_game_part: GamePart.Enum) !Self {
+        var memory = try Memory.new(allocator, reader);
+        errdefer memory.deinit();
+
+        var self = Self{
+            .threads = .{.{}} ** thread_count,
+            .registers = .{0} ** register_count,
+            .stack = .{},
+            .memory = memory,
+            // The video and program will be populated once the first game part is started.
+            // TODO: the machine shouldn't know which fields of the Video instance need to be marked undefined.
+            .video = .{
+                .polygons = undefined,
+                .animations = undefined,
+                .palettes = undefined,
+            },
+            .program = undefined,
+        };
+
+        // Load the initial game part from the filesystem.
+        try self.startGamePart(initial_game_part);
+
+        return self;
+    }
+
+    pub fn deinit(self: *Self) void {
+        self.memory.deinit();
+        self.* = undefined;
+    }
+
+    /// Immediately unload all resources, load the resources for the specified game part,
+    /// and prepare to execute its bytecode.
+    /// Returns an error if one or more resources do not exist or could not be loaded.
+    /// Not intended to be called outside of execution: instead call `scheduleGamePart`,
+    /// which will let the current game cycle finish executing before beginning the new
+    /// game part on the next run loop.
+    fn startGamePart(self: *Self, game_part: GamePart.Enum) !void {
+        const resource_locations = try self.memory.loadGamePart(game_part);
+        self.program = Program.new(resource_locations.bytecode);
+        self.video.setResourceLocations(resource_locations.palettes, resource_locations.polygons, resource_locations.animations);
+
+        // Stop all threads and reset the main thread to begin execution at the start of the current program
+        for (self.threads) |*thread| {
+            thread.execution_state = .inactive;
+        }
+        self.threads[ThreadID.main].execution_state = .{ .active = 0 };
+
+        // TODO: probably a bunch more stuff
+    }
 
     // -- Resource subsystem interface --
 
@@ -54,62 +119,56 @@ pub const Instance = struct {
 
     /// Load the specified resource if it is not already loaded.
     /// Returns an error if the specified resource ID does not exist or could not be loaded.
-    pub fn loadResource(_: *Self, resource_id: ResourceID.Raw) !void {
-        log_unimplemented("Resources.loadResource: load #{X}", .{resource_id});
+    pub fn loadResource(self: *Self, resource_id: ResourceID.Raw) !void {
+        const location = try self.memory.loadIndividualResource(resource_id);
+
+        switch (location) {
+            // Bitmap resources must be loaded immediately from their temporary location into the video buffer.
+            .temporary_bitmap => |address| try self.video.loadBitmapResource(address),
+            // Audio resources will remain in memory for a later instruction to play them.
+            .audio => {},
+        }
     }
 
-    /// Unload all resources and stop any currently-playing sound.
-    pub fn unloadAllResources(_: *Self) void {
-        log_unimplemented("Resources.unloadAllResources: unload all resources", .{});
+    /// Unload all audio resources and stop any currently-playing sound.
+    pub fn unloadAllResources(self: *Self) void {
+        self.memory.unloadAllIndividualResources();
+        // TODO: the reference implementation mentioned that this will also stop any playing sound,
+        // this function may need to tell the audio subsystem (once we have one) to do that manually.
     }
 
     // -- Video subsystem interface --
 
     /// Render a polygon from the specified source and address at the specified screen position and scale.
     /// Returns an error if the specified polygon address was invalid.
-    pub fn drawPolygon(_: *Self, source: Video.PolygonSource, address: Video.PolygonAddress, point: Point.Instance, scale: PolygonScale.Raw) !void {
-        log_unimplemented("Video.drawPolygon: draw {s}.{X} at x:{} y:{} scale:{}", .{
-            @tagName(source),
-            address,
-            point.x,
-            point.y,
-            scale,
-        });
+    pub fn drawPolygon(self: *Self, source: Video.PolygonSource, address: Video.PolygonAddress, point: Point.Instance, scale: PolygonScale.Raw) !void {
+        try self.video.drawPolygon(source, address, point, scale);
     }
 
     /// Render a string from the current string table at the specified screen position in the specified color.
     /// Returns an error if the string could not be found.
-    pub fn drawString(_: *Self, string_id: StringID.Raw, color_id: ColorID.Trusted, point: Point.Instance) !void {
-        log_unimplemented("Video.drawString: draw #{} color:{} at x:{} y:{}", .{
-            string_id,
-            color_id,
-            point.x,
-            point.y,
-        });
+    pub fn drawString(self: *Self, string_id: StringID.Raw, color_id: ColorID.Trusted, point: Point.Instance) !void {
+        try self.video.drawString(string_id, color_id, point);
     }
 
     /// Select the active palette to render the video buffer in.
-    pub fn selectPalette(_: *Self, palette_id: PaletteID.Trusted) void {
-        log_unimplemented("Video.selectPalette: {}", .{palette_id});
+    pub fn selectPalette(self: *Self, palette_id: PaletteID.Trusted) void {
+        self.video.selectPalette(palette_id);
     }
 
     /// Select the video buffer that subsequent drawPolygon and drawString operations will draw into.
-    pub fn selectVideoBuffer(_: *Self, buffer_id: BufferID.Enum) void {
-        log_unimplemented("Video.selectVideoBuffer: {}", .{buffer_id});
+    pub fn selectVideoBuffer(self: *Self, buffer_id: BufferID.Enum) void {
+        self.video.selectBuffer(buffer_id);
     }
 
     /// Fill a specified video buffer with a single color.
-    pub fn fillVideoBuffer(_: *Self, buffer_id: BufferID.Enum, color_id: ColorID.Trusted) void {
-        log_unimplemented("Video.fillVideoBuffer: {} color:{}", .{ buffer_id, color_id });
+    pub fn fillVideoBuffer(self: *Self, buffer_id: BufferID.Enum, color_id: ColorID.Trusted) void {
+        self.video.fillBuffer(buffer_id, color_id);
     }
 
     /// Copy the contents of one video buffer into another at the specified vertical offset.
-    pub fn copyVideoBuffer(_: *Self, source: BufferID.Enum, destination: BufferID.Enum, vertical_offset: Point.Coordinate) void {
-        log_unimplemented("Video.copyVideoBuffer: source:{} destination:{} vertical_offset:{}", .{
-            source,
-            destination,
-            vertical_offset,
-        });
+    pub fn copyVideoBuffer(self: *Self, source: BufferID.Enum, destination: BufferID.Enum, vertical_offset: Point.Coordinate) void {
+        self.video.copyBuffer(source, destination, vertical_offset);
     }
 
     /// Render the contents of the specified buffer to the host screen after the specified delay.
@@ -159,21 +218,24 @@ pub const Instance = struct {
     }
 };
 
-/// A placeholder program to keep tests happy until we flesh out the VM enough
-/// to load a real program during its initialization.
-const empty_program = [0]u8{};
+pub fn new(allocator: mem.Allocator, reader: Reader.Interface, initial_game_part: GamePart.Enum) !Instance {
+    return Instance.init(allocator, reader, initial_game_part);
+}
 
-pub fn new() Instance {
-    var machine = Instance{
-        .threads = [_]Thread.Instance{.{}} ** thread_count,
-        .registers = [_]Register.Signed{0} ** register_count,
-        .stack = Stack.Instance{},
-        .program = Program.new(&empty_program),
-    };
-
-    // Initialize the main thread to begin execution at the start of the current program
-    machine.threads[ThreadID.main].execution_state = .{ .active = 0 };
-
+/// Returns a machine instance suitable for use in tests.
+/// The machine will load game data from a fake repository,
+/// and will be optionally be initialized with the specified bytecode program.
+///
+/// Usage:
+/// ------
+/// const machine = Machine.test_machine();
+/// defer machine.deinit();
+/// try testing.expectEqual(result, do_something_that_requires_a_machine(machine));
+pub fn test_machine(possible_bytecode: ?[]const u8) Instance {
+    var machine = new(testing.allocator, Reader.test_reader, .intro_cinematic) catch unreachable;
+    if (possible_bytecode) |bytecode| {
+        machine.program = Program.new(bytecode);
+    }
     return machine;
 }
 
@@ -182,7 +244,8 @@ pub fn new() Instance {
 const testing = @import("../utils/testing.zig");
 
 test "new creates new virtual machine with expected state" {
-    const machine = new();
+    var machine = try new(testing.allocator, Reader.test_reader, .intro_cinematic);
+    defer machine.deinit();
 
     for (machine.threads) |thread, id| {
         if (id == ThreadID.main) {
@@ -196,4 +259,6 @@ test "new creates new virtual machine with expected state" {
     for (machine.registers) |register| {
         try testing.expectEqual(0, register);
     }
+
+    try testing.expectEqual(null, machine.scheduled_game_part);
 }

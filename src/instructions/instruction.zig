@@ -233,27 +233,29 @@ test "parseNextInstruction returns error.InvalidOpcode error when it encounters 
 }
 
 test "executeNextInstruction executes arbitrary instruction on machine when given valid bytecode" {
-    var program = Program.new(&RegisterSet.BytecodeExamples.valid);
-    var machine = Machine.new();
+    var machine = Machine.test_machine(&RegisterSet.BytecodeExamples.valid);
+    defer machine.deinit();
 
-    const action = try executeNextInstruction(&program, &machine);
+    const action = try executeNextInstruction(&machine.program, &machine);
 
     try testing.expectEqual(.Continue, action);
     try testing.expectEqual(-18901, machine.registers[16]);
 }
 
 test "executeNextInstruction returns DeactivateThread action if specified" {
-    var program = Program.new(&Kill.BytecodeExamples.valid);
-    var machine = Machine.new();
+    var machine = Machine.test_machine(&Kill.BytecodeExamples.valid);
+    defer machine.deinit();
 
-    const action = try executeNextInstruction(&program, &machine);
+    const action = try executeNextInstruction(&machine.program, &machine);
+
     try testing.expectEqual(.DeactivateThread, action);
 }
 
 test "executeNextInstruction returns YieldToNextThread action if specified" {
-    var program = Program.new(&Yield.BytecodeExamples.valid);
-    var machine = Machine.new();
+    var machine = Machine.test_machine(&Yield.BytecodeExamples.valid);
+    defer machine.deinit();
 
-    const action = try executeNextInstruction(&program, &machine);
+    const action = try executeNextInstruction(&machine.program, &machine);
+
     try testing.expectEqual(.YieldToNextThread, action);
 }

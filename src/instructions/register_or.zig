@@ -65,7 +65,9 @@ test "execute masks destination register" {
         .value = mask,
     };
 
-    var machine = Machine.new();
+    var machine = Machine.test_machine(null);
+    defer machine.deinit();
+
     machine.registers[16] = original_value;
 
     instruction.execute(&machine);
