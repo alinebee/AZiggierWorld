@@ -117,14 +117,6 @@ pub const Instance = struct {
     }
 };
 
-pub const Error = error{
-    /// The specified resource ID does not exist in the game's resource list.
-    InvalidResourceID,
-
-    /// The provided buffer is not large enough to load the requested resource.
-    BufferTooSmall,
-};
-
 // -- Helper functions --
 
 /// Loads a list of resource descriptors into the provided buffer, from a byte stream

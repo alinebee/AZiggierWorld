@@ -64,10 +64,10 @@ pub const Instance = struct {
     front_buffer_id: BufferID.Specific = 2,
 
     /// Masked drawing operations always read the mask from buffer 0.
-    const mask_buffer_id: BufferID.Specific = 0;
+    pub const mask_buffer_id: BufferID.Specific = 0;
 
     /// Bitmaps are always loaded into buffer 0.
-    const bitmap_buffer_id: BufferID.Specific = 0;
+    pub const bitmap_buffer_id: BufferID.Specific = 0;
 
     const Self = @This();
 

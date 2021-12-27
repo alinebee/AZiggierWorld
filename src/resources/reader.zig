@@ -115,6 +115,14 @@ pub const Interface = struct {
     }
 };
 
+pub const Error = error{
+    /// The specified resource ID does not exist in the game's resource list.
+    InvalidResourceID,
+
+    /// The provided buffer is not large enough to load the requested resource.
+    BufferTooSmall,
+};
+
 // -- Test data --
 
 const example_descriptor = ResourceDescriptor.Instance{

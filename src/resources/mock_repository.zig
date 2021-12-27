@@ -152,11 +152,12 @@ pub const FixtureData = struct {
     pub const music_resource_id = 0x02;
     pub const bitmap_resource_id = 0x03;
     pub const bitmap_resource_id_2 = 0x04;
+    pub const max_resource_id = 0x7F;
+    pub const invalid_resource_id = max_resource_id + 1;
 
     /// A list of fake descriptors with realistic values for resources that are referenced in game parts.
     pub const descriptors = block: {
-        const max_resource_id = 0x7F;
-        var d = [_]ResourceDescriptor.Instance{empty_descriptor} ** (max_resource_id + 1);
+        var d = [_]ResourceDescriptor.Instance{empty_descriptor} ** (invalid_resource_id);
 
         // Drop in individually loadable resources at known offsets
         d[sfx_resource_id] = sfx_descriptor;

@@ -17,6 +17,7 @@ const Video = @import("video.zig");
 const Audio = @import("audio.zig");
 const Memory = @import("memory.zig");
 const Reader = @import("../resources/reader.zig");
+const MockRepository = @import("../resources/mock_repository.zig");
 
 const static_limits = @import("../static_limits.zig");
 
@@ -242,9 +243,12 @@ pub fn test_machine(possible_bytecode: ?[]const u8) Instance {
 // -- Tests --
 
 const testing = @import("../utils/testing.zig");
+const meta = @import("std").meta;
 
-test "new creates new virtual machine with expected state" {
-    var machine = try new(testing.allocator, Reader.test_reader, .intro_cinematic);
+test "new creates virtual machine instance with expected initial state" {
+    const initial_game_part = GamePart.Enum.gameplay1;
+
+    var machine = try new(testing.allocator, Reader.test_reader, initial_game_part);
     defer machine.deinit();
 
     for (machine.threads) |thread, id| {
@@ -261,4 +265,85 @@ test "new creates new virtual machine with expected state" {
     }
 
     try testing.expectEqual(null, machine.scheduled_game_part);
+
+    // Ensure each resource was loaded for the requested game part
+    // and passed to the program and video subsystems
+    const resource_ids = initial_game_part.resourceIDs();
+
+    const bytecode_address = try machine.memory.resourceLocation(resource_ids.bytecode);
+    try testing.expect(bytecode_address != null);
+    try testing.expectEqual(bytecode_address.?, machine.program.bytecode);
+
+    const palettes_address = try machine.memory.resourceLocation(resource_ids.palettes);
+    try testing.expect(palettes_address != null);
+    try testing.expectEqual(palettes_address.?, machine.video.palettes.data);
+
+    const polygons_address = try machine.memory.resourceLocation(resource_ids.polygons);
+    try testing.expect(polygons_address != null);
+    try testing.expectEqual(polygons_address.?, machine.video.polygons.data);
+
+    const animations_address = try machine.memory.resourceLocation(resource_ids.animations.?);
+    try testing.expect(animations_address != null);
+    try testing.expect(machine.video.animations != null);
+    try testing.expectEqual(animations_address.?, machine.video.animations.?.data);
+}
+
+test "scheduleGamePart schedules a new game part without loading it" {
+    var machine = try new(testing.allocator, Reader.test_reader, .copy_protection);
+    defer machine.deinit();
+
+    try testing.expectEqual(null, machine.scheduled_game_part);
+
+    const next_game_part = GamePart.Enum.intro_cinematic;
+    const resource_ids = next_game_part.resourceIDs();
+
+    try testing.expectEqual(null, try machine.memory.resourceLocation(resource_ids.bytecode));
+    try testing.expectEqual(null, try machine.memory.resourceLocation(resource_ids.palettes));
+    try testing.expectEqual(null, try machine.memory.resourceLocation(resource_ids.polygons));
+
+    machine.scheduleGamePart(next_game_part);
+    try testing.expectEqual(next_game_part, machine.scheduled_game_part);
+
+    try testing.expectEqual(null, try machine.memory.resourceLocation(resource_ids.bytecode));
+    try testing.expectEqual(null, try machine.memory.resourceLocation(resource_ids.palettes));
+    try testing.expectEqual(null, try machine.memory.resourceLocation(resource_ids.polygons));
+}
+
+test "loadResource loads audio resource into main memory" {
+    var machine = test_machine(null);
+    defer machine.deinit();
+
+    const audio_resource_id = MockRepository.FixtureData.sfx_resource_id;
+
+    try testing.expectEqual(null, try machine.memory.resourceLocation(audio_resource_id));
+    try machine.loadResource(audio_resource_id);
+    try testing.expect((try machine.memory.resourceLocation(audio_resource_id)) != null);
+}
+
+test "loadResource copies bitmap resource directly into video buffer without persisting in main memory" {
+    var machine = test_machine(null);
+    defer machine.deinit();
+
+    const buffer = &machine.video.buffers[Video.Instance.bitmap_buffer_id];
+    buffer.fill(0x0);
+    const original_contents = buffer.storage.toBitmap();
+
+    const bitmap_resource_id = MockRepository.FixtureData.bitmap_resource_id;
+    try testing.expectEqual(null, machine.memory.resourceLocation(bitmap_resource_id));
+    try machine.loadResource(bitmap_resource_id);
+    try testing.expectEqual(null, machine.memory.resourceLocation(bitmap_resource_id));
+
+    const new_contents = buffer.storage.toBitmap();
+    // FIXME: the loaded bitmap resource will be filled with garbage data,
+    // so there's a chance that it could be filled with all zeroes.
+    // We should make the mock repository emit data with a stable fixed bit pattern.
+    try testing.expect(meta.eql(original_contents, new_contents) == false);
+}
+
+test "loadResource returns error on invalid resource ID" {
+    var machine = test_machine(null);
+    defer machine.deinit();
+
+    const invalid_id = MockRepository.FixtureData.invalid_resource_id;
+    try testing.expectError(error.InvalidResourceID, machine.loadResource(invalid_id));
 }

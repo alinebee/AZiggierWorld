@@ -307,7 +307,7 @@ test "loadIndividualResource returns error.InvalidResourceID on out-of-bounds re
     var memory = try new(testing.allocator, test_reader);
     defer memory.deinit();
 
-    const invalid_id = @intCast(ResourceID.Raw, test_reader.resourceDescriptors().len);
+    const invalid_id = MockRepository.FixtureData.invalid_resource_id;
     try testing.expectError(error.InvalidResourceID, memory.loadIndividualResource(invalid_id));
 }
 
