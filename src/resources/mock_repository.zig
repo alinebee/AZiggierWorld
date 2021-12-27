@@ -45,8 +45,13 @@ pub const Instance = struct {
     /// Incremented by calls to reader().bufReadResource() or any of its derived methods.
     read_count: usize = 0,
 
+    /// The bit pattern to fill loaded resource buffers with.
+    /// This is 0xAA, the same as Zig uses for `undefined` regions in Debug mode:
+    /// https://ziglang.org/documentation/0.9.0/#undefined
+    const bit_pattern: u8 = 0b1010_1010;
+
     /// Create a new mock repository that exposes the specified resource descriptors,
-    /// and produces either an error or an appropriately-sized buffer full of garbage when
+    /// and produces either an error or an appropriately-sized buffer when
     /// a resource load method is called.
     pub fn init(descriptors: []const ResourceDescriptor.Instance, read_error: ?anyerror) Instance {
         return Instance{
@@ -60,10 +65,11 @@ pub const Instance = struct {
         return Reader.Interface.init(self, bufReadResource, resourceDescriptors);
     }
 
-    /// Leaves the contents of the supplied buffer unchanged, and returns a pointer to the region
-    /// of the buffer that would have been filled by resource data in a real implementation.
-    /// Returns error.BufferTooSmall if the supplied buffer would not have been large enough
-    /// to hold the real resource.
+    /// Returns a pointer to the region of the buffer that would have been filled by resource
+    /// data in a real implementation. This region of the buffer will instead be filled with
+    /// a 0xAA bit pattern (the same pattern Zig fills `undefined` regions with in debug mode).
+    /// Returns error.BufferTooSmall and leaves the buffer unchanged if the supplied buffer
+    /// would not have been large enough to hold the real resource.
     fn bufReadResource(self: *Instance, buffer: []u8, descriptor: ResourceDescriptor.Instance) ![]const u8 {
         self.read_count += 1;
 
@@ -71,7 +77,14 @@ pub const Instance = struct {
             return error.BufferTooSmall;
         }
 
-        return self.read_error orelse buffer[0..descriptor.uncompressed_size];
+        if (self.read_error) |err| {
+            return err;
+        }
+
+        var filled_slice = buffer[0..descriptor.uncompressed_size];
+        mem.set(u8, filled_slice, bit_pattern);
+
+        return filled_slice;
     }
 
     /// Returns a list of all valid resource descriptors,
@@ -231,39 +244,46 @@ const example_descriptor = ResourceDescriptor.Instance{
     .uncompressed_size = 10,
 };
 
-test "bufReadResource returns slice of original buffer when buffer is appropriate size" {
+test "bufReadResource returns slice of original buffer filled with bit pattern when buffer is appropriate size" {
     var repository = Instance.init(&.{example_descriptor}, null);
 
-    var buffer = try testing.allocator.alloc(u8, example_descriptor.uncompressed_size * 2);
-    defer testing.allocator.free(buffer);
+    var buffer = [_]u8{0} ** (example_descriptor.uncompressed_size * 2);
+
+    // The region of the buffer representing the resource should be filled with the bit pattern
+    // for loaded data, and the rest of the buffer left as-is.
+    const expected_buffer_contents = [_]u8{Instance.bit_pattern} ** example_descriptor.uncompressed_size ++ [_]u8{0x0} ** example_descriptor.uncompressed_size;
 
     try testing.expectEqual(0, repository.read_count);
-    const result = try repository.reader().bufReadResource(buffer, example_descriptor);
-    try testing.expectEqual(@ptrToInt(result.ptr), @ptrToInt(buffer.ptr));
-    try testing.expectEqual(result.len, example_descriptor.uncompressed_size);
-    try testing.expectEqual(1, repository.read_count);
+    const result = try repository.reader().bufReadResource(&buffer, example_descriptor);
+    try testing.expectEqual(@ptrToInt(&buffer), @ptrToInt(result.ptr));
+    try testing.expectEqual(example_descriptor.uncompressed_size, result.len);
+    try testing.expectEqualSlices(u8, &expected_buffer_contents, &buffer);
 }
 
-test "bufReadResource returns supplied error when buffer is appropriate size" {
+test "bufReadResource returns supplied error and leaves buffer alone when buffer is appropriate size" {
     var repository = Instance.init(&.{example_descriptor}, error.ChecksumFailed);
 
-    var buffer = try testing.allocator.alloc(u8, example_descriptor.uncompressed_size * 2);
-    defer testing.allocator.free(buffer);
+    var buffer = [_]u8{0} ** (example_descriptor.uncompressed_size * 2);
+    // The whole buffer should be left untouched.
+    const expected_buffer_contents = buffer;
 
     try testing.expectEqual(0, repository.read_count);
-    try testing.expectError(error.ChecksumFailed, repository.reader().bufReadResource(buffer, example_descriptor));
+    try testing.expectError(error.ChecksumFailed, repository.reader().bufReadResource(&buffer, example_descriptor));
     try testing.expectEqual(1, repository.read_count);
+    try testing.expectEqualSlices(u8, &expected_buffer_contents, &buffer);
 }
 
 test "bufReadResource returns error.BufferTooSmall if buffer is too small for resource, even if another error was specified" {
     var repository = Instance.init(&.{example_descriptor}, error.ChecksumFailed);
 
-    var buffer = try testing.allocator.alloc(u8, example_descriptor.uncompressed_size / 2);
-    defer testing.allocator.free(buffer);
+    var buffer = [_]u8{0} ** (example_descriptor.uncompressed_size - 1);
+    // The whole buffer should be left untouched.
+    const expected_buffer_contents = buffer;
 
     try testing.expectEqual(0, repository.read_count);
-    try testing.expectError(error.BufferTooSmall, repository.reader().bufReadResource(buffer, example_descriptor));
+    try testing.expectError(error.BufferTooSmall, repository.reader().bufReadResource(&buffer, example_descriptor));
     try testing.expectEqual(1, repository.read_count);
+    try testing.expectEqualSlices(u8, &expected_buffer_contents, &buffer);
 }
 
 test "resourceDescriptors returns expected descriptors" {
