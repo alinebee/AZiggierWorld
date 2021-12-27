@@ -48,21 +48,22 @@ fn findPolygonDrawInstructions(allocator: std.mem.Allocator, bytecode: []const u
 /// Parses all polygon draw instructions from the bytecode for a given game part,
 /// then parses the polygons themselves from the respective polygon or animation resource for that game part.
 /// Returns the total number of polygons parsed, or an error if parsing or memory allocation failed.
-fn parsePolygonInstructionsForGamePart(allocator: std.mem.Allocator, resource_directory: ResourceDirectory.Instance, game_part: GamePart.Enum) !usize {
+fn parsePolygonInstructionsForGamePart(allocator: std.mem.Allocator, resource_directory: *ResourceDirectory.Instance, game_part: GamePart.Enum) !usize {
     const resource_ids = game_part.resourceIDs();
+    const repository = resource_directory.repository();
 
-    const bytecode = try resource_directory.allocReadResourceByID(allocator, resource_ids.bytecode);
+    const bytecode = try repository.allocReadResourceByID(allocator, resource_ids.bytecode);
     defer allocator.free(bytecode);
 
     const instructions = try findPolygonDrawInstructions(allocator, bytecode);
     defer allocator.free(instructions);
 
-    const polygons = PolygonResource.new(try resource_directory.allocReadResourceByID(allocator, resource_ids.polygons));
+    const polygons = PolygonResource.new(try repository.allocReadResourceByID(allocator, resource_ids.polygons));
     defer allocator.free(polygons.data);
 
     const maybe_animations: ?PolygonResource.Instance = init: {
         if (resource_ids.animations) |id| {
-            const data = try resource_directory.allocReadResourceByID(allocator, id);
+            const data = try repository.allocReadResourceByID(allocator, id);
             break :init PolygonResource.new(data);
         } else {
             break :init null;
@@ -119,12 +120,12 @@ test "Parse polygon instructions for every game part" {
     var game_dir = validFixtureDir() catch return;
     defer game_dir.close();
 
-    const resource_directory = try ResourceDirectory.new(&game_dir);
+    var resource_directory = try ResourceDirectory.new(&game_dir);
 
     var count: usize = 0;
     for (GamePart.Enum.all) |game_part| {
-        count += try parsePolygonInstructionsForGamePart(testing.allocator, resource_directory, game_part);
+        count += try parsePolygonInstructionsForGamePart(testing.allocator, &resource_directory, game_part);
     }
 
-    //std.debug.print("\n{} polygon(s) successfully parsed.\n", .{count});
+    std.log.debug("\n{} polygon(s) successfully parsed.\n", .{count});
 }

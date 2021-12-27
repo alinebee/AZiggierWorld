@@ -1,6 +1,16 @@
-//! This file defines a type for loading resources from a filesystem directory
-//! that contains Another World game files.
+//! A type representing a filesystem directory that contains Another World game files.
+//! Use the `repository()` method to get a standard Repository interface for loading game data.
+//! See repository.zig for the available methods on that interface.
+//!
+//! Usage:
+//! ------
+//! const game_dir = try std.fs.openDirAbsolute("/path/to/another/world/", .{});
+//! var directory = try ResourceDirectory.new(game_dir);
+//! const repository = directory.repository();
+//! const first_resource_descriptor = try repository.resourceDescriptor(0);
+//! const game_data = try repository.allocReadResource(my_allocator, first_resource_descriptor);
 
+const Repository = @import("repository.zig");
 const ResourceDescriptor = @import("resource_descriptor.zig");
 const ResourceID = @import("../values/resource_id.zig");
 const Filename = @import("filename.zig");
@@ -58,12 +68,18 @@ pub const Instance = struct {
         return self;
     }
 
+    pub fn repository(self: *Instance) Repository.Interface {
+        return Repository.Interface.init(self, bufReadResource, resourceDescriptors);
+    }
+
+    // - Private methods -
+
     /// Read the specified resource from the appropriate BANKXX file into the provided buffer.
     /// Returns a slice representing the portion of `buffer` that contains resource data.
     /// Returns an error if `buffer` was not large enough to hold the data or if the data
     /// could not be read or decompressed.
     /// In the event of an error, `buffer` may contain partially-loaded game data.
-    pub fn bufReadResource(self: Instance, buffer: []u8, descriptor: ResourceDescriptor.Instance) ![]const u8 {
+    fn bufReadResource(self: *const Instance, buffer: []u8, descriptor: ResourceDescriptor.Instance) ![]const u8 {
         if (buffer.len < descriptor.uncompressed_size) {
             return error.BufferTooSmall;
         }
@@ -80,51 +96,11 @@ pub const Instance = struct {
         return destination;
     }
 
-    /// Allocate a buffer and read the specified resource from the appropriate
-    /// BANKXX file into it.
-    /// Returns a slice that contains the decompressed resource data.
-    /// Caller owns the returned slice and must free it with `allocator.free`.
-    /// Returns an error if the allocator failed to allocate memory or if the data
-    /// could not be read or decompressed.
-    pub fn allocReadResource(self: Instance, allocator: mem.Allocator, descriptor: ResourceDescriptor.Instance) ![]const u8 {
-        // Create a buffer just large enough to decompress the resource into.
-        var destination = try allocator.alloc(u8, descriptor.uncompressed_size);
-        errdefer allocator.free(destination);
-
-        return try self.bufReadResource(destination, descriptor);
-    }
-
-    /// Allocate a buffer and read the resource with the specified ID
-    /// from the appropriate BANKXX file into it.
-    /// Returns a slice that contains the decompressed resource data.
-    /// Caller owns the returned slice and must free it with `allocator.free`.
-    /// Returns an error if the resource ID was invalid, the allocator failed
-    /// to allocate memory, or the data could not be read or decompressed.
-    pub fn allocReadResourceByID(self: Instance, allocator: mem.Allocator, id: ResourceID.Raw) ![]const u8 {
-        return self.allocReadResource(allocator, try self.resourceDescriptor(id));
-    }
-
     /// Returns a list of all valid resource descriptors,
     /// loaded from the MEMLIST.BIN file in the game directory.
-    pub fn resourceDescriptors(self: Instance) []const ResourceDescriptor.Instance {
+    fn resourceDescriptors(self: *const Instance) []const ResourceDescriptor.Instance {
         return self._raw_descriptors.constSlice();
     }
-
-    /// Returns the descriptor matching the specified ID.
-    /// Returns an InvalidResourceID error if the ID was out of range.
-    pub fn resourceDescriptor(self: Instance, id: ResourceID.Raw) !ResourceDescriptor.Instance {
-        try self.validateResourceID(id);
-        return self._raw_descriptors.buffer[id];
-    }
-
-    /// Returns an error if the specified resource ID is out of range for this game directory.
-    pub fn validateResourceID(self: Instance, id: ResourceID.Raw) !void {
-        if (id >= self._raw_descriptors.len) {
-            return error.InvalidResourceID;
-        }
-    }
-
-    // - Private methods -
 
     /// Given the filename of an Another World data file, opens the corresponding file
     /// in the game directory for reading.

@@ -1,10 +1,25 @@
-//! Defines a mock equivalent of ResourceDirectory.Instance for unit tests
+//! A mock equivalent of ResourceDirectory.Instance, intended for unit tests
 //! that need to test resource-loading pathways but don't want to depend
 //! on the presence of real game files.
 //!
 //! This mock resource repository provides a configurable list of resource descriptors;
 //! attempts to load any descriptor will produce either a configurable error,
 //! or a pointer to garbage data of an appropriate length for that resource.
+//!
+//! Use the `repository()` method to get a standard Repository interface for loading game data.
+//! See repository.zig for the available methods on that interface.
+//!
+//! Usage:
+//! ------
+//! const resource_descriptors = []ResourceDescriptor.Instance { descriptor1, descriptor2...descriptorN };
+//! const error_to_produce_on_read: ?anyerror = null;
+//! var mock = MockRepository.Instance.init(resource_descriptors, error_to_produce_on_read);
+//! const repository = mock.repository();
+//!
+//! const first_resource_descriptor = try repository.resourceDescriptor(0);
+//! try testing.expectEqual(0, mock.read_count);
+//! const garbage_data = try repository.allocReadResource(testing.allocator, first_resource_descriptor);
+//! try testing.expectEqual(1, mock.read_count);
 
 const ResourceDescriptor = @import("resource_descriptor.zig");
 const ResourceID = @import("../values/resource_id.zig");
@@ -19,7 +34,7 @@ const DescriptorStorage = BoundedArray(ResourceDescriptor.Instance, static_limit
 
 pub const Instance = struct {
     /// The list of resources vended by this mock repository.
-    /// Access this via resourceDescriptors() instead of directly.
+    /// Access this via repository().resourceDescriptors() instead of directly.
     _raw_descriptors: DescriptorStorage,
 
     /// An optional error returned by `bufReadResource` to simulate file-reading or decompression errors.
@@ -27,6 +42,7 @@ pub const Instance = struct {
     read_error: ?anyerror,
 
     /// The number of times a resource has been loaded, whether the load succeeded or failed.
+    /// Incremented by calls to repository().bufReadResource() or any of its derived methods.
     read_count: usize = 0,
 
     /// Create a new mock repository that exposes the specified resource descriptors,
@@ -40,14 +56,14 @@ pub const Instance = struct {
     }
 
     pub fn repository(self: *Instance) Repository.Interface {
-        return Repository.Interface.init(self, _bufReadResource, _resourceDescriptors);
+        return Repository.Interface.init(self, bufReadResource, resourceDescriptors);
     }
 
     /// Leaves the contents of the supplied buffer unchanged, and returns a pointer to the region
     /// of the buffer that would have been filled by resource data in a real implementation.
     /// Returns error.BufferTooSmall if the supplied buffer would not have been large enough
     /// to hold the real resource.
-    fn _bufReadResource(self: *Instance, buffer: []u8, descriptor: ResourceDescriptor.Instance) ![]const u8 {
+    fn bufReadResource(self: *Instance, buffer: []u8, descriptor: ResourceDescriptor.Instance) ![]const u8 {
         self.read_count += 1;
 
         if (buffer.len < descriptor.uncompressed_size) {
@@ -59,7 +75,7 @@ pub const Instance = struct {
 
     /// Returns a list of all valid resource descriptors,
     /// loaded from the MEMLIST.BIN file in the game directory.
-    fn _resourceDescriptors(self: *const Instance) []const ResourceDescriptor.Instance {
+    fn resourceDescriptors(self: *const Instance) []const ResourceDescriptor.Instance {
         return self._raw_descriptors.constSlice();
     }
 };

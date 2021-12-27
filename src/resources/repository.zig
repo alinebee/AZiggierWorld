@@ -1,3 +1,6 @@
+//! Provides a standard interface for accessing Another World resource data from a data source,
+//! e.g. a directory on the local filesystem.
+
 const ResourceDescriptor = @import("resource_descriptor.zig");
 const ResourceID = @import("../values/resource_id.zig");
 
@@ -18,6 +21,8 @@ pub const Interface = struct {
         resourceDescriptors: fn (self: *anyopaque) []const ResourceDescriptor.Instance,
     };
 
+    /// Create a new type-erased "fat pointer" to a repository of Another World game data.
+    /// Intended to be called by implementors of the repository interface; should not be used directly.
     pub fn init(implementation_ptr: anytype, comptime bufReadResourceFn: fn (self: @TypeOf(implementation_ptr), buffer: []u8, descriptor: ResourceDescriptor.Instance) anyerror![]const u8, comptime resourceDescriptorsFn: fn (self: @TypeOf(implementation_ptr)) []const ResourceDescriptor.Instance) Interface {
         const Implementation = @TypeOf(implementation_ptr);
         const ptr_info = @typeInfo(Implementation);
