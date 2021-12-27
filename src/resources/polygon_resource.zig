@@ -293,7 +293,7 @@ fn parseOffset(reader: anytype, scale: PolygonScale.Raw) !Point.Instance {
 // -- Data examples --
 
 // zig fmt: off
-const DataExamples = struct {
+pub const DataExamples = struct {
     // - Individual header examples -
 
     const polygon_entry_header = [_]u8{0b1100_1010}; // Lower 6 bits define draw mode with solid color 0xA (0b1010)
@@ -370,7 +370,7 @@ const DataExamples = struct {
     // - Group 1 points to polygon 2, polygon 1, group 2
     // - Group 2 points to polygon 2
     // Should result in iterating 3 polygons.
-    const resource = [_]u8{}
+    pub const resource = [_]u8{}
         // Block contents                           // Address
         // --------------                           // -------
         ++ polygon_entry_header ++ polygon_1        // 0

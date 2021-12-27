@@ -20,16 +20,16 @@ pub const Interface = struct {
     implementation: *anyopaque,
     vtable: *const TypeErasedVTable,
 
-    const Self = @This();
-
     const TypeErasedVTable = struct {
         bufReadResource: fn (self: *anyopaque, buffer: []u8, descriptor: ResourceDescriptor.Instance) anyerror![]const u8,
         resourceDescriptors: fn (self: *anyopaque) []const ResourceDescriptor.Instance,
     };
 
+    const Self = @This();
+
     /// Create a new type-erased "fat pointer" that reads from a repository of Another World game data.
     /// Intended to be called by repositories to create a reader interface; should not be used directly.
-    pub fn init(implementation_ptr: anytype, comptime bufReadResourceFn: fn (self: @TypeOf(implementation_ptr), buffer: []u8, descriptor: ResourceDescriptor.Instance) anyerror![]const u8, comptime resourceDescriptorsFn: fn (self: @TypeOf(implementation_ptr)) []const ResourceDescriptor.Instance) Interface {
+    pub fn init(implementation_ptr: anytype, comptime bufReadResourceFn: fn (self: @TypeOf(implementation_ptr), buffer: []u8, descriptor: ResourceDescriptor.Instance) anyerror![]const u8, comptime resourceDescriptorsFn: fn (self: @TypeOf(implementation_ptr)) []const ResourceDescriptor.Instance) Self {
         const Implementation = @TypeOf(implementation_ptr);
         const ptr_info = @typeInfo(Implementation);
 
@@ -43,6 +43,7 @@ pub const Interface = struct {
                 const self = @ptrCast(Implementation, @alignCast(alignment, type_erased_self));
                 return @call(.{ .modifier = .always_inline }, bufReadResourceFn, .{ self, buffer, descriptor });
             }
+
             fn resourceDescriptorsImpl(type_erased_self: *anyopaque) []const ResourceDescriptor.Instance {
                 const self = @ptrCast(Implementation, @alignCast(alignment, type_erased_self));
                 return @call(.{ .modifier = .always_inline }, resourceDescriptorsFn, .{self});

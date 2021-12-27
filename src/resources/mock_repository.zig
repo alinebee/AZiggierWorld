@@ -257,7 +257,7 @@ test "bufReadResource returns slice of original buffer filled with bit pattern w
     const result = try repository.reader().bufReadResource(&buffer, example_descriptor);
     try testing.expectEqual(@ptrToInt(&buffer), @ptrToInt(result.ptr));
     try testing.expectEqual(example_descriptor.uncompressed_size, result.len);
-    try testing.expectEqualSlices(u8, &expected_buffer_contents, &buffer);
+    try testing.expectEqual(expected_buffer_contents, buffer);
 }
 
 test "bufReadResource returns supplied error and leaves buffer alone when buffer is appropriate size" {
@@ -270,7 +270,7 @@ test "bufReadResource returns supplied error and leaves buffer alone when buffer
     try testing.expectEqual(0, repository.read_count);
     try testing.expectError(error.ChecksumFailed, repository.reader().bufReadResource(&buffer, example_descriptor));
     try testing.expectEqual(1, repository.read_count);
-    try testing.expectEqualSlices(u8, &expected_buffer_contents, &buffer);
+    try testing.expectEqual(expected_buffer_contents, buffer);
 }
 
 test "bufReadResource returns error.BufferTooSmall if buffer is too small for resource, even if another error was specified" {
@@ -283,7 +283,7 @@ test "bufReadResource returns error.BufferTooSmall if buffer is too small for re
     try testing.expectEqual(0, repository.read_count);
     try testing.expectError(error.BufferTooSmall, repository.reader().bufReadResource(&buffer, example_descriptor));
     try testing.expectEqual(1, repository.read_count);
-    try testing.expectEqualSlices(u8, &expected_buffer_contents, &buffer);
+    try testing.expectEqual(expected_buffer_contents, buffer);
 }
 
 test "resourceDescriptors returns expected descriptors" {
