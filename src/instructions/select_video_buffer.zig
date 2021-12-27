@@ -48,7 +48,7 @@ pub const BytecodeExamples = struct {
 
 const testing = @import("../utils/testing.zig");
 const expectParse = @import("test_helpers/parse.zig").expectParse;
-const MockMachine = @import("test_helpers/mock_machine.zig");
+const MockMachine = @import("../machine/test_helpers/mock_machine.zig");
 
 test "parse parses valid bytecode and consumes 2 bytes" {
     const instruction = try expectParse(parse, &BytecodeExamples.valid, 2);
