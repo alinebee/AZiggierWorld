@@ -18,6 +18,7 @@
 //!   a background video buffer. That same memory location is reused for every bitmap resource
 //!   that is loaded; it is never unloaded nor accessed outside of populating a video buffer.
 
+const Repository = @import("../resources/repository.zig");
 const ResourceDirectory = @import("../resources/resource_directory.zig");
 const ResourceID = @import("../values/resource_id.zig");
 const ResourceType = @import("../values/resource_type.zig");
@@ -67,144 +68,140 @@ const BitmapRegion = [bitmap_region_size]u8;
 /// and loads game data from the specified repository.
 /// All resources will begin initially unloaded.
 /// The returned instance must be destroyed by calling `deinit`.
-pub fn new(allocator: mem.Allocator, repository: anytype) !Instance(@TypeOf(repository)) {
-    return Instance(@TypeOf(repository)).init(allocator, repository);
+pub fn new(allocator: mem.Allocator, repository: Repository.Interface) !Instance {
+    return Instance.init(allocator, repository);
 }
 
-pub fn Instance(comptime Repository: type) type {
-    return struct {
-        /// The allocator used for loading resources into memory.
-        allocator: mem.Allocator,
-        /// The data source to load resource data from: typically a directory on the local filesystem.
-        repository: Repository,
-        /// The current location of each resource ID in memory, or null if that resource ID is not loaded.
-        /// Should not be accessed directly: instead use resourceLocation(id).
-        resource_locations: [ResourceDirectory.max_resource_descriptors]PossibleResourceLocation,
-        /// The fixed memory region used for temporarily loading bitmap data.
-        temporary_bitmap_region: *BitmapRegion,
+pub const Instance = struct {
+    /// The allocator used for loading resources into memory.
+    allocator: mem.Allocator,
+    /// The data source to load resource data from: typically a directory on the local filesystem.
+    repository: Repository.Interface,
+    /// The current location of each resource ID in memory, or null if that resource ID is not loaded.
+    /// Should not be accessed directly: instead use resourceLocation(id).
+    resource_locations: [ResourceDirectory.max_resource_descriptors]PossibleResourceLocation,
+    /// The fixed memory region used for temporarily loading bitmap data.
+    temporary_bitmap_region: *BitmapRegion,
 
-        const Self = @This();
+    const Self = @This();
 
-        /// Creates a new instance that uses the specified allocator for allocating memory
-        /// and loads game data from the specified repository.
-        /// All resources will begin initially unloaded.
-        /// The returned instance must be destroyed by calling `deinit`.
-        pub fn init(allocator: mem.Allocator, repository: Repository) !Self {
-            return Self{
-                .allocator = allocator,
-                .repository = repository,
-                .resource_locations = .{null} ** ResourceDirectory.max_resource_descriptors,
-                .temporary_bitmap_region = try allocator.create(BitmapRegion),
-            };
-        }
+    /// Creates a new instance that uses the specified allocator for allocating memory
+    /// and loads game data from the specified repository.
+    /// All resources will begin initially unloaded.
+    /// The returned instance must be destroyed by calling `deinit`.
+    pub fn init(allocator: mem.Allocator, repository: Repository.Interface) !Self {
+        return Self{
+            .allocator = allocator,
+            .repository = repository,
+            .resource_locations = .{null} ** ResourceDirectory.max_resource_descriptors,
+            .temporary_bitmap_region = try allocator.create(BitmapRegion),
+        };
+    }
 
-        /// Free all loaded resources and allocated buffers, invalidating any references to them.
-        /// The instance should not be used after this.
-        pub fn deinit(self: *Self) void {
-            for (self.resource_locations) |possible_location| {
-                if (possible_location) |location| {
-                    self.allocator.free(location);
-                }
-            }
-
-            self.allocator.free(self.temporary_bitmap_region);
-            self.* = undefined;
-
-            // TODO: handle repository types that have their own deinit methods.
-        }
-
-        /// The memory location of the resource with the specified ID, or `null` if the resource is not loaded.
-        /// Returns an error if the location is out of range.
-        pub fn resourceLocation(self: Self, id: ResourceID.Raw) !PossibleResourceLocation {
-            try self.repository.validateResourceID(id);
-            return self.resource_locations[id];
-        }
-
-        /// Flush all loaded resources from memory, then load the resources for the specified game part.
-        /// Returns a structure with the locations of all loaded resources.
-        /// Returns an error if loading any game part resource failed.
-        ///
-        /// If an error occurs, all previously loaded resources will still have been unloaded,
-        /// and some resources for the specified game part may remain loaded. In this situation,
-        /// it is safe to call `loadGamePart` on the instance again.
-        pub fn loadGamePart(self: *Self, game_part: GamePart.Enum) !GamePartResourceLocations {
-            for (self.resource_locations) |*location| {
-                self.unload(location);
-            }
-
-            const resource_ids = game_part.resourceIDs();
-            return GamePartResourceLocations{
-                .bytecode = try self.loadIfNeeded(resource_ids.bytecode),
-                .palettes = try self.loadIfNeeded(resource_ids.palettes),
-                .polygons = try self.loadIfNeeded(resource_ids.polygons),
-                .animations = if (resource_ids.animations) |resource_id|
-                    try self.loadIfNeeded(resource_id)
-                else
-                    null,
-            };
-        }
-
-        /// Loads an individual resource by ID if it is not already loaded,
-        /// and returns its memory location.
-        ///
-        /// Returns an error if the specified resource ID is invalid, the resource at that ID
-        /// could not be read from disk, or the resource is of a type that can only be loaded
-        /// by `loadGamePart` (not individually).
-        pub fn loadIndividualResource(self: *Self, id: ResourceID.Raw) !IndividualResourceLocation {
-            const descriptor = try self.repository.resourceDescriptor(id);
-
-            return switch (descriptor.type) {
-                .sound_or_empty, .music => IndividualResourceLocation{
-                    .audio = try self.loadIfNeeded(id),
-                },
-                .bitmap => IndividualResourceLocation{
-                    .temporary_bitmap = try self.repository.bufReadResource(self.temporary_bitmap_region, descriptor),
-                },
-                .bytecode, .palettes, .polygons, .sprite_polygons => error.GamePartOnlyResourceType,
-            };
-        }
-
-        /// Unload all resources that have been loaded with `loadIndividualResource`,
-        /// invalidating any pointers to the memory locations of those resources.
-        /// Any resources that are intrinsic to the current game part will remain loaded.
-        pub fn unloadAllIndividualResources(self: *Self) void {
-            for (self.repository.resourceDescriptors()) |descriptor, id| {
-                switch (descriptor.type) {
-                    // These resource types can only be loaded by loadIndividualResource(id).
-                    .sound_or_empty, .music, .bitmap => self.unload(&self.resource_locations[id]),
-                    // These resource types can only be loaded by loadGamePart(game_part) and should be left alone.
-                    .bytecode, .palettes, .polygons, .sprite_polygons => continue,
-                }
-            }
-        }
-
-        // -- Private methods --
-
-        /// Loads a resource into memory if it is not already loaded, and returns its location.
-        /// Returns an error if the specified resource ID is invalid or the resource with that ID
-        /// could not be read from disk.
-        fn loadIfNeeded(self: *Self, id: ResourceID.Raw) ![]const u8 {
-            try self.repository.validateResourceID(id);
-
-            if (self.resource_locations[id]) |location| {
-                return location;
-            } else {
-                const location = try self.repository.allocReadResourceByID(self.allocator, id);
-                self.resource_locations[id] = location;
-                return location;
-            }
-        }
-
-        /// Unload a resource by reference.
-        /// Invalidates any pointer to that resource's location.
-        fn unload(self: *Self, possible_location: *PossibleResourceLocation) void {
-            if (possible_location.*) |location| {
+    /// Free all loaded resources and allocated buffers, invalidating any references to them.
+    /// The instance should not be used after this.
+    pub fn deinit(self: *Self) void {
+        for (self.resource_locations) |possible_location| {
+            if (possible_location) |location| {
                 self.allocator.free(location);
-                possible_location.* = null;
             }
         }
-    };
-}
+
+        self.allocator.free(self.temporary_bitmap_region);
+        self.* = undefined;
+    }
+
+    /// The memory location of the resource with the specified ID, or `null` if the resource is not loaded.
+    /// Returns an error if the location is out of range.
+    pub fn resourceLocation(self: Self, id: ResourceID.Raw) !PossibleResourceLocation {
+        try self.repository.validateResourceID(id);
+        return self.resource_locations[id];
+    }
+
+    /// Flush all loaded resources from memory, then load the resources for the specified game part.
+    /// Returns a structure with the locations of all loaded resources.
+    /// Returns an error if loading any game part resource failed.
+    ///
+    /// If an error occurs, all previously loaded resources will still have been unloaded,
+    /// and some resources for the specified game part may remain loaded. In this situation,
+    /// it is safe to call `loadGamePart` on the instance again.
+    pub fn loadGamePart(self: *Self, game_part: GamePart.Enum) !GamePartResourceLocations {
+        for (self.resource_locations) |*location| {
+            self.unload(location);
+        }
+
+        const resource_ids = game_part.resourceIDs();
+        return GamePartResourceLocations{
+            .bytecode = try self.loadIfNeeded(resource_ids.bytecode),
+            .palettes = try self.loadIfNeeded(resource_ids.palettes),
+            .polygons = try self.loadIfNeeded(resource_ids.polygons),
+            .animations = if (resource_ids.animations) |resource_id|
+                try self.loadIfNeeded(resource_id)
+            else
+                null,
+        };
+    }
+
+    /// Loads an individual resource by ID if it is not already loaded,
+    /// and returns its memory location.
+    ///
+    /// Returns an error if the specified resource ID is invalid, the resource at that ID
+    /// could not be read from disk, or the resource is of a type that can only be loaded
+    /// by `loadGamePart` (not individually).
+    pub fn loadIndividualResource(self: *Self, id: ResourceID.Raw) !IndividualResourceLocation {
+        const descriptor = try self.repository.resourceDescriptor(id);
+
+        return switch (descriptor.type) {
+            .sound_or_empty, .music => IndividualResourceLocation{
+                .audio = try self.loadIfNeeded(id),
+            },
+            .bitmap => IndividualResourceLocation{
+                .temporary_bitmap = try self.repository.bufReadResource(self.temporary_bitmap_region, descriptor),
+            },
+            .bytecode, .palettes, .polygons, .sprite_polygons => error.GamePartOnlyResourceType,
+        };
+    }
+
+    /// Unload all resources that have been loaded with `loadIndividualResource`,
+    /// invalidating any pointers to the memory locations of those resources.
+    /// Any resources that are intrinsic to the current game part will remain loaded.
+    pub fn unloadAllIndividualResources(self: *Self) void {
+        for (self.repository.resourceDescriptors()) |descriptor, id| {
+            switch (descriptor.type) {
+                // These resource types can only be loaded by loadIndividualResource(id).
+                .sound_or_empty, .music, .bitmap => self.unload(&self.resource_locations[id]),
+                // These resource types can only be loaded by loadGamePart(game_part) and should be left alone.
+                .bytecode, .palettes, .polygons, .sprite_polygons => continue,
+            }
+        }
+    }
+
+    // -- Private methods --
+
+    /// Loads a resource into memory if it is not already loaded, and returns its location.
+    /// Returns an error if the specified resource ID is invalid or the resource with that ID
+    /// could not be read from disk.
+    fn loadIfNeeded(self: *Self, id: ResourceID.Raw) ![]const u8 {
+        try self.repository.validateResourceID(id);
+
+        if (self.resource_locations[id]) |location| {
+            return location;
+        } else {
+            const location = try self.repository.allocReadResourceByID(self.allocator, id);
+            self.resource_locations[id] = location;
+            return location;
+        }
+    }
+
+    /// Unload a resource by reference.
+    /// Invalidates any pointer to that resource's location.
+    fn unload(self: *Self, possible_location: *PossibleResourceLocation) void {
+        if (possible_location.*) |location| {
+            self.allocator.free(location);
+            possible_location.* = null;
+        }
+    }
+};
 
 pub const Error = error{
     /// `loadIndividualResource` attempted to load a resource that can only be loaded by `loadGamePart`.
@@ -218,11 +215,15 @@ const MockRepository = @import("../resources/mock_repository.zig");
 const FailingAllocator = @import("std").testing.FailingAllocator;
 
 const test_descriptors = &MockRepository.FixtureData.descriptors;
-const test_repository = MockRepository.Instance.init(test_descriptors, null);
-const failing_repository = MockRepository.Instance.init(test_descriptors, error.ChecksumFailed);
+
+var test_data_source = MockRepository.Instance.init(test_descriptors, null);
+var failing_data_source = MockRepository.Instance.init(test_descriptors, error.ChecksumFailed);
+
+const test_repository = test_data_source.repository();
+const failing_repository = failing_data_source.repository();
 
 test "Ensure everything compiles" {
-    testing.refAllDecls(Instance(*ResourceDirectory.Instance));
+    testing.refAllDecls(Instance);
 }
 
 // -- new tests --
@@ -332,7 +333,7 @@ test "loadIndividualResource returns load error from repository" {
 test "loadIndividualResource returns error.OutOfMemory if allocation fails" {
     var fail_on_second_allocation_allocator = FailingAllocator.init(testing.allocator, 1);
 
-    var memory = try new(&fail_on_second_allocation_allocator.allocator, test_repository);
+    var memory = try new(fail_on_second_allocation_allocator.allocator(), test_repository);
     defer memory.deinit();
 
     const resource_id = MockRepository.FixtureData.music_resource_id;
@@ -342,7 +343,7 @@ test "loadIndividualResource returns error.OutOfMemory if allocation fails" {
 test "loadIndividualResource does not allocate additional memory when loading bitmaps" {
     var fail_on_second_allocation_allocator = FailingAllocator.init(testing.allocator, 1);
 
-    var memory = try new(&fail_on_second_allocation_allocator.allocator, test_repository);
+    var memory = try new(fail_on_second_allocation_allocator.allocator(), test_repository);
     defer memory.deinit();
 
     const resource_id = MockRepository.FixtureData.bitmap_resource_id;
@@ -350,41 +351,41 @@ test "loadIndividualResource does not allocate additional memory when loading bi
 }
 
 test "loadIndividualResource avoids reloading already-loaded audio resources" {
-    var counted_repository = MockRepository.Instance.init(test_descriptors, null);
+    var counted_data_source = MockRepository.Instance.init(test_descriptors, null);
 
-    var memory = try new(testing.allocator, &counted_repository);
+    var memory = try new(testing.allocator, counted_data_source.repository());
     defer memory.deinit();
 
-    try testing.expectEqual(0, counted_repository.read_count);
+    try testing.expectEqual(0, counted_data_source.read_count);
 
     const resource_id = MockRepository.FixtureData.music_resource_id;
     const location_of_first_load = try memory.loadIndividualResource(resource_id);
 
-    try testing.expectEqual(1, counted_repository.read_count);
+    try testing.expectEqual(1, counted_data_source.read_count);
 
     const location_of_second_load = try memory.loadIndividualResource(resource_id);
 
     try testing.expectEqual(location_of_first_load, location_of_second_load);
-    try testing.expectEqual(1, counted_repository.read_count);
+    try testing.expectEqual(1, counted_data_source.read_count);
 }
 
 test "loadIndividualResource always reloads bitmap resources" {
-    var counted_repository = MockRepository.Instance.init(test_descriptors, null);
+    var counted_data_source = MockRepository.Instance.init(test_descriptors, null);
 
-    var memory = try new(testing.allocator, &counted_repository);
+    var memory = try new(testing.allocator, counted_data_source.repository());
     defer memory.deinit();
 
-    try testing.expectEqual(0, counted_repository.read_count);
+    try testing.expectEqual(0, counted_data_source.read_count);
 
     const resource_id = MockRepository.FixtureData.bitmap_resource_id;
     const location_of_first_load = try memory.loadIndividualResource(resource_id);
 
-    try testing.expectEqual(1, counted_repository.read_count);
+    try testing.expectEqual(1, counted_data_source.read_count);
 
     const location_of_second_load = try memory.loadIndividualResource(resource_id);
 
     try testing.expectEqual(location_of_first_load, location_of_second_load);
-    try testing.expectEqual(2, counted_repository.read_count);
+    try testing.expectEqual(2, counted_data_source.read_count);
 }
 
 // -- loadGamePart tests --
@@ -413,7 +414,6 @@ test "loadGamePart does not load animations for game part without animations" {
     defer memory.deinit();
 
     const game_part: GamePart.Enum = .copy_protection;
-    const resource_ids = game_part.resourceIDs();
     const locations = try memory.loadGamePart(game_part);
 
     try testing.expectEqual(null, locations.animations);
@@ -468,9 +468,9 @@ test "loadGamePart unloads any previously loaded individual resources" {
 
 test "loadGamePart returns error.InvalidResourceID on out-of-bounds resource ID" {
     // Snip off the descriptor list halfway through the resource IDs for the first game part
-    const truncated_repository = MockRepository.Instance.init(test_descriptors[0..0x15], null);
+    var truncated_data_source = MockRepository.Instance.init(test_descriptors[0..0x15], null);
 
-    var memory = try new(testing.allocator, truncated_repository);
+    var memory = try new(testing.allocator, truncated_data_source.repository());
     defer memory.deinit();
 
     try testing.expectError(error.InvalidResourceID, memory.loadGamePart(.copy_protection));
@@ -486,7 +486,7 @@ test "loadGamePart returns load error from repository" {
 test "loadGamePart returns error.OutOfMemory if allocation fails" {
     var fail_on_second_allocation_allocator = FailingAllocator.init(testing.allocator, 1);
 
-    var memory = try new(&fail_on_second_allocation_allocator.allocator, test_repository);
+    var memory = try new(fail_on_second_allocation_allocator.allocator(), test_repository);
     defer memory.deinit();
 
     try testing.expectError(error.OutOfMemory, memory.loadGamePart(.copy_protection));

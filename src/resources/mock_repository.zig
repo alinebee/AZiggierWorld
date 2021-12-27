@@ -8,14 +8,14 @@
 
 const ResourceDescriptor = @import("resource_descriptor.zig");
 const ResourceID = @import("../values/resource_id.zig");
+const Repository = @import("repository.zig");
 
 const static_limits = @import("../static_limits.zig");
 
 const mem = @import("std").mem;
 const BoundedArray = @import("std").BoundedArray;
 
-pub const max_resource_descriptors = static_limits.max_resource_descriptors;
-const DescriptorStorage = BoundedArray(ResourceDescriptor.Instance, max_resource_descriptors);
+const DescriptorStorage = BoundedArray(ResourceDescriptor.Instance, static_limits.max_resource_descriptors);
 
 pub const Instance = struct {
     /// The list of resources vended by this mock repository.
@@ -39,11 +39,15 @@ pub const Instance = struct {
         };
     }
 
+    pub fn repository(self: *Instance) Repository.Interface {
+        return Repository.Interface.init(self, _bufReadResource, _resourceDescriptors);
+    }
+
     /// Leaves the contents of the supplied buffer unchanged, and returns a pointer to the region
     /// of the buffer that would have been filled by resource data in a real implementation.
     /// Returns error.BufferTooSmall if the supplied buffer would not have been large enough
     /// to hold the real resource.
-    pub fn bufReadResource(self: *Instance, buffer: []u8, descriptor: ResourceDescriptor.Instance) ![]const u8 {
+    fn _bufReadResource(self: *Instance, buffer: []u8, descriptor: ResourceDescriptor.Instance) ![]const u8 {
         self.read_count += 1;
 
         if (buffer.len < descriptor.uncompressed_size) {
@@ -53,42 +57,10 @@ pub const Instance = struct {
         return self.read_error orelse buffer[0..descriptor.uncompressed_size];
     }
 
-    /// Allocate and return a buffer large enough to store the specified resource.
-    /// This buffer will be filled with garbage rather than parseable resource data.
-    /// Returns an error if the allocator could not allocate memory for the buffer.
-    pub fn allocReadResource(self: *Instance, allocator: mem.Allocator, descriptor: ResourceDescriptor.Instance) ![]const u8 {
-        // Create a buffer just large enough to decompress the resource into.
-        var destination = try allocator.alloc(u8, descriptor.uncompressed_size);
-        errdefer allocator.free(destination);
-
-        return self.bufReadResource(destination, descriptor);
-    }
-
-    /// Allocate and return a buffer large enough to store the resource with the specified ID.
-    /// This buffer will be filled with garbage rather than parseable resource data.
-    /// Returns an error if the resource ID was invalid.
-    pub fn allocReadResourceByID(self: *Instance, allocator: mem.Allocator, id: ResourceID.Raw) ![]const u8 {
-        return self.allocReadResource(allocator, try self.resourceDescriptor(id));
-    }
-
     /// Returns a list of all valid resource descriptors,
     /// loaded from the MEMLIST.BIN file in the game directory.
-    pub fn resourceDescriptors(self: Instance) []const ResourceDescriptor.Instance {
+    fn _resourceDescriptors(self: *const Instance) []const ResourceDescriptor.Instance {
         return self._raw_descriptors.constSlice();
-    }
-
-    /// Returns the descriptor matching the specified ID.
-    /// Returns an InvalidResourceID error if the ID was out of range.
-    pub fn resourceDescriptor(self: Instance, id: ResourceID.Raw) !ResourceDescriptor.Instance {
-        try self.validateResourceID(id);
-        return self._raw_descriptors.items[id];
-    }
-
-    /// Returns an error if the specified resource ID is out of range for this game directory.
-    pub fn validateResourceID(self: Instance, id: ResourceID.Raw) !void {
-        if (id >= self._raw_descriptors.len) {
-            return error.InvalidResourceID;
-        }
     }
 };
 
@@ -242,62 +214,44 @@ const example_descriptor = ResourceDescriptor.Instance{
 };
 
 test "bufReadResource returns slice of original buffer when buffer is appropriate size" {
-    var repository = Instance.init(&.{example_descriptor}, null);
+    var instance = Instance.init(&.{example_descriptor}, null);
 
     var buffer = try testing.allocator.alloc(u8, example_descriptor.uncompressed_size * 2);
     defer testing.allocator.free(buffer);
 
-    try testing.expectEqual(0, repository.read_count);
-    const result = try repository.bufReadResource(buffer, example_descriptor);
+    try testing.expectEqual(0, instance.read_count);
+    const result = try instance.repository().bufReadResource(buffer, example_descriptor);
     try testing.expectEqual(@ptrToInt(result.ptr), @ptrToInt(buffer.ptr));
     try testing.expectEqual(result.len, example_descriptor.uncompressed_size);
-    try testing.expectEqual(1, repository.read_count);
+    try testing.expectEqual(1, instance.read_count);
 }
 
 test "bufReadResource returns supplied error when buffer is appropriate size" {
-    var repository = Instance.init(&.{example_descriptor}, error.ChecksumFailed);
+    var instance = Instance.init(&.{example_descriptor}, error.ChecksumFailed);
 
     var buffer = try testing.allocator.alloc(u8, example_descriptor.uncompressed_size * 2);
     defer testing.allocator.free(buffer);
 
-    try testing.expectEqual(0, repository.read_count);
-    try testing.expectError(error.ChecksumFailed, repository.bufReadResource(buffer, example_descriptor));
-    try testing.expectEqual(1, repository.read_count);
+    try testing.expectEqual(0, instance.read_count);
+    try testing.expectError(error.ChecksumFailed, instance.repository().bufReadResource(buffer, example_descriptor));
+    try testing.expectEqual(1, instance.read_count);
 }
 
 test "bufReadResource returns error.BufferTooSmall if buffer is too small for resource, even if another error was specified" {
-    var repository = Instance.init(&.{example_descriptor}, error.ChecksumFailed);
+    var instance = Instance.init(&.{example_descriptor}, error.ChecksumFailed);
 
     var buffer = try testing.allocator.alloc(u8, example_descriptor.uncompressed_size / 2);
     defer testing.allocator.free(buffer);
 
-    try testing.expectEqual(0, repository.read_count);
-    try testing.expectError(error.BufferTooSmall, repository.bufReadResource(buffer, example_descriptor));
-    try testing.expectEqual(1, repository.read_count);
+    try testing.expectEqual(0, instance.read_count);
+    try testing.expectError(error.BufferTooSmall, instance.repository().bufReadResource(buffer, example_descriptor));
+    try testing.expectEqual(1, instance.read_count);
 }
 
 test "resourceDescriptors returns expected descriptors" {
-    const repository = Instance.init(&FixtureData.descriptors, null);
+    var instance = Instance.init(&FixtureData.descriptors, null);
 
-    try testing.expectEqualSlices(ResourceDescriptor.Instance, repository.resourceDescriptors(), &FixtureData.descriptors);
-}
-
-test "resourceDescriptor returns expected descriptor by ID" {
-    const repository = Instance.init(&FixtureData.descriptors, null);
-
-    try testing.expectEqual(FixtureData.sprite_polygons_descriptor, repository.resourceDescriptor(0x11));
-}
-
-test "validateResourceDescriptor returns no error for resource ID in range" {
-    const repository = Instance.init(&FixtureData.descriptors, null);
-
-    try repository.validateResourceID(FixtureData.descriptors.len - 1);
-}
-
-test "validateResourceDescriptor returns no error for resource ID in range" {
-    const repository = Instance.init(&FixtureData.descriptors, null);
-
-    try testing.expectError(error.InvalidResourceID, repository.validateResourceID(FixtureData.descriptors.len));
+    try testing.expectEqualSlices(ResourceDescriptor.Instance, instance.repository().resourceDescriptors(), &FixtureData.descriptors);
 }
 
 test "Ensure everything compiles" {
