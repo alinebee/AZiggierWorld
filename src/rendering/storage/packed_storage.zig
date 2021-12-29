@@ -11,10 +11,12 @@
 //! Behind the scenes Zig takes care of the masking for us.)
 
 const ColorID = @import("../../values/color_id.zig");
+const Palette = @import("../../values/palette.zig");
 const Point = @import("../../values/point.zig");
 const Range = @import("../../values/range.zig");
 const DrawMode = @import("../../values/draw_mode.zig");
 
+const Surface = @import("../surface.zig");
 const IndexedBitmap = @import("../test_helpers/indexed_bitmap.zig");
 const PlanarBitmapResource = @import("../../resources/planar_bitmap_resource.zig");
 
@@ -161,6 +163,17 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
 
         // -- Public instance methods --
 
+        /// Render the contents of the buffer into a 24-bit host surface.
+        pub fn renderToSurface(self: Self, surface: *Surface.Instance(width, height), palette: Palette.Instance) void {
+            var outputIndex: usize = 0;
+            for (self.data) |native_color| {
+                surface[outputIndex] = palette[native_color.left];
+                outputIndex += 1;
+                surface[outputIndex] = palette[native_color.right];
+                outputIndex += 1;
+            }
+        }
+
         /// Fill the entire buffer with the specified color.
         pub fn fill(self: *Self, color: ColorID.Trusted) void {
             const native_color = filledColor(color);
@@ -277,6 +290,8 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
         pub fn toBitmap(self: Self) IndexedBitmap.Instance(width, height) {
             var bitmap: IndexedBitmap.Instance(width, height) = .{ .data = undefined };
 
+            // TODO: this would probably be more efficient if we iterated the storage's data
+            // instead of the bitmap's. But, this function is only used in tests right now.
             for (bitmap.data) |*row, y| {
                 for (row) |*column, x| {
                     const point = Point.Instance{

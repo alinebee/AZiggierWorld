@@ -1,5 +1,9 @@
-const expectBitmap = @import("indexed_bitmap.zig").expectBitmap;
 const PlanarBitmapResource = @import("../../resources/planar_bitmap_resource.zig");
+const Surface = @import("../surface.zig");
+const Palette = @import("../../values/palette.zig");
+
+const testing = @import("../../utils/testing.zig");
+const expectBitmap = @import("indexed_bitmap.zig").expectBitmap;
 
 // -- Test helpers --
 
@@ -13,7 +17,9 @@ pub fn expectPixels(expected: []const u8, actual: anytype) !void {
 
 /// Given a function that takes a width and height and constructs a buffer storage type,
 /// runs a suite of tests against the public interface of that type.
+///
 /// Usage:
+/// ------
 ///   const storage_test_suite = @import("storage_test_suite.zig");
 ///
 ///   test "Run storage interface tests" {
@@ -293,6 +299,45 @@ pub fn runTests(comptime Instance: anytype) void {
             ;
 
             try expectPixels(expected, buffer);
+        }
+
+        test "renderToSurface correctly renders 24-bit colors from specified palette" {
+            const Storage = Instance(4, 4);
+            const DestinationSurface = Surface.Instance(4, 4);
+
+            var source = Storage{};
+            var destination: DestinationSurface = undefined;
+
+            source.fillFromString(
+                \\FEDC
+                \\BA98
+                \\7654
+                \\3210
+            );
+
+            const palette = Palette.FixtureData.palette;
+            const expected = DestinationSurface{
+                palette[15],
+                palette[14],
+                palette[13],
+                palette[12],
+                palette[11],
+                palette[10],
+                palette[9],
+                palette[8],
+                palette[7],
+                palette[6],
+                palette[5],
+                palette[4],
+                palette[3],
+                palette[2],
+                palette[1],
+                palette[0],
+            };
+
+            source.renderToSurface(&destination, palette);
+
+            try testing.expectEqual(expected, destination);
         }
     };
 }

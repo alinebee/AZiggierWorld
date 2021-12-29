@@ -6,10 +6,12 @@
 //! versus 32,000 for the packed storage implementation.
 
 const ColorID = @import("../../values/color_id.zig");
+const Palette = @import("../../values/palette.zig");
 const Point = @import("../../values/point.zig");
 const Range = @import("../../values/range.zig");
 const DrawMode = @import("../../values/draw_mode.zig");
 
+const Surface = @import("../surface.zig");
 const IndexedBitmap = @import("../test_helpers/indexed_bitmap.zig");
 const PlanarBitmapResource = @import("../../resources/planar_bitmap_resource.zig");
 
@@ -109,6 +111,17 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
         };
 
         // -- Public instance methods --
+
+        /// Render the contents of the buffer into a 24-bit host surface.
+        pub fn renderToSurface(self: Self, surface: *Surface.Instance(width, height), palette: Palette.Instance) void {
+            var outputIndex: usize = 0;
+            for (self.data) |row| {
+                for (row) |color| {
+                    surface[outputIndex] = palette[color];
+                    outputIndex += 1;
+                }
+            }
+        }
 
         /// Fill the entire buffer with the specified color.
         pub fn fill(self: *Self, color: ColorID.Trusted) void {

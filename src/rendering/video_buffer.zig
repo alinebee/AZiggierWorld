@@ -9,6 +9,7 @@
 //! See packed_storage.zig and aligned_storage.zig for two storage implementations.
 
 const ColorID = @import("../values/color_id.zig");
+const Palette = @import("../values/palette.zig");
 const Point = @import("../values/point.zig");
 const Range = @import("../values/range.zig");
 const BoundingBox = @import("../values/bounding_box.zig");
@@ -16,6 +17,7 @@ const FixedPrecision = @import("../values/fixed_precision.zig");
 const DrawMode = @import("../values/draw_mode.zig");
 const Font = @import("../assets/font.zig");
 const Polygon = @import("polygon.zig");
+const Surface = @import("surface.zig");
 
 const math = @import("std").math;
 
@@ -34,6 +36,10 @@ pub fn Instance(comptime StorageFn: anytype, comptime width: usize, comptime hei
         pub const bounds = BoundingBox.new(0, 0, width - 1, height - 1);
 
         const Self = @This();
+
+        pub fn renderToSurface(self: Self, surface: *Surface.Instance(width, height), palette: Palette.Instance) void {
+            self.storage.renderToSurface(surface, palette);
+        }
 
         /// Fill every pixel in the buffer with the specified color.
         pub fn fill(self: *Self, color: ColorID.Trusted) void {
@@ -301,6 +307,44 @@ fn runTests(comptime Storage: anytype) void {
             try testing.expectEqual(0, Buffer.bounds.y.min);
             try testing.expectEqual(319, Buffer.bounds.x.max);
             try testing.expectEqual(199, Buffer.bounds.y.max);
+        }
+
+        test "renderToSurface correctly renders 24-bit colors from specified palette" {
+            const DestinationSurface = Surface.Instance(4, 4);
+
+            var buffer = new(Storage, 4, 4);
+            var destination: DestinationSurface = undefined;
+
+            buffer.storage.fillFromString(
+                \\FEDC
+                \\BA98
+                \\7654
+                \\3210
+            );
+
+            const palette = Palette.FixtureData.palette;
+            const expected = DestinationSurface{
+                palette[15],
+                palette[14],
+                palette[13],
+                palette[12],
+                palette[11],
+                palette[10],
+                palette[9],
+                palette[8],
+                palette[7],
+                palette[6],
+                palette[5],
+                palette[4],
+                palette[3],
+                palette[2],
+                palette[1],
+                palette[0],
+            };
+
+            buffer.renderToSurface(&destination, palette);
+
+            try testing.expectEqual(expected, destination);
         }
 
         test "fill fills buffer with specified color" {
