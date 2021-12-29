@@ -27,10 +27,10 @@ pub const Instance = struct {
     b: u8,
 };
 
-/// Color values are stored in resource data as 16-bit integers.
+/// Color values are stored in resource data as 16-bit big-endian integers.
 pub const Raw = u16;
 
-/// Convert a 16-bit raw color value into an RGB color.
+/// Convert a 16-bit raw color value from Another World game data into an RGB color.
 pub fn parse(raw: Raw) Instance {
     // Palette entries use 4 bits per channel but were stored
     // as 16 bits with the layout xxxxRRRRGGGGBBBB:

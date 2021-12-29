@@ -13,6 +13,7 @@
 //! http://fabiensanglard.net/another_world_polygons_amiga500/index.html
 
 const Color = @import("../values/color.zig");
+const Palette = @import("../values/palette.zig");
 const PaletteID = @import("../values/palette_id.zig");
 
 const static_limits = @import("../static_limits.zig");
@@ -21,14 +22,8 @@ const mem = @import("std").mem;
 /// The number of palettes inside a palette resource.
 const palette_count = static_limits.palette_count;
 
-/// The number of colors inside a palette.
-const color_count = static_limits.color_count;
-
-/// A 16-color palette parsed from Another World game data.
-pub const Palette = [color_count]Color.Instance;
-
 /// The size in bytes of an individual palette within an Another World palette resource.
-const raw_palette_size = @sizeOf(Color.Raw) * color_count; // 32 bytes
+pub const raw_palette_size = @sizeOf(Color.Raw) * static_limits.color_count; // 32 bytes
 
 pub const Instance = struct {
     /// Raw palette data read from Another World's resource files.
@@ -40,14 +35,18 @@ pub const Instance = struct {
 
     /// Returns the palette at the specified ID.
     /// Returns error.EndOfStream if the palette resource data was truncated.
-    pub fn palette(self: Self, palette_id: PaletteID.Trusted) !Palette {
+    pub fn palette(self: Self, palette_id: PaletteID.Trusted) !Palette.Instance {
         const start = @as(usize, palette_id) * raw_palette_size;
         const end = start + raw_palette_size;
 
         if (end > self.data.len) return error.EndOfStream;
+        // Palette colors are stored as 16-bit big-endian integers:
+        // Reinterpret the slice of bytes for this palette as pairs of big and little bytes.
+        // TODO: This could would probably be more readable if I used an I/O reader instead,
+        // but I second-guessed the efficiency of the standard library's implementation of them.
         const raw_palette = @bitCast([]const [2]u8, self.data[start..end]);
 
-        var pal: Palette = undefined;
+        var pal: Palette.Instance = undefined;
         for (pal) |*color, index| {
             const raw_color = mem.readIntBig(Color.Raw, &raw_palette[index]);
             color.* = Color.parse(raw_color);
@@ -99,7 +98,7 @@ const countingReader = @import("std").io.countingReader;
 
 test "Instance.at returns expected palettes from resource" {
     // zig fmt: off
-    const expected_palette = Palette {
+    const expected_palette = Palette.Instance {
         .{ .r = 0,      .g = 0,     .b = 0 },    // color 0
         .{ .r = 16,     .g = 16,    .b = 16 },   // color 1
         .{ .r = 32,     .g = 32,    .b = 32 },   // color 2
