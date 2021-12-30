@@ -56,7 +56,7 @@ pub const Instance = struct {
 
     /// Validates that the polygon has a legal number of vertices and the expected
     /// relationship of vertical distances.
-    /// Only used by tests; VideoBuffer.drawPolygon does a more restricted set of checks
+    /// Only used by tests; drawPolygon does a more restricted set of checks
     /// when rasterizing polygon data.
     pub fn validate(self: Instance) ValidationError!void {
         // Polygons must contain an even number of vertices

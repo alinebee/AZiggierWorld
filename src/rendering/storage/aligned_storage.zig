@@ -10,6 +10,7 @@ const Palette = @import("../../values/palette.zig");
 const Point = @import("../../values/point.zig");
 const Range = @import("../../values/range.zig");
 const DrawMode = @import("../../values/draw_mode.zig");
+const BoundingBox = @import("../../values/bounding_box.zig");
 
 const Surface = @import("../surface.zig");
 const IndexedBitmap = @import("../test_helpers/indexed_bitmap.zig");
@@ -32,6 +33,9 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
 
     return struct {
         data: Data = undefined,
+
+        /// The bounding box that encompasses all legal points within this buffer.
+        pub const bounds = BoundingBox.new(0, 0, width - 1, height - 1);
 
         const Self = @This();
 

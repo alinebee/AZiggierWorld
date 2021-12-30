@@ -7,8 +7,10 @@ const PolygonScale = @import("../values/polygon_scale.zig");
 const PolygonResource = @import("../resources/polygon_resource.zig");
 const PaletteResource = @import("../resources/palette_resource.zig");
 const Polygon = @import("../rendering/polygon.zig");
-const VideoBuffer = @import("../rendering/video_buffer.zig");
+
 const PackedStorage = @import("../rendering/storage/packed_storage.zig");
+const drawPolygonImpl = @import("../rendering/operations/draw_polygon.zig").drawPolygon;
+const drawStringImpl = @import("../rendering/operations/draw_string.zig").drawString;
 
 const static_limits = @import("../static_limits.zig");
 
@@ -31,8 +33,8 @@ pub const Milliseconds = usize;
 /// The location of a polygon record within its containing resource.
 pub const PolygonAddress = PolygonResource.Address;
 
-/// The type used for buffer storage.
-pub const Buffer = VideoBuffer.Instance(PackedStorage.Instance, static_limits.virtual_screen_width, static_limits.virtual_screen_height);
+/// The type used for the video buffers.
+pub const Buffer = PackedStorage.Instance(static_limits.virtual_screen_width, static_limits.virtual_screen_height);
 
 /// The video subsystem responsible for handling draw calls and sending frames to the host screen.
 pub const Instance = struct {
@@ -139,7 +141,7 @@ pub const Instance = struct {
         // TODO: allow different localizations at runtime.
         const string = try english.find(string_id);
 
-        try buffer.drawString(string, color_id, point);
+        try drawStringImpl(Buffer, buffer, string, color_id, point);
     }
 
     /// Render the contents of a video buffer to the host screen using the current palette.
@@ -201,7 +203,7 @@ const PolygonVisitor = struct {
 
     /// Draw a single polygon into the target buffer, using the mask buffer to read from if necessary.
     pub fn visit(self: @This(), polygon: Polygon.Instance) !void {
-        try self.target_buffer.drawPolygon(polygon, self.mask_buffer);
+        try drawPolygonImpl(Buffer, self.target_buffer, self.mask_buffer, polygon);
     }
 };
 

@@ -326,14 +326,14 @@ test "loadResource copies bitmap resource directly into video buffer without per
 
     const buffer = &machine.video.buffers[Video.Instance.bitmap_buffer_id];
     buffer.fill(0x0);
-    const original_buffer_contents = buffer.storage.toBitmap();
+    const original_buffer_contents = buffer.toBitmap();
 
     const bitmap_resource_id = MockRepository.FixtureData.bitmap_resource_id;
     try testing.expectEqual(null, machine.memory.resourceLocation(bitmap_resource_id));
     try machine.loadResource(bitmap_resource_id);
     try testing.expectEqual(null, machine.memory.resourceLocation(bitmap_resource_id));
 
-    const new_buffer_contents = buffer.storage.toBitmap();
+    const new_buffer_contents = buffer.toBitmap();
     // The fake bitmap resource data should have been filled with a 0b01010 bit pattern,
     // which should never be equal to the flat black color filled into the buffer.
     try testing.expect(meta.eql(original_buffer_contents, new_buffer_contents) == false);
