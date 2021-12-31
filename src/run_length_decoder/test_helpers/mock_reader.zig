@@ -55,7 +55,7 @@ fn Instance(comptime Integer: type) type {
         }
 
         // Add methods for reading bytes and whole integers
-        usingnamespace ReaderMethods.extend(Self);
+        usingnamespace ReaderMethods.Mixin(Self);
     };
 }
 

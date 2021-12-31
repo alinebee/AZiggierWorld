@@ -143,7 +143,7 @@ const Instance = struct {
     }
 
     // Add methods for reading bytes and whole integers
-    usingnamespace ReaderMethods.extend(Instance);
+    usingnamespace ReaderMethods.Mixin(Instance);
 };
 
 /// The possible errors from a reader instance.

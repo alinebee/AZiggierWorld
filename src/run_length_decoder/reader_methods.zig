@@ -8,15 +8,15 @@ const trait = std.meta.trait;
 
 const introspection = @import("../utils/introspection.zig");
 
-/// Returns a struct of methods that can be imported onto the specified type.
+/// Returns a struct of methods that can be mixed into the specified type.
 /// Intended usage:
 ///   const ReaderMethods = @import("reader_methods.zig");
 ///
-///   const TypeToExtend = struct {
-///       usingnamespace ReaderMethods.extend(@This());
+///   const ReaderType = struct {
+///       usingnamespace ReaderMethods.Mixin(@This());
 ///   }
 ///
-pub fn extend(comptime Self: type) type {
+pub fn Mixin(comptime Self: type) type {
     const ReadError = introspection.ErrorType(Self.readBit);
 
     return struct {
