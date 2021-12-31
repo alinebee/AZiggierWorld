@@ -65,7 +65,7 @@ pub const Error = error{
 
 // -- Examples --
 
-pub const DataExamples = struct {
+pub const Fixtures = struct {
     // zig fmt: off
     const palette = [raw_palette_size]u8 {
         0x00, 0x00, // color 0
@@ -118,7 +118,7 @@ test "Instance.at returns expected palettes from resource" {
     };
     // zig fmt: on
 
-    const data = &DataExamples.resource;
+    const data = &Fixtures.resource;
     const palettes = new(data);
 
     var idx: usize = 0;
@@ -131,7 +131,7 @@ test "Instance.at returns expected palettes from resource" {
 }
 
 test "Instance.palette returns error.EndOfStream on truncated data" {
-    const data = DataExamples.resource[0..1023];
+    const data = Fixtures.resource[0..1023];
     const palettes = new(data);
 
     try testing.expectError(error.EndOfStream, palettes.palette(31));

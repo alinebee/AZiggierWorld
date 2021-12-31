@@ -21,7 +21,7 @@ pub fn parse(_: Opcode.Raw, _: *Program.Instance) Error!Instance {
 
 // -- Bytecode examples --
 
-pub const BytecodeExamples = struct {
+pub const Fixtures = struct {
     const raw_opcode = @enumToInt(Opcode.Enum.Return);
 
     /// Example bytecode that should produce a valid instruction.
@@ -34,7 +34,7 @@ const testing = @import("../utils/testing.zig");
 const expectParse = @import("test_helpers/parse.zig").expectParse;
 
 test "parse parses instruction from valid bytecode and consumes 1 byte" {
-    _ = try expectParse(parse, &BytecodeExamples.valid, 1);
+    _ = try expectParse(parse, &Fixtures.valid, 1);
 }
 
 test "execute jumps to previous address from the stack" {

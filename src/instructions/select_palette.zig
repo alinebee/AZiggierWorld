@@ -38,7 +38,7 @@ pub fn parse(_: Opcode.Raw, program: *Program.Instance) Error!Instance {
 
 // -- Bytecode examples --
 
-pub const BytecodeExamples = struct {
+pub const Fixtures = struct {
     const raw_opcode = @enumToInt(Opcode.Enum.SelectPalette);
 
     /// Example bytecode that should produce a valid instruction.
@@ -54,7 +54,7 @@ const expectParse = @import("test_helpers/parse.zig").expectParse;
 const MockMachine = @import("../machine/test_helpers/mock_machine.zig");
 
 test "parse parses valid bytecode and consumes 2 bytes" {
-    const instruction = try expectParse(parse, &BytecodeExamples.valid, 3);
+    const instruction = try expectParse(parse, &Fixtures.valid, 3);
 
     try testing.expectEqual(31, instruction.palette_id);
 }
@@ -62,7 +62,7 @@ test "parse parses valid bytecode and consumes 2 bytes" {
 test "parse returns error.InvalidPaletteID on unknown palette identifier and consumes 2 bytes" {
     try testing.expectError(
         error.InvalidPaletteID,
-        expectParse(parse, &BytecodeExamples.invalid_palette_id, 3),
+        expectParse(parse, &Fixtures.invalid_palette_id, 3),
     );
 }
 

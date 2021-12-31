@@ -232,8 +232,8 @@ test "Ensure everything compiles" {
 /// Construct a video instance populated with sample valid resource data,
 /// with all buffers filled with color ID 0.
 fn testInstance() Instance {
-    const polygon_data = &PolygonResource.DataExamples.resource;
-    const palette_data = &PaletteResource.DataExamples.resource;
+    const polygon_data = &PolygonResource.Fixtures.resource;
+    const palette_data = &PaletteResource.Fixtures.resource;
 
     var instance = Instance{
         .polygons = PolygonResource.new(polygon_data),

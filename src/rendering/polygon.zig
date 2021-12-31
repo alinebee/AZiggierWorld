@@ -194,7 +194,7 @@ pub const ValidationError = error{
 // -- Data examples --
 
 // zig fmt: off
-pub const DataExamples = struct {
+pub const Fixtures = struct {
     pub const valid_dot = [_]u8 {
         0, 1, // width and height
         4, // vertex count
@@ -275,7 +275,7 @@ const testing = @import("../utils/testing.zig");
 const fixedBufferStream = @import("std").io.fixedBufferStream;
 
 test "parse correctly parses 4-vertex dot polygon" {
-    const reader = fixedBufferStream(&DataExamples.valid_dot).reader();
+    const reader = fixedBufferStream(&Fixtures.valid_dot).reader();
 
     const center = Point.Instance{ .x = 320, .y = 200 };
     const polygon = try parse(reader, center, PolygonScale.default, .highlight);
@@ -297,7 +297,7 @@ test "parse correctly parses 4-vertex dot polygon" {
 
 // zig fmt: off
 test "parse correctly parses and scales pentagon" {
-    const reader = fixedBufferStream(&DataExamples.valid_pentagon).reader();
+    const reader = fixedBufferStream(&Fixtures.valid_pentagon).reader();
 
     const center = Point.zero;
     const polygon = try parse(reader, center, PolygonScale.default * 2, .highlight);
@@ -321,36 +321,36 @@ test "parse correctly parses and scales pentagon" {
 // zig fmt: on
 
 test "parse returns error.VertexCountTooHigh when count is too high" {
-    const reader = fixedBufferStream(&DataExamples.vertex_count_too_high).reader();
+    const reader = fixedBufferStream(&Fixtures.vertex_count_too_high).reader();
     try testing.expectError(error.VertexCountTooHigh, parse(reader, Point.zero, PolygonScale.default, .highlight));
 }
 
 test "validate returns error.VertexCountTooLow when count is too low" {
-    const reader = fixedBufferStream(&DataExamples.vertex_count_too_low).reader();
+    const reader = fixedBufferStream(&Fixtures.vertex_count_too_low).reader();
     const polygon = try parse(reader, Point.zero, PolygonScale.default, .highlight);
     try testing.expectError(error.VertexCountTooLow, polygon.validate());
 }
 
 test "validate returns error.VertexCountUneven when count is uneven" {
-    const reader = fixedBufferStream(&DataExamples.vertex_count_uneven).reader();
+    const reader = fixedBufferStream(&Fixtures.vertex_count_uneven).reader();
     const polygon = try parse(reader, Point.zero, PolygonScale.default, .highlight);
     try testing.expectError(error.VertexCountUneven, polygon.validate());
 }
 
 test "validate returns error.VerticesMisaligned when vertex pairs are not aligned horizontally" {
-    const reader = fixedBufferStream(&DataExamples.vertices_misaligned).reader();
+    const reader = fixedBufferStream(&Fixtures.vertices_misaligned).reader();
     const polygon = try parse(reader, Point.zero, PolygonScale.default, .highlight);
     try testing.expectError(error.VerticesMisaligned, polygon.validate());
 }
 
 test "validate returns error.VerticesBacktracked when a clockwise vertex is above the one before it" {
-    const reader = fixedBufferStream(&DataExamples.vertices_backtracked).reader();
+    const reader = fixedBufferStream(&Fixtures.vertices_backtracked).reader();
     const polygon = try parse(reader, Point.zero, PolygonScale.default, .highlight);
     try testing.expectError(error.VerticesBacktracked, polygon.validate());
 }
 
 test "validate returns error.VerticesTooFarApart when a clockwise vertex is more than 1023 units below the one before it" {
-    const reader = fixedBufferStream(&DataExamples.vertices_too_far_apart).reader();
+    const reader = fixedBufferStream(&Fixtures.vertices_too_far_apart).reader();
     const polygon = try parse(reader, Point.zero, 258, .highlight);
     try testing.expectError(error.VerticesTooFarApart, polygon.validate());
 }

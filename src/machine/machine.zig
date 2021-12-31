@@ -318,7 +318,7 @@ test "loadResource loads audio resource into main memory" {
     var machine = testInstance(null);
     defer machine.deinit();
 
-    const audio_resource_id = MockRepository.FixtureData.sfx_resource_id;
+    const audio_resource_id = MockRepository.Fixtures.sfx_resource_id;
 
     try testing.expectEqual(null, try machine.memory.resourceLocation(audio_resource_id));
     try machine.loadResource(audio_resource_id);
@@ -333,7 +333,7 @@ test "loadResource copies bitmap resource directly into video buffer without per
     buffer.fill(0x0);
     const original_buffer_contents = buffer.toBitmap();
 
-    const bitmap_resource_id = MockRepository.FixtureData.bitmap_resource_id;
+    const bitmap_resource_id = MockRepository.Fixtures.bitmap_resource_id;
     try testing.expectEqual(null, machine.memory.resourceLocation(bitmap_resource_id));
     try machine.loadResource(bitmap_resource_id);
     try testing.expectEqual(null, machine.memory.resourceLocation(bitmap_resource_id));
@@ -348,6 +348,6 @@ test "loadResource returns error on invalid resource ID" {
     var machine = testInstance(null);
     defer machine.deinit();
 
-    const invalid_id = MockRepository.FixtureData.invalid_resource_id;
+    const invalid_id = MockRepository.Fixtures.invalid_resource_id;
     try testing.expectError(error.InvalidResourceID, machine.loadResource(invalid_id));
 }

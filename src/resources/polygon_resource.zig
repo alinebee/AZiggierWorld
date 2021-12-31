@@ -293,7 +293,7 @@ fn parseOffset(reader: anytype, scale: PolygonScale.Raw) !Point.Instance {
 // -- Data examples --
 
 // zig fmt: off
-pub const DataExamples = struct {
+pub const Fixtures = struct {
     // - Individual header examples -
 
     const polygon_entry_header = [_]u8{0b1100_1010}; // Lower 6 bits define draw mode with solid color 0xA (0b1010)
@@ -323,8 +323,8 @@ pub const DataExamples = struct {
     // - Full resource block -
 
     // Simple 4-vertex polygons @ 12 bytes long each
-    const polygon_1 = Polygon.DataExamples.valid_dot;
-    const polygon_2 = Polygon.DataExamples.valid_dot;
+    const polygon_1 = Polygon.Fixtures.valid_dot;
+    const polygon_2 = Polygon.Fixtures.valid_dot;
 
     const group_1 = [_]u8{
         1, // X negative offset
@@ -416,7 +416,7 @@ const countingReader = @import("std").io.countingReader;
 // - EntryHeader tests -
 
 test "EntryHeader.parse parses single polygon entry header correctly and consumes 1 byte" {
-    const data = &DataExamples.polygon_entry_header;
+    const data = &Fixtures.polygon_entry_header;
 
     var stream = countingReader(fixedBufferStream(data).reader());
 
@@ -428,7 +428,7 @@ test "EntryHeader.parse parses single polygon entry header correctly and consume
 }
 
 test "EntryHeader.parse parses polygon group entry header correctly and consumes 1 byte" {
-    const data = &DataExamples.group_entry_header;
+    const data = &Fixtures.group_entry_header;
 
     var stream = countingReader(fixedBufferStream(data).reader());
 
@@ -440,7 +440,7 @@ test "EntryHeader.parse parses polygon group entry header correctly and consumes
 }
 
 test "EntryHeader.parse fails with error.UnknownPolygonEntryType and consumes 1 byte when header is invalid" {
-    const data = &DataExamples.invalid_entry_header;
+    const data = &Fixtures.invalid_entry_header;
 
     var stream = countingReader(fixedBufferStream(data).reader());
 
@@ -460,7 +460,7 @@ test "EntryHeader.parse fails with error.EndOfStream and consumes 0 bytes on tru
 // - GroupHeader tests -
 
 test "GroupHeader.parse correctly parses group header with scaled offset and consumes 3 bytes" {
-    const data = &DataExamples.group_header;
+    const data = &Fixtures.group_header;
 
     var stream = countingReader(fixedBufferStream(data).reader());
 
@@ -478,7 +478,7 @@ test "GroupHeader.parse correctly parses group header with scaled offset and con
 }
 
 test "GroupHeader.parse fails with error.EndOfStream and consumes all remaining bytes on truncated header" {
-    const data = DataExamples.group_header[0..2];
+    const data = Fixtures.group_header[0..2];
 
     var stream = countingReader(fixedBufferStream(data).reader());
 
@@ -489,7 +489,7 @@ test "GroupHeader.parse fails with error.EndOfStream and consumes all remaining 
 // - EntryPointer tests -
 
 test "EntryPointer.parse correctly parses pointer without custom draw mode and consumes 4 bytes" {
-    const data = &DataExamples.entry_pointer_without_draw_mode;
+    const data = &Fixtures.entry_pointer_without_draw_mode;
 
     var stream = countingReader(fixedBufferStream(data).reader());
 
@@ -508,7 +508,7 @@ test "EntryPointer.parse correctly parses pointer without custom draw mode and c
 }
 
 test "EntryPointer.parse correctly parses pointer with custom draw mode and consumes 6 bytes" {
-    const data = &DataExamples.entry_pointer_with_draw_mode;
+    const data = &Fixtures.entry_pointer_with_draw_mode;
 
     var stream = countingReader(fixedBufferStream(data).reader());
 
@@ -527,7 +527,7 @@ test "EntryPointer.parse correctly parses pointer with custom draw mode and cons
 }
 
 test "EntryPointer.parse fails with error.EndOfStream and consumes all remaining bytes on truncated header without custom draw mode" {
-    const data = DataExamples.entry_pointer_without_draw_mode[0..3];
+    const data = Fixtures.entry_pointer_without_draw_mode[0..3];
 
     var stream = countingReader(fixedBufferStream(data).reader());
 
@@ -536,7 +536,7 @@ test "EntryPointer.parse fails with error.EndOfStream and consumes all remaining
 }
 
 test "EntryPointer.parse fails with error.EndOfStream and consumes all remaining bytes on truncated header with custom draw mode" {
-    const data = DataExamples.entry_pointer_with_draw_mode[0..4];
+    const data = Fixtures.entry_pointer_with_draw_mode[0..4];
 
     var stream = countingReader(fixedBufferStream(data).reader());
 
@@ -568,7 +568,7 @@ const TestVisitor = struct {
 };
 
 test "iteratePolygons correctly visits all polygons in group" {
-    const resource = new(&DataExamples.resource);
+    const resource = new(&Fixtures.resource);
 
     var visitor = TestVisitor.init(testing.allocator);
     defer visitor.deinit();
@@ -603,7 +603,7 @@ test "iteratePolygons correctly visits all polygons in group" {
 }
 
 test "iteratePolygons fails with error.PolygonRecursionDepthExceeded on circular reference in polygon data" {
-    const resource = new(&DataExamples.circular_reference);
+    const resource = new(&Fixtures.circular_reference);
 
     var visitor = TestVisitor.init(testing.allocator);
     defer visitor.deinit();
@@ -616,7 +616,7 @@ test "iteratePolygons fails with error.PolygonRecursionDepthExceeded on circular
 }
 
 test "iteratePolygons fails with error.InvalidAddress if requested address does not exist" {
-    const resource = new(&DataExamples.resource);
+    const resource = new(&Fixtures.resource);
 
     var visitor = TestVisitor.init(testing.allocator);
     defer visitor.deinit();
@@ -629,7 +629,7 @@ test "iteratePolygons fails with error.InvalidAddress if requested address does 
 }
 
 test "iteratePolygons fails with error.InvalidAddress if entry pointer within data points to address that does not exist" {
-    const resource = new(&DataExamples.invalid_pointer_address);
+    const resource = new(&Fixtures.invalid_pointer_address);
 
     var visitor = TestVisitor.init(testing.allocator);
     defer visitor.deinit();
@@ -642,7 +642,7 @@ test "iteratePolygons fails with error.InvalidAddress if entry pointer within da
 }
 
 test "iteratePolygons fails with error.EndOfStream on truncated polygon data" {
-    const truncated_data = DataExamples.resource[0..32];
+    const truncated_data = Fixtures.resource[0..32];
     const resource = new(truncated_data);
 
     var visitor = TestVisitor.init(testing.allocator);

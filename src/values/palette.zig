@@ -7,7 +7,7 @@ const color_count = static_limits.color_count;
 /// A 16-color palette of 24-bit colors.
 pub const Instance = [color_count]Color.Instance;
 
-pub const FixtureData = struct {
+pub const Fixtures = struct {
     // zig fmt: off
 
     /// A sample 16-color palette of 24-bit colors.

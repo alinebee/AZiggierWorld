@@ -35,7 +35,7 @@ const DescriptorStorage = BoundedArray(ResourceDescriptor.Instance, static_limit
 /// A reader for a test repository that can safely load any game part,
 /// albeit with garbage data. Should only be used in tests.
 pub var test_reader = test_repository.reader();
-var test_repository = Instance.init(&FixtureData.descriptors, null);
+var test_repository = Instance.init(&Fixtures.descriptors, null);
 
 pub const Instance = struct {
     /// The list of resources vended by this mock repository.
@@ -101,7 +101,7 @@ pub const Instance = struct {
 
 // -- Resource descriptor fixture data --
 
-pub const FixtureData = struct {
+pub const Fixtures = struct {
     const empty_descriptor = ResourceDescriptor.Instance{
         .type = .sound_or_empty,
         .bank_id = 0,
@@ -292,9 +292,9 @@ test "bufReadResource returns error.BufferTooSmall if buffer is too small for re
 }
 
 test "resourceDescriptors returns expected descriptors" {
-    var repository = Instance.init(&FixtureData.descriptors, null);
+    var repository = Instance.init(&Fixtures.descriptors, null);
 
-    try testing.expectEqualSlices(ResourceDescriptor.Instance, repository.reader().resourceDescriptors(), &FixtureData.descriptors);
+    try testing.expectEqualSlices(ResourceDescriptor.Instance, repository.reader().resourceDescriptors(), &Fixtures.descriptors);
 }
 
 test "Ensure everything compiles" {

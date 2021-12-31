@@ -59,7 +59,7 @@ pub fn parse(_: Opcode.Raw, program: *Program.Instance) Error!Instance {
 
 // -- Bytecode examples --
 
-pub const BytecodeExamples = struct {
+pub const Fixtures = struct {
     const raw_opcode = @enumToInt(Opcode.Enum.ControlThreads);
 
     /// Example bytecode that should produce a valid instruction.
@@ -84,7 +84,7 @@ const testing = @import("../utils/testing.zig");
 const expectParse = @import("test_helpers/parse.zig").expectParse;
 
 test "parse parses valid bytecode and consumes 4 bytes" {
-    const instruction = try expectParse(parse, &BytecodeExamples.valid, 4);
+    const instruction = try expectParse(parse, &Fixtures.valid, 4);
 
     try testing.expectEqual(62, instruction.start_thread_id);
     try testing.expectEqual(63, instruction.end_thread_id);
@@ -94,21 +94,21 @@ test "parse parses valid bytecode and consumes 4 bytes" {
 test "parse returns error.InvalidThreadID and consumes 4 bytes when start thread ID is invalid" {
     try testing.expectError(
         error.InvalidThreadID,
-        expectParse(parse, &BytecodeExamples.invalid_start_thread_id, 4),
+        expectParse(parse, &Fixtures.invalid_start_thread_id, 4),
     );
 }
 
 test "parse returns error.InvalidThreadID and consumes 4 bytes when end thread ID is invalid" {
     try testing.expectError(
         error.InvalidThreadID,
-        expectParse(parse, &BytecodeExamples.invalid_end_thread_id, 4),
+        expectParse(parse, &Fixtures.invalid_end_thread_id, 4),
     );
 }
 
 test "parse returns error.InvalidThreadRange and consumes 4 bytes when thread range is transposed" {
     try testing.expectError(
         error.InvalidThreadRange,
-        expectParse(parse, &BytecodeExamples.transposed_thread_ids, 4),
+        expectParse(parse, &Fixtures.transposed_thread_ids, 4),
     );
 }
 

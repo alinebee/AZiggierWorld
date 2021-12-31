@@ -51,7 +51,7 @@ pub const Error = Program.Error || error{
 
 // -- Bytecode examples --
 
-pub const BytecodeExamples = struct {
+pub const Fixtures = struct {
     const raw_opcode = @enumToInt(Opcode.Enum.RegisterShiftLeft);
 
     /// Example bytecode that should produce a valid instruction.
@@ -66,7 +66,7 @@ const testing = @import("../utils/testing.zig");
 const expectParse = @import("test_helpers/parse.zig").expectParse;
 
 test "parse parses valid bytecode and consumes 4 bytes" {
-    const instruction = try expectParse(parse, &BytecodeExamples.valid, 4);
+    const instruction = try expectParse(parse, &Fixtures.valid, 4);
 
     try testing.expectEqual(16, instruction.destination);
     try testing.expectEqual(8, instruction.shift);
@@ -75,7 +75,7 @@ test "parse parses valid bytecode and consumes 4 bytes" {
 test "parse returns error.ShiftTooLarge and consumes 4 bytes on invalid shift distance" {
     try testing.expectError(
         error.ShiftTooLarge,
-        expectParse(parse, &BytecodeExamples.invalid_shift, 4),
+        expectParse(parse, &Fixtures.invalid_shift, 4),
     );
 }
 

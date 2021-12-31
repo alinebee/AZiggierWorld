@@ -34,7 +34,7 @@ pub const Error = Program.Error;
 
 // -- Bytecode examples --
 
-pub const BytecodeExamples = struct {
+pub const Fixtures = struct {
     const raw_opcode = @enumToInt(Opcode.Enum.RegisterOr);
 
     /// Example bytecode that should produce a valid instruction.
@@ -47,7 +47,7 @@ const testing = @import("../utils/testing.zig");
 const expectParse = @import("test_helpers/parse.zig").expectParse;
 
 test "parse parses valid bytecode and consumes 3 bytes" {
-    const instruction = try expectParse(parse, &BytecodeExamples.valid, 4);
+    const instruction = try expectParse(parse, &Fixtures.valid, 4);
 
     try testing.expectEqual(16, instruction.destination);
     try testing.expectEqual(0b1100_0011_1111_0000, instruction.value);

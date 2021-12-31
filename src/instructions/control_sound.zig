@@ -63,7 +63,7 @@ pub fn parse(_: Opcode.Raw, program: *Program.Instance) Error!Instance {
 
 // -- Bytecode examples --
 
-pub const BytecodeExamples = struct {
+pub const Fixtures = struct {
     const raw_opcode = @enumToInt(Opcode.Enum.ControlSound);
 
     /// Example bytecode that should produce a valid instruction.
@@ -82,7 +82,7 @@ const expectParse = @import("test_helpers/parse.zig").expectParse;
 const MockMachine = @import("../machine/test_helpers/mock_machine.zig");
 
 test "parse parses play instruction and consumes 6 bytes" {
-    const instruction = try expectParse(parse, &BytecodeExamples.play, 6);
+    const instruction = try expectParse(parse, &Fixtures.play, 6);
     const expected = Instance{
         .play = .{
             .resource_id = 0xDEAD,
@@ -95,7 +95,7 @@ test "parse parses play instruction and consumes 6 bytes" {
 }
 
 test "parse parses stop instruction and consumes 6 bytes" {
-    const instruction = try expectParse(parse, &BytecodeExamples.stop, 6);
+    const instruction = try expectParse(parse, &Fixtures.stop, 6);
     const expected = Instance{ .stop = 1 };
     try testing.expectEqual(expected, instruction);
 }
@@ -103,7 +103,7 @@ test "parse parses stop instruction and consumes 6 bytes" {
 test "parse returns error.InvalidChannel when unknown channel is specified in bytecode" {
     try testing.expectError(
         error.InvalidChannel,
-        expectParse(parse, &BytecodeExamples.invalid_channel, 6),
+        expectParse(parse, &Fixtures.invalid_channel, 6),
     );
 }
 

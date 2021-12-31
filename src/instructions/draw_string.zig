@@ -56,7 +56,7 @@ const column_width = 8;
 
 // -- Bytecode examples --
 
-pub const BytecodeExamples = struct {
+pub const Fixtures = struct {
     const raw_opcode = @enumToInt(Opcode.Enum.DrawString);
 
     /// Example bytecode that should produce a valid instruction.
@@ -72,7 +72,7 @@ const expectParse = @import("test_helpers/parse.zig").expectParse;
 const MockMachine = @import("../machine/test_helpers/mock_machine.zig");
 
 test "parse parses valid bytecode and consumes 6 bytes" {
-    const instruction = try expectParse(parse, &BytecodeExamples.valid, 6);
+    const instruction = try expectParse(parse, &Fixtures.valid, 6);
 
     try testing.expectEqual(0xDEAD, instruction.string_id);
     try testing.expectEqual(15, instruction.color_id);
@@ -83,7 +83,7 @@ test "parse parses valid bytecode and consumes 6 bytes" {
 test "parse returns error.InvalidColorID on out of range color and consumes 6 bytes" {
     try testing.expectError(
         error.InvalidColorID,
-        expectParse(parse, &BytecodeExamples.invalid_color_id, 6),
+        expectParse(parse, &Fixtures.invalid_color_id, 6),
     );
 }
 

@@ -142,7 +142,7 @@ pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instance 
 // -- Bytecode examples --
 
 // zig fmt: off
-pub const BytecodeExamples = struct {
+pub const Fixtures = struct {
     /// Example bytecode that should produce a valid instruction.
     pub const valid = wide_constants;
 
@@ -195,7 +195,7 @@ const expectParse = @import("test_helpers/parse.zig").expectParse;
 const MockMachine = @import("../machine/test_helpers/mock_machine.zig");
 
 test "parse parses all-registers instruction and consumes 6 bytes" {
-    const instruction = try expectParse(parse, &BytecodeExamples.registers, 6);
+    const instruction = try expectParse(parse, &Fixtures.registers, 6);
 
     try testing.expectEqual(.polygons, instruction.source);
     // Address is right-shifted by 1
@@ -206,7 +206,7 @@ test "parse parses all-registers instruction and consumes 6 bytes" {
 }
 
 test "parse parses instruction with full-width constants and consumes 8 bytes" {
-    const instruction = try expectParse(parse, &BytecodeExamples.wide_constants, 8);
+    const instruction = try expectParse(parse, &Fixtures.wide_constants, 8);
 
     try testing.expectEqual(.polygons, instruction.source);
     try testing.expectEqual(0b0001_1110_0001_1110, instruction.address);
@@ -216,7 +216,7 @@ test "parse parses instruction with full-width constants and consumes 8 bytes" {
 }
 
 test "parse parses instruction with short constants and consumes 6 bytes" {
-    const instruction = try expectParse(parse, &BytecodeExamples.short_constants, 6);
+    const instruction = try expectParse(parse, &Fixtures.short_constants, 6);
 
     try testing.expectEqual(.polygons, instruction.source);
     try testing.expectEqual(0b0001_1110_0001_1110, instruction.address);
@@ -226,7 +226,7 @@ test "parse parses instruction with short constants and consumes 6 bytes" {
 }
 
 test "parse parses instruction with short constants with boosted X and consumes 6 bytes" {
-    const instruction = try expectParse(parse, &BytecodeExamples.short_boosted_x_constants, 6);
+    const instruction = try expectParse(parse, &Fixtures.short_boosted_x_constants, 6);
 
     try testing.expectEqual(.polygons, instruction.source);
     try testing.expectEqual(0b0001_1110_0001_1110, instruction.address);
@@ -236,7 +236,7 @@ test "parse parses instruction with short constants with boosted X and consumes 
 }
 
 test "parse parses instruction with default scale/polygon source and consumes 5 bytes" {
-    const instruction = try expectParse(parse, &BytecodeExamples.default_scale_from_polygons, 5);
+    const instruction = try expectParse(parse, &Fixtures.default_scale_from_polygons, 5);
 
     try testing.expectEqual(.polygons, instruction.source);
     try testing.expectEqual(0b0001_1110_0001_1110, instruction.address);
@@ -246,7 +246,7 @@ test "parse parses instruction with default scale/polygon source and consumes 5 
 }
 
 test "parse parses instruction with default scale/animation source and consumes 5 bytes" {
-    const instruction = try expectParse(parse, &BytecodeExamples.default_scale_from_animations, 5);
+    const instruction = try expectParse(parse, &Fixtures.default_scale_from_animations, 5);
 
     try testing.expectEqual(.animations, instruction.source);
     try testing.expectEqual(0b0001_1110_0001_1110, instruction.address);

@@ -86,7 +86,7 @@ pub const Error = Program.Error || Comparison.Error;
 // -- Bytecode examples --
 
 // zig fmt: off
-pub const BytecodeExamples = struct {
+pub const Fixtures = struct {
     const raw_opcode = @enumToInt(Opcode.Enum.JumpConditional);
 
     /// Example bytecode that should produce a valid instruction.
@@ -111,7 +111,7 @@ const testing = @import("../utils/testing.zig");
 const expectParse = @import("test_helpers/parse.zig").expectParse;
 
 test "parse parses equal_to_register instruction and consumes 6 bytes" {
-    const instruction = try expectParse(parse, &BytecodeExamples.equal_to_register, 6);
+    const instruction = try expectParse(parse, &Fixtures.equal_to_register, 6);
     const expected = Instance{
         .lhs = 0xFF,
         .rhs = .{ .register = 0x00 },
@@ -122,7 +122,7 @@ test "parse parses equal_to_register instruction and consumes 6 bytes" {
 }
 
 test "parse parses equal_to_const16 instruction and consumes 7 bytes" {
-    const instruction = try expectParse(parse, &BytecodeExamples.equal_to_const16, 7);
+    const instruction = try expectParse(parse, &Fixtures.equal_to_const16, 7);
     const expected = Instance{
         .lhs = 0xFF,
         .rhs = .{ .constant = 0x4B1D },
@@ -133,7 +133,7 @@ test "parse parses equal_to_const16 instruction and consumes 7 bytes" {
 }
 
 test "parse parses equal_to_const8 instruction and consumes 6 bytes" {
-    const instruction = try expectParse(parse, &BytecodeExamples.equal_to_const8, 6);
+    const instruction = try expectParse(parse, &Fixtures.equal_to_const8, 6);
     const expected = Instance{
         .lhs = 0xFF,
         .rhs = .{ .constant = 0xBE },
@@ -144,7 +144,7 @@ test "parse parses equal_to_const8 instruction and consumes 6 bytes" {
 }
 
 test "parse parses not_equal instruction and consumes 6 bytes" {
-    const instruction = try expectParse(parse, &BytecodeExamples.not_equal, 6);
+    const instruction = try expectParse(parse, &Fixtures.not_equal, 6);
     const expected = Instance{
         .lhs = 0xFF,
         .rhs = .{ .register = 0x00 },
@@ -155,7 +155,7 @@ test "parse parses not_equal instruction and consumes 6 bytes" {
 }
 
 test "parse parses greater_than instruction and consumes 6 bytes" {
-    const instruction = try expectParse(parse, &BytecodeExamples.greater_than, 6);
+    const instruction = try expectParse(parse, &Fixtures.greater_than, 6);
     const expected = Instance{
         .lhs = 0xFF,
         .rhs = .{ .register = 0x00 },
@@ -166,7 +166,7 @@ test "parse parses greater_than instruction and consumes 6 bytes" {
 }
 
 test "parse parses greater_than_or_equal_to instruction and consumes 6 bytes" {
-    const instruction = try expectParse(parse, &BytecodeExamples.greater_than_or_equal_to, 6);
+    const instruction = try expectParse(parse, &Fixtures.greater_than_or_equal_to, 6);
     const expected = Instance{
         .lhs = 0xFF,
         .rhs = .{ .register = 0x00 },
@@ -177,7 +177,7 @@ test "parse parses greater_than_or_equal_to instruction and consumes 6 bytes" {
 }
 
 test "parse parses less_than instruction and consumes 6 bytes" {
-    const instruction = try expectParse(parse, &BytecodeExamples.less_than, 6);
+    const instruction = try expectParse(parse, &Fixtures.less_than, 6);
     const expected = Instance{
         .lhs = 0xFF,
         .rhs = .{ .register = 0x00 },
@@ -188,7 +188,7 @@ test "parse parses less_than instruction and consumes 6 bytes" {
 }
 
 test "parse parses less_than_or_equal_to instruction and consumes 6 bytes" {
-    const instruction = try expectParse(parse, &BytecodeExamples.less_than_or_equal_to, 6);
+    const instruction = try expectParse(parse, &Fixtures.less_than_or_equal_to, 6);
     const expected = Instance{
         .lhs = 0xFF,
         .rhs = .{ .register = 0x00 },
@@ -201,7 +201,7 @@ test "parse parses less_than_or_equal_to instruction and consumes 6 bytes" {
 test "parse returns error.InvalidJumpComparison for instruction with invalid comparison" {
     try testing.expectError(
         error.InvalidJumpComparison,
-        expectParse(parse, &BytecodeExamples.invalid_comparison, 6),
+        expectParse(parse, &Fixtures.invalid_comparison, 6),
     );
 }
 

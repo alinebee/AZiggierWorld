@@ -161,7 +161,7 @@ pub const Error = error{
 // -- Test helpers --
 
 // zig fmt: off
-const DataExamples = struct {
+const Fixtures = struct {
     const valid = [_]u8{
         // A couple of chunks of raw data that will be returned by readBit.
         0x8B, 0xAD, 0xF0, 0x0D,
@@ -192,7 +192,7 @@ const testing = @import("../utils/testing.zig");
 const io = std.io;
 
 test "init() reads unpacked size, initial checksum and first chunk from end of source data" {
-    const source = DataExamples.valid;
+    const source = Fixtures.valid;
 
     var reader = try Instance.init(&source);
 
@@ -211,7 +211,7 @@ test "new() returns `error.SourceExhausted` when source data is too small" {
 }
 
 test "readBit() reads chunks bit by bit in reverse order" {
-    const source = DataExamples.valid;
+    const source = Fixtures.valid;
     var reader = try new(&source);
 
     var destination: [8]u8 = undefined;
@@ -234,7 +234,7 @@ test "readBit() reads chunks bit by bit in reverse order" {
 }
 
 test "isAtEnd() returns false and validateChecksum() returns error.ChecksumNotReady when reader hasn't consumed all bits yet" {
-    const single_chunk_source = DataExamples.valid[4..];
+    const single_chunk_source = Fixtures.valid[4..];
 
     var reader = try new(single_chunk_source);
     try testing.expectEqual(false, reader.isAtEnd());
@@ -248,7 +248,7 @@ test "isAtEnd() returns false and validateChecksum() returns error.ChecksumNotRe
 }
 
 test "isAtEnd() returns true and validateChecksum() returns error.ChecksumFailed when reader has consumed all bits but has a non-0 checksum" {
-    var reader = try new(&DataExamples.invalid_checksum);
+    var reader = try new(&Fixtures.invalid_checksum);
 
     var bits_remaining: usize = 8 * 8;
     while (bits_remaining > 0) : (bits_remaining -= 1) {
@@ -262,7 +262,7 @@ test "isAtEnd() returns true and validateChecksum() returns error.ChecksumFailed
 }
 
 test "isAtEnd() returns true and validateChecksum() passes when reader has consumed all bits and has a 0 checksum" {
-    var reader = try new(&DataExamples.valid);
+    var reader = try new(&Fixtures.valid);
 
     var bits_remaining: usize = 8 * 8;
     while (bits_remaining > 0) : (bits_remaining -= 1) {

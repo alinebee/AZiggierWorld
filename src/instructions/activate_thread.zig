@@ -37,7 +37,7 @@ pub fn parse(_: Opcode.Raw, program: *Program.Instance) Error!Instance {
 
 // -- Bytecode examples --
 
-pub const BytecodeExamples = struct {
+pub const Fixtures = struct {
     const raw_opcode = @enumToInt(Opcode.Enum.ActivateThread);
 
     /// Example bytecode that should produce a valid instruction.
@@ -53,7 +53,7 @@ const testing = @import("../utils/testing.zig");
 const expectParse = @import("test_helpers/parse.zig").expectParse;
 
 test "parse parses instruction from valid bytecode and consumes 4 bytes" {
-    const instruction = try expectParse(parse, &BytecodeExamples.valid, 4);
+    const instruction = try expectParse(parse, &Fixtures.valid, 4);
 
     try testing.expectEqual(63, instruction.thread_id);
     try testing.expectEqual(0xDEAD, instruction.address);
@@ -62,7 +62,7 @@ test "parse parses instruction from valid bytecode and consumes 4 bytes" {
 test "parse returns error.InvalidThreadID and consumes 4 bytes when thread ID is invalid" {
     try testing.expectError(
         error.InvalidThreadID,
-        expectParse(parse, &BytecodeExamples.invalid_thread_id, 4),
+        expectParse(parse, &Fixtures.invalid_thread_id, 4),
     );
 }
 

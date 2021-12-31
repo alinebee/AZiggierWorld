@@ -55,7 +55,7 @@ pub const Error = Program.Error || BufferID.Error;
 
 // -- Bytecode examples --
 
-pub const BytecodeExamples = struct {
+pub const Fixtures = struct {
     const raw_opcode = @enumToInt(Opcode.Enum.RenderVideoBuffer);
 
     /// Example bytecode that should produce a valid instruction.
@@ -71,7 +71,7 @@ const expectParse = @import("test_helpers/parse.zig").expectParse;
 const MockMachine = @import("../machine/test_helpers/mock_machine.zig");
 
 test "parse parses valid bytecode and consumes 2 bytes" {
-    const instruction = try expectParse(parse, &BytecodeExamples.valid, 2);
+    const instruction = try expectParse(parse, &Fixtures.valid, 2);
 
     try testing.expectEqual(.back_buffer, instruction.buffer_id);
 }
@@ -79,7 +79,7 @@ test "parse parses valid bytecode and consumes 2 bytes" {
 test "parse returns error.InvalidBufferID on unknown buffer identifier and consumes 2 bytes" {
     try testing.expectError(
         error.InvalidBufferID,
-        expectParse(parse, &BytecodeExamples.invalid_buffer_id, 2),
+        expectParse(parse, &Fixtures.invalid_buffer_id, 2),
     );
 }
 

@@ -56,7 +56,7 @@ fn spread(value: u4) u8 {
 
 // -- Examples --
 
-const DataExamples = struct {
+const Fixtures = struct {
     // zig fmt: off
     const red:      Raw = 0b0000_1111_0000_0000;
     const green:    Raw = 0b0000_0000_1111_0000;
@@ -95,11 +95,11 @@ test "spread converts 4-bit values to expected 8-bit values" {
 
 test "parse converts 12-bit colors to expected 24-bit colors" {
     // zig fmt: off
-    try testing.expectEqual(.{ .r = 252, .g = 0,   .b = 0 },    parse(DataExamples.red));
-    try testing.expectEqual(.{ .r = 0,   .g = 252, .b = 0 },    parse(DataExamples.green));
-    try testing.expectEqual(.{ .r = 0,   .g = 0,   .b = 252 },  parse(DataExamples.blue));
-    try testing.expectEqual(.{ .r = 252, .g = 252, .b = 252 },  parse(DataExamples.white));
-    try testing.expectEqual(.{ .r = 136, .g = 136, .b = 136 },  parse(DataExamples.grey));
-    try testing.expectEqual(.{ .r = 0,   .g = 0,   .b = 0 },    parse(DataExamples.black));
+    try testing.expectEqual(.{ .r = 252, .g = 0,   .b = 0 },    parse(Fixtures.red));
+    try testing.expectEqual(.{ .r = 0,   .g = 252, .b = 0 },    parse(Fixtures.green));
+    try testing.expectEqual(.{ .r = 0,   .g = 0,   .b = 252 },  parse(Fixtures.blue));
+    try testing.expectEqual(.{ .r = 252, .g = 252, .b = 252 },  parse(Fixtures.white));
+    try testing.expectEqual(.{ .r = 136, .g = 136, .b = 136 },  parse(Fixtures.grey));
+    try testing.expectEqual(.{ .r = 0,   .g = 0,   .b = 0 },    parse(Fixtures.black));
     // zig fmt: on
 }

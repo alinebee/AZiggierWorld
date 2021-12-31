@@ -132,7 +132,7 @@ pub const Error = error{
 
 // -- Examples --
 
-pub const DataExamples = struct {
+pub const Fixtures = struct {
     // zig fmt: off
     /// A planar image containing 16 pixels @ 2 pixels per byte, 2 bytes per plane, 4 planes.
     pub const valid_16px = [_]u8 {
@@ -152,7 +152,7 @@ const testing = @import("../utils/testing.zig");
 const print = @import("std").debug.print;
 
 test "Parses planar data properly" {
-    const data = &DataExamples.valid_16px;
+    const data = &Fixtures.valid_16px;
     var reader = try new(4, 4, data);
     try testing.expectEqual(false, reader.isAtEnd());
 
@@ -185,14 +185,14 @@ test "Parses planar data properly" {
 }
 
 test "new returns error.InvalidBitmapSize if source data is the wrong length for requested dimensions" {
-    const data = &DataExamples.valid_16px;
+    const data = &Fixtures.valid_16px;
 
     try testing.expectError(error.InvalidBitmapSize, new(4, 2, data));
     try testing.expectError(error.InvalidBitmapSize, new(320, 200, data));
 }
 
 test "readColor returns error.EndOfStream once reader is exhausted" {
-    const data = &DataExamples.valid_16px;
+    const data = &Fixtures.valid_16px;
     var reader = try new(4, 4, data);
     try testing.expectEqual(false, reader.isAtEnd());
 

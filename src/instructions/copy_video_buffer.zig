@@ -71,7 +71,7 @@ pub const Error = Program.Error || BufferID.Error;
 
 // -- Bytecode examples --
 
-pub const BytecodeExamples = struct {
+pub const Fixtures = struct {
     const raw_opcode = @enumToInt(Opcode.Enum.CopyVideoBuffer);
 
     /// Example bytecode that should produce a valid instruction.
@@ -93,7 +93,7 @@ const expectParse = @import("test_helpers/parse.zig").expectParse;
 const MockMachine = @import("../machine/test_helpers/mock_machine.zig");
 
 test "parse parses valid bytecode without vertical offset flag and consumes 3 bytes" {
-    const instruction = try expectParse(parse, &BytecodeExamples.specific_buffer_ignore_offset, 3);
+    const instruction = try expectParse(parse, &Fixtures.specific_buffer_ignore_offset, 3);
 
     try testing.expectEqual(.{ .specific = 3 }, instruction.source);
     try testing.expectEqual(.{ .specific = 1 }, instruction.destination);
@@ -101,7 +101,7 @@ test "parse parses valid bytecode without vertical offset flag and consumes 3 by
 }
 
 test "parse parses valid bytecode with vertical offset flag and consumes 3 bytes" {
-    const instruction = try expectParse(parse, &BytecodeExamples.specific_buffer_respect_offset, 3);
+    const instruction = try expectParse(parse, &Fixtures.specific_buffer_respect_offset, 3);
 
     try testing.expectEqual(.{ .specific = 3 }, instruction.source);
     try testing.expectEqual(.{ .specific = 1 }, instruction.destination);
@@ -109,7 +109,7 @@ test "parse parses valid bytecode with vertical offset flag and consumes 3 bytes
 }
 
 test "parse parses valid bytecode with front buffer source and consumes 3 bytes" {
-    const instruction = try expectParse(parse, &BytecodeExamples.front_buffer, 3);
+    const instruction = try expectParse(parse, &Fixtures.front_buffer, 3);
 
     try testing.expectEqual(.front_buffer, instruction.source);
     try testing.expectEqual(.{ .specific = 1 }, instruction.destination);
@@ -117,7 +117,7 @@ test "parse parses valid bytecode with front buffer source and consumes 3 bytes"
 }
 
 test "parse parses valid bytecode with back buffer source and consumes 3 bytes" {
-    const instruction = try expectParse(parse, &BytecodeExamples.back_buffer, 3);
+    const instruction = try expectParse(parse, &Fixtures.back_buffer, 3);
 
     try testing.expectEqual(.back_buffer, instruction.source);
     try testing.expectEqual(.{ .specific = 1 }, instruction.destination);
@@ -127,14 +127,14 @@ test "parse parses valid bytecode with back buffer source and consumes 3 bytes" 
 test "parse returns error.InvalidBufferID on unknown source and consumes 3 bytes" {
     try testing.expectError(
         error.InvalidBufferID,
-        expectParse(parse, &BytecodeExamples.invalid_source, 3),
+        expectParse(parse, &Fixtures.invalid_source, 3),
     );
 }
 
 test "parse returns error.InvalidBufferID on unknown destination and consumes 3 bytes" {
     try testing.expectError(
         error.InvalidBufferID,
-        expectParse(parse, &BytecodeExamples.invalid_destination, 3),
+        expectParse(parse, &Fixtures.invalid_destination, 3),
     );
 }
 

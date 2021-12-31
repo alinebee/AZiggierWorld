@@ -50,7 +50,7 @@ pub fn parse(_: Opcode.Raw, program: *Program.Instance) Error!Instance {
 
 // -- Bytecode examples --
 
-pub const BytecodeExamples = struct {
+pub const Fixtures = struct {
     const raw_opcode = @enumToInt(Opcode.Enum.ControlResources);
 
     /// Example bytecode that should produce a valid instruction.
@@ -68,19 +68,19 @@ const expectParse = @import("test_helpers/parse.zig").expectParse;
 const MockMachine = @import("../machine/test_helpers/mock_machine.zig");
 
 test "parse parses unload_all instruction and consumes 3 bytes" {
-    const instruction = try expectParse(parse, &BytecodeExamples.unload_all, 3);
+    const instruction = try expectParse(parse, &Fixtures.unload_all, 3);
 
     try testing.expectEqual(.unload_all, instruction);
 }
 
 test "parse parses start_game_part instruction and consumes 3 bytes" {
-    const instruction = try expectParse(parse, &BytecodeExamples.start_game_part, 3);
+    const instruction = try expectParse(parse, &Fixtures.start_game_part, 3);
 
     try testing.expectEqual(.{ .start_game_part = .arena_cinematic }, instruction);
 }
 
 test "parse parses load_resource instruction and consumes 3 bytes" {
-    const instruction = try expectParse(parse, &BytecodeExamples.load_resource, 3);
+    const instruction = try expectParse(parse, &Fixtures.load_resource, 3);
 
     try testing.expectEqual(.{ .load_resource = 0xDEAD }, instruction);
 }

@@ -198,33 +198,33 @@ fn expectParse(bytecode: []const u8) !Wrapped {
 const testing = @import("../utils/testing.zig");
 
 test "parseNextInstruction returns expected instruction type when given valid bytecode" {
-    try testing.expectEqualTags(.ActivateThread, try expectParse(&ActivateThread.BytecodeExamples.valid));
-    try testing.expectEqualTags(.Call, try expectParse(&Call.BytecodeExamples.valid));
-    try testing.expectEqualTags(.ControlMusic, try expectParse(&ControlMusic.BytecodeExamples.valid));
-    try testing.expectEqualTags(.ControlResources, try expectParse(&ControlResources.BytecodeExamples.valid));
-    try testing.expectEqualTags(.ControlSound, try expectParse(&ControlSound.BytecodeExamples.valid));
-    try testing.expectEqualTags(.ControlThreads, try expectParse(&ControlThreads.BytecodeExamples.valid));
-    try testing.expectEqualTags(.DrawBackgroundPolygon, try expectParse(&DrawBackgroundPolygon.BytecodeExamples.valid));
-    try testing.expectEqualTags(.DrawSpritePolygon, try expectParse(&DrawSpritePolygon.BytecodeExamples.valid));
-    try testing.expectEqualTags(.DrawString, try expectParse(&DrawString.BytecodeExamples.valid));
-    try testing.expectEqualTags(.FillVideoBuffer, try expectParse(&FillVideoBuffer.BytecodeExamples.valid));
-    try testing.expectEqualTags(.Jump, try expectParse(&Jump.BytecodeExamples.valid));
-    try testing.expectEqualTags(.JumpConditional, try expectParse(&JumpConditional.BytecodeExamples.valid));
-    try testing.expectEqualTags(.JumpIfNotZero, try expectParse(&JumpIfNotZero.BytecodeExamples.valid));
-    try testing.expectEqualTags(.Kill, try expectParse(&Kill.BytecodeExamples.valid));
-    try testing.expectEqualTags(.RegisterAdd, try expectParse(&RegisterAdd.BytecodeExamples.valid));
-    try testing.expectEqualTags(.RegisterAddConstant, try expectParse(&RegisterAddConstant.BytecodeExamples.valid));
-    try testing.expectEqualTags(.RegisterAnd, try expectParse(&RegisterAnd.BytecodeExamples.valid));
-    try testing.expectEqualTags(.RegisterCopy, try expectParse(&RegisterCopy.BytecodeExamples.valid));
-    try testing.expectEqualTags(.RegisterOr, try expectParse(&RegisterOr.BytecodeExamples.valid));
-    try testing.expectEqualTags(.RegisterSet, try expectParse(&RegisterSet.BytecodeExamples.valid));
-    try testing.expectEqualTags(.RegisterShiftLeft, try expectParse(&RegisterShiftLeft.BytecodeExamples.valid));
-    try testing.expectEqualTags(.RegisterSubtract, try expectParse(&RegisterSubtract.BytecodeExamples.valid));
-    try testing.expectEqualTags(.RenderVideoBuffer, try expectParse(&RenderVideoBuffer.BytecodeExamples.valid));
-    try testing.expectEqualTags(.Return, try expectParse(&Return.BytecodeExamples.valid));
-    try testing.expectEqualTags(.SelectPalette, try expectParse(&SelectPalette.BytecodeExamples.valid));
-    try testing.expectEqualTags(.SelectVideoBuffer, try expectParse(&SelectVideoBuffer.BytecodeExamples.valid));
-    try testing.expectEqualTags(.Yield, try expectParse(&Yield.BytecodeExamples.valid));
+    try testing.expectEqualTags(.ActivateThread, try expectParse(&ActivateThread.Fixtures.valid));
+    try testing.expectEqualTags(.Call, try expectParse(&Call.Fixtures.valid));
+    try testing.expectEqualTags(.ControlMusic, try expectParse(&ControlMusic.Fixtures.valid));
+    try testing.expectEqualTags(.ControlResources, try expectParse(&ControlResources.Fixtures.valid));
+    try testing.expectEqualTags(.ControlSound, try expectParse(&ControlSound.Fixtures.valid));
+    try testing.expectEqualTags(.ControlThreads, try expectParse(&ControlThreads.Fixtures.valid));
+    try testing.expectEqualTags(.DrawBackgroundPolygon, try expectParse(&DrawBackgroundPolygon.Fixtures.valid));
+    try testing.expectEqualTags(.DrawSpritePolygon, try expectParse(&DrawSpritePolygon.Fixtures.valid));
+    try testing.expectEqualTags(.DrawString, try expectParse(&DrawString.Fixtures.valid));
+    try testing.expectEqualTags(.FillVideoBuffer, try expectParse(&FillVideoBuffer.Fixtures.valid));
+    try testing.expectEqualTags(.Jump, try expectParse(&Jump.Fixtures.valid));
+    try testing.expectEqualTags(.JumpConditional, try expectParse(&JumpConditional.Fixtures.valid));
+    try testing.expectEqualTags(.JumpIfNotZero, try expectParse(&JumpIfNotZero.Fixtures.valid));
+    try testing.expectEqualTags(.Kill, try expectParse(&Kill.Fixtures.valid));
+    try testing.expectEqualTags(.RegisterAdd, try expectParse(&RegisterAdd.Fixtures.valid));
+    try testing.expectEqualTags(.RegisterAddConstant, try expectParse(&RegisterAddConstant.Fixtures.valid));
+    try testing.expectEqualTags(.RegisterAnd, try expectParse(&RegisterAnd.Fixtures.valid));
+    try testing.expectEqualTags(.RegisterCopy, try expectParse(&RegisterCopy.Fixtures.valid));
+    try testing.expectEqualTags(.RegisterOr, try expectParse(&RegisterOr.Fixtures.valid));
+    try testing.expectEqualTags(.RegisterSet, try expectParse(&RegisterSet.Fixtures.valid));
+    try testing.expectEqualTags(.RegisterShiftLeft, try expectParse(&RegisterShiftLeft.Fixtures.valid));
+    try testing.expectEqualTags(.RegisterSubtract, try expectParse(&RegisterSubtract.Fixtures.valid));
+    try testing.expectEqualTags(.RenderVideoBuffer, try expectParse(&RenderVideoBuffer.Fixtures.valid));
+    try testing.expectEqualTags(.Return, try expectParse(&Return.Fixtures.valid));
+    try testing.expectEqualTags(.SelectPalette, try expectParse(&SelectPalette.Fixtures.valid));
+    try testing.expectEqualTags(.SelectVideoBuffer, try expectParse(&SelectVideoBuffer.Fixtures.valid));
+    try testing.expectEqualTags(.Yield, try expectParse(&Yield.Fixtures.valid));
 }
 
 test "parseNextInstruction returns error.InvalidOpcode error when it encounters an unknown opcode" {
@@ -233,7 +233,7 @@ test "parseNextInstruction returns error.InvalidOpcode error when it encounters 
 }
 
 test "executeNextInstruction executes arbitrary instruction on machine when given valid bytecode" {
-    var machine = Machine.testInstance(&RegisterSet.BytecodeExamples.valid);
+    var machine = Machine.testInstance(&RegisterSet.Fixtures.valid);
     defer machine.deinit();
 
     const action = try executeNextInstruction(&machine.program, &machine);
@@ -243,7 +243,7 @@ test "executeNextInstruction executes arbitrary instruction on machine when give
 }
 
 test "executeNextInstruction returns DeactivateThread action if specified" {
-    var machine = Machine.testInstance(&Kill.BytecodeExamples.valid);
+    var machine = Machine.testInstance(&Kill.Fixtures.valid);
     defer machine.deinit();
 
     const action = try executeNextInstruction(&machine.program, &machine);
@@ -252,7 +252,7 @@ test "executeNextInstruction returns DeactivateThread action if specified" {
 }
 
 test "executeNextInstruction returns YieldToNextThread action if specified" {
-    var machine = Machine.testInstance(&Yield.BytecodeExamples.valid);
+    var machine = Machine.testInstance(&Yield.Fixtures.valid);
     defer machine.deinit();
 
     const action = try executeNextInstruction(&machine.program, &machine);

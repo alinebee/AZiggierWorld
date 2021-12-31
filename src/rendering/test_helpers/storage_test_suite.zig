@@ -285,7 +285,7 @@ pub fn runTests(comptime Instance: anytype) void {
         }
 
         test "loadBitmapResource correctly parses planar bitmap data" {
-            const data = &PlanarBitmapResource.DataExamples.valid_16px;
+            const data = &PlanarBitmapResource.Fixtures.valid_16px;
             const Storage = Instance(4, 4);
 
             var buffer = Storage{};
@@ -315,7 +315,7 @@ pub fn runTests(comptime Instance: anytype) void {
                 \\3210
             );
 
-            const palette = Palette.FixtureData.palette;
+            const palette = Palette.Fixtures.palette;
             const expected = DestinationSurface{
                 palette[15],
                 palette[14],

@@ -69,7 +69,7 @@ pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instance 
 
 // -- Bytecode examples --
 
-pub const BytecodeExamples = struct {
+pub const Fixtures = struct {
     /// Example bytecode that should produce a valid instruction.
     pub const valid = low_x;
 
@@ -84,7 +84,7 @@ const expectParse = @import("test_helpers/parse.zig").expectParse;
 const MockMachine = @import("../machine/test_helpers/mock_machine.zig");
 
 test "parse parses bytecode with low X coordinate and consumes 4 bytes" {
-    const instruction = try expectParse(parse, &BytecodeExamples.low_x, 4);
+    const instruction = try expectParse(parse, &Fixtures.low_x, 4);
 
     // Address will be the first two bytes right-shifted by 1
     try testing.expectEqual(0b0001_1110_0001_1110, instruction.address);
@@ -93,7 +93,7 @@ test "parse parses bytecode with low X coordinate and consumes 4 bytes" {
 }
 
 test "parse parses bytecode with high X coordinate and consumes 4 bytes" {
-    const instruction = try expectParse(parse, &BytecodeExamples.high_x, 4);
+    const instruction = try expectParse(parse, &Fixtures.high_x, 4);
 
     try testing.expectEqual(0b0001_1110_0001_1110, instruction.address);
     try testing.expectEqual(255 + (240 - 199), instruction.point.x);
