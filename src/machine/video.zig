@@ -11,10 +11,13 @@ const Polygon = @import("../rendering/polygon.zig");
 const PackedStorage = @import("../rendering/storage/packed_storage.zig");
 const drawPolygonImpl = @import("../rendering/operations/draw_polygon.zig").drawPolygon;
 const drawStringImpl = @import("../rendering/operations/draw_string.zig").drawString;
+const Host = @import("host.zig");
 
 const static_limits = @import("../static_limits.zig");
 
 const english = @import("../assets/english.zig");
+
+const mem = @import("std").mem;
 
 /// Defines where to read polygon from for a polygon draw operation.
 /// Another World's polygons may be stored in one of two locations:
@@ -56,19 +59,25 @@ pub const Instance = struct {
     /// Frames will be rendered to the host screen using this palette.
     palette_id: PaletteID.Trusted = 0,
 
-    /// The index of the buffer in `buffers` that draw instructions will render into.
-    target_buffer_id: BufferID.Specific = 2,
+    /// The index of the buffer in `buffers` that was rendered to the host screen on the previous frame.
+    front_buffer_id: BufferID.Specific = initial_front_buffer_id,
 
     /// The index of the buffer in `buffers` that will be rendered to the host screen on the next frame.
-    back_buffer_id: BufferID.Specific = 1,
+    back_buffer_id: BufferID.Specific = initial_back_buffer_id,
 
-    /// The index of the buffer in `buffers` that was rendered to the host screen on the previous frame.
-    front_buffer_id: BufferID.Specific = 2,
+    /// The index of the buffer in `buffers` that draw operations will draw into.
+    /// (The reference implementation initialized this to the front buffer, not the back buffer:
+    /// it's unclear why, as normally a game would want to send its draw operations to the back buffer.)
+    target_buffer_id: BufferID.Specific = initial_front_buffer_id,
 
-    /// Masked drawing operations always read the mask from buffer 0.
+    const initial_front_buffer_id: BufferID.Specific = 2;
+    const initial_back_buffer_id: BufferID.Specific = 1;
+
+    /// Masked drawing operations always read the mask from buffer 0,
+    /// which presumably contains the scene background.
     pub const mask_buffer_id: BufferID.Specific = 0;
 
-    /// Bitmaps are always loaded into buffer 0.
+    /// Bitmaps are always loaded into buffer 0, presumably replacing the scene background.
     pub const bitmap_buffer_id: BufferID.Specific = 0;
 
     const Self = @This();
@@ -144,21 +153,29 @@ pub const Instance = struct {
         try drawStringImpl(Buffer, buffer, string, color_id, point);
     }
 
-    /// Render the contents of a video buffer to the host screen using the current palette.
-    pub fn renderBuffer(self: *Self, buffer_id: BufferID.Enum, delay: Milliseconds, host: anytype) void {
-        const resolved_id = self.resolvedBufferID(buffer_id);
-        const buffer = &self.buffers[resolved_id];
+    /// Render the contents of a video buffer to the host using the current palette.
+    pub fn renderBuffer(self: *Self, buffer_id: BufferID.Enum, delay: Milliseconds, host: Host.Interface) !void {
+        const buffer = self.resolvedBuffer(buffer_id);
+        const palette = try self.palettes.palette(self.palette_id);
 
-        const palette = self.palettes[self.palette_id];
-        var surface = host.getRenderSurface();
-        buffer.renderIntoSurface(surface, palette);
+        var surface = try host.prepareSurface();
+        buffer.renderToSurface(surface, palette);
 
-        if (resolved_id != self.front_buffer_id) {
-            self.back_buffer_id = self.front_buffer_id;
-            self.front_buffer_id = resolved_id;
+        switch (buffer_id) {
+            // When re-rendering the front buffer, leave the current front and back buffers as they were.
+            .front_buffer => {},
+            // When rendering the back buffer, swap the front and back buffers.
+            .back_buffer => {
+                mem.swap(BufferID.Specific, &self.front_buffer_id, &self.back_buffer_id);
+            },
+            // When rendering a specific buffer by ID, mark that buffer as the front buffer
+            // and leave the current back buffer alone.
+            .specific => |resolved_id| {
+                self.front_buffer_id = resolved_id;
+            },
         }
 
-        host.surfaceIsReady(surface, delay);
+        host.surfaceReady(surface, delay);
     }
 
     // - Private helpers -
@@ -175,7 +192,7 @@ pub const Instance = struct {
         return &self.buffers[self.resolvedBufferID(buffer_id)];
     }
 
-    fn resolvedPolygonSource(self: *Self, source: PolygonSource) !*PolygonResource.Instance {
+    fn resolvedPolygonSource(self: *const Self, source: PolygonSource) !*const PolygonResource.Instance {
         switch (source) {
             .polygons => return &self.polygons,
             .animations => {
@@ -209,8 +226,127 @@ const PolygonVisitor = struct {
 
 // -- Tests --
 
-const testing = @import("std").testing;
+const testing = @import("../utils/testing.zig");
+const MockHost = @import("test_helpers/mock_host.zig");
+const Color = @import("../values/color.zig");
 
 test "Ensure everything compiles" {
     testing.refAllDecls(Instance);
+}
+
+/// Construct a video instance populated with sample valid resource data,
+/// with all buffers filled with color ID 0.
+fn test_instance() Instance {
+    const polygon_data = &PolygonResource.DataExamples.resource;
+    const palette_data = &PaletteResource.DataExamples.resource;
+
+    var instance = Instance{
+        .polygons = PolygonResource.new(polygon_data),
+        .animations = PolygonResource.new(polygon_data),
+        .palettes = PaletteResource.new(palette_data),
+    };
+
+    for (instance.buffers) |*buffer| {
+        buffer.fill(0x0);
+    }
+
+    return instance;
+}
+
+test "resolvedBufferID returns expected IDs for each buffer enum" {
+    const instance = test_instance();
+
+    try testing.expectEqual(0, instance.resolvedBufferID(.{ .specific = 0 }));
+    try testing.expectEqual(1, instance.resolvedBufferID(.{ .specific = 1 }));
+    try testing.expectEqual(2, instance.resolvedBufferID(.{ .specific = 2 }));
+    try testing.expectEqual(3, instance.resolvedBufferID(.{ .specific = 3 }));
+
+    try testing.expectEqual(2, instance.front_buffer_id);
+    try testing.expectEqual(2, instance.resolvedBufferID(.front_buffer));
+    try testing.expectEqual(1, instance.back_buffer_id);
+    try testing.expectEqual(1, instance.resolvedBufferID(.back_buffer));
+}
+
+test "resolvedPolygonSource with polygons resolves expected source" {
+    const instance = test_instance();
+    try testing.expectEqual(&instance.polygons, try instance.resolvedPolygonSource(.polygons));
+}
+
+test "resolvedPolygonSource with animations resolves expected source when animations are loaded" {
+    const instance = test_instance();
+    try testing.expectEqual(&instance.animations.?, try instance.resolvedPolygonSource(.animations));
+}
+
+test "resolvedPolygonSource with animations returns error when animations are not loaded" {
+    var instance = test_instance();
+    instance.animations = null;
+    try testing.expectError(error.AnimationsNotLoaded, instance.resolvedPolygonSource(.animations));
+}
+
+test "renderBuffer renders specific buffer to host surface and marks it as the front buffer" {
+    var instance = test_instance();
+    var test_host = MockHost.Instance.init(null);
+    mem.set(Color.Instance, &test_host.surface, .{ .r = 255, .g = 255, .b = 255 });
+
+    const expected_palette = try instance.palettes.palette(instance.palette_id);
+    // All buffers of the test instance are filled with color ID 0.
+    const expected_color = expected_palette[0];
+    var expected_surface: Host.Surface = undefined;
+    mem.set(Color.Instance, &expected_surface, expected_color);
+
+    const buffer_to_render = 0;
+    try instance.renderBuffer(BufferID.Enum{ .specific = buffer_to_render }, 0, test_host.host());
+
+    try testing.expectEqual(1, test_host.call_counts.prepareSurface);
+    try testing.expectEqual(1, test_host.call_counts.surfaceReady);
+    try testing.expectEqual(expected_surface, test_host.surface);
+
+    try testing.expectEqual(buffer_to_render, instance.front_buffer_id);
+    try testing.expectEqual(Instance.initial_back_buffer_id, instance.back_buffer_id);
+}
+
+test "renderBuffer swaps front and back buffers when back buffer is rendered" {
+    var instance = test_instance();
+    var test_host = MockHost.Instance.init(null);
+
+    try instance.renderBuffer(.back_buffer, 0, test_host.host());
+
+    // Rendering should swap the front and back buffers
+    try testing.expectEqual(Instance.initial_back_buffer_id, instance.front_buffer_id);
+    try testing.expectEqual(Instance.initial_front_buffer_id, instance.back_buffer_id);
+}
+
+test "renderBuffer does not swap buffers when front buffer is re-rendered" {
+    var instance = test_instance();
+    var test_host = MockHost.Instance.init(null);
+
+    try instance.renderBuffer(.front_buffer, 0, test_host.host());
+
+    try testing.expectEqual(Instance.initial_front_buffer_id, instance.front_buffer_id);
+    try testing.expectEqual(Instance.initial_back_buffer_id, instance.back_buffer_id);
+}
+
+test "renderBuffer returns host error and does not swap buffers when host is unable to create surface" {
+    var instance = test_instance();
+    var test_host = MockHost.Instance.init(error.CannotCreateSurface);
+
+    try testing.expectError(error.CannotCreateSurface, instance.renderBuffer(.back_buffer, 0, test_host.host()));
+    try testing.expectEqual(1, test_host.call_counts.prepareSurface);
+    try testing.expectEqual(0, test_host.call_counts.surfaceReady);
+    try testing.expectEqual(Instance.initial_front_buffer_id, instance.front_buffer_id);
+    try testing.expectEqual(Instance.initial_back_buffer_id, instance.back_buffer_id);
+}
+
+test "renderBuffer returns error.EndOfStream and does not swap buffers or request surface when palette data was corrupted" {
+    var instance = test_instance();
+    const empty_palette_data = [0]u8{};
+    instance.palettes = PaletteResource.new(&empty_palette_data);
+
+    var test_host = MockHost.Instance.init(null);
+
+    try testing.expectError(error.EndOfStream, instance.renderBuffer(.back_buffer, 0, test_host.host()));
+    try testing.expectEqual(0, test_host.call_counts.prepareSurface);
+    try testing.expectEqual(0, test_host.call_counts.surfaceReady);
+    try testing.expectEqual(Instance.initial_front_buffer_id, instance.front_buffer_id);
+    try testing.expectEqual(Instance.initial_back_buffer_id, instance.back_buffer_id);
 }
