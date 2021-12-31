@@ -3,16 +3,10 @@
 
 const ResourceDescriptor = @import("resource_descriptor.zig");
 const ResourceID = @import("../values/resource_id.zig");
-const MockRepository = @import("mock_repository.zig");
 
 const std = @import("std");
 const mem = std.mem;
 const assert = std.debug.assert;
-
-/// A reader for a test repository that can safely load any game part,
-/// albeit with garbage data. Should only be used in tests.
-pub const test_reader = test_repository.reader();
-var test_repository = MockRepository.Instance.init(&MockRepository.FixtureData.descriptors, null);
 
 /// A generic interface for enumerating available resources and loading resource data into buffers.
 /// This is passed around as a 'fat pointer', following zig 0.9.0's polymorphic allocator pattern.

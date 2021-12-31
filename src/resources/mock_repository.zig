@@ -32,6 +32,11 @@ const BoundedArray = @import("std").BoundedArray;
 
 const DescriptorStorage = BoundedArray(ResourceDescriptor.Instance, static_limits.max_resource_descriptors);
 
+/// A reader for a test repository that can safely load any game part,
+/// albeit with garbage data. Should only be used in tests.
+pub var test_reader = test_repository.reader();
+var test_repository = Instance.init(&FixtureData.descriptors, null);
+
 pub const Instance = struct {
     /// The list of resources vended by this mock repository.
     /// Access this via reader().resourceDescriptors() instead of directly.

@@ -2,6 +2,9 @@
 
 const Host = @import("../host.zig");
 
+var test_host_implementation = Instance.init(null);
+pub var test_host = test_host_implementation.host();
+
 pub const Instance = struct {
     prepare_surface_error: ?Host.PrepareSurfaceError,
     surface: Host.Surface = undefined,

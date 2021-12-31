@@ -16,8 +16,9 @@ const Program = @import("program.zig");
 const Video = @import("video.zig");
 const Audio = @import("audio.zig");
 const Memory = @import("memory.zig");
+const Host = @import("host.zig");
+
 const Reader = @import("../resources/reader.zig");
-const MockRepository = @import("../resources/mock_repository.zig");
 
 const static_limits = @import("../static_limits.zig");
 
@@ -51,6 +52,9 @@ pub const Instance = struct {
     /// The current state of resources loaded into memory.
     memory: Memory.Instance,
 
+    /// The host which the machine will send video and audio output to and read player input from.
+    host: Host.Interface,
+
     /// The next game part that has been scheduled to be started by a program instruction.
     /// Null if no game part is scheduled.
     scheduled_game_part: ?GamePart.Enum = null,
@@ -61,7 +65,7 @@ pub const Instance = struct {
     /// and reads game data from the specified reader. The virtual machine will attempt
     /// to load the resources for the specified game part.
     /// On success, returns a machine instance that is ready to simulate.
-    fn init(allocator: mem.Allocator, reader: Reader.Interface, initial_game_part: GamePart.Enum) !Self {
+    fn init(allocator: mem.Allocator, reader: Reader.Interface, host: Host.Interface, initial_game_part: GamePart.Enum) !Self {
         var memory = try Memory.new(allocator, reader);
         errdefer memory.deinit();
 
@@ -70,6 +74,7 @@ pub const Instance = struct {
             .registers = .{0} ** register_count,
             .stack = .{},
             .memory = memory,
+            .host = host,
             // The video and program will be populated once the first game part is started.
             // TODO: the machine shouldn't know which fields of the Video instance need to be marked undefined.
             .video = .{
@@ -173,11 +178,8 @@ pub const Instance = struct {
     }
 
     /// Render the contents of the specified buffer to the host screen after the specified delay.
-    pub fn renderVideoBuffer(_: *Self, buffer_id: BufferID.Enum, delay: Video.Milliseconds) void {
-        log_unimplemented("Video.renderVideoBuffer: {} delay:{}", .{
-            buffer_id,
-            delay,
-        });
+    pub fn renderVideoBuffer(self: *Self, buffer_id: BufferID.Enum, delay: Video.Milliseconds) !void {
+        try self.video.renderBuffer(buffer_id, delay, self.host);
     }
 
     // -- Audio subsystem interface --
@@ -219,9 +221,12 @@ pub const Instance = struct {
     }
 };
 
-pub fn new(allocator: mem.Allocator, reader: Reader.Interface, initial_game_part: GamePart.Enum) !Instance {
-    return Instance.init(allocator, reader, initial_game_part);
+pub fn new(allocator: mem.Allocator, reader: Reader.Interface, host: Host.Interface, initial_game_part: GamePart.Enum) !Instance {
+    return Instance.init(allocator, reader, host, initial_game_part);
 }
+
+const MockRepository = @import("../resources/mock_repository.zig");
+const MockHost = @import("test_helpers/mock_host.zig");
 
 /// Returns a machine instance suitable for use in tests.
 /// The machine will load game data from a fake repository,
@@ -233,7 +238,7 @@ pub fn new(allocator: mem.Allocator, reader: Reader.Interface, initial_game_part
 /// defer machine.deinit();
 /// try testing.expectEqual(result, do_something_that_requires_a_machine(machine));
 pub fn test_machine(possible_bytecode: ?[]const u8) Instance {
-    var machine = new(testing.allocator, Reader.test_reader, .intro_cinematic) catch unreachable;
+    var machine = new(testing.allocator, MockRepository.test_reader, MockHost.test_host, .intro_cinematic) catch unreachable;
     if (possible_bytecode) |bytecode| {
         machine.program = Program.new(bytecode);
     }
@@ -248,7 +253,7 @@ const meta = @import("std").meta;
 test "new creates virtual machine instance with expected initial state" {
     const initial_game_part = GamePart.Enum.gameplay1;
 
-    var machine = try new(testing.allocator, Reader.test_reader, initial_game_part);
+    var machine = try new(testing.allocator, MockRepository.test_reader, MockHost.test_host, initial_game_part);
     defer machine.deinit();
 
     for (machine.threads) |thread, id| {
@@ -289,7 +294,7 @@ test "new creates virtual machine instance with expected initial state" {
 }
 
 test "scheduleGamePart schedules a new game part without loading it" {
-    var machine = try new(testing.allocator, Reader.test_reader, .copy_protection);
+    var machine = try new(testing.allocator, MockRepository.test_reader, MockHost.test_host, .copy_protection);
     defer machine.deinit();
 
     try testing.expectEqual(null, machine.scheduled_game_part);

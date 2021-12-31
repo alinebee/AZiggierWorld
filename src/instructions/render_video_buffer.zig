@@ -19,12 +19,12 @@ pub const Instance = struct {
     buffer_id: BufferID.Enum,
 
     // Public implementation is constrained to concrete type so that instruction.zig can infer errors.
-    pub fn execute(self: Instance, machine: *Machine.Instance) void {
+    pub fn execute(self: Instance, machine: *Machine.Instance) !void {
         return self._execute(machine);
     }
 
     // Private implementation is generic to allow tests to use mocks.
-    fn _execute(self: Instance, machine: anytype) void {
+    fn _execute(self: Instance, machine: anytype) !void {
         // In Another World's original bytecode, the delay is typically set to between 1-11 units (20-220 ms).
         const delay_in_frame_units = @bitCast(RawFrameDelay, machine.registers[RegisterID.frame_duration]);
         const delay_in_milliseconds = @as(Video.Milliseconds, delay_in_frame_units) * milliseconds_per_frame_unit;
@@ -32,10 +32,11 @@ pub const Instance = struct {
         // Copypasta from reference implementation.
         // From examining Another World's bytecode, nothing else ever writes to this register;
         // since 0 is the initial value of all registers, this code effectively does nothing.
-        // Some instructions do read from this register, so changing this value may have some effect.
+        // Some instructions do read from this register, so altering this value at compile time
+        // may have some effect.
         machine.registers[RegisterID.render_video_buffer_UNKNOWN] = 0;
 
-        machine.renderVideoBuffer(self.buffer_id, delay_in_milliseconds);
+        try machine.renderVideoBuffer(self.buffer_id, delay_in_milliseconds);
     }
 };
 
@@ -88,19 +89,15 @@ test "execute calls renderVideoBuffer with correct parameters" {
     };
 
     var machine = MockMachine.new(struct {
-        pub fn renderVideoBuffer(buffer_id: BufferID.Enum, delay: Video.Milliseconds) void {
-            testing.expectEqual(.back_buffer, buffer_id) catch {
-                unreachable;
-            };
-            testing.expectEqual(100, delay) catch {
-                unreachable;
-            };
+        pub fn renderVideoBuffer(buffer_id: BufferID.Enum, delay: Video.Milliseconds) !void {
+            try testing.expectEqual(.back_buffer, buffer_id);
+            try testing.expectEqual(100, delay);
         }
     });
     machine.registers[RegisterID.frame_duration] = 5;
     machine.registers[RegisterID.render_video_buffer_UNKNOWN] = 1234;
 
-    instruction._execute(&machine);
+    try instruction._execute(&machine);
     try testing.expectEqual(1, machine.call_counts.renderVideoBuffer);
 
     try testing.expectEqual(0, machine.registers[RegisterID.render_video_buffer_UNKNOWN]);
