@@ -72,7 +72,8 @@ pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instance 
     // address and uses the lower 6 bits of the opcode for other parts of the instruction (see below.)
     // It interprets the raw polygon address the same way as DrawBackgroundPolygon though,
     // right-shifting by one to land on an even address boundary.
-    self.address = (try program.read(Video.PolygonAddress)) << 1;
+    const raw_address = try program.read(Video.PolygonAddress);
+    self.address = raw_address << 1;
 
     // The low 6 bits of the opcode byte determine where to read the x, y and scale values from,
     // and therefore how many bytes to consume for the operation.
@@ -93,11 +94,11 @@ pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instance 
     //   - 01: read next byte as ID of register containing Y coordinate
     //   - 10, 11: read next byte as unsigned 8-bit constant
     //
-    // - `ss` controls where to read the scale from and which memory to read region polygon data from:
-    //   - 00: use `.polygons` region, set default scale
-    //   - 01: use `.polygons` region, read next byte as ID of register containing scale
-    //   - 10: use `.polygons` region, read next byte as unsigned 8-bit constant
-    //   - 11: use `.animations` region, set default scale
+    // - `ss` controls where to read the scale from and which resource to read polygon data from:
+    //   - 00: use `.polygons` resource, set default scale
+    //   - 01: use `.polygons` resource, read next byte as ID of register containing scale
+    //   - 10: use `.polygons` resource, read next byte as unsigned 8-bit constant
+    //   - 11: use `.animations` resource, set default scale
 
     const raw_x = @truncate(u2, raw_opcode >> 4);
     const raw_y = @truncate(u2, raw_opcode >> 2);

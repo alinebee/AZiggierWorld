@@ -37,7 +37,7 @@ pub const Milliseconds = usize;
 pub const PolygonAddress = PolygonResource.Address;
 
 /// The type used for the video buffers.
-pub const Buffer = PackedStorage.Instance(static_limits.virtual_screen_width, static_limits.virtual_screen_height);
+const Buffer = PackedStorage.Instance(static_limits.virtual_screen_width, static_limits.virtual_screen_height);
 
 /// The video subsystem responsible for handling draw calls and sending frames to the host screen.
 pub const Instance = struct {
@@ -129,7 +129,8 @@ pub const Instance = struct {
         try buffer.loadBitmapResource(bitmap_data);
     }
 
-    /// Render a polygon from the specified source and address at the specified screen position and scale.
+    /// Render a polygon from the specified source and address into the current target buffer,
+    /// at the specified screen position and scale.
     /// Returns an error if the specified polygon address was invalid or if polygon data was malformed.
     pub fn drawPolygon(self: *Self, source: PolygonSource, address: PolygonResource.Address, point: Point.Instance, scale: PolygonScale.Raw) !void {
         const visitor = PolygonVisitor{
@@ -142,8 +143,8 @@ pub const Instance = struct {
     }
 
     /// Render a string from the English string table at the specified screen position
-    /// in the specified color. Returns an error if the string ID was not found
-    /// or the string contained unsupported characters.
+    /// in the specified color into the current target buffer.
+    /// Returns an error if the string ID was not found or the string contained unsupported characters.
     pub fn drawString(self: *Self, string_id: StringID.Raw, color_id: ColorID.Trusted, point: Point.Instance) !void {
         var buffer = &self.buffers[self.target_buffer_id];
 
@@ -207,7 +208,7 @@ pub const Instance = struct {
 };
 
 pub const Error = error{
-    /// Attempted to render polygons from the animation when it was not loaded by the current game part.
+    /// Attempted to render polygons from the animations resource when it was not loaded by the current game part.
     AnimationsNotLoaded,
 };
 
