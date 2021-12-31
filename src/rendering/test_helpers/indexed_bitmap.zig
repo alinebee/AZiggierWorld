@@ -3,16 +3,32 @@ const ColorID = @import("../../values/color_id.zig");
 const std = @import("std");
 const fmt = std.fmt;
 const mem = std.mem;
+const debug = std.debug;
 
 /// Stores a 16-color bitmap with the specified width and height, and converts its contents
 /// to and from a multiline string representation. Intended for unit-testing the contents of a draw buffer.
 pub fn Instance(comptime width: usize, comptime height: usize) type {
-    const Data = [height][width]ColorID.Trusted;
+    // Store pixel data in a two-dimensional array
+    const Row = [width]ColorID.Trusted;
+    const Data = [height]Row;
+
+    // We sometimes also address pixels as a 1D array, e.g. for fills
+    const bytes_required = width * height;
+    const RawData = [bytes_required]ColorID.Trusted;
+    comptime debug.assert(@sizeOf(Data) == @sizeOf(RawData));
 
     return struct {
-        data: Data = mem.zeroes(Data),
+        data: Data = undefined,
 
         const Self = @This();
+
+        /// Return a fixed bitmap filled with the specified color.
+        pub fn filled(color_id: ColorID.Trusted) Self {
+            var self = Self{};
+            const raw_bytes = @ptrCast(*RawData, &self.data);
+            mem.set(ColorID.Trusted, raw_bytes, color_id);
+            return self;
+        }
 
         /// Creates a new bitmap from a multiline string, where rows of the bitmap are lines
         /// of uppercase hexadecimal color values from '0' to 'F', followed by a newline.
@@ -76,19 +92,42 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
     };
 }
 
-/// Assert that a bitmap's contents match an expected ASCII string representation. Example:
+/// Assert that a bitmap's contents match an expected ASCII hex string representation.
+/// Prints the difference between them as a hex string in case of a mismatch.
+///
+/// Usage:
+/// ------
 /// const expected =
 ///     \\0123
 ///     \\4567
 ///     \\89AB
 ///     \\CDEF
 /// ;
-/// expectBitmap(expected, bitmap);
+/// const actual = my_buffer.toBitmap();
+/// expectBitmap(expected, actual);
 pub fn expectBitmap(expected: []const u8, actual: anytype) !void {
-    const actual_formatted = fmt.allocPrint(testing.allocator, "{}", .{actual}) catch unreachable;
+    const actual_formatted = try fmt.allocPrint(testing.allocator, "{}", .{actual});
     defer testing.allocator.free(actual_formatted);
 
     try testing.expectEqualStrings(expected, actual_formatted);
+}
+
+/// Assert that a bitmap's contents match those of another bitmap.
+/// Prints the difference between them as a hex string in case of a mismatch.
+///
+/// Usage:
+/// ------
+/// const expected = IndexedBitmap.filled(0);
+/// const actual = my_buffer.toBitmap();
+/// expectEqualBitmaps(expected, actual);
+pub fn expectEqualBitmaps(expected: anytype, actual: @TypeOf(expected)) !void {
+    const expected_formatted = try fmt.allocPrint(testing.allocator, "{}", .{expected});
+    defer testing.allocator.free(expected_formatted);
+
+    const actual_formatted = try fmt.allocPrint(testing.allocator, "{}", .{actual});
+    defer testing.allocator.free(actual_formatted);
+
+    try testing.expectEqualStrings(expected_formatted, actual_formatted);
 }
 
 // -- Tests --
@@ -108,6 +147,19 @@ test "fromString populates bitmap data correctly from multiline string" {
         .{ 04, 05, 06, 07 },
         .{ 08, 09, 10, 11 },
         .{ 12, 13, 14, 15 },
+    };
+
+    try testing.expectEqual(expected, bitmap.data);
+}
+
+test "fileld populates bitmap data correctly" {
+    const bitmap = Instance(4, 4).filled(15);
+
+    const expected: @TypeOf(bitmap.data) = .{
+        .{ 15, 15, 15, 15 },
+        .{ 15, 15, 15, 15 },
+        .{ 15, 15, 15, 15 },
+        .{ 15, 15, 15, 15 },
     };
 
     try testing.expectEqual(expected, bitmap.data);
@@ -136,7 +188,7 @@ test "format prints colors as lines of hex values" {
     try testing.expectEqualStrings(expected_output, actual_output);
 }
 
-test "expectBitmap compares bitmaps correctly" {
+test "expectBitmap compares bitmap correctly against string" {
     const bitmap = Instance(4, 4){
         .data = .{
             .{ 00, 01, 02, 03 },
@@ -153,6 +205,28 @@ test "expectBitmap compares bitmaps correctly" {
         \\CDEF
     ;
     try expectBitmap(expected, bitmap);
+}
+
+test "expectedEqualBitmaps compares two bitmaps correctly" {
+    const expected = Instance(4, 4){
+        .data = .{
+            .{ 00, 01, 02, 03 },
+            .{ 04, 05, 06, 07 },
+            .{ 08, 09, 10, 11 },
+            .{ 12, 13, 14, 15 },
+        },
+    };
+
+    const actual = Instance(4, 4){
+        .data = .{
+            .{ 00, 01, 02, 03 },
+            .{ 04, 05, 06, 07 },
+            .{ 08, 09, 10, 11 },
+            .{ 12, 13, 14, 15 },
+        },
+    };
+
+    try expectEqualBitmaps(expected, actual);
 }
 
 test "Malformed strings cause panic" {

@@ -224,6 +224,9 @@ const PolygonVisitor = struct {
 const testing = @import("../utils/testing.zig");
 const MockHost = @import("test_helpers/mock_host.zig");
 const Color = @import("../values/color.zig");
+const IndexedBitmap = @import("../rendering/test_helpers/indexed_bitmap.zig");
+const PlanarBitmapResource = @import("../resources/planar_bitmap_resource.zig");
+const Bitmap = IndexedBitmap.Instance(static_limits.virtual_screen_width, static_limits.virtual_screen_height);
 
 test "Ensure everything compiles" {
     testing.refAllDecls(Instance);
@@ -344,4 +347,35 @@ test "renderBuffer returns error.EndOfStream and does not swap buffers or reques
     try testing.expectEqual(0, test_host.call_counts.surfaceReady);
     try testing.expectEqual(Instance.initial_front_buffer_id, instance.front_buffer_id);
     try testing.expectEqual(Instance.initial_back_buffer_id, instance.back_buffer_id);
+}
+
+test "loadBitmapResource loads bitmap data into expected buffer" {
+    var instance = testInstance();
+
+    const bitmap_size = comptime PlanarBitmapResource.bytesRequiredForSize(
+        static_limits.virtual_screen_width,
+        static_limits.virtual_screen_height,
+    );
+    const filled_bitmap_data = [_]u8{0xFF} ** bitmap_size;
+
+    const expected_bitmap_buffer_contents = Bitmap.filled(0xF);
+    const expected_untouched_buffer_contents = Bitmap.filled(0x0);
+
+    try instance.loadBitmapResource(&filled_bitmap_data);
+
+    for (instance.buffers) |buffer, index| {
+        const actual = buffer.toBitmap();
+        if (index == Instance.bitmap_buffer_id) {
+            try IndexedBitmap.expectEqualBitmaps(expected_bitmap_buffer_contents, actual);
+        } else {
+            try IndexedBitmap.expectEqualBitmaps(expected_untouched_buffer_contents, actual);
+        }
+    }
+}
+
+test "loadBitmapResource returns error from buffer when data is malformed" {
+    var instance = testInstance();
+    const empty_bitmap_data = [0]u8{};
+
+    try testing.expectError(error.InvalidBitmapSize, instance.loadBitmapResource(&empty_bitmap_data));
 }
