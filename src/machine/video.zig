@@ -193,16 +193,10 @@ pub const Instance = struct {
         return &self.buffers[self.resolvedBufferID(buffer_id)];
     }
 
-    fn resolvedPolygonSource(self: *const Self, source: PolygonSource) !*const PolygonResource.Instance {
+    fn resolvedPolygonSource(self: Self, source: PolygonSource) !PolygonResource.Instance {
         switch (source) {
-            .polygons => return &self.polygons,
-            .animations => {
-                if (self.animations) |*resource| {
-                    return resource;
-                } else {
-                    return error.AnimationsNotLoaded;
-                }
-            },
+            .polygons => return self.polygons,
+            .animations => return self.animations orelse error.AnimationsNotLoaded,
         }
     }
 };
@@ -270,12 +264,12 @@ test "resolvedBufferID returns expected IDs for each buffer enum" {
 
 test "resolvedPolygonSource with polygons resolves expected source" {
     const instance = testInstance();
-    try testing.expectEqual(&instance.polygons, try instance.resolvedPolygonSource(.polygons));
+    try testing.expectEqual(instance.polygons, try instance.resolvedPolygonSource(.polygons));
 }
 
 test "resolvedPolygonSource with animations resolves expected source when animations are loaded" {
     const instance = testInstance();
-    try testing.expectEqual(&instance.animations.?, try instance.resolvedPolygonSource(.animations));
+    try testing.expectEqual(instance.animations.?, try instance.resolvedPolygonSource(.animations));
 }
 
 test "resolvedPolygonSource with animations returns error when animations are not loaded" {
