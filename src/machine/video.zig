@@ -65,7 +65,7 @@ pub const Instance = struct {
     /// The index of the buffer in `buffers` that will be rendered to the host screen on the next frame.
     back_buffer_id: BufferID.Specific = initial_back_buffer_id,
 
-    /// The index of the buffer in `buffers` that draw operations will draw into.
+    /// The index of the buffer in `buffers` that polygon and string drawing operations will draw into.
     /// (The reference implementation initialized this to the front buffer, not the back buffer:
     /// it's unclear why, as normally a game would want to send its draw operations to the back buffer.)
     target_buffer_id: BufferID.Specific = initial_front_buffer_id,

@@ -17,7 +17,22 @@
 //!   then convert the raw bitmap data into an internal format to draw it immediately into
 //!   a background video buffer. That same memory location is reused for every bitmap resource
 //!   that is loaded; it is never unloaded nor accessed outside of populating a video buffer.
-
+//!
+//! TODO: The original game allocated a fixed 600kb block of resource memory and used a stack
+//! allocator (`FixedBufferAllocator` in zig) to load resources. This made it trivial to free
+//! the memory for an entire game part at once by rewinding the stack allocation pointer.
+//!
+//! The type defined in this file currently relies an arbitrary allocator as input, which is
+//! standard practice in Zig and makes the memory instance (and its parent VM) relocatable:
+//! but it permits unbounded memory usage, makes freeing less efficient, and forces the upstream
+//! VM to care about allocators too.
+//!
+//! It would be nicer and more "authentic" for this type to define its own 600kb fixed buffer
+//! and create a stack allocator internally to manage it. This would give us a predictable memory
+//! footprint and efficient freeing. It would prevent safe relocation (memory pointers into that
+//! fixed buffer for each loaded resource would break if the VM or memory instance is copied)
+//! but we don't need to support that anyway, and future Zig versions may allow us to mark
+//! the entire type as move-only.
 const Reader = @import("../resources/reader.zig");
 const ResourceDirectory = @import("../resources/resource_directory.zig");
 const ResourceID = @import("../values/resource_id.zig");
