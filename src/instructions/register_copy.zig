@@ -55,7 +55,7 @@ test "execute updates specified register with value" {
         .source = 17,
     };
 
-    var machine = Machine.test_machine(null);
+    var machine = Machine.testInstance(null);
     defer machine.deinit();
 
     machine.registers[16] = 32767;

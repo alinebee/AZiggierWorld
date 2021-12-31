@@ -234,10 +234,10 @@ const MockHost = @import("test_helpers/mock_host.zig");
 ///
 /// Usage:
 /// ------
-/// const machine = Machine.test_machine();
+/// const machine = Machine.testInstance();
 /// defer machine.deinit();
 /// try testing.expectEqual(result, do_something_that_requires_a_machine(machine));
-pub fn test_machine(possible_bytecode: ?[]const u8) Instance {
+pub fn testInstance(possible_bytecode: ?[]const u8) Instance {
     var machine = new(testing.allocator, MockRepository.test_reader, MockHost.test_host, .intro_cinematic) catch unreachable;
     if (possible_bytecode) |bytecode| {
         machine.program = Program.new(bytecode);
@@ -315,7 +315,7 @@ test "scheduleGamePart schedules a new game part without loading it" {
 }
 
 test "loadResource loads audio resource into main memory" {
-    var machine = test_machine(null);
+    var machine = testInstance(null);
     defer machine.deinit();
 
     const audio_resource_id = MockRepository.FixtureData.sfx_resource_id;
@@ -326,7 +326,7 @@ test "loadResource loads audio resource into main memory" {
 }
 
 test "loadResource copies bitmap resource directly into video buffer without persisting in main memory" {
-    var machine = test_machine(null);
+    var machine = testInstance(null);
     defer machine.deinit();
 
     const buffer = &machine.video.buffers[Video.Instance.bitmap_buffer_id];
@@ -345,7 +345,7 @@ test "loadResource copies bitmap resource directly into video buffer without per
 }
 
 test "loadResource returns error on invalid resource ID" {
-    var machine = test_machine(null);
+    var machine = testInstance(null);
     defer machine.deinit();
 
     const invalid_id = MockRepository.FixtureData.invalid_resource_id;

@@ -208,7 +208,7 @@ test "parse returns error.InvalidJumpComparison for instruction with invalid com
 test "execute compares expected registers and jumps to expected address when condition succeeds" {
     const bytecode = [_]u8{0} ** 10;
 
-    var machine = Machine.test_machine(&bytecode);
+    var machine = Machine.testInstance(&bytecode);
     defer machine.deinit();
 
     machine.registers[1] = 0xFF;
@@ -231,7 +231,7 @@ test "execute compares expected registers and jumps to expected address when con
 test "execute compares expected register to constant and jumps to expected address when condition succeeds" {
     const bytecode = [_]u8{0} ** 10;
 
-    var machine = Machine.test_machine(&bytecode);
+    var machine = Machine.testInstance(&bytecode);
     defer machine.deinit();
 
     machine.registers[1] = 0x41BD;
@@ -251,7 +251,7 @@ test "execute compares expected register to constant and jumps to expected addre
 test "execute does not jump when condition fails" {
     const bytecode = [_]u8{0} ** 10;
 
-    var machine = Machine.test_machine(&bytecode);
+    var machine = Machine.testInstance(&bytecode);
     defer machine.deinit();
 
     machine.registers[1] = 0xFF;
@@ -274,7 +274,7 @@ test "execute does not jump when condition fails" {
 test "execute returns error.InvalidAddress when address is out of range" {
     const bytecode = [_]u8{0} ** 10;
 
-    var machine = Machine.test_machine(&bytecode);
+    var machine = Machine.testInstance(&bytecode);
     defer machine.deinit();
 
     machine.registers[0] = 0xFF;

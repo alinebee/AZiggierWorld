@@ -41,7 +41,7 @@ test "parse parses instruction from valid bytecode and consumes 1 byte" {
 test "execute returns DeactivateThread action" {
     const instruction = Instance{};
 
-    var machine = Machine.test_machine(null);
+    var machine = Machine.testInstance(null);
     defer machine.deinit();
 
     try testing.expectEqual(.DeactivateThread, instruction.execute(&machine));

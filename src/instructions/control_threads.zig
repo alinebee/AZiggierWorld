@@ -119,7 +119,7 @@ test "execute with resume operation schedules specified threads to resume" {
         .operation = .Resume,
     };
 
-    var machine = Machine.test_machine(null);
+    var machine = Machine.testInstance(null);
     defer machine.deinit();
 
     for (machine.threads) |thread| {
@@ -142,7 +142,7 @@ test "execute with suspend operation schedules specified threads to suspend" {
         .operation = .Suspend,
     };
 
-    var machine = Machine.test_machine(null);
+    var machine = Machine.testInstance(null);
     defer machine.deinit();
 
     for (machine.threads) |thread| {
@@ -165,7 +165,7 @@ test "execute with deactivate operation schedules specified threads to deactivat
         .operation = .Deactivate,
     };
 
-    var machine = Machine.test_machine(null);
+    var machine = Machine.testInstance(null);
     defer machine.deinit();
 
     for (machine.threads) |thread| {
@@ -190,7 +190,7 @@ test "execute safely iterates full range of threads" {
         .operation = .Resume,
     };
 
-    var machine = Machine.test_machine(null);
+    var machine = Machine.testInstance(null);
     defer machine.deinit();
 
     for (machine.threads) |thread| {

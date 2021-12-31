@@ -57,7 +57,7 @@ test "execute adds to destination register" {
         .value = -1000,
     };
 
-    var machine = Machine.test_machine(null);
+    var machine = Machine.testInstance(null);
     defer machine.deinit();
 
     machine.registers[16] = 125;
@@ -73,7 +73,7 @@ test "execute wraps on overflow" {
         .value = 32767,
     };
 
-    var machine = Machine.test_machine(null);
+    var machine = Machine.testInstance(null);
     defer machine.deinit();
 
     machine.registers[16] = 1;
@@ -89,7 +89,7 @@ test "execute wraps on underflow" {
         .value = -32768,
     };
 
-    var machine = Machine.test_machine(null);
+    var machine = Machine.testInstance(null);
     defer machine.deinit();
 
     machine.registers[16] = -1;

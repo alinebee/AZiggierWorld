@@ -261,7 +261,7 @@ test "run stores program counter upon reaching yield instruction and does not co
         @enumToInt(Opcode.Enum.RegisterSet), 2, 0xF0, 0x0D, // Offset 5: Set register 2 to 0xF00D
     };
 
-    var machine = Machine.test_machine(&bytecode);
+    var machine = Machine.testInstance(&bytecode);
     defer machine.deinit();
 
     try machine.threads[0].run(&machine);
@@ -279,7 +279,7 @@ test "run deactivates thread upon reaching deactivate instruction" {
         @enumToInt(Opcode.Enum.RegisterSet), 2, 0xF0, 0x0D, // Offset 5: Set register 2 to 0xF00D
     };
 
-    var machine = Machine.test_machine(&bytecode);
+    var machine = Machine.testInstance(&bytecode);
     defer machine.deinit();
 
     try machine.threads[0].run(&machine);
@@ -296,7 +296,7 @@ test "run returns error.InstructionLimitExceeded if program never yields or deac
         @enumToInt(Opcode.Enum.Jump), 0x00, 0x00, // Offset 4: jump to offset 0 (infinite loop)
     };
 
-    var machine = Machine.test_machine(&bytecode);
+    var machine = Machine.testInstance(&bytecode);
     defer machine.deinit();
 
     try testing.expectError(error.InstructionLimitExceeded, machine.threads[0].run(&machine));
@@ -310,7 +310,7 @@ test "run returns error.InvalidYield if program yields in the middle of function
         @enumToInt(Opcode.Enum.Yield), // Offset 7: yield to next thread
     };
 
-    var machine = Machine.test_machine(&bytecode);
+    var machine = Machine.testInstance(&bytecode);
     defer machine.deinit();
 
     try testing.expectError(error.InvalidYield, machine.threads[0].run(&machine));

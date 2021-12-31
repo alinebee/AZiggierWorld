@@ -42,7 +42,7 @@ test "execute jumps to previous address from the stack" {
 
     const bytecode = [_]u8{0} ** 10;
 
-    var machine = Machine.test_machine(&bytecode);
+    var machine = Machine.testInstance(&bytecode);
     defer machine.deinit();
 
     try machine.stack.push(9);
@@ -59,7 +59,7 @@ test "execute jumps to previous address from the stack" {
 test "execute returns error.StackUnderflow when stack is empty" {
     const instruction = Instance{};
 
-    var machine = Machine.test_machine(null);
+    var machine = Machine.testInstance(null);
     defer machine.deinit();
 
     try testing.expectError(error.StackUnderflow, instruction.execute(&machine));

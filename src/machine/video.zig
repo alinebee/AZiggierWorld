@@ -236,7 +236,7 @@ test "Ensure everything compiles" {
 
 /// Construct a video instance populated with sample valid resource data,
 /// with all buffers filled with color ID 0.
-fn test_instance() Instance {
+fn testInstance() Instance {
     const polygon_data = &PolygonResource.DataExamples.resource;
     const palette_data = &PaletteResource.DataExamples.resource;
 
@@ -254,7 +254,7 @@ fn test_instance() Instance {
 }
 
 test "resolvedBufferID returns expected IDs for each buffer enum" {
-    const instance = test_instance();
+    const instance = testInstance();
 
     try testing.expectEqual(0, instance.resolvedBufferID(.{ .specific = 0 }));
     try testing.expectEqual(1, instance.resolvedBufferID(.{ .specific = 1 }));
@@ -268,23 +268,23 @@ test "resolvedBufferID returns expected IDs for each buffer enum" {
 }
 
 test "resolvedPolygonSource with polygons resolves expected source" {
-    const instance = test_instance();
+    const instance = testInstance();
     try testing.expectEqual(&instance.polygons, try instance.resolvedPolygonSource(.polygons));
 }
 
 test "resolvedPolygonSource with animations resolves expected source when animations are loaded" {
-    const instance = test_instance();
+    const instance = testInstance();
     try testing.expectEqual(&instance.animations.?, try instance.resolvedPolygonSource(.animations));
 }
 
 test "resolvedPolygonSource with animations returns error when animations are not loaded" {
-    var instance = test_instance();
+    var instance = testInstance();
     instance.animations = null;
     try testing.expectError(error.AnimationsNotLoaded, instance.resolvedPolygonSource(.animations));
 }
 
 test "renderBuffer renders specific buffer to host surface and marks it as the front buffer" {
-    var instance = test_instance();
+    var instance = testInstance();
     var test_host = MockHost.Instance.init(null);
     mem.set(Color.Instance, &test_host.surface, .{ .r = 255, .g = 255, .b = 255 });
 
@@ -306,7 +306,7 @@ test "renderBuffer renders specific buffer to host surface and marks it as the f
 }
 
 test "renderBuffer swaps front and back buffers when back buffer is rendered" {
-    var instance = test_instance();
+    var instance = testInstance();
     var test_host = MockHost.Instance.init(null);
 
     try instance.renderBuffer(.back_buffer, 0, test_host.host());
@@ -317,7 +317,7 @@ test "renderBuffer swaps front and back buffers when back buffer is rendered" {
 }
 
 test "renderBuffer does not swap buffers when front buffer is re-rendered" {
-    var instance = test_instance();
+    var instance = testInstance();
     var test_host = MockHost.Instance.init(null);
 
     try instance.renderBuffer(.front_buffer, 0, test_host.host());
@@ -327,7 +327,7 @@ test "renderBuffer does not swap buffers when front buffer is re-rendered" {
 }
 
 test "renderBuffer returns host error and does not swap buffers when host is unable to create surface" {
-    var instance = test_instance();
+    var instance = testInstance();
     var test_host = MockHost.Instance.init(error.CannotCreateSurface);
 
     try testing.expectError(error.CannotCreateSurface, instance.renderBuffer(.back_buffer, 0, test_host.host()));
@@ -338,7 +338,7 @@ test "renderBuffer returns host error and does not swap buffers when host is una
 }
 
 test "renderBuffer returns error.EndOfStream and does not swap buffers or request surface when palette data was corrupted" {
-    var instance = test_instance();
+    var instance = testInstance();
     const empty_palette_data = [0]u8{};
     instance.palettes = PaletteResource.new(&empty_palette_data);
 
