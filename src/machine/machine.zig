@@ -178,8 +178,8 @@ pub const Instance = struct {
     }
 
     /// Render the contents of the specified buffer to the host screen after the specified delay.
-    pub fn renderVideoBuffer(self: *Self, buffer_id: BufferID.Enum, delay: Video.Milliseconds) !void {
-        try self.video.renderBuffer(buffer_id, delay, self.host);
+    pub fn renderVideoBuffer(self: *Self, buffer_id: BufferID.Enum, delay: Video.Milliseconds) void {
+        self.video.renderBuffer(buffer_id, delay, self.host);
     }
 
     // -- Audio subsystem interface --

@@ -80,9 +80,9 @@ fn MockMachine(comptime Implementation: type) type {
             Implementation.copyVideoBuffer(source, destination, vertical_offset);
         }
 
-        pub fn renderVideoBuffer(self: *Self, buffer_id: BufferID.Enum, delay: Video.Milliseconds) !void {
+        pub fn renderVideoBuffer(self: *Self, buffer_id: BufferID.Enum, delay: Video.Milliseconds) void {
             self.call_counts.renderVideoBuffer += 1;
-            try Implementation.renderVideoBuffer(buffer_id, delay);
+            Implementation.renderVideoBuffer(buffer_id, delay);
         }
 
         pub fn scheduleGamePart(self: *Self, game_part: GamePart.Enum) void {
@@ -223,13 +223,13 @@ test "MockMachine calls copyVideoBuffer correctly on stub implementation" {
 
 test "MockMachine calls renderVideoBuffer correctly on stub implementation" {
     var mock = new(struct {
-        fn renderVideoBuffer(buffer_id: BufferID.Enum, delay: Video.Milliseconds) !void {
-            try testing.expectEqual(.back_buffer, buffer_id);
-            try testing.expectEqual(5, delay);
+        fn renderVideoBuffer(buffer_id: BufferID.Enum, delay: Video.Milliseconds) void {
+            testing.expectEqual(.back_buffer, buffer_id) catch unreachable;
+            testing.expectEqual(5, delay) catch unreachable;
         }
     });
 
-    try mock.renderVideoBuffer(.back_buffer, 5);
+    mock.renderVideoBuffer(.back_buffer, 5);
     try testing.expectEqual(1, mock.call_counts.renderVideoBuffer);
 }
 

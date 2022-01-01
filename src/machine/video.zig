@@ -7,6 +7,7 @@ const PolygonScale = @import("../values/polygon_scale.zig");
 const PolygonResource = @import("../resources/polygon_resource.zig");
 const PaletteResource = @import("../resources/palette_resource.zig");
 const Polygon = @import("../rendering/polygon.zig");
+const Surface = @import("../rendering/surface.zig");
 
 const PackedStorage = @import("../rendering/storage/packed_storage.zig");
 const drawPolygonImpl = @import("../rendering/operations/draw_polygon.zig").drawPolygon;
@@ -38,6 +39,9 @@ pub const PolygonAddress = PolygonResource.Address;
 
 /// The type used for the video buffers.
 const Buffer = PackedStorage.Instance(static_limits.virtual_screen_width, static_limits.virtual_screen_height);
+
+/// The type of 24-bit buffer that hosts are expected to provide for the video subsystem to render frames into.
+pub const HostSurface = Surface.Instance(static_limits.virtual_screen_width, static_limits.virtual_screen_height);
 
 /// The video subsystem responsible for handling draw calls and sending frames to the host screen.
 pub const Instance = struct {
@@ -155,12 +159,8 @@ pub const Instance = struct {
     }
 
     /// Render the contents of a video buffer to the host using the current palette.
-    pub fn renderBuffer(self: *Self, buffer_id: BufferID.Enum, delay: Milliseconds, host: Host.Interface) !void {
-        const buffer = self.resolvedBuffer(buffer_id);
-        const palette = try self.palettes.palette(self.palette_id);
-
-        var surface = try host.prepareSurface();
-        buffer.renderToSurface(surface, palette);
+    pub fn renderBuffer(self: *Self, buffer_id: BufferID.Enum, delay: Milliseconds, host: Host.Interface) void {
+        const resolved_buffer_id = self.resolvedBufferID(buffer_id);
 
         switch (buffer_id) {
             // When re-rendering the front buffer, leave the current front and back buffers as they were.
@@ -176,7 +176,14 @@ pub const Instance = struct {
             },
         }
 
-        host.surfaceReady(surface, delay);
+        host.bufferReady(self, resolved_buffer_id, delay);
+    }
+
+    /// Render the contents of the specified buffer into the specified 24-bit host surface.
+    /// Returns an error and leaves the surface unchanged if palette data was corrupt.
+    pub fn renderBufferToSurface(self: Self, buffer_id: BufferID.Specific, surface: *HostSurface) !void {
+        const palette = try self.palettes.palette(self.palette_id);
+        self.buffers[buffer_id].renderToSurface(surface, palette);
     }
 
     // - Private helpers -
@@ -281,70 +288,60 @@ test "resolvedPolygonSource with animations returns error when animations are no
     try testing.expectError(error.AnimationsNotLoaded, instance.resolvedPolygonSource(.animations));
 }
 
-test "renderBuffer renders specific buffer to host surface and marks it as the front buffer" {
+test "renderBuffer with specific buffer notifies host and sets front buffer while leaving back buffer alone" {
+    const expected_buffer_id = 3;
+    const expected_delay = 24;
+
     var instance = testInstance();
-    var test_host = MockHost.Instance.init(null);
-    mem.set(Color.Instance, &test_host.surface, .{ .r = 255, .g = 255, .b = 255 });
+    var host = MockHost.new(struct {
+        pub fn bufferReady(_: *const Instance, buffer_id: BufferID.Specific, delay: Host.Milliseconds) void {
+            // TODO: compare video pointer against instance (not yet possible to close over runtime values in Zig.)
+            testing.expectEqual(expected_buffer_id, buffer_id) catch unreachable;
+            testing.expectEqual(expected_delay, delay) catch unreachable;
+        }
+    });
 
-    const expected_palette = try instance.palettes.palette(instance.palette_id);
-    // All buffers of the test instance are filled with color ID 0.
-    const expected_color = expected_palette[0];
-    var expected_surface: Host.Surface = undefined;
-    mem.set(Color.Instance, &expected_surface, expected_color);
+    instance.renderBuffer(BufferID.Enum{ .specific = expected_buffer_id }, expected_delay, host.host());
 
-    const buffer_to_render = 0;
-    try instance.renderBuffer(BufferID.Enum{ .specific = buffer_to_render }, 0, test_host.host());
-
-    try testing.expectEqual(1, test_host.call_counts.prepareSurface);
-    try testing.expectEqual(1, test_host.call_counts.surfaceReady);
-    try testing.expectEqual(expected_surface, test_host.surface);
-
-    try testing.expectEqual(buffer_to_render, instance.front_buffer_id);
+    try testing.expectEqual(1, host.call_counts.bufferReady);
+    try testing.expectEqual(expected_buffer_id, instance.front_buffer_id);
     try testing.expectEqual(Instance.initial_back_buffer_id, instance.back_buffer_id);
 }
 
 test "renderBuffer swaps front and back buffers when back buffer is rendered" {
+    const expected_buffer_id = Instance.initial_back_buffer_id;
+    const expected_delay = 24;
+
     var instance = testInstance();
-    var test_host = MockHost.Instance.init(null);
+    var host = MockHost.new(struct {
+        pub fn bufferReady(_: *const Instance, buffer_id: BufferID.Specific, delay: Host.Milliseconds) void {
+            testing.expectEqual(expected_buffer_id, buffer_id) catch unreachable;
+            testing.expectEqual(expected_delay, delay) catch unreachable;
+        }
+    });
 
-    try instance.renderBuffer(.back_buffer, 0, test_host.host());
+    instance.renderBuffer(.back_buffer, expected_delay, host.host());
 
-    // Rendering should swap the front and back buffers
+    try testing.expectEqual(1, host.call_counts.bufferReady);
     try testing.expectEqual(Instance.initial_back_buffer_id, instance.front_buffer_id);
     try testing.expectEqual(Instance.initial_front_buffer_id, instance.back_buffer_id);
 }
 
 test "renderBuffer does not swap buffers when front buffer is re-rendered" {
+    const expected_buffer_id = Instance.initial_front_buffer_id;
+    const expected_delay = 24;
+
     var instance = testInstance();
-    var test_host = MockHost.Instance.init(null);
+    var host = MockHost.new(struct {
+        pub fn bufferReady(_: *const Instance, buffer_id: BufferID.Specific, delay: Host.Milliseconds) void {
+            testing.expectEqual(expected_buffer_id, buffer_id) catch unreachable;
+            testing.expectEqual(expected_delay, delay) catch unreachable;
+        }
+    });
 
-    try instance.renderBuffer(.front_buffer, 0, test_host.host());
+    instance.renderBuffer(.front_buffer, expected_delay, host.host());
 
-    try testing.expectEqual(Instance.initial_front_buffer_id, instance.front_buffer_id);
-    try testing.expectEqual(Instance.initial_back_buffer_id, instance.back_buffer_id);
-}
-
-test "renderBuffer returns host error and does not swap buffers when host is unable to create surface" {
-    var instance = testInstance();
-    var test_host = MockHost.Instance.init(error.CannotCreateSurface);
-
-    try testing.expectError(error.CannotCreateSurface, instance.renderBuffer(.back_buffer, 0, test_host.host()));
-    try testing.expectEqual(1, test_host.call_counts.prepareSurface);
-    try testing.expectEqual(0, test_host.call_counts.surfaceReady);
-    try testing.expectEqual(Instance.initial_front_buffer_id, instance.front_buffer_id);
-    try testing.expectEqual(Instance.initial_back_buffer_id, instance.back_buffer_id);
-}
-
-test "renderBuffer returns error.EndOfStream and does not swap buffers or request surface when palette data was corrupted" {
-    var instance = testInstance();
-    const empty_palette_data = [0]u8{};
-    instance.palettes = PaletteResource.new(&empty_palette_data);
-
-    var test_host = MockHost.Instance.init(null);
-
-    try testing.expectError(error.EndOfStream, instance.renderBuffer(.back_buffer, 0, test_host.host()));
-    try testing.expectEqual(0, test_host.call_counts.prepareSurface);
-    try testing.expectEqual(0, test_host.call_counts.surfaceReady);
+    try testing.expectEqual(1, host.call_counts.bufferReady);
     try testing.expectEqual(Instance.initial_front_buffer_id, instance.front_buffer_id);
     try testing.expectEqual(Instance.initial_back_buffer_id, instance.back_buffer_id);
 }
@@ -378,4 +375,40 @@ test "loadBitmapResource returns error from buffer when data is malformed" {
     const empty_bitmap_data = [0]u8{};
 
     try testing.expectError(error.InvalidBitmapSize, instance.loadBitmapResource(&empty_bitmap_data));
+}
+
+test "renderBufferToSurface renders colors from palette into surface" {
+    const buffer_id = 0;
+    const color_id = 15;
+
+    var instance = testInstance();
+    instance.buffers[buffer_id].fill(color_id);
+
+    const expected_palette = try instance.palettes.palette(instance.palette_id);
+    const expected_color = expected_palette[color_id];
+
+    var surface: HostSurface = undefined;
+    var expected_surface: HostSurface = undefined;
+    mem.set(Color.Instance, &expected_surface, expected_color);
+
+    try instance.renderBufferToSurface(buffer_id, &surface);
+
+    try testing.expectEqual(expected_surface, surface);
+}
+
+test "renderBufferToSurface returns error and leaves surface unchanged when palette data is corrupt" {
+    const empty_palette_data = [0]u8{};
+
+    var instance = testInstance();
+    instance.palettes = PaletteResource.new(&empty_palette_data);
+
+    const color = Color.Instance{ .r = 0x00, .g = 0xDE, .b = 0xAD };
+
+    var surface: HostSurface = undefined;
+    var expected_surface: HostSurface = undefined;
+    mem.set(Color.Instance, &surface, color);
+    mem.set(Color.Instance, &expected_surface, color);
+
+    try testing.expectError(error.EndOfStream, instance.renderBufferToSurface(0, &surface));
+    try testing.expectEqual(expected_surface, surface);
 }

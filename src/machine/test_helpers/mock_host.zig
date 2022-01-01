@@ -1,38 +1,41 @@
 //! A mock implementation of a virtual machine host, intended for unit tests.
+//! Records the number of times each host method was called, and allows a test
+//! to perform arbitrary assertions in the body of each host method.
 
 const Host = @import("../host.zig");
+const Video = @import("../video.zig");
+const BufferID = @import("../../values/buffer_id.zig");
 
-var test_host_implementation = Instance.init(null);
+var test_host_implementation = new(DefaultImplementation);
 pub var test_host = test_host_implementation.host();
 
-pub const Instance = struct {
-    prepare_surface_error: ?Host.PrepareSurfaceError,
-    surface: Host.Surface = undefined,
-    call_counts: struct {
-        prepareSurface: usize = 0,
-        surfaceReady: usize = 0,
-    } = .{},
+/// Returns a fake instance that defers to the specified struct to implement its functions.
+pub fn new(comptime Implementation: type) Instance(Implementation) {
+    return .{};
+}
 
-    const Self = @This();
+pub fn Instance(comptime Implementation: type) type {
+    return struct {
+        call_counts: struct {
+            bufferReady: usize = 0,
+        } = .{},
 
-    /// Create a new host with a suitably-sized video surface to render into.
-    pub fn init(prepare_surface_error: ?Host.PrepareSurfaceError) Self {
-        return Instance{ .prepare_surface_error = prepare_surface_error };
-    }
+        const Self = @This();
 
-    pub fn host(self: *Self) Host.Interface {
-        return Host.Interface.init(self, prepareSurface, surfaceReady);
-    }
+        pub fn host(self: *Self) Host.Interface {
+            return Host.Interface.init(self, bufferReady);
+        }
 
-    fn prepareSurface(self: *Self) Host.PrepareSurfaceResult {
-        self.call_counts.prepareSurface += 1;
-        return self.prepare_surface_error orelse &self.surface;
-    }
+        fn bufferReady(self: *Self, video: *const Video.Instance, buffer_id: BufferID.Specific, delay: Host.Milliseconds) void {
+            self.call_counts.bufferReady += 1;
+            Implementation.bufferReady(video, buffer_id, delay);
+        }
+    };
+}
 
-    fn surfaceReady(self: *Self, surface: *Host.Surface, _: Host.Milliseconds) void {
-        self.call_counts.surfaceReady += 1;
-        testing.expectEqual(&self.surface, surface) catch unreachable;
-    }
+/// A default implementation for the mock host that does nothing in any method.
+pub const DefaultImplementation = struct {
+    pub fn bufferReady(_: *const Video.Instance, _: BufferID.Specific, _: Host.Milliseconds) void {}
 };
 
 // -- Tests --
@@ -40,5 +43,5 @@ pub const Instance = struct {
 const testing = @import("../../utils/testing.zig");
 
 test "Ensure everything compiles" {
-    testing.refAllDecls(Instance);
+    testing.refAllDecls(Instance(DefaultImplementation));
 }

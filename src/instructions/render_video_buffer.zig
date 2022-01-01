@@ -19,12 +19,12 @@ pub const Instance = struct {
     buffer_id: BufferID.Enum,
 
     // Public implementation is constrained to concrete type so that instruction.zig can infer errors.
-    pub fn execute(self: Instance, machine: *Machine.Instance) !void {
+    pub fn execute(self: Instance, machine: *Machine.Instance) void {
         return self._execute(machine);
     }
 
     // Private implementation is generic to allow tests to use mocks.
-    fn _execute(self: Instance, machine: anytype) !void {
+    fn _execute(self: Instance, machine: anytype) void {
         // In Another World's original bytecode, the delay is typically set to between 1-11 units (20-220 ms).
         const delay_in_frame_units = @bitCast(RawFrameDelay, machine.registers[RegisterID.frame_duration]);
         const delay_in_milliseconds = @as(Video.Milliseconds, delay_in_frame_units) * milliseconds_per_frame_unit;
@@ -36,7 +36,7 @@ pub const Instance = struct {
         // may have some effect.
         machine.registers[RegisterID.render_video_buffer_UNKNOWN] = 0;
 
-        try machine.renderVideoBuffer(self.buffer_id, delay_in_milliseconds);
+        machine.renderVideoBuffer(self.buffer_id, delay_in_milliseconds);
     }
 };
 
@@ -89,15 +89,15 @@ test "execute calls renderVideoBuffer with correct parameters" {
     };
 
     var machine = MockMachine.new(struct {
-        pub fn renderVideoBuffer(buffer_id: BufferID.Enum, delay: Video.Milliseconds) !void {
-            try testing.expectEqual(.back_buffer, buffer_id);
-            try testing.expectEqual(100, delay);
+        pub fn renderVideoBuffer(buffer_id: BufferID.Enum, delay: Video.Milliseconds) void {
+            testing.expectEqual(.back_buffer, buffer_id) catch unreachable;
+            testing.expectEqual(100, delay) catch unreachable;
         }
     });
     machine.registers[RegisterID.frame_duration] = 5;
     machine.registers[RegisterID.render_video_buffer_UNKNOWN] = 1234;
 
-    try instruction._execute(&machine);
+    instruction._execute(&machine);
     try testing.expectEqual(1, machine.call_counts.renderVideoBuffer);
 
     try testing.expectEqual(0, machine.registers[RegisterID.render_video_buffer_UNKNOWN]);
