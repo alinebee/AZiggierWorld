@@ -1,4 +1,4 @@
-//! This file defines a type that reads game resources from disk using a ResourceDirectory instance
+//! This file defines a type that reads game resources from disk using a Repository instance
 //! and stores their data into memory, keeping track of their address and managing their lifetime.
 //!
 //! Another World loads resources in three different stages:
@@ -27,14 +27,13 @@
 //! but it permits unbounded memory usage, makes freeing less efficient, and forces the upstream
 //! VM to care about allocators too.
 //!
-//! It would be nicer and more "authentic" for this type to define its own 600kb fixed buffer
-//! and create a stack allocator internally to manage it. This would give us a predictable memory
-//! footprint and efficient freeing. It would prevent safe relocation (memory pointers into that
-//! fixed buffer for each loaded resource would break if the VM or memory instance is copied)
+//! It would be more "authentic" for this type to define its own 600kb fixed buffer and create
+//! a stack allocator internally to manage it. This would give us a predictable memory footprint
+//! and efficient freeing. It would prevent safe relocation (the pointers into that fixed
+//! buffer for each loaded resource would break if the VM or memory instance is copied)
 //! but we don't need to support that anyway, and future Zig versions may allow us to mark
 //! the entire type as move-only.
 const Reader = @import("../resources/reader.zig");
-const ResourceDirectory = @import("../resources/resource_directory.zig");
 const ResourceID = @import("../values/resource_id.zig");
 const ResourceType = @import("../values/resource_type.zig");
 const PlanarBitmapResource = @import("../resources/planar_bitmap_resource.zig");
@@ -94,7 +93,7 @@ pub const Instance = struct {
     reader: Reader.Interface,
     /// The current location of each resource ID in memory, or null if that resource ID is not loaded.
     /// Should not be accessed directly: instead use resourceLocation(id).
-    resource_locations: [ResourceDirectory.max_resource_descriptors]PossibleResourceLocation,
+    resource_locations: [static_limits.max_resource_descriptors]PossibleResourceLocation,
     /// The fixed memory region used for temporarily loading bitmap data.
     temporary_bitmap_region: *BitmapRegion,
 
@@ -108,7 +107,7 @@ pub const Instance = struct {
         return Self{
             .allocator = allocator,
             .reader = reader,
-            .resource_locations = .{null} ** ResourceDirectory.max_resource_descriptors,
+            .resource_locations = .{null} ** static_limits.max_resource_descriptors,
             .temporary_bitmap_region = try allocator.create(BitmapRegion),
         };
     }
