@@ -210,16 +210,16 @@ test "finalize produces valid decodable data" {
     try testing.expectEqual(16, encoder.uncompressed_size);
     try testing.expectEqual(24, encoder.compressedSize());
 
-    var compressed_data = try encoder.finalize(testing.allocator);
+    const compressed_data = try encoder.finalize(testing.allocator);
     defer testing.allocator.free(compressed_data);
 
     try testing.expectEqual(encoder.compressedSize(), compressed_data.len);
 
-    var destination = try testing.allocator.alloc(u8, encoder.uncompressed_size);
+    const destination = try testing.allocator.alloc(u8, encoder.uncompressed_size);
     defer testing.allocator.free(destination);
 
     try decode(compressed_data, destination);
-    var destination_reader = io.fixedBufferStream(destination).reader();
+    const destination_reader = io.fixedBufferStream(destination).reader();
 
     try testing.expectEqual(0x8BADF00D, destination_reader.readIntBig(u32));
     try testing.expectEqual(0x8BADF00D, destination_reader.readIntBig(u32));

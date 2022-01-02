@@ -70,7 +70,7 @@ pub const Instance = struct {
             return error.PolygonRecursionDepthExceeded;
         }
 
-        var reader = fixedBufferStream(self.data[address..]).reader();
+        const reader = fixedBufferStream(self.data[address..]).reader();
 
         const header = try EntryHeader.parse(reader);
 

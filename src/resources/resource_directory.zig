@@ -88,7 +88,6 @@ pub const Instance = struct {
         if (buffer.len < descriptor.uncompressed_size) {
             return error.BufferTooSmall;
         }
-        const destination = buffer[0..descriptor.uncompressed_size];
 
         const bank_file = try self.openFile(.{ .bank = descriptor.bank_id });
         // TODO: leave the files open and have a separate close function,
@@ -97,6 +96,7 @@ pub const Instance = struct {
 
         try bank_file.seekTo(descriptor.bank_offset);
 
+        const destination = buffer[0..descriptor.uncompressed_size];
         try readAndDecompress(bank_file.reader(), destination, descriptor.compressed_size);
         return destination;
     }
@@ -159,7 +159,7 @@ fn readAndDecompress(reader: anytype, buffer: []u8, compressed_size: usize) Read
         return error.InvalidResourceSize;
     }
 
-    var compressed_region = buffer[0..compressed_size];
+    const compressed_region = buffer[0..compressed_size];
     try reader.readNoEof(compressed_region);
 
     // If the data was compressed, decompress it in place.
@@ -246,7 +246,7 @@ test "readAndDecompress returns error.EndOfStream when source data is truncated"
 }
 
 test "readResourceList parses all descriptors from a stream" {
-    var reader = io.fixedBufferStream(&ResourceListExamples.valid).reader();
+    const reader = io.fixedBufferStream(&ResourceListExamples.valid).reader();
 
     var buffer: [max_resource_descriptors]ResourceDescriptor.Instance = undefined;
     const count = try readResourceList(&buffer, reader);
@@ -255,7 +255,7 @@ test "readResourceList parses all descriptors from a stream" {
 }
 
 test "readResourceList returns error.BufferTooSmall when stream contains too many descriptors for the buffer" {
-    var reader = io.fixedBufferStream(&ResourceListExamples.too_many_descriptors).reader();
+    const reader = io.fixedBufferStream(&ResourceListExamples.too_many_descriptors).reader();
 
     var buffer: [max_resource_descriptors]ResourceDescriptor.Instance = undefined;
     try testing.expectError(error.BufferTooSmall, readResourceList(&buffer, reader));

@@ -7,7 +7,7 @@ const Video = @import("../video.zig");
 const BufferID = @import("../../values/buffer_id.zig");
 
 var test_host_implementation = new(DefaultImplementation);
-pub var test_host = test_host_implementation.host();
+pub const test_host = test_host_implementation.host();
 
 /// Returns a fake instance that defers to the specified struct to implement its functions.
 pub fn new(comptime Implementation: type) Instance(Implementation) {

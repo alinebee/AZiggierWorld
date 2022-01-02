@@ -107,7 +107,7 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
             // -- Private methods --
 
             fn fillPixel(buffer: *Self, index: Index, color: NativeColor) void {
-                var destination = &buffer.data[index.offset];
+                const destination = &buffer.data[index.offset];
                 switch (index.hand) {
                     .left => destination.*.left = color.left,
                     .right => destination.*.right = color.right,

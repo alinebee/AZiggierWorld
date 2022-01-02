@@ -105,7 +105,7 @@ const max_usize = @import("std").math.maxInt(usize);
 
 test "writeFromSource writes bytes in reverse order starting at the end of the destination" {
     const source = [_]u8{ 0xDE, 0xAD, 0xBE, 0xEF };
-    var reader = fixedBufferStream(&source).reader();
+    const reader = fixedBufferStream(&source).reader();
 
     var destination: [4]u8 = undefined;
     var writer = new(&destination);
@@ -119,7 +119,7 @@ test "writeFromSource writes bytes in reverse order starting at the end of the d
 
 test "writeFromSource returns error.DestinationExhausted if destination does not have space" {
     const source = [_]u8{ 0xDE, 0xAD, 0xBE, 0xEF };
-    var reader = fixedBufferStream(&source).reader();
+    const reader = fixedBufferStream(&source).reader();
 
     var destination: [2]u8 = undefined;
     var writer = new(&destination);
@@ -129,7 +129,7 @@ test "writeFromSource returns error.DestinationExhausted if destination does not
 
 test "writeFromSource does not trap on egregiously large count" {
     const source = [_]u8{ 0xDE, 0xAD, 0xBE, 0xEF };
-    var reader = fixedBufferStream(&source).reader();
+    const reader = fixedBufferStream(&source).reader();
 
     var destination: [2]u8 = undefined;
     var writer = new(&destination);

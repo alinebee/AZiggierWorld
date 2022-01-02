@@ -113,7 +113,7 @@ pub const Instance = struct {
 
     /// Fill a video buffer with a solid color.
     pub fn fillBuffer(self: *Self, buffer_id: BufferID.Enum, color: ColorID.Trusted) void {
-        var buffer = self.resolvedBuffer(buffer_id);
+        const buffer = self.resolvedBuffer(buffer_id);
         buffer.fill(color);
     }
 
@@ -121,7 +121,7 @@ pub const Instance = struct {
     /// Does nothing if the vertical offset is out of bounds.
     pub fn copyBuffer(self: *Self, source_id: BufferID.Enum, destination_id: BufferID.Enum, y: Point.Coordinate) void {
         const source = self.resolvedBuffer(source_id);
-        var destination = self.resolvedBuffer(destination_id);
+        const destination = self.resolvedBuffer(destination_id);
 
         destination.copy(source, y);
     }
@@ -129,7 +129,7 @@ pub const Instance = struct {
     /// Loads the specified bitmap resource into the default destination buffer for bitmaps.
     /// Returns an error if the specified bitmap data was the wrong size for the buffer.
     pub fn loadBitmapResource(self: *Self, bitmap_data: []const u8) !void {
-        var buffer = &self.buffers[bitmap_buffer_id];
+        const buffer = &self.buffers[bitmap_buffer_id];
         try buffer.loadBitmapResource(bitmap_data);
     }
 
@@ -150,11 +150,10 @@ pub const Instance = struct {
     /// in the specified color into the current target buffer.
     /// Returns an error if the string ID was not found or the string contained unsupported characters.
     pub fn drawString(self: *Self, string_id: StringID.Raw, color_id: ColorID.Trusted, point: Point.Instance) !void {
-        var buffer = &self.buffers[self.target_buffer_id];
-
         // TODO: allow different localizations at runtime.
         const string = try english.find(string_id);
 
+        const buffer = &self.buffers[self.target_buffer_id];
         try drawStringImpl(Buffer, buffer, string, color_id, point);
     }
 

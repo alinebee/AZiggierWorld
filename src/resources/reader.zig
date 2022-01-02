@@ -72,7 +72,7 @@ pub const Interface = struct {
     /// could not be read or decompressed.
     pub fn allocReadResource(self: Self, allocator: mem.Allocator, descriptor: ResourceDescriptor.Instance) ![]const u8 {
         // Create a buffer just large enough to decompress the resource into.
-        var destination = try allocator.alloc(u8, descriptor.uncompressed_size);
+        const destination = try allocator.alloc(u8, descriptor.uncompressed_size);
         errdefer allocator.free(destination);
 
         return try self.bufReadResource(destination, descriptor);

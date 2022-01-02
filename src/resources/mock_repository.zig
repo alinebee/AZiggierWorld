@@ -34,7 +34,7 @@ const DescriptorStorage = BoundedArray(ResourceDescriptor.Instance, static_limit
 
 /// A reader for a test repository that can safely load any game part,
 /// albeit with garbage data. Should only be used in tests.
-pub var test_reader = test_repository.reader();
+pub const test_reader = test_repository.reader();
 var test_repository = Instance.init(&Fixtures.descriptors, null);
 
 pub const Instance = struct {
@@ -86,7 +86,7 @@ pub const Instance = struct {
             return err;
         }
 
-        var filled_slice = buffer[0..descriptor.uncompressed_size];
+        const filled_slice = buffer[0..descriptor.uncompressed_size];
         mem.set(u8, filled_slice, bit_pattern);
 
         return filled_slice;
