@@ -9,13 +9,13 @@ pub const Instance = struct {
     palette_id: PaletteID.Trusted,
 
     // Public implementation is constrained to concrete type so that instruction.zig can infer errors.
-    pub fn execute(self: Instance, machine: *Machine.Instance) void {
+    pub fn execute(self: Instance, machine: *Machine.Instance) !void {
         return self._execute(machine);
     }
 
     // Private implementation is generic to allow tests to use mocks.
-    fn _execute(self: Instance, machine: anytype) void {
-        machine.selectPalette(self.palette_id);
+    fn _execute(self: Instance, machine: anytype) !void {
+        try machine.selectPalette(self.palette_id);
     }
 };
 
@@ -72,13 +72,11 @@ test "execute calls selectPalette with correct parameters" {
     };
 
     var machine = MockMachine.new(struct {
-        pub fn selectPalette(palette_id: PaletteID.Trusted) void {
-            testing.expectEqual(16, palette_id) catch {
-                unreachable;
-            };
+        pub fn selectPalette(palette_id: PaletteID.Trusted) !void {
+            try testing.expectEqual(16, palette_id);
         }
     });
 
-    instruction._execute(&machine);
+    try instruction._execute(&machine);
     try testing.expectEqual(1, machine.call_counts.selectPalette);
 }

@@ -6,6 +6,7 @@ const PaletteID = @import("../values/palette_id.zig");
 const PolygonScale = @import("../values/polygon_scale.zig");
 const PolygonResource = @import("../resources/polygon_resource.zig");
 const PaletteResource = @import("../resources/palette_resource.zig");
+const Palette = @import("../values/palette.zig");
 const Polygon = @import("../rendering/polygon.zig");
 const Surface = @import("../rendering/surface.zig");
 
@@ -54,14 +55,16 @@ pub const Instance = struct {
     /// The palettes used to render frames to the host screen.
     palettes: PaletteResource.Instance,
 
+    /// The currently selected palette, loaded from `palettes` when `selectPalette` is called.
+    /// Frames will be rendered to the host screen using this palette.
+    /// This will be null when first created and after `setResourceLocations` has been called;
+    /// The owning context must call `selectPalette` before attempting to call `renderBufferToSurface`.
+    current_palette: ?Palette.Instance = null,
+
     /// The set of 4 buffers used for rendering.
     /// These will be filled with garbage data when the instance is first created;
     /// it is expected that the game program will initialize them with an explicit fill command.
     buffers: [static_limits.buffer_count]Buffer = .{.{}} ** static_limits.buffer_count,
-
-    /// The index of the currently selected palette in `palette_resource`.
-    /// Frames will be rendered to the host screen using this palette.
-    palette_id: PaletteID.Trusted = 0,
 
     /// The index of the buffer in `buffers` that was rendered to the host screen on the previous frame.
     front_buffer_id: BufferID.Specific = initial_front_buffer_id,
@@ -91,6 +94,8 @@ pub const Instance = struct {
     /// Called when a new game part is loaded to set the sources for polygon and palette data to new memory locations.
     pub fn setResourceLocations(self: *Self, palettes: []const u8, polygons: []const u8, possible_animations: ?[]const u8) void {
         self.palettes = PaletteResource.new(palettes);
+        self.current_palette = null;
+
         self.polygons = PolygonResource.new(polygons);
         if (possible_animations) |animations| {
             self.animations = PolygonResource.new(animations);
@@ -102,8 +107,8 @@ pub const Instance = struct {
     }
 
     /// Select the palette used to render the next frame to the host screen.
-    pub fn selectPalette(self: *Self, palette_id: PaletteID.Trusted) void {
-        self.palette_id = palette_id;
+    pub fn selectPalette(self: *Self, palette_id: PaletteID.Trusted) !void {
+        self.current_palette = try self.palettes.palette(palette_id);
     }
 
     /// Select the buffer that subsequent polygon and string draw operations will draw into.
@@ -181,8 +186,11 @@ pub const Instance = struct {
     /// Render the contents of the specified buffer into the specified 24-bit host surface.
     /// Returns an error and leaves the surface unchanged if palette data was corrupt.
     pub fn renderBufferToSurface(self: Self, buffer_id: BufferID.Specific, surface: *HostSurface) !void {
-        const palette = try self.palettes.palette(self.palette_id);
-        self.buffers[buffer_id].renderToSurface(surface, palette);
+        if (self.current_palette) |palette| {
+            self.buffers[buffer_id].renderToSurface(surface, palette);
+        } else {
+            return error.PaletteNotSelected;
+        }
     }
 
     // - Private helpers -
@@ -210,6 +218,8 @@ pub const Instance = struct {
 pub const Error = error{
     /// Attempted to render polygons from the animations resource when it was not loaded by the current game part.
     AnimationsNotLoaded,
+    /// Attempted to render a buffer to a surface before selectPalette has been called.
+    PaletteNotSelected,
 };
 
 /// Used by `Instance.drawPolygon` to loop over polygons parsed from a resource.
@@ -255,6 +265,22 @@ fn testInstance() Instance {
     }
 
     return instance;
+}
+
+test "setResourceLocations sets resource data pointers and resets current palette" {
+    var instance = testInstance();
+    try instance.selectPalette(0);
+
+    const new_palette_data = [0]u8{};
+    const new_polygon_data = [0]u8{};
+
+    try testing.expect(instance.current_palette != null);
+    instance.setResourceLocations(&new_palette_data, &new_polygon_data, null);
+
+    try testing.expectEqual(null, instance.current_palette);
+    try testing.expectEqual(&new_palette_data, instance.palettes.data);
+    try testing.expectEqual(&new_polygon_data, instance.polygons.data);
+    try testing.expectEqual(null, instance.animations);
 }
 
 test "resolvedBufferID returns expected IDs for each buffer enum" {
@@ -369,6 +395,28 @@ test "loadBitmapResource loads bitmap data into expected buffer" {
     }
 }
 
+test "selectPalette loads specified palette" {
+    var instance = testInstance();
+
+    const palette_id = 15;
+    const expected_palette = try instance.palettes.palette(palette_id);
+
+    try testing.expectEqual(null, instance.current_palette);
+    try instance.selectPalette(palette_id);
+    try testing.expectEqual(expected_palette, instance.current_palette);
+}
+
+test "selectPalette returns error and leaves current palette unchanged when palette data is corrupt" {
+    const empty_palette_data = [0]u8{};
+
+    var instance = testInstance();
+    instance.palettes = PaletteResource.new(&empty_palette_data);
+
+    try testing.expectEqual(null, instance.current_palette);
+    try testing.expectError(error.EndOfStream, instance.selectPalette(0));
+    try testing.expectEqual(null, instance.current_palette);
+}
+
 test "loadBitmapResource returns error from buffer when data is malformed" {
     var instance = testInstance();
     const empty_bitmap_data = [0]u8{};
@@ -376,38 +424,37 @@ test "loadBitmapResource returns error from buffer when data is malformed" {
     try testing.expectError(error.InvalidBitmapSize, instance.loadBitmapResource(&empty_bitmap_data));
 }
 
-test "renderBufferToSurface renders colors from palette into surface" {
+test "renderBufferToSurface renders colors from current palette into surface" {
     const buffer_id = 0;
     const color_id = 15;
 
     var instance = testInstance();
+    try instance.selectPalette(0);
+
     instance.buffers[buffer_id].fill(color_id);
 
-    const expected_palette = try instance.palettes.palette(instance.palette_id);
-    const expected_color = expected_palette[color_id];
-
     var surface: HostSurface = undefined;
-    var expected_surface: HostSurface = undefined;
-    mem.set(Color.Instance, &expected_surface, expected_color);
+    const expected_color = instance.current_palette.?[color_id];
+    const expected_surface = Surface.filled(HostSurface, expected_color);
 
     try instance.renderBufferToSurface(buffer_id, &surface);
-
     try testing.expectEqual(expected_surface, surface);
 }
 
-test "renderBufferToSurface returns error and leaves surface unchanged when palette data is corrupt" {
-    const empty_palette_data = [0]u8{};
+test "renderBufferToSurface returns error.PaletteNotSelected and leaves surface unchanged if selectPalette has not been called" {
+    const buffer_id = 0;
 
     var instance = testInstance();
-    instance.palettes = PaletteResource.new(&empty_palette_data);
+    try testing.expectEqual(null, instance.current_palette);
 
-    const color = Color.Instance{ .r = 0x00, .g = 0xDE, .b = 0xAD };
+    instance.buffers[buffer_id].fill(0);
 
-    var surface: HostSurface = undefined;
-    var expected_surface: HostSurface = undefined;
-    mem.set(Color.Instance, &surface, color);
-    mem.set(Color.Instance, &expected_surface, color);
+    // This color is not present in the palette and should never be rendered normally
+    const untouched_color = .{ .r = 1, .g = 2, .b = 3 };
 
-    try testing.expectError(error.EndOfStream, instance.renderBufferToSurface(0, &surface));
+    var surface: HostSurface = Surface.filled(HostSurface, untouched_color);
+    const expected_surface = surface;
+
+    try testing.expectError(error.PaletteNotSelected, instance.renderBufferToSurface(buffer_id, &surface));
     try testing.expectEqual(expected_surface, surface);
 }

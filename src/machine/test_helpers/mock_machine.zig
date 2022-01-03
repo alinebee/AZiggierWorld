@@ -60,9 +60,9 @@ fn MockMachine(comptime Implementation: type) type {
             try Implementation.drawString(string_id, color_id, point);
         }
 
-        pub fn selectPalette(self: *Self, palette_id: PaletteID.Trusted) void {
+        pub fn selectPalette(self: *Self, palette_id: PaletteID.Trusted) !void {
             self.call_counts.selectPalette += 1;
-            Implementation.selectPalette(palette_id);
+            try Implementation.selectPalette(palette_id);
         }
 
         pub fn selectVideoBuffer(self: *Self, buffer_id: BufferID.Enum) void {
@@ -162,14 +162,14 @@ test "MockMachine calls drawString correctly on stub implementation" {
 
 test "MockMachine calls selectPalette correctly on stub implementation" {
     var mock = new(struct {
-        fn selectPalette(palette_id: PaletteID.Trusted) void {
+        fn selectPalette(palette_id: PaletteID.Trusted) !void {
             testing.expectEqual(16, palette_id) catch {
                 unreachable;
             };
         }
     });
 
-    mock.selectPalette(16);
+    try mock.selectPalette(16);
     try testing.expectEqual(1, mock.call_counts.selectPalette);
 }
 

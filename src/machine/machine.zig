@@ -158,8 +158,8 @@ pub const Instance = struct {
     }
 
     /// Select the active palette to render the video buffer in.
-    pub fn selectPalette(self: *Self, palette_id: PaletteID.Trusted) void {
-        self.video.selectPalette(palette_id);
+    pub fn selectPalette(self: *Self, palette_id: PaletteID.Trusted) !void {
+        try self.video.selectPalette(palette_id);
     }
 
     /// Select the video buffer that subsequent drawPolygon and drawString operations will draw into.
