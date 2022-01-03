@@ -164,8 +164,6 @@ pub const Instance = struct {
 
     /// Render the contents of a video buffer to the host using the current palette.
     pub fn renderBuffer(self: *Self, buffer_id: BufferID.Enum, delay: Milliseconds, host: Host.Interface) void {
-        const resolved_buffer_id = self.resolvedBufferID(buffer_id);
-
         switch (buffer_id) {
             // When re-rendering the front buffer, leave the current front and back buffers as they were.
             .front_buffer => {},
@@ -180,7 +178,7 @@ pub const Instance = struct {
             },
         }
 
-        host.bufferReady(self, resolved_buffer_id, delay);
+        host.bufferReady(self, self.front_buffer_id, delay);
     }
 
     /// Render the contents of the specified buffer into the specified 24-bit host surface.
