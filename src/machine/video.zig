@@ -1,14 +1,14 @@
 const Point = @import("../values/point.zig");
+const PolygonScale = @import("../values/polygon_scale.zig");
 const ColorID = @import("../values/color_id.zig");
 const StringID = @import("../values/string_id.zig");
 const BufferID = @import("../values/buffer_id.zig");
 const PaletteID = @import("../values/palette_id.zig");
-const PolygonScale = @import("../values/polygon_scale.zig");
-const PolygonResource = @import("../resources/polygon_resource.zig");
-const PaletteResource = @import("../resources/palette_resource.zig");
 const Palette = @import("../values/palette.zig");
 const Polygon = @import("../rendering/polygon.zig");
 const Surface = @import("../rendering/surface.zig");
+const PolygonResource = @import("../resources/polygon_resource.zig");
+const PaletteResource = @import("../resources/palette_resource.zig");
 
 const PackedStorage = @import("../rendering/storage/packed_storage.zig");
 const drawPolygonImpl = @import("../rendering/operations/draw_polygon.zig").drawPolygon;
@@ -92,13 +92,13 @@ pub const Instance = struct {
     // - Public methods -
 
     /// Called when a new game part is loaded to set the sources for polygon and palette data to new memory locations.
-    pub fn setResourceLocations(self: *Self, palettes: []const u8, polygons: []const u8, possible_animations: ?[]const u8) void {
-        self.palettes = PaletteResource.new(palettes);
+    pub fn setResourceLocations(self: *Self, palette_data: []const u8, polygon_data: []const u8, possible_animation_data: ?[]const u8) void {
+        self.palettes = PaletteResource.new(palette_data);
         self.current_palette = null;
 
-        self.polygons = PolygonResource.new(polygons);
-        if (possible_animations) |animations| {
-            self.animations = PolygonResource.new(animations);
+        self.polygons = PolygonResource.new(polygon_data);
+        if (possible_animation_data) |data| {
+            self.animations = PolygonResource.new(data);
         } else {
             self.animations = null;
         }
