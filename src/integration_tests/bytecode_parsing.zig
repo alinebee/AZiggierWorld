@@ -72,8 +72,16 @@ test "parseNextInstruction parses all programs in fixture bytecode" {
 
         while (program.isAtEnd() == false) {
             const last_valid_address = program.counter;
-            if (Instruction.parseNextInstruction(&program)) {
-                // Instruction parsing succeeded, hooray!
+            if (Instruction.parseNextInstruction(&program)) |instruction| {
+                switch (instruction) {
+                    // .ControlResources => |control_resources| {
+                    //     switch (control_resources) {
+                    //         .start_game_part => |game_part| std.debug.print("\nGame part: {X}\n", .{game_part}),
+                    //         else => {},
+                    //     }
+                    // },
+                    else => {},
+                }
             } else |err| {
                 // Log and continue parsing after encountering a failure
                 try failures.append(ParseFailure.init(

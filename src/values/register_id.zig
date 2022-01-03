@@ -4,14 +4,20 @@ pub const Raw = u8;
 
 // -- Known register ID constants --
 
-/// Set at VM start for use in random calculations.
+/// UNKNOWN: Set to 129 (0x81) at VM startup in reference implementation.
+pub const virtual_machine_startup_UNKNOWN: Raw = 0x54;
+
+/// Seeded at VM startup from the current system time, for use in random calculations.
 pub const random_seed: Raw = 0x3C;
 
-/// Read when copying a buffer to the screen.
-pub const scroll_y_position: Raw = 0xF9;
+/// The keycode of the last key that was pressed. Set when processing user input.
+pub const last_keychar: Raw = 0xDA;
 
 // These placeholder names are copypasta from the reference implementation:
 // https://github.com/fabiensanglard/Another-World-Bytecode-Interpreter/blob/master/src/vm.h#L30
+pub const hero_pos_up_down: Raw = 0xE5;
+pub const music_mark: Raw = 0xF4;
+pub const scroll_y_position: Raw = 0xF9;
 pub const hero_action: Raw = 0xFA;
 pub const hero_pos_jump_down: Raw = 0xFB;
 pub const hero_pos_left_right: Raw = 0xFC;

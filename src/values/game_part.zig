@@ -4,25 +4,34 @@ const intToEnum = @import("../utils/introspection.zig").intToEnum;
 
 /// Defines the parts in an Another World game, which can represent either chapters of gameplay,
 /// cinematics, or menu screens. The VM can have a single game part loaded and running at a time.
+// zig fmt: off
 pub const Enum = enum(Raw) {
     copy_protection = 0x3E80,
-    intro_cinematic,
+    intro_cinematic = 0x3E81,
     /// Starting in tentacle pool, escaping from beast
-    gameplay1,
+    gameplay1       = 0x3E82,
     /// Breaking out of prison
-    gameplay2,
+    gameplay2       = 0x3E83,
     /// Fleeing through the caves
-    gameplay3,
+    gameplay3       = 0x3E84,
     /// Arena in giant vehicle
-    arena_cinematic,
+    arena_cinematic = 0x3E85,
     /// Final gameplay section
-    gameplay4,
+    gameplay4       = 0x3E86,
     /// Credits sequence?
-    gameplay5,
-    password_entry,
+    gameplay5       = 0x3E87,
+    /// Password entry screen
+    password_entry  = 0x3E88,
 
-    // zig fmt: off
+    // NOTE: the reference implementation treats both 0x3E88 and 0x3E89 as the password entry screen,
+    // but neither of them is referenced by part-loading instructions in bytecode.
+    // It's possible the password entry screen needed to be triggered by the VM's host instead.
+    // The reference implementation has code to handle keyboard entry in 0x3E89, but not 0x3E88:
+    // https://github.com/fabiensanglard/Another-World-Bytecode-Interpreter/blob/master/src/vm.cpp#L590
+
     /// The IDs of the resources to load for this game part.
+    // Copypasta from reference implementation:
+    // https://github.com/fabiensanglard/Another-World-Bytecode-Interpreter/blob/master/src/parts.cpp#L14-L27
     pub fn resourceIDs(self: Enum) ResourceIDs {
         return switch (self) {
             .copy_protection    => .{ .palettes = 0x14, .bytecode = 0x15, .polygons = 0x16 },
