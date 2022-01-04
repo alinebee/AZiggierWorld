@@ -1,11 +1,14 @@
 /// A raw register identifier as represented in Another World's bytecode.
-/// Guaranteed at compile-time to be valid.
+/// Guaranteed at compile-time to be valid, as the VM has exactly 256 registers.
 pub const Raw = u8;
 
-// -- Known register ID constants --
+const Register = @import("register.zig");
+
+// -- Known register ID constants and their initial values (where known) --
 
 /// UNKNOWN: Set to 129 (0x81) at VM startup in reference implementation.
 pub const virtual_machine_startup_UNKNOWN: Raw = 0x54;
+pub const virtual_machine_startup_UNKNOWN_initial_value: Register.Unsigned = 0x81;
 
 /// Seeded at VM startup from the current system time, for use in random calculations.
 pub const random_seed: Raw = 0x3C;

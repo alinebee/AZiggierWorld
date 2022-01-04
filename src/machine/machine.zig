@@ -7,6 +7,7 @@ const ColorID = @import("../values/color_id.zig");
 const Channel = @import("../values/channel.zig");
 const Point = @import("../values/point.zig");
 const PolygonScale = @import("../values/polygon_scale.zig");
+const RegisterID = @import("../values/register_id.zig");
 const Register = @import("../values/register.zig");
 const GamePart = @import("../values/game_part.zig");
 
@@ -61,11 +62,13 @@ pub const Instance = struct {
 
     const Self = @This();
 
+    // -- Virtual machine lifecycle --
+
     /// Create a new virtual machine that uses the specified allocator to allocate memory
     /// and reads game data from the specified reader. The virtual machine will attempt
     /// to load the resources for the specified game part.
     /// On success, returns a machine instance that is ready to simulate.
-    fn init(allocator: mem.Allocator, reader: Reader.Interface, host: Host.Interface, initial_game_part: GamePart.Enum) !Self {
+    fn init(allocator: mem.Allocator, reader: Reader.Interface, host: Host.Interface, initial_game_part: GamePart.Enum, random_seed: Register.Unsigned) !Self {
         var memory = try Memory.new(allocator, reader);
         errdefer memory.deinit();
 
@@ -75,7 +78,7 @@ pub const Instance = struct {
             .stack = .{},
             .memory = memory,
             .host = host,
-            // The video and program will be populated once the first game part is started.
+            // The video and program will be populated once the first game part is loaded.
             // TODO: the machine shouldn't know which fields of the Video instance need to be marked undefined.
             .video = .{
                 .polygons = undefined,
@@ -85,7 +88,13 @@ pub const Instance = struct {
             .program = undefined,
         };
 
-        // Load the initial game part from the filesystem.
+        // Initialize registers to their expected values.
+        // Copypasta from reference implementation.
+        self.registers[RegisterID.virtual_machine_startup_UNKNOWN] = @bitCast(Register.Signed, RegisterID.virtual_machine_startup_UNKNOWN_initial_value);
+        self.registers[RegisterID.random_seed] = @bitCast(Register.Signed, random_seed);
+
+        // Load the resources for the initial game part.
+        // This will populate the previously `undefined` program and video struct.
         try self.startGamePart(initial_game_part);
 
         return self;
@@ -221,8 +230,8 @@ pub const Instance = struct {
     }
 };
 
-pub fn new(allocator: mem.Allocator, reader: Reader.Interface, host: Host.Interface, initial_game_part: GamePart.Enum) !Instance {
-    return Instance.init(allocator, reader, host, initial_game_part);
+pub fn new(allocator: mem.Allocator, reader: Reader.Interface, host: Host.Interface, initial_game_part: GamePart.Enum, random_seed: Register.Unsigned) !Instance {
+    return Instance.init(allocator, reader, host, initial_game_part, random_seed);
 }
 
 const MockRepository = @import("../resources/mock_repository.zig");
@@ -238,7 +247,7 @@ const MockHost = @import("test_helpers/mock_host.zig");
 /// defer machine.deinit();
 /// try testing.expectEqual(result, do_something_that_requires_a_machine(machine));
 pub fn testInstance(possible_bytecode: ?[]const u8) Instance {
-    var machine = new(testing.allocator, MockRepository.test_reader, MockHost.test_host, .intro_cinematic) catch unreachable;
+    var machine = new(testing.allocator, MockRepository.test_reader, MockHost.test_host, .intro_cinematic, 0) catch unreachable;
     if (possible_bytecode) |bytecode| {
         machine.program = Program.new(bytecode);
     }
@@ -252,8 +261,9 @@ const meta = @import("std").meta;
 
 test "new creates virtual machine instance with expected initial state" {
     const initial_game_part = GamePart.Enum.gameplay1;
+    const random_seed = 12345;
 
-    var machine = try new(testing.allocator, MockRepository.test_reader, MockHost.test_host, initial_game_part);
+    var machine = try new(testing.allocator, MockRepository.test_reader, MockHost.test_host, initial_game_part, random_seed);
     defer machine.deinit();
 
     for (machine.threads) |thread, id| {
@@ -265,8 +275,13 @@ test "new creates virtual machine instance with expected initial state" {
         try testing.expectEqual(.running, thread.suspend_state);
     }
 
-    for (machine.registers) |register| {
-        try testing.expectEqual(0, register);
+    for (machine.registers) |register, id| {
+        const expected_value: Register.Unsigned = switch (id) {
+            RegisterID.virtual_machine_startup_UNKNOWN => RegisterID.virtual_machine_startup_UNKNOWN_initial_value,
+            RegisterID.random_seed => random_seed,
+            else => 0,
+        };
+        try testing.expectEqual(expected_value, @bitCast(Register.Unsigned, register));
     }
 
     try testing.expectEqual(null, machine.scheduled_game_part);
@@ -294,7 +309,7 @@ test "new creates virtual machine instance with expected initial state" {
 }
 
 test "scheduleGamePart schedules a new game part without loading it" {
-    var machine = try new(testing.allocator, MockRepository.test_reader, MockHost.test_host, .copy_protection);
+    var machine = try new(testing.allocator, MockRepository.test_reader, MockHost.test_host, .copy_protection, 0);
     defer machine.deinit();
 
     try testing.expectEqual(null, machine.scheduled_game_part);
