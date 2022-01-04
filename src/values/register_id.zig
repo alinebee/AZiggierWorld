@@ -6,26 +6,47 @@ pub const Raw = u8;
 
 /// A non-exhaustive enumeration of known register IDs used in Another World's bytecode.
 pub const Enum = enum(Raw) {
-    /// UNKNOWN: Set to 129 (0x81) at VM startup in reference implementation.
+    /// UNKNOWN: Set to 129 (0x81) at VM startup in reference implementation:
+    /// https://github.com/fabiensanglard/Another-World-Bytecode-Interpreter/blob/master/src/vm.cpp#L37
     virtual_machine_startup_UNKNOWN = 0x54,
 
     /// The seed used for random calculations, set at VM startup.
     /// The reference implementation seeded this with the current system time.
     random_seed = 0x3C,
 
-    /// The keycode of the last key that was pressed. Set when processing user input.
-    last_keychar = 0xDA,
+    /// The ASCII character of the last alphanumeric key that was pressed.
+    /// Used for keyboard entry in the password entry screen.
+    /// See user_input.zig for possible values.
+    last_character_typed = 0xDA,
 
-    // These placeholder names are copypasta from the reference implementation:
-    // https://github.com/fabiensanglard/Another-World-Bytecode-Interpreter/blob/master/src/vm.h#L30
-    hero_pos_up_down = 0xE5,
-    music_mark = 0xF4,
+    /// The state of the user's up/down input. See user_input.zig for possible values.
+    up_down_input = 0xE5,
+
+    /// Whether the action button is held down. See user_input.zig for possible values.
+    action_input = 0xFA,
+
+    /// In the reference implementation, this is always set to the same value as `up_down_input`.
+    up_down_input_2 = 0xFB,
+
+    /// The state of the user's left/right input. See user_input.zig for possible values.
+    left_right_input = 0xFC,
+
+    /// A combined bitmask of the state of the user's movement inputs (up, down, left, right).
+    /// See user_input.zig for possible values.
+    movement_inputs = 0xFD,
+
+    /// A combined bitmask of the state of the user's movement inputs (up, down, left, right)
+    /// and the state of the action button.
+    /// See user_input.zig for possible values.
+    all_inputs = 0xFE,
+
+    /// How much to vertically offset the scene background, on screens that scroll vertically.
+    /// Read by the `CopyVideoBuffer` instruction.
     scroll_y_position = 0xF9,
-    hero_action = 0xFA,
-    hero_pos_jump_down = 0xFB,
-    hero_pos_left_right = 0xFC,
-    hero_pos_mask = 0xFD,
-    hero_action_pos_mask = 0xFE,
+
+    /// Copypasta from reference implementation:
+    // https://github.com/fabiensanglard/Another-World-Bytecode-Interpreter/blob/master/src/vm.h#L30
+    music_mark = 0xF4,
 
     /// UNKNOWN: Reset to 0 by render_video_buffer right before a new frame is rendered.
     render_video_buffer_UNKNOWN = 0xF7,
