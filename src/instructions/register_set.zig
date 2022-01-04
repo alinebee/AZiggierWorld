@@ -7,13 +7,13 @@ const Machine = @import("../machine/machine.zig");
 /// Set a specific register to a constant value.
 pub const Instance = struct {
     /// The ID of the register to set.
-    destination: RegisterID.Raw,
+    destination: RegisterID.Enum,
 
     /// The constant value to set the register to.
     value: Register.Signed,
 
     pub fn execute(self: Instance, machine: *Machine.Instance) void {
-        machine.registers[self.destination] = self.value;
+        machine.registers.setSigned(self.destination, self.value);
     }
 };
 
@@ -22,7 +22,7 @@ pub const Instance = struct {
 /// Returns an error if the bytecode could not be read or contained an invalid instruction.
 pub fn parse(_: Opcode.Raw, program: *Program.Instance) Error!Instance {
     return Instance{
-        .destination = try program.read(RegisterID.Raw),
+        .destination = RegisterID.parse(try program.read(RegisterID.Raw)),
         .value = try program.read(Register.Signed),
     };
 }
@@ -46,13 +46,13 @@ const expectParse = @import("test_helpers/parse.zig").expectParse;
 test "parse parses valid bytecode and consumes 4 bytes" {
     const instruction = try expectParse(parse, &Fixtures.valid, 4);
 
-    try testing.expectEqual(16, instruction.destination);
+    try testing.expectEqual(RegisterID.parse(16), instruction.destination);
     try testing.expectEqual(-18901, instruction.value);
 }
 
 test "execute updates specified register with value" {
     const instruction = Instance{
-        .destination = 16,
+        .destination = RegisterID.parse(16),
         .value = -1234,
     };
 
@@ -61,5 +61,5 @@ test "execute updates specified register with value" {
 
     instruction.execute(&machine);
 
-    try testing.expectEqual(-1234, machine.registers[16]);
+    try testing.expectEqual(-1234, machine.registers.signed(instruction.destination));
 }

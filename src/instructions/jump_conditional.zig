@@ -10,12 +10,12 @@ const RegisterID = @import("../values/register_id.zig");
 /// and jumps to a new address in the program if the comparison succeeds.
 pub const Instance = struct {
     /// The register to use for the left-hand side of the condition.
-    lhs: RegisterID.Raw,
+    lhs: RegisterID.Enum,
 
     /// The register or constant to use for the right-hand side of the condition.
     rhs: union(enum) {
         constant: Register.Signed,
-        register: RegisterID.Raw,
+        register: RegisterID.Enum,
     },
 
     /// How to compare the two sides of the condition.
@@ -25,10 +25,10 @@ pub const Instance = struct {
     address: Address.Raw,
 
     pub fn execute(self: Instance, machine: *Machine.Instance) !void {
-        const lhs = machine.registers[self.lhs];
+        const lhs = machine.registers.signed(self.lhs);
         const rhs = switch (self.rhs) {
             .constant => |value| value,
-            .register => |register_id| machine.registers[register_id],
+            .register => |register_id| machine.registers.signed(register_id),
         };
 
         if (self.comparison.compare(lhs, rhs)) {
@@ -64,12 +64,12 @@ pub fn parse(_: Opcode.Raw, program: *Program.Instance) Error!Instance {
     const raw_source = @truncate(u2, control_code >> 6);
     const raw_comparison = @truncate(Comparison.Raw, control_code);
 
-    self.lhs = try program.read(RegisterID.Raw);
+    self.lhs = RegisterID.parse(try program.read(RegisterID.Raw));
     self.rhs = switch (raw_source) {
         // Even though 16-bit registers are signed, the reference implementation treats 8-bit constants as unsigned.
         0b00 => .{ .constant = try program.read(u8) },
         0b01 => .{ .constant = try program.read(Register.Signed) },
-        0b10, 0b11 => .{ .register = try program.read(RegisterID.Raw) },
+        0b10, 0b11 => .{ .register = RegisterID.parse(try program.read(RegisterID.Raw)) },
     };
 
     self.address = try program.read(Address.Raw);
@@ -113,8 +113,8 @@ const expectParse = @import("test_helpers/parse.zig").expectParse;
 test "parse parses equal_to_register instruction and consumes 6 bytes" {
     const instruction = try expectParse(parse, &Fixtures.equal_to_register, 6);
     const expected = Instance{
-        .lhs = 0xFF,
-        .rhs = .{ .register = 0x00 },
+        .lhs = RegisterID.parse(0xFF),
+        .rhs = .{ .register = RegisterID.parse(0) },
         .comparison = .equal,
         .address = 0xDEAD,
     };
@@ -124,7 +124,7 @@ test "parse parses equal_to_register instruction and consumes 6 bytes" {
 test "parse parses equal_to_const16 instruction and consumes 7 bytes" {
     const instruction = try expectParse(parse, &Fixtures.equal_to_const16, 7);
     const expected = Instance{
-        .lhs = 0xFF,
+        .lhs = RegisterID.parse(0xFF),
         .rhs = .{ .constant = 0x4B1D },
         .comparison = .equal,
         .address = 0xDEAD,
@@ -135,7 +135,7 @@ test "parse parses equal_to_const16 instruction and consumes 7 bytes" {
 test "parse parses equal_to_const8 instruction and consumes 6 bytes" {
     const instruction = try expectParse(parse, &Fixtures.equal_to_const8, 6);
     const expected = Instance{
-        .lhs = 0xFF,
+        .lhs = RegisterID.parse(0xFF),
         .rhs = .{ .constant = 0xBE },
         .comparison = .equal,
         .address = 0xDEAD,
@@ -146,8 +146,8 @@ test "parse parses equal_to_const8 instruction and consumes 6 bytes" {
 test "parse parses not_equal instruction and consumes 6 bytes" {
     const instruction = try expectParse(parse, &Fixtures.not_equal, 6);
     const expected = Instance{
-        .lhs = 0xFF,
-        .rhs = .{ .register = 0x00 },
+        .lhs = RegisterID.parse(0xFF),
+        .rhs = .{ .register = RegisterID.parse(0) },
         .comparison = .not_equal,
         .address = 0xDEAD,
     };
@@ -157,8 +157,8 @@ test "parse parses not_equal instruction and consumes 6 bytes" {
 test "parse parses greater_than instruction and consumes 6 bytes" {
     const instruction = try expectParse(parse, &Fixtures.greater_than, 6);
     const expected = Instance{
-        .lhs = 0xFF,
-        .rhs = .{ .register = 0x00 },
+        .lhs = RegisterID.parse(0xFF),
+        .rhs = .{ .register = RegisterID.parse(0) },
         .comparison = .greater_than,
         .address = 0xDEAD,
     };
@@ -168,8 +168,8 @@ test "parse parses greater_than instruction and consumes 6 bytes" {
 test "parse parses greater_than_or_equal_to instruction and consumes 6 bytes" {
     const instruction = try expectParse(parse, &Fixtures.greater_than_or_equal_to, 6);
     const expected = Instance{
-        .lhs = 0xFF,
-        .rhs = .{ .register = 0x00 },
+        .lhs = RegisterID.parse(0xFF),
+        .rhs = .{ .register = RegisterID.parse(0) },
         .comparison = .greater_than_or_equal_to,
         .address = 0xDEAD,
     };
@@ -179,8 +179,8 @@ test "parse parses greater_than_or_equal_to instruction and consumes 6 bytes" {
 test "parse parses less_than instruction and consumes 6 bytes" {
     const instruction = try expectParse(parse, &Fixtures.less_than, 6);
     const expected = Instance{
-        .lhs = 0xFF,
-        .rhs = .{ .register = 0x00 },
+        .lhs = RegisterID.parse(0xFF),
+        .rhs = .{ .register = RegisterID.parse(0) },
         .comparison = .less_than,
         .address = 0xDEAD,
     };
@@ -190,8 +190,8 @@ test "parse parses less_than instruction and consumes 6 bytes" {
 test "parse parses less_than_or_equal_to instruction and consumes 6 bytes" {
     const instruction = try expectParse(parse, &Fixtures.less_than_or_equal_to, 6);
     const expected = Instance{
-        .lhs = 0xFF,
-        .rhs = .{ .register = 0x00 },
+        .lhs = RegisterID.parse(0xFF),
+        .rhs = .{ .register = RegisterID.parse(0) },
         .comparison = .less_than_or_equal_to,
         .address = 0xDEAD,
     };
@@ -207,16 +207,18 @@ test "parse returns error.InvalidJumpComparison for instruction with invalid com
 
 test "execute compares expected registers and jumps to expected address when condition succeeds" {
     const bytecode = [_]u8{0} ** 10;
+    const lhs_register = RegisterID.parse(1);
+    const rhs_register = RegisterID.parse(2);
 
     var machine = Machine.testInstance(&bytecode);
     defer machine.deinit();
 
-    machine.registers[1] = 0xFF;
-    machine.registers[2] = 0xFF;
+    machine.registers.setSigned(lhs_register, 0xFF);
+    machine.registers.setSigned(rhs_register, 0xFF);
 
     const instruction = Instance{
-        .lhs = 1,
-        .rhs = .{ .register = 2 },
+        .lhs = lhs_register,
+        .rhs = .{ .register = rhs_register },
         .comparison = .equal,
         .address = 9,
     };
@@ -230,14 +232,15 @@ test "execute compares expected registers and jumps to expected address when con
 
 test "execute compares expected register to constant and jumps to expected address when condition succeeds" {
     const bytecode = [_]u8{0} ** 10;
+    const lhs_register = RegisterID.parse(1);
 
     var machine = Machine.testInstance(&bytecode);
     defer machine.deinit();
 
-    machine.registers[1] = 0x41BD;
+    machine.registers.setSigned(lhs_register, 0x41BD);
 
     const instruction = Instance{
-        .lhs = 1,
+        .lhs = lhs_register,
         .rhs = .{ .constant = 0x41BD },
         .comparison = .equal,
         .address = 9,
@@ -250,16 +253,18 @@ test "execute compares expected register to constant and jumps to expected addre
 
 test "execute does not jump when condition fails" {
     const bytecode = [_]u8{0} ** 10;
+    const lhs_register = RegisterID.parse(1);
+    const rhs_register = RegisterID.parse(2);
 
     var machine = Machine.testInstance(&bytecode);
     defer machine.deinit();
 
-    machine.registers[1] = 0xFF;
-    machine.registers[2] = 0xFE;
+    machine.registers.setSigned(lhs_register, 0xFF);
+    machine.registers.setSigned(rhs_register, 0xFE);
 
     const instruction = Instance{
-        .lhs = 1,
-        .rhs = .{ .register = 2 },
+        .lhs = lhs_register,
+        .rhs = .{ .register = rhs_register },
         .comparison = .equal,
         .address = 9,
     };
@@ -273,16 +278,18 @@ test "execute does not jump when condition fails" {
 
 test "execute returns error.InvalidAddress when address is out of range" {
     const bytecode = [_]u8{0} ** 10;
+    const lhs_register = RegisterID.parse(1);
+    const rhs_register = RegisterID.parse(2);
 
     var machine = Machine.testInstance(&bytecode);
     defer machine.deinit();
 
-    machine.registers[0] = 0xFF;
-    machine.registers[1] = 0xFF;
+    machine.registers.setSigned(lhs_register, 0xFF);
+    machine.registers.setSigned(rhs_register, 0xFF);
 
     const instruction = Instance{
-        .lhs = 0,
-        .rhs = .{ .register = 1 },
+        .lhs = lhs_register,
+        .rhs = .{ .register = rhs_register },
         .comparison = .equal,
         .address = 1000,
     };

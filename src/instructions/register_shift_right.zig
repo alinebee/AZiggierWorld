@@ -9,15 +9,17 @@ const introspection = @import("../utils/introspection.zig");
 /// Right-shift (>>) the bits in a register's value by a specified distance.
 pub const Instance = struct {
     /// The ID of the register to add to.
-    destination: RegisterID.Raw,
+    destination: RegisterID.Enum,
 
     /// The distance to shift the value by.
     shift: Register.Shift,
 
     pub fn execute(self: Instance, machine: *Machine.Instance) void {
-        // Unlike || or && operations, Zig is happy to << and >> signed values without respecting their sign bit:
-        // this is the desired behaviour, and may cause a negative to become a positive and vice versa.
-        machine.registers[self.destination] >>= self.shift;
+        // Zig is currently happy to << and >> signed values without respecting their sign bit,
+        // but that doesn't seem safe and may go away in future. To be sure, treat the value as unsigned.
+        const original_value = machine.registers.unsigned(self.destination);
+        const shifted_value = original_value >> self.shift;
+        machine.registers.setUnsigned(self.destination, shifted_value);
     }
 };
 
@@ -25,7 +27,7 @@ pub const Instance = struct {
 /// Consumes 3 bytes from the bytecode on success, including the opcode.
 /// Returns an error if the bytecode could not be read or contained an invalid instruction.
 pub fn parse(_: Opcode.Raw, program: *Program.Instance) Error!Instance {
-    const destination = try program.read(RegisterID.Raw);
+    const destination = RegisterID.parse(try program.read(RegisterID.Raw));
 
     // Bytecode stored the shift distance as an unsigned 16-bit integer,
     // even though the legal range is 0...15.
@@ -68,7 +70,7 @@ const expectParse = @import("test_helpers/parse.zig").expectParse;
 test "parse parses valid bytecode and consumes 4 bytes" {
     const instruction = try expectParse(parse, &Fixtures.valid, 4);
 
-    try testing.expectEqual(16, instruction.destination);
+    try testing.expectEqual(RegisterID.parse(16), instruction.destination);
     try testing.expectEqual(8, instruction.shift);
 }
 
@@ -81,22 +83,22 @@ test "parse returns error.ShiftTooLarge and consumes 4 bytes on invalid shift di
 
 test "execute shifts destination register" {
     // zig fmt: off
-    const original_value    = @as(Register.Signed, 0b0000_1111_1111_0000);
-    const shift             = @as(Register.Shift, 9);
-    const expected_value    = @as(Register.Signed, 0b0000_0000_0000_0111);
+    const original_value: Register.Unsigned = 0b0000_1111_1111_0000;
+    const shift: Register.Shift = 9;
+    const expected_value: Register.Unsigned = 0b0000_0000_0000_0111;
     // zig fmt: on
 
     const instruction = Instance{
-        .destination = 16,
+        .destination = RegisterID.parse(16),
         .shift = shift,
     };
 
     var machine = Machine.testInstance(null);
     defer machine.deinit();
 
-    machine.registers[16] = original_value;
+    machine.registers.setUnsigned(instruction.destination, original_value);
 
     instruction.execute(&machine);
 
-    try testing.expectEqual(expected_value, machine.registers[16]);
+    try testing.expectEqual(expected_value, machine.registers.unsigned(instruction.destination));
 }

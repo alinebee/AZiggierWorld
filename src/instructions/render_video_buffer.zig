@@ -11,8 +11,6 @@ const RegisterID = @import("../values/register_id.zig");
 /// by this constant to get the delay in milliseconds.
 const milliseconds_per_frame_unit: Video.Milliseconds = 20;
 
-const RawFrameDelay = u16;
-
 /// Renders the contents of a video buffer to the host screen.
 pub const Instance = struct {
     /// The buffer to render.
@@ -26,7 +24,7 @@ pub const Instance = struct {
     // Private implementation is generic to allow tests to use mocks.
     fn _execute(self: Instance, machine: anytype) void {
         // In Another World's original bytecode, the delay is typically set to between 1-11 units (20-220 ms).
-        const delay_in_frame_units = @bitCast(RawFrameDelay, machine.registers[RegisterID.frame_duration]);
+        const delay_in_frame_units = machine.registers.unsigned(.frame_duration);
         const delay_in_milliseconds = @as(Video.Milliseconds, delay_in_frame_units) * milliseconds_per_frame_unit;
 
         // Copypasta from reference implementation.
@@ -34,7 +32,7 @@ pub const Instance = struct {
         // since 0 is the initial value of all registers, this code effectively does nothing.
         // Some instructions do read from this register, so altering this value at compile time
         // may have some effect.
-        machine.registers[RegisterID.render_video_buffer_UNKNOWN] = 0;
+        machine.registers.setUnsigned(.render_video_buffer_UNKNOWN, 0);
 
         machine.renderVideoBuffer(self.buffer_id, delay_in_milliseconds);
     }
@@ -88,17 +86,20 @@ test "execute calls renderVideoBuffer with correct parameters" {
         .buffer_id = .back_buffer,
     };
 
+    const raw_frame_duration = 5;
+    const expected_milliseconds = raw_frame_duration * milliseconds_per_frame_unit;
+
     var machine = MockMachine.new(struct {
         pub fn renderVideoBuffer(buffer_id: BufferID.Enum, delay: Video.Milliseconds) void {
             testing.expectEqual(.back_buffer, buffer_id) catch unreachable;
-            testing.expectEqual(100, delay) catch unreachable;
+            testing.expectEqual(expected_milliseconds, delay) catch unreachable;
         }
     });
-    machine.registers[RegisterID.frame_duration] = 5;
-    machine.registers[RegisterID.render_video_buffer_UNKNOWN] = 1234;
+    machine.registers.setUnsigned(.frame_duration, raw_frame_duration);
+    machine.registers.setUnsigned(.render_video_buffer_UNKNOWN, 1234);
 
     instruction._execute(&machine);
     try testing.expectEqual(1, machine.call_counts.renderVideoBuffer);
 
-    try testing.expectEqual(0, machine.registers[RegisterID.render_video_buffer_UNKNOWN]);
+    try testing.expectEqual(0, machine.registers.unsigned(.render_video_buffer_UNKNOWN));
 }

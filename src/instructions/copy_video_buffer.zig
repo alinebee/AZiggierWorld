@@ -24,7 +24,7 @@ pub const Instance = struct {
     // Private implementation is generic to allow tests to use mocks.
     fn _execute(self: Instance, machine: anytype) void {
         if (self.use_vertical_offset) {
-            const offset = machine.registers[RegisterID.scroll_y_position];
+            const offset = machine.registers.signed(.scroll_y_position);
             machine.copyVideoBuffer(self.source, self.destination, offset);
         } else {
             machine.copyVideoBuffer(self.source, self.destination, 0);
@@ -158,7 +158,7 @@ test "execute calls copyVideoBuffer with offset when use_vertical_offset = true"
             };
         }
     });
-    machine.registers[RegisterID.scroll_y_position] = 199;
+    machine.registers.setSigned(.scroll_y_position, 199);
 
     instruction._execute(&machine);
     try testing.expectEqual(1, machine.call_counts.copyVideoBuffer);
@@ -184,7 +184,7 @@ test "execute ignores vertical offset when use_vertical_offset = false" {
             };
         }
     });
-    machine.registers[RegisterID.scroll_y_position] = 199;
+    machine.registers.setSigned(.scroll_y_position, 199);
 
     instruction._execute(&machine);
     try testing.expectEqual(1, machine.call_counts.copyVideoBuffer);

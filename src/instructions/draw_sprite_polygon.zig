@@ -18,20 +18,20 @@ pub const Instance = struct {
     /// The source for the X offset at which to draw the polygon.
     x: union(enum) {
         constant: Point.Coordinate,
-        register: RegisterID.Raw,
+        register: RegisterID.Enum,
     },
 
     /// The source for the Y offset at which to draw the polygon.
     y: union(enum) {
         constant: Point.Coordinate,
-        register: RegisterID.Raw,
+        register: RegisterID.Enum,
     },
 
     /// The source for the scale at which to draw the polygon.
     scale: union(enum) {
         default,
         constant: PolygonScale.Raw,
-        register: RegisterID.Raw,
+        register: RegisterID.Enum,
     },
 
     // Public implementation is constrained to concrete type so that instruction.zig can infer errors.
@@ -43,15 +43,15 @@ pub const Instance = struct {
     fn _execute(self: Instance, machine: anytype) !void {
         const x = switch (self.x) {
             .constant => |constant| constant,
-            .register => |id| machine.registers[id],
+            .register => |id| machine.registers.signed(id),
         };
         const y = switch (self.y) {
             .constant => |constant| constant,
-            .register => |id| machine.registers[id],
+            .register => |id| machine.registers.signed(id),
         };
         const scale = switch (self.scale) {
             .constant => |constant| constant,
-            .register => |id| @bitCast(PolygonScale.Raw, machine.registers[id]),
+            .register => |id| machine.registers.unsigned(id),
             .default => PolygonScale.default,
         };
 
@@ -106,14 +106,14 @@ pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instance 
 
     self.x = switch (raw_x) {
         0b00 => .{ .constant = try program.read(Point.Coordinate) },
-        0b01 => .{ .register = try program.read(RegisterID.Raw) },
+        0b01 => .{ .register = RegisterID.parse(try program.read(RegisterID.Raw)) },
         0b10 => .{ .constant = @as(Point.Coordinate, try program.read(u8)) },
         0b11 => .{ .constant = @as(Point.Coordinate, try program.read(u8)) + 256 },
     };
 
     self.y = switch (raw_y) {
         0b00 => .{ .constant = try program.read(Point.Coordinate) },
-        0b01 => .{ .register = try program.read(RegisterID.Raw) },
+        0b01 => .{ .register = RegisterID.parse(try program.read(RegisterID.Raw)) },
         0b10, 0b11 => .{ .constant = @as(Point.Coordinate, try program.read(u8)) },
     };
 
@@ -124,7 +124,7 @@ pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instance 
         },
         0b01 => {
             self.source = .polygons;
-            self.scale = .{ .register = try program.read(RegisterID.Raw) };
+            self.scale = .{ .register = RegisterID.parse(try program.read(RegisterID.Raw)) };
         },
         0b10 => {
             self.source = .polygons;
@@ -200,9 +200,9 @@ test "parse parses all-registers instruction and consumes 6 bytes" {
     try testing.expectEqual(.polygons, instruction.source);
     // Address is right-shifted by 1
     try testing.expectEqual(0b0001_1110_0001_1110, instruction.address);
-    try testing.expectEqual(.{ .register = 1 }, instruction.x);
-    try testing.expectEqual(.{ .register = 2 }, instruction.y);
-    try testing.expectEqual(.{ .register = 3 }, instruction.scale);
+    try testing.expectEqual(.{ .register = RegisterID.parse(1) }, instruction.x);
+    try testing.expectEqual(.{ .register = RegisterID.parse(2) }, instruction.y);
+    try testing.expectEqual(.{ .register = RegisterID.parse(3) }, instruction.scale);
 }
 
 test "parse parses instruction with full-width constants and consumes 8 bytes" {
@@ -280,12 +280,16 @@ test "execute with constants calls drawPolygon with correct parameters" {
 }
 
 test "execute with registers calls drawPolygon with correct parameters" {
+    const x_register = RegisterID.parse(1);
+    const y_register = RegisterID.parse(2);
+    const scale_register = RegisterID.parse(3);
+
     const instruction = Instance{
         .source = .polygons,
         .address = 0xDEAD,
-        .x = .{ .register = 1 },
-        .y = .{ .register = 2 },
-        .scale = .{ .register = 3 },
+        .x = .{ .register = x_register },
+        .y = .{ .register = y_register },
+        .scale = .{ .register = scale_register },
     };
 
     var machine = MockMachine.new(struct {
@@ -298,9 +302,9 @@ test "execute with registers calls drawPolygon with correct parameters" {
         }
     });
 
-    machine.registers[1] = -1234;
-    machine.registers[2] = 5678;
-    machine.registers[3] = 16384;
+    machine.registers.setSigned(x_register, -1234);
+    machine.registers.setSigned(y_register, 5678);
+    machine.registers.setSigned(scale_register, 16384);
 
     try instruction._execute(&machine);
 
@@ -308,12 +312,13 @@ test "execute with registers calls drawPolygon with correct parameters" {
 }
 
 test "execute with register scale value interprets value as unsigned" {
+    const scale_register = RegisterID.parse(1);
     const instruction = Instance{
         .source = .polygons,
         .address = 0xDEAD,
         .x = .{ .constant = 320 },
         .y = .{ .constant = 200 },
-        .scale = .{ .register = 1 },
+        .scale = .{ .register = scale_register },
     };
 
     var machine = MockMachine.new(struct {
@@ -324,7 +329,7 @@ test "execute with register scale value interprets value as unsigned" {
 
     // 0b1011_0110_0010_1011 = -18901 in signed two's-complement;
     // Should be interpreted as 46635 when unsigned
-    machine.registers[1] = -18901;
+    machine.registers.setSigned(scale_register, -18901);
 
     try instruction._execute(&machine);
 

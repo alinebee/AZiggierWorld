@@ -12,6 +12,7 @@
 //! for the current screen of the game.
 
 const Address = @import("../values/address.zig");
+const RegisterID = @import("../values/register_id.zig");
 const Machine = @import("machine.zig");
 const Program = @import("program.zig");
 const executeNextInstruction = @import("../instructions/instruction.zig").executeNextInstruction;
@@ -255,10 +256,12 @@ test "update applies scheduled suspend state" {
 const Opcode = @import("../values/opcode.zig");
 
 test "run stores program counter upon reaching yield instruction and does not continue executing" {
+    const register_1 = RegisterID.parse(1);
+    const register_2 = RegisterID.parse(2);
     const bytecode = [_]u8{
-        @enumToInt(Opcode.Enum.RegisterSet), 1, 0x0B, 0xAD, // Offset 0: Set register 1 to 0x0BAD
+        @enumToInt(Opcode.Enum.RegisterSet), @enumToInt(register_1), 0x0B, 0xAD, // Offset 0: Set register 1 to 0x0BAD
         @enumToInt(Opcode.Enum.Yield), // Offset 3: Yield to next thread
-        @enumToInt(Opcode.Enum.RegisterSet), 2, 0xF0, 0x0D, // Offset 5: Set register 2 to 0xF00D
+        @enumToInt(Opcode.Enum.RegisterSet), @enumToInt(register_2), 0xF0, 0x0D, // Offset 5: Set register 2 to 0xF00D
     };
 
     var machine = Machine.testInstance(&bytecode);
@@ -266,17 +269,19 @@ test "run stores program counter upon reaching yield instruction and does not co
 
     try machine.threads[0].run(&machine);
     // First register-set should have been executed
-    try testing.expectEqual(0x0BAD, machine.registers[1]);
+    try testing.expectEqual(0x0BAD, machine.registers.unsigned(register_1));
     // Second register-set should not have been executed
-    try testing.expectEqual(0, machine.registers[2]);
+    try testing.expectEqual(0, machine.registers.unsigned(register_2));
     try testing.expectEqual(.{ .active = 5 }, machine.threads[0].execution_state);
 }
 
 test "run deactivates thread upon reaching deactivate instruction" {
+    const register_1 = RegisterID.parse(1);
+    const register_2 = RegisterID.parse(2);
     const bytecode = [_]u8{
-        @enumToInt(Opcode.Enum.RegisterSet), 1, 0x0B, 0xAD, // Offset 0: Set register 1 to 0x0BAD
+        @enumToInt(Opcode.Enum.RegisterSet), @enumToInt(register_1), 0x0B, 0xAD, // Offset 0: Set register 1 to 0x0BAD
         @enumToInt(Opcode.Enum.Kill), // Offset 3: Kill current thread
-        @enumToInt(Opcode.Enum.RegisterSet), 2, 0xF0, 0x0D, // Offset 5: Set register 2 to 0xF00D
+        @enumToInt(Opcode.Enum.RegisterSet), @enumToInt(register_2), 0xF0, 0x0D, // Offset 5: Set register 2 to 0xF00D
     };
 
     var machine = Machine.testInstance(&bytecode);
@@ -284,15 +289,16 @@ test "run deactivates thread upon reaching deactivate instruction" {
 
     try machine.threads[0].run(&machine);
     // First register-set should have been executed
-    try testing.expectEqual(0x0BAD, machine.registers[1]);
+    try testing.expectEqual(0x0BAD, machine.registers.unsigned(register_1));
     // Second register-set should not have been executed
-    try testing.expectEqual(0, machine.registers[2]);
+    try testing.expectEqual(0, machine.registers.unsigned(register_2));
     try testing.expectEqual(.inactive, machine.threads[0].execution_state);
 }
 
 test "run returns error.InstructionLimitExceeded if program never yields or deactivates" {
+    const register_1 = RegisterID.parse(1);
     const bytecode = [_]u8{
-        @enumToInt(Opcode.Enum.RegisterAddConstant), 1, 0, 2, // Offset 0: add 2 to register 1
+        @enumToInt(Opcode.Enum.RegisterAddConstant), @enumToInt(register_1), 0, 2, // Offset 0: add 2 to register 1
         @enumToInt(Opcode.Enum.Jump), 0x00, 0x00, // Offset 4: jump to offset 0 (infinite loop)
     };
 
@@ -300,13 +306,14 @@ test "run returns error.InstructionLimitExceeded if program never yields or deac
     defer machine.deinit();
 
     try testing.expectError(error.InstructionLimitExceeded, machine.threads[0].run(&machine));
-    try testing.expectEqual(max_instructions_per_tic, machine.registers[1]);
+    try testing.expectEqual(max_instructions_per_tic, machine.registers.unsigned(register_1));
 }
 
 test "run returns error.InvalidYield if program yields in the middle of function" {
+    const register_1 = RegisterID.parse(1);
     const bytecode = [_]u8{
         @enumToInt(Opcode.Enum.Call), 0, 3, // Offset 0: call function at offset 3
-        @enumToInt(Opcode.Enum.RegisterSet), 1, 0x0B, 0xAD, // Offset 3: set register 1 to 0x0BAD
+        @enumToInt(Opcode.Enum.RegisterSet), @enumToInt(register_1), 0x0B, 0xAD, // Offset 3: set register 1 to 0x0BAD
         @enumToInt(Opcode.Enum.Yield), // Offset 7: yield to next thread
     };
 
@@ -314,5 +321,5 @@ test "run returns error.InvalidYield if program yields in the middle of function
     defer machine.deinit();
 
     try testing.expectError(error.InvalidYield, machine.threads[0].run(&machine));
-    try testing.expectEqual(0x0BAD, machine.registers[1]);
+    try testing.expectEqual(0x0BAD, machine.registers.unsigned(register_1));
 }

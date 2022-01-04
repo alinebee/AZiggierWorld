@@ -1,6 +1,7 @@
-const Machine = @import("../../machine/machine.zig");
-const Video = @import("../../machine/video.zig");
-const Audio = @import("../../machine/audio.zig");
+const Machine = @import("../machine.zig");
+const Video = @import("../video.zig");
+const Audio = @import("../audio.zig");
+const Registers = @import("../registers.zig");
 
 const Point = @import("../../values/point.zig");
 const GamePart = @import("../../values/game_part.zig");
@@ -18,10 +19,7 @@ const zeroes = @import("std").mem.zeroes;
 /// This allows testing of Machine function calls that would produce changes in state that are hard
 /// to measure (e.g. drawing on screen or producing audio).
 pub fn new(comptime Implementation: type) MockMachine(Implementation) {
-    return MockMachine(Implementation){
-        .registers = zeroes(Machine.Registers),
-        .call_counts = zeroes(CallCounts),
-    };
+    return MockMachine(Implementation){};
 }
 
 const CallCounts = struct {
@@ -44,9 +42,9 @@ const CallCounts = struct {
 
 fn MockMachine(comptime Implementation: type) type {
     return struct {
-        registers: Machine.Registers,
+        registers: Registers.Instance = .{},
 
-        call_counts: CallCounts,
+        call_counts: CallCounts = zeroes(CallCounts),
 
         const Self = @This();
 

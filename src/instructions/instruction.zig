@@ -233,13 +233,13 @@ test "parseNextInstruction returns error.InvalidOpcode error when it encounters 
 }
 
 test "executeNextInstruction executes arbitrary instruction on machine when given valid bytecode" {
-    var machine = Machine.testInstance(&RegisterSet.Fixtures.valid);
+    var machine = Machine.testInstance(&ControlResources.Fixtures.valid);
     defer machine.deinit();
 
     const action = try executeNextInstruction(&machine.program, &machine);
 
     try testing.expectEqual(.Continue, action);
-    try testing.expectEqual(-18901, machine.registers[16]);
+    try testing.expectEqual(.arena_cinematic, machine.scheduled_game_part);
 }
 
 test "executeNextInstruction returns DeactivateThread action if specified" {

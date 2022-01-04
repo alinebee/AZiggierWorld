@@ -13,6 +13,7 @@ const GamePart = @import("../values/game_part.zig");
 
 const Thread = @import("thread.zig");
 const Stack = @import("stack.zig");
+const Registers = @import("registers.zig");
 const Program = @import("program.zig");
 const Video = @import("video.zig");
 const Audio = @import("audio.zig");
@@ -28,9 +29,6 @@ const fs = @import("std").fs;
 
 const log_unimplemented = @import("../utils/logging.zig").log_unimplemented;
 
-const register_count = static_limits.register_count;
-pub const Registers = [register_count]Register.Signed;
-
 const thread_count = static_limits.thread_count;
 pub const Threads = [thread_count]Thread.Instance;
 
@@ -39,7 +37,7 @@ pub const Instance = struct {
     threads: Threads,
 
     /// The current state of the VM's 256 registers.
-    registers: Registers,
+    registers: Registers.Instance,
 
     /// The current program execution stack.
     stack: Stack.Instance,
@@ -74,7 +72,7 @@ pub const Instance = struct {
 
         var self = Self{
             .threads = .{.{}} ** thread_count,
-            .registers = .{0} ** register_count,
+            .registers = .{},
             .stack = .{},
             .memory = memory,
             .host = host,
@@ -89,9 +87,10 @@ pub const Instance = struct {
         };
 
         // Initialize registers to their expected values.
-        // Copypasta from reference implementation.
-        self.registers[RegisterID.virtual_machine_startup_UNKNOWN] = @bitCast(Register.Signed, RegisterID.virtual_machine_startup_UNKNOWN_initial_value);
-        self.registers[RegisterID.random_seed] = @bitCast(Register.Signed, random_seed);
+        // Copypasta from reference implementation:
+        // https://github.com/fabiensanglard/Another-World-Bytecode-Interpreter/blob/master/src/vm.cpp#L37
+        self.registers.setUnsigned(.virtual_machine_startup_UNKNOWN, 0x81);
+        self.registers.setUnsigned(.random_seed, random_seed);
 
         // Load the resources for the initial game part.
         // This will populate the previously `undefined` program and video struct.
@@ -275,13 +274,13 @@ test "new creates virtual machine instance with expected initial state" {
         try testing.expectEqual(.running, thread.suspend_state);
     }
 
-    for (machine.registers) |register, id| {
-        const expected_value: Register.Unsigned = switch (id) {
-            RegisterID.virtual_machine_startup_UNKNOWN => RegisterID.virtual_machine_startup_UNKNOWN_initial_value,
-            RegisterID.random_seed => random_seed,
+    for (machine.registers.unsignedSlice()) |register, id| {
+        const expected_value: Register.Unsigned = switch (@intToEnum(RegisterID.Enum, id)) {
+            .virtual_machine_startup_UNKNOWN => 0x81,
+            .random_seed => random_seed,
             else => 0,
         };
-        try testing.expectEqual(expected_value, @bitCast(Register.Unsigned, register));
+        try testing.expectEqual(expected_value, register);
     }
 
     try testing.expectEqual(null, machine.scheduled_game_part);
