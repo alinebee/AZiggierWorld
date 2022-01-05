@@ -9,14 +9,13 @@ pub const Instance = struct {
     /// The ID of the register to apply the mask to.
     destination: RegisterID.Enum,
 
-    /// The mask to apply to the value in the register.
-    value: Register.Mask,
+    /// The bitmask to apply to the value in the register.
+    value: Register.BitPattern,
 
     pub fn execute(self: Instance, machine: *Machine.Instance) void {
-        // Masking must always be done against the unsigned representation of the register value.
-        const original_value = machine.registers.unsigned(self.destination);
+        const original_value = machine.registers.bitPattern(self.destination);
         const masked_value = original_value & self.value;
-        machine.registers.setUnsigned(self.destination, masked_value);
+        machine.registers.setBitPattern(self.destination, masked_value);
     }
 };
 
@@ -26,7 +25,7 @@ pub const Instance = struct {
 pub fn parse(_: Opcode.Raw, program: *Program.Instance) Error!Instance {
     return Instance{
         .destination = RegisterID.parse(try program.read(RegisterID.Raw)),
-        .value = try program.read(Register.Mask),
+        .value = try program.read(Register.BitPattern),
     };
 }
 
@@ -55,9 +54,9 @@ test "parse parses valid bytecode and consumes 3 bytes" {
 
 test "execute masks destination register" {
     // zig fmt: off
-    const original_value: Register.Unsigned = 0b1010_0101_1010_0101;
-    const mask: Register.Mask               = 0b1100_0011_1111_0000;
-    const expected_value: Register.Unsigned = 0b1000_0001_1010_0000;
+    const original_value: Register.BitPattern   = 0b1010_0101_1010_0101;
+    const mask: Register.BitPattern             = 0b1100_0011_1111_0000;
+    const expected_value: Register.BitPattern   = 0b1000_0001_1010_0000;
     // zig fmt: on
 
     const instruction = Instance{
@@ -68,9 +67,9 @@ test "execute masks destination register" {
     var machine = Machine.testInstance(null);
     defer machine.deinit();
 
-    machine.registers.setUnsigned(instruction.destination, original_value);
+    machine.registers.setBitPattern(instruction.destination, original_value);
 
     instruction.execute(&machine);
 
-    try testing.expectEqual(expected_value, machine.registers.unsigned(instruction.destination));
+    try testing.expectEqual(expected_value, machine.registers.bitPattern(instruction.destination));
 }

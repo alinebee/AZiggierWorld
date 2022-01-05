@@ -16,10 +16,11 @@ pub const Instance = struct {
 
     pub fn execute(self: Instance, machine: *Machine.Instance) void {
         // Zig is currently happy to << and >> signed values without respecting their sign bit,
-        // but that doesn't seem safe and may go away in future. To be sure, treat the value as unsigned.
-        const original_value = machine.registers.unsigned(self.destination);
+        // but that doesn't seem safe and may go away in future.
+        // To be sure, treat the value as a raw bit pattern.
+        const original_value = machine.registers.bitPattern(self.destination);
         const shifted_value = original_value << self.shift;
-        machine.registers.setUnsigned(self.destination, shifted_value);
+        machine.registers.setBitPattern(self.destination, shifted_value);
     }
 };
 
@@ -83,9 +84,9 @@ test "parse returns error.ShiftTooLarge and consumes 4 bytes on invalid shift di
 
 test "execute shifts destination register" {
     // zig fmt: off
-    const original_value: Register.Unsigned = 0b0000_1111_1111_0000;
+    const original_value: Register.BitPattern   = 0b0000_1111_1111_0000;
     const shift: Register.Shift = 3;
-    const expected_value: Register.Unsigned = 0b0111_1111_1000_0000;
+    const expected_value: Register.BitPattern   = 0b0111_1111_1000_0000;
     // zig fmt: on
 
     const instruction = Instance{
@@ -96,9 +97,9 @@ test "execute shifts destination register" {
     var machine = Machine.testInstance(null);
     defer machine.deinit();
 
-    machine.registers.setUnsigned(instruction.destination, original_value);
+    machine.registers.setBitPattern(instruction.destination, original_value);
 
     instruction.execute(&machine);
 
-    try testing.expectEqual(expected_value, machine.registers.unsigned(instruction.destination));
+    try testing.expectEqual(expected_value, machine.registers.bitPattern(instruction.destination));
 }

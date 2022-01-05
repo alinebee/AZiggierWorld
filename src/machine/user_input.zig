@@ -51,7 +51,7 @@ pub const Instance = struct {
     }
 
     /// The value to insert into RegisterID.movement_inputs.
-    pub fn movementInputsRegisterValue(self: Self) Register.Mask {
+    pub fn movementInputsRegisterValue(self: Self) Register.BitPattern {
         // zig fmt: off
         var mask: u4          = 0b0000;
         if (self.right) mask |= 0b0001;
@@ -64,7 +64,7 @@ pub const Instance = struct {
     }
 
     /// The value to insert into RegisterID.all_inputs.
-    pub fn allInputsRegisterValue(self: Self) Register.Mask {
+    pub fn allInputsRegisterValue(self: Self) Register.BitPattern {
         var mask = self.movementInputsRegisterValue();
         if (self.action) mask |= 0b1000_0000; // 0x80
         return mask;
