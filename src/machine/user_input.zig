@@ -21,8 +21,10 @@ pub const Instance = struct {
     /// Whether the button to show the password entry screen was just released after being pressed.
     show_password_screen: bool = false,
 
-    /// The ASCII character of the most recently pressed key. Used for text entry on the password entry screen.
-    /// Leave as null if no key has been pressed, or the most recently-pressed key has no ASCII equivalent.
+    /// The ASCII character of the most recent key that was released this frame after being pressed.
+    /// Used for text entry on the password entry screen.
+    /// Leave as `null` if no key was released this frame, or if the most recently-released key
+    /// has no ASCII equivalent.
     last_character_typed: ?u8 = null,
 
     const Self = @This();
@@ -65,7 +67,7 @@ pub const Instance = struct {
         }
 
         if (self.last_character_typed) |char| {
-            values.last_character_typed = normalizedCharacter(char);
+            values.last_character_typed = normalizedCharacterValue(char);
         }
 
         return values;
@@ -97,15 +99,15 @@ pub const RegisterValues = struct {
     all_inputs: Register.BitPattern = 0b0000_0000,
 
     /// The value to insert into `RegisterID.last_character_typed`.
-    /// Contains the ASCII value of the most recently-pressed key,
-    /// or `null` if the key is unknown or does not correspond to a supported character.
-    last_character_typed: ?Register.Unsigned = null,
+    /// Contains the uppercased ASCII value of the most recently-pressed key,
+    /// or `0` if the key is unknown or does not correspond to a supported character.
+    last_character_typed: Register.Unsigned = 0,
 };
 
 /// Given an ASCII character representing the most recently pressed key,
 /// normalizes it into a value supported by the Another World bytecode,
 /// or converts it to `null` if the character is unsupported.
-fn normalizedCharacter(char: u8) ?Register.Unsigned {
+fn normalizedCharacterValue(char: u8) Register.Unsigned {
     return switch (char) {
         'A'...'Z' => |uppercase_char| uppercase_char,
         'a'...'z' => |lowercase_char| {
@@ -117,15 +119,12 @@ fn normalizedCharacter(char: u8) ?Register.Unsigned {
         },
         // The SDL reference implementation permitted 8 (backspace, SDL's SDLK_BACKSPACE keycode).
         '\x08' => 8,
-        // The SDL reference implementation permitted 0 (NUL, SDL's SDLK_UNKNOWN keycode),
-        // though it's unclear when that would ever be sent by the host.
-        '\x00' => 0,
         // The SDL reference implementation commented out code that permitted 0xD
         // (carriage return, SDL's SDLK_RETURN keycode).
-        // We could reenable it if the Another World bytecode actually responds to it.
-        '\r' => null,
-        // All other keys should not be sent.
-        else => null,
+        // We could reenable it if the Another World bytecode actually handles it.
+        '\r' => 0,
+        // All other keys should not be handled.
+        else => 0,
     };
 }
 
@@ -281,39 +280,37 @@ test "registerValues returns expected value on all inputs combined" {
     try testing.expectEqual(expected, input.registerValues());
 }
 
-// - normalizedCharacter tests -
+// - normalizedCharacterValue tests -
 
-test "normalizedCharacter returns expected values for supported characters" {
+test "normalizedCharacterValue returns expected values for explicitly handled characters" {
     const uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     const lowercase = "abcdefghijklmnopqrstuvwxyz";
     const backspace = '\x08';
-    const NUL = '\x00';
     const carriage_return = '\r';
 
     for (uppercase) |char| {
-        try testing.expectEqual(char, normalizedCharacter(char));
+        try testing.expectEqual(char, normalizedCharacterValue(char));
     }
 
     // lowercase characters should be converted to uppercase
     for (lowercase) |char, index| {
-        try testing.expectEqual(uppercase[index], normalizedCharacter(char));
+        try testing.expectEqual(uppercase[index], normalizedCharacterValue(char));
     }
 
-    try testing.expectEqual(8, normalizedCharacter(backspace));
-    try testing.expectEqual(0, normalizedCharacter(NUL));
-    try testing.expectEqual(null, normalizedCharacter(carriage_return));
+    try testing.expectEqual(8, normalizedCharacterValue(backspace));
+    try testing.expectEqual(0, normalizedCharacterValue(carriage_return));
 }
 
-test "normalizedCharacter returns null when last character is not a supported character" {
+test "normalizedCharacterValue returns null for unsupported characters" {
     // These are not intended to be exhaustive 😁
     const numbers = "0123456789";
     const punctuation = ",./\\;:'\"<>{}()[]!@#$%^&*";
 
     for (numbers) |char| {
-        try testing.expectEqual(null, normalizedCharacter(char));
+        try testing.expectEqual(0, normalizedCharacterValue(char));
     }
 
     for (punctuation) |char| {
-        try testing.expectEqual(null, normalizedCharacter(char));
+        try testing.expectEqual(0, normalizedCharacterValue(char));
     }
 }
