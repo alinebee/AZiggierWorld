@@ -19,6 +19,7 @@ const Video = @import("video.zig");
 const Audio = @import("audio.zig");
 const Memory = @import("memory.zig");
 const Host = @import("host.zig");
+const UserInput = @import("user_input.zig");
 
 const Reader = @import("../resources/reader.zig");
 
@@ -54,6 +55,9 @@ pub const Instance = struct {
     /// The host which the machine will send video and audio output to and read player input from.
     host: Host.Interface,
 
+    /// The currently-active game part.
+    current_game_part: GamePart.Enum,
+
     /// The next game part that has been scheduled to be started by a program instruction.
     /// Null if no game part is scheduled.
     scheduled_game_part: ?GamePart.Enum = null,
@@ -84,6 +88,7 @@ pub const Instance = struct {
                 .palettes = undefined,
             },
             .program = undefined,
+            .current_game_part = undefined,
         };
 
         // Initialize registers to their expected values.
@@ -104,6 +109,27 @@ pub const Instance = struct {
         self.* = undefined;
     }
 
+    pub fn applyUserInput(self: *Self, input: UserInput.Instance) void {
+        const register_values = input.registerValues();
+
+        self.registers.setSigned(.left_right_input, register_values.left_right_input);
+        self.registers.setSigned(.up_down_input, register_values.up_down_input);
+        self.registers.setSigned(.up_down_input_2, register_values.up_down_input);
+        self.registers.setSigned(.action_input, register_values.action_input);
+        self.registers.setBitPattern(.movement_inputs, register_values.movement_inputs);
+        self.registers.setBitPattern(.all_inputs, register_values.all_inputs);
+
+        // TODO: check if the `last_character_typed` register is read by any other game part;
+        // we may be able to unconditionally set it.
+        if (self.current_game_part == .password_entry) {
+            self.registers.setUnsigned(.last_character_typed, register_values.last_character_typed);
+        }
+
+        if (input.show_password_screen and self.current_game_part.allowsPasswordEntry()) {
+            self.scheduled_game_part = .password_entry;
+        }
+    }
+
     /// Immediately unload all resources, load the resources for the specified game part,
     /// and prepare to execute its bytecode.
     /// Returns an error if one or more resources do not exist or could not be loaded.
@@ -121,7 +147,8 @@ pub const Instance = struct {
         }
         self.threads[ThreadID.main].execution_state = .{ .active = 0 };
 
-        // TODO: probably a bunch more stuff
+        self.current_game_part = game_part;
+        self.scheduled_game_part = null;
     }
 
     // -- Resource subsystem interface --
@@ -328,6 +355,8 @@ test "scheduleGamePart schedules a new game part without loading it" {
     try testing.expectEqual(null, try machine.memory.resourceLocation(resource_ids.polygons));
 }
 
+// - LoadResource tests -
+
 test "loadResource loads audio resource into main memory" {
     var machine = testInstance(null);
     defer machine.deinit();
@@ -364,4 +393,104 @@ test "loadResource returns error on invalid resource ID" {
 
     const invalid_id = MockRepository.Fixtures.invalid_resource_id;
     try testing.expectError(error.InvalidResourceID, machine.loadResource(invalid_id));
+}
+
+// - applyUserInput tests -
+
+test "applyUserInput sets expected register values" {
+    var machine = testInstance(null);
+    defer machine.deinit();
+
+    const full_input = UserInput.Instance{
+        .action = true,
+        .left = true,
+        .right = true,
+        .up = true,
+        .down = true,
+    };
+
+    machine.applyUserInput(full_input);
+
+    try testing.expectEqual(1, machine.registers.signed(.action_input));
+    try testing.expectEqual(-1, machine.registers.signed(.left_right_input));
+    try testing.expectEqual(-1, machine.registers.signed(.up_down_input));
+    try testing.expectEqual(-1, machine.registers.signed(.up_down_input_2));
+    try testing.expectEqual(0b1111, machine.registers.bitPattern(.movement_inputs));
+    try testing.expectEqual(0b1000_1111, machine.registers.bitPattern(.all_inputs));
+
+    const empty_input = UserInput.Instance{};
+    machine.applyUserInput(empty_input);
+
+    try testing.expectEqual(0, machine.registers.signed(.action_input));
+    try testing.expectEqual(0, machine.registers.signed(.left_right_input));
+    try testing.expectEqual(0, machine.registers.signed(.up_down_input));
+    try testing.expectEqual(0, machine.registers.signed(.up_down_input_2));
+    try testing.expectEqual(0b0000, machine.registers.bitPattern(.movement_inputs));
+    try testing.expectEqual(0b0000_0000, machine.registers.bitPattern(.all_inputs));
+}
+
+test "applyUserInput sets RegisterID.last_character_typed when in password entry screen" {
+    var machine = testInstance(null);
+    defer machine.deinit();
+
+    try machine.startGamePart(.password_entry);
+
+    const original_value = 1234;
+    machine.registers.setUnsigned(.last_character_typed, original_value);
+
+    const input = UserInput.Instance{ .last_character_typed = 'a' };
+    machine.applyUserInput(input);
+
+    try testing.expectEqual('A', machine.registers.unsigned(.last_character_typed));
+}
+
+test "applyUserInput does not touch RegisterID.last_character_typed during other game parts" {
+    var machine = testInstance(null);
+    defer machine.deinit();
+
+    try testing.expect(machine.current_game_part != .password_entry);
+
+    const original_value = 1234;
+    machine.registers.setUnsigned(.last_character_typed, original_value);
+
+    const input = UserInput.Instance{ .last_character_typed = 'a' };
+    machine.applyUserInput(input);
+
+    try testing.expectEqual(original_value, machine.registers.unsigned(.last_character_typed));
+}
+
+test "applyUserInput opens password screen if permitted for current game part" {
+    var machine = testInstance(null);
+    defer machine.deinit();
+
+    try testing.expectEqual(.intro_cinematic, machine.current_game_part);
+
+    const input = UserInput.Instance{ .show_password_screen = true };
+    machine.applyUserInput(input);
+
+    try testing.expectEqual(.password_entry, machine.scheduled_game_part);
+}
+
+test "applyUserInput does not open password screen when in copy protection" {
+    var machine = testInstance(null);
+    defer machine.deinit();
+
+    try machine.startGamePart(.copy_protection);
+
+    const input = UserInput.Instance{ .show_password_screen = true };
+    machine.applyUserInput(input);
+
+    try testing.expectEqual(null, machine.scheduled_game_part);
+}
+
+test "applyUserInput does not open password screen when already in password screen" {
+    var machine = testInstance(null);
+    defer machine.deinit();
+
+    try machine.startGamePart(.password_entry);
+
+    const input = UserInput.Instance{ .show_password_screen = true };
+    machine.applyUserInput(input);
+
+    try testing.expectEqual(null, machine.scheduled_game_part);
 }

@@ -47,6 +47,17 @@ pub const Enum = enum(Raw) {
     }
     // zig fmt: on
 
+    /// Whether this game part should allow switching to the password entry screeen.
+    pub fn allowsPasswordEntry(self: Enum) bool {
+        return switch (self) {
+            // Don't allow the user to enter passwords until they've passed copy protection.
+            .copy_protection => false,
+            // Don't reactivate the password entry screen while the user is already on it.
+            .password_entry => false,
+            else => true,
+        };
+    }
+
     /// All game parts in order of occurrence
     pub const all = [_]Enum{
         // TODO: try populating this via @typeInfo(@This()).Enum.fields
@@ -110,4 +121,16 @@ test "parse returns expected enum cases" {
     try testing.expectError(error.InvalidGamePart, parse(0x3E79));
     try testing.expectError(error.InvalidGamePart, parse(0x3E89));
     try testing.expectError(error.InvalidGamePart, parse(0xFFFF));
+}
+
+test "allowsPasswordEntry returns expected values" {
+    try testing.expectEqual(false, Enum.copy_protection.allowsPasswordEntry());
+    try testing.expectEqual(true, Enum.intro_cinematic.allowsPasswordEntry());
+    try testing.expectEqual(true, Enum.gameplay1.allowsPasswordEntry());
+    try testing.expectEqual(true, Enum.gameplay2.allowsPasswordEntry());
+    try testing.expectEqual(true, Enum.gameplay3.allowsPasswordEntry());
+    try testing.expectEqual(true, Enum.arena_cinematic.allowsPasswordEntry());
+    try testing.expectEqual(true, Enum.gameplay4.allowsPasswordEntry());
+    try testing.expectEqual(true, Enum.gameplay5.allowsPasswordEntry());
+    try testing.expectEqual(false, Enum.password_entry.allowsPasswordEntry());
 }
