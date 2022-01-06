@@ -23,16 +23,12 @@ pub const Enum = enum(Raw) {
     /// Password entry screen
     password_entry  = 0x3E88,
 
-    // NOTE: the reference implementation treats both 0x3E88 and 0x3E89 as the password entry screen,
-    // but neither of them is referenced by part-loading instructions in bytecode.
-    // It's possible the password entry screen needed to be triggered by the VM's host instead.
-    // The reference implementation has code to handle keyboard entry in 0x3E89, but not 0x3E88:
-    // https://github.com/fabiensanglard/Another-World-Bytecode-Interpreter/blob/master/src/vm.cpp#L590
+    const Self = @This();
 
     /// The IDs of the resources to load for this game part.
     // Copypasta from reference implementation:
     // https://github.com/fabiensanglard/Another-World-Bytecode-Interpreter/blob/master/src/parts.cpp#L14-L27
-    pub fn resourceIDs(self: Enum) ResourceIDs {
+    pub fn resourceIDs(self: Self) ResourceIDs {
         return switch (self) {
             .copy_protection    => .{ .palettes = 0x14, .bytecode = 0x15, .polygons = 0x16 },
             .intro_cinematic    => .{ .palettes = 0x17, .bytecode = 0x18, .polygons = 0x19 },
@@ -48,7 +44,7 @@ pub const Enum = enum(Raw) {
     // zig fmt: on
 
     /// Whether this game part should allow switching to the password entry screeen.
-    pub fn allowsPasswordEntry(self: Enum) bool {
+    pub fn allowsPasswordEntry(self: Self) bool {
         return switch (self) {
             // Don't allow the user to enter passwords until they've passed copy protection.
             .copy_protection => false,
@@ -59,8 +55,7 @@ pub const Enum = enum(Raw) {
     }
 
     /// All game parts in order of occurrence
-    pub const all = [_]Enum{
-        // TODO: try populating this via @typeInfo(@This()).Enum.fields
+    pub const all = [@typeInfo(Self).Enum.fields.len]Self{
         .copy_protection,
         .intro_cinematic,
         .gameplay1,
@@ -105,6 +100,10 @@ pub const Error = error{
 // -- Tests --
 
 const testing = @import("../utils/testing.zig");
+
+test "ensure everything compiles" {
+    testing.refAllDecls(Enum);
+}
 
 test "parse returns expected enum cases" {
     try testing.expectEqual(.copy_protection, parse(0x3E80));
