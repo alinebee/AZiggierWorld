@@ -17,7 +17,7 @@ pub const Enum = enum(Raw) {
     /// The ASCII character of the last alphanumeric key that was pressed.
     /// Used for keyboard entry in the password entry screen.
     /// See user_input.zig for possible values.
-    last_character_typed = 0xDA,
+    last_pressed_character = 0xDA,
 
     /// The state of the user's up/down input. See user_input.zig for possible values.
     up_down_input = 0xE5,

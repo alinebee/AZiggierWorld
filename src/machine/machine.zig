@@ -119,10 +119,10 @@ pub const Instance = struct {
         self.registers.setBitPattern(.movement_inputs, register_values.movement_inputs);
         self.registers.setBitPattern(.all_inputs, register_values.all_inputs);
 
-        // TODO: check if the `last_character_typed` register is read by any other game part;
+        // TODO: check if the `last_pressed_character` register is read by any other game part;
         // we may be able to unconditionally set it.
         if (self.current_game_part == .password_entry) {
-            self.registers.setUnsigned(.last_character_typed, register_values.last_character_typed);
+            self.registers.setUnsigned(.last_pressed_character, register_values.last_pressed_character);
         }
 
         if (input.show_password_screen and self.current_game_part.allowsPasswordEntry()) {
@@ -429,34 +429,34 @@ test "applyUserInput sets expected register values" {
     try testing.expectEqual(0b0000_0000, machine.registers.bitPattern(.all_inputs));
 }
 
-test "applyUserInput sets RegisterID.last_character_typed when in password entry screen" {
+test "applyUserInput sets RegisterID.last_pressed_character when in password entry screen" {
     var machine = testInstance(null);
     defer machine.deinit();
 
     try machine.startGamePart(.password_entry);
 
     const original_value = 1234;
-    machine.registers.setUnsigned(.last_character_typed, original_value);
+    machine.registers.setUnsigned(.last_pressed_character, original_value);
 
-    const input = UserInput.Instance{ .last_character_typed = 'a' };
+    const input = UserInput.Instance{ .last_pressed_character = 'a' };
     machine.applyUserInput(input);
 
-    try testing.expectEqual('A', machine.registers.unsigned(.last_character_typed));
+    try testing.expectEqual('A', machine.registers.unsigned(.last_pressed_character));
 }
 
-test "applyUserInput does not touch RegisterID.last_character_typed during other game parts" {
+test "applyUserInput does not touch RegisterID.last_pressed_character during other game parts" {
     var machine = testInstance(null);
     defer machine.deinit();
 
     try testing.expect(machine.current_game_part != .password_entry);
 
     const original_value = 1234;
-    machine.registers.setUnsigned(.last_character_typed, original_value);
+    machine.registers.setUnsigned(.last_pressed_character, original_value);
 
-    const input = UserInput.Instance{ .last_character_typed = 'a' };
+    const input = UserInput.Instance{ .last_pressed_character = 'a' };
     machine.applyUserInput(input);
 
-    try testing.expectEqual(original_value, machine.registers.unsigned(.last_character_typed));
+    try testing.expectEqual(original_value, machine.registers.unsigned(.last_pressed_character));
 }
 
 test "applyUserInput opens password screen if permitted for current game part" {
