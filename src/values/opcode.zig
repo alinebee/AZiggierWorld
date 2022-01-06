@@ -41,14 +41,18 @@ pub const Enum = enum(Raw) {
 
     // All lower enum cases map directly to raw byte values from 0 to 26.
     // These two last cases are different: they are marked by the second-to-highest and highest bit
-    // respectively, because these instructions treat the lower 6/7 bits of the opcode as part of the
-    // instruction itself.
-    // They need bitmasking to identity: the values here are their bitmasks rather than discrete values.
-    // As a result `intToEnum` should never be used to construct instances of this enum type directly:
+    // of the raw byte respectively, because these instructions treat the lower 6/7 bits of the opcode
+    // byte as part of the instruction itself.
+    //
+    // They need bitmasking via `draw_sprite_polygon_mask and `draw_background_polygon_mask` to identify.
+    // As a result, `intToEnum` should *never* be used to construct instances of this enum type directly:
     // instead, always construct the enum using `parse`.
-    DrawSpritePolygon = 0b0100_0000,
-    DrawBackgroundPolygon = 0b1000_0000,
+    DrawSpritePolygon,
+    DrawBackgroundPolygon,
 };
+
+const draw_sprite_polygon_mask: Raw = 0b0100_0000;
+const draw_background_polygon_mask: Raw = 0b1000_0000;
 
 pub const Error = error{
     /// Bytecode contained an unrecognized opcode.
@@ -56,12 +60,20 @@ pub const Error = error{
 };
 
 pub fn parse(raw_opcode: Raw) Error!Enum {
-    if (raw_opcode & @enumToInt(Enum.DrawBackgroundPolygon) != 0) {
+    if (raw_opcode & draw_background_polygon_mask != 0) {
         return .DrawBackgroundPolygon;
-    } else if (raw_opcode & @enumToInt(Enum.DrawSpritePolygon) != 0) {
+    } else if (raw_opcode & draw_sprite_polygon_mask != 0) {
         return .DrawSpritePolygon;
     } else {
-        return intToEnum(Enum, raw_opcode) catch error.InvalidOpcode;
+        const opcode = intToEnum(Enum, raw_opcode) catch return error.InvalidOpcode;
+
+        // Reject raw opcodes that happened to match the exact enum position
+        // of the polygon-drawing enum cases, as those are actually invalid.
+        if (opcode == .DrawBackgroundPolygon or opcode == .DrawSpritePolygon) {
+            return error.InvalidOpcode;
+        }
+
+        return opcode;
     }
 }
 
