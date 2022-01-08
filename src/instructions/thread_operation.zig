@@ -6,11 +6,12 @@ pub const Raw = u8;
 /// The possible operations for a ControlThreads instruction.
 pub const Enum = enum(Raw) {
     /// Resume a previously paused thread.
-    Resume = 0,
+    // `resume` is a reserved keyword in Zig.
+    @"resume" = 0,
     /// Mark the threads as paused, but maintain their current state.
-    Suspend = 1,
+    pause = 1,
     /// Mark the threads as deactivated.
-    Deactivate = 2,
+    deactivate = 2,
 };
 
 pub const Error = error{
@@ -29,9 +30,9 @@ pub fn parse(raw: Raw) Error!Enum {
 const testing = @import("../utils/testing.zig");
 
 test "parse parses raw operation bytes correctly" {
-    try testing.expectEqual(.Resume, parse(0));
-    try testing.expectEqual(.Suspend, parse(1));
-    try testing.expectEqual(.Deactivate, parse(2));
+    try testing.expectEqual(.@"resume", parse(0));
+    try testing.expectEqual(.pause, parse(1));
+    try testing.expectEqual(.deactivate, parse(2));
     try testing.expectError(
         error.InvalidThreadOperation,
         parse(3),

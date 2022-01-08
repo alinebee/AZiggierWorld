@@ -9,8 +9,8 @@ pub const Error = Program.Error || ThreadID.Error || Operation.Error || error{
     InvalidThreadRange,
 };
 
-/// Resumes, suspends or deactivates one or more threads on the next game tic.
-/// Note that any threads suspended or deactivated by this instruction will still
+/// Resumes, pauses or deactivates one or more threads on the next game tic.
+/// Note that any threads paused or deactivated by this instruction will still
 /// run to completion this tic, including the thread that executed this instruction.
 pub const Instance = struct {
     /// The ID of the minimum thread to operate upon.
@@ -31,9 +31,9 @@ pub const Instance = struct {
 
         for (affected_threads) |*thread| {
             switch (self.operation) {
-                .Resume => thread.scheduleResume(),
-                .Suspend => thread.scheduleSuspend(),
-                .Deactivate => thread.scheduleDeactivate(),
+                .@"resume" => thread.scheduleResume(),
+                .pause => thread.schedulePause(),
+                .deactivate => thread.scheduleDeactivate(),
             }
         }
     }
@@ -91,7 +91,7 @@ test "parse parses valid bytecode and consumes 4 bytes" {
 
     try testing.expectEqual(62, instruction.start_thread_id);
     try testing.expectEqual(63, instruction.end_thread_id);
-    try testing.expectEqual(.Deactivate, instruction.operation);
+    try testing.expectEqual(.deactivate, instruction.operation);
 }
 
 test "parse returns error.InvalidThreadID and consumes 4 bytes when start thread ID is invalid" {
@@ -119,44 +119,44 @@ test "execute with resume operation schedules specified threads to resume" {
     const instruction = Instance{
         .start_thread_id = 1,
         .end_thread_id = 3,
-        .operation = .Resume,
+        .operation = .@"resume",
     };
 
     var machine = Machine.testInstance(null);
     defer machine.deinit();
 
     for (machine.threads) |thread| {
-        try testing.expectEqual(null, thread.scheduled_suspend_state);
+        try testing.expectEqual(null, thread.scheduled_pause_state);
     }
 
     instruction.execute(&machine);
     for (machine.threads) |thread, index| {
         switch (index) {
-            1...3 => try testing.expectEqual(.running, thread.scheduled_suspend_state),
-            else => try testing.expectEqual(null, thread.scheduled_suspend_state),
+            1...3 => try testing.expectEqual(.running, thread.scheduled_pause_state),
+            else => try testing.expectEqual(null, thread.scheduled_pause_state),
         }
     }
 }
 
-test "execute with suspend operation schedules specified threads to suspend" {
+test "execute with pause operation schedules specified threads to pause" {
     const instruction = Instance{
         .start_thread_id = 1,
         .end_thread_id = 3,
-        .operation = .Suspend,
+        .operation = .pause,
     };
 
     var machine = Machine.testInstance(null);
     defer machine.deinit();
 
     for (machine.threads) |thread| {
-        try testing.expectEqual(null, thread.scheduled_suspend_state);
+        try testing.expectEqual(null, thread.scheduled_pause_state);
     }
 
     instruction.execute(&machine);
     for (machine.threads) |thread, index| {
         switch (index) {
-            1...3 => try testing.expectEqual(.suspended, thread.scheduled_suspend_state),
-            else => try testing.expectEqual(null, thread.scheduled_suspend_state),
+            1...3 => try testing.expectEqual(.paused, thread.scheduled_pause_state),
+            else => try testing.expectEqual(null, thread.scheduled_pause_state),
         }
     }
 }
@@ -165,7 +165,7 @@ test "execute with deactivate operation schedules specified threads to deactivat
     const instruction = Instance{
         .start_thread_id = 1,
         .end_thread_id = 3,
-        .operation = .Deactivate,
+        .operation = .deactivate,
     };
 
     var machine = Machine.testInstance(null);
@@ -190,18 +190,18 @@ test "execute safely iterates full range of threads" {
     const instruction = Instance{
         .start_thread_id = math.minInt(ThreadID.Trusted),
         .end_thread_id = math.maxInt(ThreadID.Trusted),
-        .operation = .Resume,
+        .operation = .@"resume",
     };
 
     var machine = Machine.testInstance(null);
     defer machine.deinit();
 
     for (machine.threads) |thread| {
-        try testing.expectEqual(null, thread.scheduled_suspend_state);
+        try testing.expectEqual(null, thread.scheduled_pause_state);
     }
 
     instruction.execute(&machine);
     for (machine.threads) |thread| {
-        try testing.expectEqual(.running, thread.scheduled_suspend_state);
+        try testing.expectEqual(.running, thread.scheduled_pause_state);
     }
 }

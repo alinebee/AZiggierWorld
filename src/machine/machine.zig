@@ -298,7 +298,7 @@ test "new creates virtual machine instance with expected initial state" {
         } else {
             try testing.expectEqual(.inactive, thread.execution_state);
         }
-        try testing.expectEqual(.running, thread.suspend_state);
+        try testing.expectEqual(.running, thread.pause_state);
     }
 
     for (machine.registers.unsignedSlice()) |register, id| {

@@ -20,34 +20,34 @@ const ExecutionState = union(enum) {
     /// The thread is active and will continue execution from the specified address when it is next run.
     active: Address.Native,
 
-    /// The thread is inactive and cannot run, regardless of whether it is running or suspended.
+    /// The thread is inactive and will not run, regardless of whether it is running or paused.
     inactive,
 };
 
-const SuspendState = enum {
-    /// The thread is not suspended: it will run if it is also active (see `ExecutionState`).
+const PauseState = enum {
+    /// The thread is not paused: it will run if it is also active (see `ExecutionState`).
     running,
 
-    /// The thread is paused and will not execute until unsuspended.
-    suspended,
+    /// The thread is paused and will not execute until unpaused.
+    paused,
 };
 
 /// One of the program execution threads within the Another World virtual machine.
 pub const Instance = struct {
     // Theoretically, a thread can only be in three functional states:
     // 1. Running at program counter X
-    // 2. Suspended at program counter X
+    // 2. Paused at program counter X
     // 3. Inactive
     //
     // However, Another World represents these 3 states with two booleans that can be modified
     // independently of each other.
     // So there are actually 4 logical states:
-    // 1. Running at program counter X and not suspended
-    // 2. Running at program counter X and suspended
-    // 3. Inactive and not suspended
-    // 4. Inactive and suspended
-    // States 3 and 4 have the same effect; but we cannot rule out that a program will suspend
-    // an inactive thread, then start running the thread *but expect it to remain suspended*.
+    // 1. Active at program counter X and not paused
+    // 2. Active at program counter X and paused
+    // 3. Inactive and not paused
+    // 4. Inactive and paused
+    // States 3 and 4 have the same effect; but we cannot rule out that a program will pause
+    // an inactive thread, then start running the thread *but expect it to remain paused*.
     // To allow that, we must track each variable independently.
 
     /// The active/inactive execution state of this thread during the current game tic.
@@ -57,12 +57,12 @@ pub const Instance = struct {
     /// If `null`, the current state will continue unchanged next tic.
     scheduled_execution_state: ?ExecutionState = null,
 
-    /// The running/suspended state of this thread during the current game tic.
-    suspend_state: SuspendState = .running,
+    /// The running/paused state of this thread during the current game tic.
+    pause_state: PauseState = .running,
 
-    /// The scheduled running/suspended state of this thread for the next game tic.
+    /// The scheduled running/paused state of this thread for the next game tic.
     /// If `null`, the current state will continue unchanged next tic.
-    scheduled_suspend_state: ?SuspendState = null,
+    scheduled_pause_state: ?PauseState = null,
 
     /// On the next game tic, activate this thread and jump to the specified address.
     /// If the thread is currently inactive, then it will remain so for the rest of the current tic.
@@ -77,34 +77,34 @@ pub const Instance = struct {
     }
 
     /// On the next game tic, resume running this thread.
-    /// If the thread is currently suspended, then it will remain so for the rest of the current tic.
+    /// If the thread is currently paused, then it will remain so for the rest of the current tic.
     pub fn scheduleResume(self: *Instance) void {
-        self.scheduled_suspend_state = .running;
+        self.scheduled_pause_state = .running;
     }
 
-    /// On the next game tic, suspend this thread.
+    /// On the next game tic, pause this thread.
     /// If the thread is currently active and running, then it will still run for the current tic if it hasn't already.
-    pub fn scheduleSuspend(self: *Instance) void {
-        self.scheduled_suspend_state = .suspended;
+    pub fn schedulePause(self: *Instance) void {
+        self.scheduled_pause_state = .paused;
     }
 
-    /// Apply any scheduled changes to the thread's execution and suspend states.
+    /// Apply any scheduled changes to the thread's execution and pause states.
     pub fn update(self: *Instance) void {
         if (self.scheduled_execution_state) |new_state| {
             self.execution_state = new_state;
             self.scheduled_execution_state = null;
         }
 
-        if (self.scheduled_suspend_state) |new_state| {
-            self.suspend_state = new_state;
-            self.scheduled_suspend_state = null;
+        if (self.scheduled_pause_state) |new_state| {
+            self.pause_state = new_state;
+            self.scheduled_pause_state = null;
         }
     }
 
     /// Execute the machine's current program on this thread, running until the thread yields
     /// or deactivates, or an error occurs, or the execution limit is exceeded.
     pub fn run(self: *Instance, machine: *Machine.Instance, max_instructions: usize) !void {
-        if (self.suspend_state == .suspended) return;
+        if (self.pause_state == .paused) return;
 
         // If this thread is active, resume executing the program from the previous address for this thread;
         // Otherwise, skip the thread.
@@ -150,21 +150,21 @@ test "scheduleDeactivate schedules deactivation for next tic" {
 }
 
 test "scheduleResume schedules resuming for next tic" {
-    var thread = Instance{ .suspend_state = .suspended };
+    var thread = Instance{ .pause_state = .paused };
 
     thread.scheduleResume();
 
-    try testing.expectEqual(.suspended, thread.suspend_state);
-    try testing.expectEqual(.running, thread.scheduled_suspend_state);
+    try testing.expectEqual(.paused, thread.pause_state);
+    try testing.expectEqual(.running, thread.scheduled_pause_state);
 }
 
-test "scheduleSuspend schedules suspending for next tic" {
+test "schedulePause schedules pausing for next tic" {
     var thread = Instance{};
 
-    thread.scheduleSuspend();
+    thread.schedulePause();
 
-    try testing.expectEqual(.running, thread.suspend_state);
-    try testing.expectEqual(.suspended, thread.scheduled_suspend_state);
+    try testing.expectEqual(.running, thread.pause_state);
+    try testing.expectEqual(.paused, thread.scheduled_pause_state);
 }
 
 test "update applies scheduled execution state" {
@@ -187,27 +187,27 @@ test "update applies scheduled execution state" {
     try testing.expectEqual(null, thread.scheduled_execution_state);
 }
 
-test "update applies scheduled suspend state" {
+test "update applies scheduled pause state" {
     var thread = Instance{};
 
-    try testing.expectEqual(.running, thread.suspend_state);
-    try testing.expectEqual(null, thread.scheduled_suspend_state);
+    try testing.expectEqual(.running, thread.pause_state);
+    try testing.expectEqual(null, thread.scheduled_pause_state);
 
-    thread.scheduleSuspend();
-    try testing.expectEqual(.running, thread.suspend_state);
-    try testing.expectEqual(.suspended, thread.scheduled_suspend_state);
+    thread.schedulePause();
+    try testing.expectEqual(.running, thread.pause_state);
+    try testing.expectEqual(.paused, thread.scheduled_pause_state);
 
     thread.update();
-    try testing.expectEqual(.suspended, thread.suspend_state);
-    try testing.expectEqual(null, thread.scheduled_suspend_state);
+    try testing.expectEqual(.paused, thread.pause_state);
+    try testing.expectEqual(null, thread.scheduled_pause_state);
 
     thread.scheduleResume();
-    try testing.expectEqual(.suspended, thread.suspend_state);
-    try testing.expectEqual(.running, thread.scheduled_suspend_state);
+    try testing.expectEqual(.paused, thread.pause_state);
+    try testing.expectEqual(.running, thread.scheduled_pause_state);
 
     thread.update();
-    try testing.expectEqual(.running, thread.suspend_state);
-    try testing.expectEqual(null, thread.scheduled_suspend_state);
+    try testing.expectEqual(.running, thread.pause_state);
+    try testing.expectEqual(null, thread.scheduled_pause_state);
 }
 
 // - Run tests -
