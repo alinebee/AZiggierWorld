@@ -8,14 +8,13 @@
 //!
 //! Each thread operates on the same bank of global registers; threads are not executed concurrently,
 //! so race conditions are not a concern. Separate threads were probably used to to simulate
-//! different entities within the game (enemies, projectiles etc.) as well as overall housekeeping
-//! for the current screen of the game.
+//! different entities within the game (enemies, projectiles etc.) as well as input-handling
+//! and overall housekeeping for the current section of the game.
 
 const Address = @import("../values/address.zig");
-const RegisterID = @import("../values/register_id.zig");
 const Machine = @import("machine.zig");
 const Program = @import("program.zig");
-const executeNextInstruction = @import("../instructions/instruction.zig").executeNextInstruction;
+const executeProgram = @import("../instructions/instruction.zig").executeProgram;
 
 const ExecutionState = union(enum) {
     /// The thread is active and will continue execution from the specified address when it is next run.
@@ -32,11 +31,6 @@ const SuspendState = enum {
     /// The thread is paused and will not execute until unsuspended.
     suspended,
 };
-
-/// The maximum number of program instructions that can be executed on a single thread in a single tic
-/// before it will abort with an error.
-/// Exceeding this number of instructions likely indicates an infinite loop.
-const max_instructions_per_tic = 10_000;
 
 /// One of the program execution threads within the Another World virtual machine.
 pub const Instance = struct {
@@ -109,7 +103,7 @@ pub const Instance = struct {
 
     /// Execute the machine's current program on this thread, running until the thread yields
     /// or deactivates, or an error occurs, or the execution limit is exceeded.
-    pub fn run(self: *Instance, machine: *Machine.Instance) !void {
+    pub fn run(self: *Instance, machine: *Machine.Instance, max_instructions: usize) !void {
         if (self.suspend_state == .suspended) return;
 
         // If this thread is active, resume executing the program from the previous address for this thread;
@@ -122,32 +116,13 @@ pub const Instance = struct {
         // Empty the stack before running each thread.
         machine.stack.clear();
 
-        var instructions_remaining: usize = max_instructions_per_tic;
-        while (instructions_remaining > 0) : (instructions_remaining -= 1) {
-            const action = try executeNextInstruction(&machine.program, machine);
-            switch (action) {
-                .Continue => continue,
-                .YieldToNextThread => {
-                    // Record the final position of the program counter so we can resume from there next tic.
-                    self.execution_state = .{ .active = machine.program.counter };
-                    return;
-                },
-                .DeactivateThread => {
-                    self.execution_state = .inactive;
-                    return;
-                },
-            }
-        } else {
-            // If we reach here without returning before now, it means the program got stuck in an infinite loop.
-            return error.InstructionLimitExceeded;
-        }
+        const result = try executeProgram(&machine.program, machine, max_instructions);
+        self.execution_state = switch (result) {
+            // On yield, record the final position of the program counter so we can resume from there next tic.
+            .yield => .{ .active = machine.program.counter },
+            .deactivate => .inactive,
+        };
     }
-};
-
-pub const Error = error{
-    /// The thread reached its execution limit without yielding or deactivating.
-    /// This would indicate a bytecode bug like an infinite loop.
-    InstructionLimitExceeded,
 };
 
 // -- Tests --
@@ -237,58 +212,27 @@ test "update applies scheduled suspend state" {
 
 // - Run tests -
 
-const Opcode = @import("../values/opcode.zig");
+const Yield = @import("../instructions/yield.zig");
+const Kill = @import("../instructions/kill.zig");
 
-test "run stores program counter upon reaching yield instruction and does not continue executing" {
-    const register_1 = RegisterID.parse(1);
-    const register_2 = RegisterID.parse(2);
-    const bytecode = [_]u8{
-        @enumToInt(Opcode.Enum.RegisterSet), @enumToInt(register_1), 0x0B, 0xAD, // Offset 0: Set register 1 to 0x0BAD
-        @enumToInt(Opcode.Enum.Yield), // Offset 3: Yield to next thread
-        @enumToInt(Opcode.Enum.RegisterSet), @enumToInt(register_2), 0xF0, 0x0D, // Offset 5: Set register 2 to 0xF00D
-    };
+test "run stores program counter in thread state upon reaching yield instruction" {
+    const bytecode = Yield.Fixtures.valid;
 
     var machine = Machine.testInstance(&bytecode);
     defer machine.deinit();
 
-    try machine.threads[0].run(&machine);
-    // First register-set should have been executed
-    try testing.expectEqual(0x0BAD, machine.registers.unsigned(register_1));
-    // Second register-set should not have been executed
-    try testing.expectEqual(0, machine.registers.unsigned(register_2));
-    try testing.expectEqual(.{ .active = 5 }, machine.threads[0].execution_state);
+    const thread = &machine.threads[0];
+    try thread.run(&machine, 10);
+    try testing.expectEqual(.{ .active = 1 }, thread.execution_state);
 }
 
-test "run deactivates thread upon reaching deactivate instruction" {
-    const register_1 = RegisterID.parse(1);
-    const register_2 = RegisterID.parse(2);
-    const bytecode = [_]u8{
-        @enumToInt(Opcode.Enum.RegisterSet), @enumToInt(register_1), 0x0B, 0xAD, // Offset 0: Set register 1 to 0x0BAD
-        @enumToInt(Opcode.Enum.Kill), // Offset 3: Kill current thread
-        @enumToInt(Opcode.Enum.RegisterSet), @enumToInt(register_2), 0xF0, 0x0D, // Offset 5: Set register 2 to 0xF00D
-    };
+test "run deactivates thread upon reaching kill instruction" {
+    const bytecode = Kill.Fixtures.valid;
 
     var machine = Machine.testInstance(&bytecode);
     defer machine.deinit();
 
-    try machine.threads[0].run(&machine);
-    // First register-set should have been executed
-    try testing.expectEqual(0x0BAD, machine.registers.unsigned(register_1));
-    // Second register-set should not have been executed
-    try testing.expectEqual(0, machine.registers.unsigned(register_2));
-    try testing.expectEqual(.inactive, machine.threads[0].execution_state);
-}
-
-test "run returns error.InstructionLimitExceeded if program never yields or deactivates" {
-    const register_1 = RegisterID.parse(1);
-    const bytecode = [_]u8{
-        @enumToInt(Opcode.Enum.RegisterAddConstant), @enumToInt(register_1), 0, 2, // Offset 0: add 2 to register 1
-        @enumToInt(Opcode.Enum.Jump), 0x00, 0x00, // Offset 4: jump to offset 0 (infinite loop)
-    };
-
-    var machine = Machine.testInstance(&bytecode);
-    defer machine.deinit();
-
-    try testing.expectError(error.InstructionLimitExceeded, machine.threads[0].run(&machine));
-    try testing.expectEqual(max_instructions_per_tic, machine.registers.unsigned(register_1));
+    const thread = &machine.threads[0];
+    try thread.run(&machine, 10);
+    try testing.expectEqual(.inactive, thread.execution_state);
 }

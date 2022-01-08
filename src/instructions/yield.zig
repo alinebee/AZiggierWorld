@@ -1,11 +1,11 @@
 const Opcode = @import("../values/opcode.zig");
 const Program = @import("../machine/program.zig");
 const Machine = @import("../machine/machine.zig");
-const Action = @import("action.zig");
+const ExecutionResult = @import("execution_result.zig");
 
 /// Immediately moves execution to the next thread.
 pub const Instance = struct {
-    pub fn execute(_: Instance, machine: *Machine.Instance) ExecutionError!Action.Enum {
+    pub fn execute(_: Instance, machine: *Machine.Instance) ExecutionError!ExecutionResult.Enum {
         // The stack is cleared between each thread execution, so yielding
         // the thread with a non-empty stack (i.e. in the middle of a function)
         // would cause the return address for the current function to be lost
@@ -20,7 +20,7 @@ pub const Instance = struct {
         if (machine.stack.depth > 0) {
             return error.YieldWithinFunction;
         }
-        return .YieldToNextThread;
+        return .yield;
     }
 };
 
@@ -58,13 +58,13 @@ test "parse parses instruction from valid bytecode and consumes 1 byte" {
     try testing.expectEqual(Instance{}, instruction);
 }
 
-test "execute returns YieldToNextThread action" {
+test "execute returns ExecutionResult.yield" {
     const instruction = Instance{};
 
     var machine = Machine.testInstance(null);
     defer machine.deinit();
 
-    try testing.expectEqual(.YieldToNextThread, try instruction.execute(&machine));
+    try testing.expectEqual(.yield, try instruction.execute(&machine));
 }
 
 test "execute on a non-empty stack returns error.YieldWithinFunction" {

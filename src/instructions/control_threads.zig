@@ -9,7 +9,9 @@ pub const Error = Program.Error || ThreadID.Error || Operation.Error || error{
     InvalidThreadRange,
 };
 
-/// Resumes, suspends or deactivates one or more threads.
+/// Resumes, suspends or deactivates one or more threads on the next game tic.
+/// Note that any threads suspended or deactivated by this instruction will still
+/// run to completion this tic, including the thread that executed this instruction.
 pub const Instance = struct {
     /// The ID of the minimum thread to operate upon.
     /// The operation will affect each thread from start_thread_id up to and including end_thread_id.
@@ -25,8 +27,9 @@ pub const Instance = struct {
     pub fn execute(self: Instance, machine: *Machine.Instance) void {
         const start = self.start_thread_id;
         const end = @as(usize, self.end_thread_id) + 1;
+        const affected_threads = machine.threads[start..end];
 
-        for (machine.threads[start..end]) |*thread| {
+        for (affected_threads) |*thread| {
             switch (self.operation) {
                 .Resume => thread.scheduleResume(),
                 .Suspend => thread.scheduleSuspend(),

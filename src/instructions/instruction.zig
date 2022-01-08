@@ -8,7 +8,7 @@
 const Program = @import("../machine/program.zig");
 const Opcode = @import("../values/opcode.zig");
 const Machine = @import("../machine/machine.zig");
-const Action = @import("action.zig");
+const ExecutionResult = @import("execution_result.zig");
 
 const ActivateThread = @import("activate_thread.zig");
 const Call = @import("call.zig");
@@ -42,10 +42,33 @@ const Yield = @import("yield.zig");
 
 const introspection = @import("../utils/introspection.zig");
 
+pub const ExecutionError = error{
+    /// Program execution reached its instruction limit without yielding or deactivating.
+    /// This indicates either that the instruction limit was too low for the program's complexity
+    /// or that the program contained a bug like an infinite loop.
+    InstructionLimitExceeded,
+};
+
+/// Run the program from its current program counter, executing its instructions on the specified machine
+/// until the program reaches a `Yield` or `Kill` instruction or exceeds the maximum iterations.
+/// Returns `ExecutionResult` on success, reflecting whether the program yielded or killed the thread.
+/// Returns an instruction-specific error if an instruction failed, or `error.InstructionLimitExceeded`
+/// if the program exceeded `max_instructions` without reaching a `Yield` or `Kill` instruction.
+pub fn executeProgram(program: *Program.Instance, machine: *Machine.Instance, max_instructions: usize) !ExecutionResult.Enum {
+    var instructions_remaining = max_instructions;
+    while (instructions_remaining > 0) : (instructions_remaining -= 1) {
+        const possible_result = try executeNextInstruction(program, machine);
+        return possible_result orelse continue;
+    } else {
+        // If we reach here without returning before now, it means the program got stuck in an infinite loop.
+        return error.InstructionLimitExceeded;
+    }
+}
+
 /// Parse and execute the next instruction from a bytecode program on the specified virtual machine.
 /// Returns an enum indicating whether execution should continue or stop as a result of that instruction.
 /// Returns an error if the bytecode could not be interpreted as an instruction.
-pub fn executeNextInstruction(program: *Program.Instance, machine: *Machine.Instance) !Action.Enum {
+pub fn executeNextInstruction(program: *Program.Instance, machine: *Machine.Instance) !?ExecutionResult.Enum {
     const raw_opcode = try program.read(Opcode.Raw);
     const opcode = try Opcode.parse(raw_opcode);
 
@@ -88,7 +111,7 @@ pub fn executeNextInstruction(program: *Program.Instance, machine: *Machine.Inst
     };
 }
 
-fn execute(comptime Instruction: type, raw_opcode: Opcode.Raw, program: *Program.Instance, machine: *Machine.Instance) !Action.Enum {
+fn execute(comptime Instruction: type, raw_opcode: Opcode.Raw, program: *Program.Instance, machine: *Machine.Instance) !?ExecutionResult.Enum {
     const instruction = try Instruction.parse(raw_opcode, program);
 
     // Zig 0.9.0 does not have a way to express "try this function if it returns an error set,
@@ -100,13 +123,12 @@ fn execute(comptime Instruction: type, raw_opcode: Opcode.Raw, program: *Program
     else
         instruction.execute(machine);
 
-    // Check whether this instruction returned a specific action to take after executing.
-    // Most instructions just return void - assume their action will be .Continue.
-    const returns_action = @TypeOf(result) == Action.Enum;
+    // Check whether this instruction returned a specific execution result. Most instructions just return void.
+    const returns_action = @TypeOf(result) == ExecutionResult.Enum;
     if (returns_action) {
         return result;
     } else {
-        return .Continue;
+        return null;
     }
 }
 
@@ -202,6 +224,9 @@ fn expectParse(bytecode: []const u8) !Wrapped {
 // -- Tests --
 
 const testing = @import("../utils/testing.zig");
+const RegisterID = @import("../values/register_id.zig");
+
+// - parseNextInstruction tests --
 
 test "parseNextInstruction returns expected instruction type when given valid bytecode" {
     try testing.expectEqualTags(.ActivateThread, try expectParse(&ActivateThread.Fixtures.valid));
@@ -238,30 +263,92 @@ test "parseNextInstruction returns error.InvalidOpcode error when it encounters 
     try testing.expectError(error.InvalidOpcode, expectParse(&bytecode));
 }
 
+// - executeNextInstruction tests -
+
 test "executeNextInstruction executes arbitrary instruction on machine when given valid bytecode" {
     var machine = Machine.testInstance(&ControlResources.Fixtures.valid);
     defer machine.deinit();
 
-    const action = try executeNextInstruction(&machine.program, &machine);
+    const result = try executeNextInstruction(&machine.program, &machine);
 
-    try testing.expectEqual(.Continue, action);
+    try testing.expectEqual(null, result);
     try testing.expectEqual(.arena_cinematic, machine.scheduled_game_part);
 }
 
-test "executeNextInstruction returns DeactivateThread action if specified" {
+test "executeNextInstruction returns ExecutionResult.deactivate if specified" {
     var machine = Machine.testInstance(&Kill.Fixtures.valid);
     defer machine.deinit();
 
-    const action = try executeNextInstruction(&machine.program, &machine);
+    const result = try executeNextInstruction(&machine.program, &machine);
 
-    try testing.expectEqual(.DeactivateThread, action);
+    try testing.expectEqual(.deactivate, result);
 }
 
-test "executeNextInstruction returns YieldToNextThread action if specified" {
+test "executeNextInstruction returns ExecutionResult.yield if specified" {
     var machine = Machine.testInstance(&Yield.Fixtures.valid);
     defer machine.deinit();
 
-    const action = try executeNextInstruction(&machine.program, &machine);
+    const result = try executeNextInstruction(&machine.program, &machine);
 
-    try testing.expectEqual(.YieldToNextThread, action);
+    try testing.expectEqual(.yield, result);
+}
+
+// - executeProgram tests -
+
+test "executeProgram ends execution on Yield instruction and returns ExecutionResult.yield" {
+    const register_1 = RegisterID.parse(1);
+    const register_2 = RegisterID.parse(2);
+    const bytecode = [_]u8{
+        @enumToInt(Opcode.Enum.RegisterSet), @enumToInt(register_1), 0x0B, 0xAD, // Offset 0: Set register 1 to 0x0BAD
+        @enumToInt(Opcode.Enum.Yield), // Offset 3: Yield current thread
+        @enumToInt(Opcode.Enum.RegisterSet), @enumToInt(register_2), 0xF0, 0x0D, // Offset 5: Set register 2 to 0xF00D
+    };
+
+    var machine = Machine.testInstance(&bytecode);
+    defer machine.deinit();
+
+    const result = try executeProgram(&machine.program, &machine, 10);
+    try testing.expectEqual(.yield, result);
+
+    // First register-set should have been executed
+    try testing.expectEqual(0x0BAD, machine.registers.unsigned(register_1));
+    // Second register-set should not have been executed
+    try testing.expectEqual(0, machine.registers.unsigned(register_2));
+}
+
+test "executeProgram ends execution on Kill instruction and returns ExecutionResult.deactivate" {
+    const register_1 = RegisterID.parse(1);
+    const register_2 = RegisterID.parse(2);
+    const bytecode = [_]u8{
+        @enumToInt(Opcode.Enum.RegisterSet), @enumToInt(register_1), 0x0B, 0xAD, // Offset 0: Set register 1 to 0x0BAD
+        @enumToInt(Opcode.Enum.Kill), // Offset 3: Kill current thread
+        @enumToInt(Opcode.Enum.RegisterSet), @enumToInt(register_2), 0xF0, 0x0D, // Offset 5: Set register 2 to 0xF00D
+    };
+
+    var machine = Machine.testInstance(&bytecode);
+    defer machine.deinit();
+
+    const result = try executeProgram(&machine.program, &machine, 10);
+    try testing.expectEqual(.deactivate, result);
+
+    // First register-set should have been executed
+    try testing.expectEqual(0x0BAD, machine.registers.unsigned(register_1));
+    // Second register-set should not have been executed
+    try testing.expectEqual(0, machine.registers.unsigned(register_2));
+}
+
+test "executeProgram returns error.InstructionLimitExceeded if program never yields or deactivates" {
+    const register_1 = RegisterID.parse(1);
+    const bytecode = [_]u8{
+        @enumToInt(Opcode.Enum.RegisterAddConstant), @enumToInt(register_1), 0, 2, // Offset 0: add 2 to register 1
+        @enumToInt(Opcode.Enum.Jump), 0x00, 0x00, // Offset 4: jump to offset 0 (infinite loop)
+    };
+
+    const max_instructions = 10;
+
+    var machine = Machine.testInstance(&bytecode);
+    defer machine.deinit();
+
+    try testing.expectError(error.InstructionLimitExceeded, executeProgram(&machine.program, &machine, max_instructions));
+    try testing.expectEqual(max_instructions, machine.registers.unsigned(register_1));
 }

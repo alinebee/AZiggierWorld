@@ -1,14 +1,14 @@
 const Opcode = @import("../values/opcode.zig");
 const Program = @import("../machine/program.zig");
 const Machine = @import("../machine/machine.zig");
-const Action = @import("action.zig");
+const ExecutionResult = @import("execution_result.zig");
 
 pub const Error = Program.Error;
 
 /// Deactivates the current thread and immediately moves execution to the next thread.
 pub const Instance = struct {
-    pub fn execute(_: Instance, _: *Machine.Instance) Action.Enum {
-        return .DeactivateThread;
+    pub fn execute(_: Instance, _: *Machine.Instance) ExecutionResult.Enum {
+        return .deactivate;
     }
 };
 
@@ -38,11 +38,11 @@ test "parse parses instruction from valid bytecode and consumes 1 byte" {
     try testing.expectEqual(Instance{}, instruction);
 }
 
-test "execute returns DeactivateThread action" {
+test "execute returns ExecutionResult.deactivate" {
     const instruction = Instance{};
 
     var machine = Machine.testInstance(null);
     defer machine.deinit();
 
-    try testing.expectEqual(.DeactivateThread, instruction.execute(&machine));
+    try testing.expectEqual(.deactivate, instruction.execute(&machine));
 }
