@@ -128,18 +128,6 @@ pub const Instance = struct {
             switch (action) {
                 .Continue => continue,
                 .YieldToNextThread => {
-                    // Yielding with a non-empty stack (i.e. in the middle of a function)
-                    // would cause the return address for the current function to be lost
-                    // once the next thread clears the stack.
-                    // When this thread resumes executing the function next tic, any Return
-                    // instruction within that function would then result in error.StackUnderflow.
-                    // We're treating this as a programmer error, but it's possible that
-                    // the original game's code contains functions that only yield
-                    // and never return. If so, I'll remove this safety check.
-                    if (machine.stack.depth > 0) {
-                        return error.InvalidYield;
-                    }
-
                     // Record the final position of the program counter so we can resume from there next tic.
                     self.execution_state = .{ .active = machine.program.counter };
                     return;
@@ -157,10 +145,6 @@ pub const Instance = struct {
 };
 
 pub const Error = error{
-    /// Bytecode attempted to yield within a function call, which would lose stack information
-    // and cause a stack underflow upon resuming and returning from the function.
-    InvalidYield,
-
     /// The thread reached its execution limit without yielding or deactivating.
     /// This would indicate a bytecode bug like an infinite loop.
     InstructionLimitExceeded,
@@ -307,19 +291,4 @@ test "run returns error.InstructionLimitExceeded if program never yields or deac
 
     try testing.expectError(error.InstructionLimitExceeded, machine.threads[0].run(&machine));
     try testing.expectEqual(max_instructions_per_tic, machine.registers.unsigned(register_1));
-}
-
-test "run returns error.InvalidYield if program yields in the middle of function" {
-    const register_1 = RegisterID.parse(1);
-    const bytecode = [_]u8{
-        @enumToInt(Opcode.Enum.Call), 0, 3, // Offset 0: call function at offset 3
-        @enumToInt(Opcode.Enum.RegisterSet), @enumToInt(register_1), 0x0B, 0xAD, // Offset 3: set register 1 to 0x0BAD
-        @enumToInt(Opcode.Enum.Yield), // Offset 7: yield to next thread
-    };
-
-    var machine = Machine.testInstance(&bytecode);
-    defer machine.deinit();
-
-    try testing.expectError(error.InvalidYield, machine.threads[0].run(&machine));
-    try testing.expectEqual(0x0BAD, machine.registers.unsigned(register_1));
 }
