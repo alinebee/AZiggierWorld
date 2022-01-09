@@ -4,6 +4,8 @@ const Machine = @import("../machine/machine.zig");
 const ResourceID = @import("../values/resource_id.zig");
 const GamePart = @import("../values/game_part.zig");
 
+pub const opcode = Opcode.Enum.ControlResources;
+
 /// Loads individual resources or entire game parts into memory.
 pub const Instance = union(enum) {
     /// Unload all loaded resources and stop audio.
@@ -30,12 +32,12 @@ pub const Instance = union(enum) {
     }
 };
 
-pub const Error = Program.Error;
+pub const ParseError = Program.Error;
 
 /// Parse the next instruction from a bytecode program.
 /// Consumes 3 bytes from the bytecode on success, including the opcode.
 /// Returns an error if the bytecode could not be read or contained an invalid instruction.
-pub fn parse(_: Opcode.Raw, program: *Program.Instance) Error!Instance {
+pub fn parse(_: Opcode.Raw, program: *Program.Instance) ParseError!Instance {
     const resource_id_or_game_part = try program.read(ResourceID.Raw);
 
     if (resource_id_or_game_part == 0) {
@@ -51,7 +53,7 @@ pub fn parse(_: Opcode.Raw, program: *Program.Instance) Error!Instance {
 // -- Bytecode examples --
 
 pub const Fixtures = struct {
-    const raw_opcode = @enumToInt(Opcode.Enum.ControlResources);
+    const raw_opcode = @enumToInt(opcode);
 
     /// Example bytecode that should produce a valid instruction.
     pub const valid = start_game_part;

@@ -126,7 +126,7 @@ pub const Instance = struct {
         }
 
         if (input.show_password_screen and self.current_game_part.allowsPasswordEntry()) {
-            self.scheduled_game_part = .password_entry;
+            self.scheduleGamePart(.password_entry);
         }
     }
 

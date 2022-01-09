@@ -4,7 +4,7 @@ const Machine = @import("../machine/machine.zig");
 const Address = @import("../values/address.zig");
 const RegisterID = @import("../values/register_id.zig");
 
-pub const Error = Program.Error;
+pub const opcode = Opcode.Enum.JumpIfNotZero;
 
 /// Decrement the value in a specific register and move the program counter to a specific address
 /// if the value in that register is not yet zero. Likely used for loop counters.
@@ -34,17 +34,19 @@ pub const Instance = struct {
 /// Parse the next instruction from a bytecode program.
 /// Consumes 4 bytes from the bytecode on success, including the opcode.
 /// Returns an error if the bytecode could not be read or contained an invalid instruction.
-pub fn parse(_: Opcode.Raw, program: *Program.Instance) Error!Instance {
+pub fn parse(_: Opcode.Raw, program: *Program.Instance) ParseError!Instance {
     return Instance{
         .register_id = RegisterID.parse(try program.read(RegisterID.Raw)),
         .address = try program.read(Address.Raw),
     };
 }
 
+pub const ParseError = Program.Error;
+
 // -- Bytecode examples --
 
 pub const Fixtures = struct {
-    const raw_opcode = @enumToInt(Opcode.Enum.JumpIfNotZero);
+    const raw_opcode = @enumToInt(opcode);
 
     /// Example bytecode that should produce a valid instruction.
     pub const valid = [4]u8{ raw_opcode, 0x01, 0xDE, 0xAD };

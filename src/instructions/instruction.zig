@@ -169,48 +169,50 @@ pub const Wrapped = union(Opcode.Enum) {
 };
 
 /// Parse the next instruction from a bytecode program and wrap it in a Wrapped union type.
-/// Returns the wrapped instruction or an error if the bytecode could not be interpreted as an instruction.
+/// Returns the wrapped instruction or an error if the program could not be read or the bytecode
+/// could not be interpreted as an instruction.
 pub fn parseNextInstruction(program: *Program.Instance) !Wrapped {
     const raw_opcode = try program.read(Opcode.Raw);
     const opcode = try Opcode.parse(raw_opcode);
 
     return switch (opcode) {
-        .ActivateThread => wrap("ActivateThread", ActivateThread, raw_opcode, program),
-        .Call => wrap("Call", Call, raw_opcode, program),
-        .ControlMusic => wrap("ControlMusic", ControlMusic, raw_opcode, program),
-        .ControlResources => wrap("ControlResources", ControlResources, raw_opcode, program),
-        .ControlSound => wrap("ControlSound", ControlSound, raw_opcode, program),
-        .ControlThreads => wrap("ControlThreads", ControlThreads, raw_opcode, program),
-        .CopyVideoBuffer => wrap("CopyVideoBuffer", CopyVideoBuffer, raw_opcode, program),
-        .DrawBackgroundPolygon => wrap("DrawBackgroundPolygon", DrawBackgroundPolygon, raw_opcode, program),
-        .DrawSpritePolygon => wrap("DrawSpritePolygon", DrawSpritePolygon, raw_opcode, program),
-        .DrawString => wrap("DrawString", DrawString, raw_opcode, program),
-        .FillVideoBuffer => wrap("FillVideoBuffer", FillVideoBuffer, raw_opcode, program),
-        .Jump => wrap("Jump", Jump, raw_opcode, program),
-        .JumpConditional => wrap("JumpConditional", JumpConditional, raw_opcode, program),
-        .JumpIfNotZero => wrap("JumpIfNotZero", JumpIfNotZero, raw_opcode, program),
-        .Kill => wrap("Kill", Kill, raw_opcode, program),
-        .RegisterAdd => wrap("RegisterAdd", RegisterAdd, raw_opcode, program),
-        .RegisterAddConstant => wrap("RegisterAddConstant", RegisterAddConstant, raw_opcode, program),
-        .RegisterAnd => wrap("RegisterAnd", RegisterAnd, raw_opcode, program),
-        .RegisterCopy => wrap("RegisterCopy", RegisterCopy, raw_opcode, program),
-        .RegisterOr => wrap("RegisterOr", RegisterOr, raw_opcode, program),
-        .RegisterSet => wrap("RegisterSet", RegisterSet, raw_opcode, program),
-        .RegisterShiftLeft => wrap("RegisterShiftLeft", RegisterShiftLeft, raw_opcode, program),
-        .RegisterShiftRight => wrap("RegisterShiftRight", RegisterShiftRight, raw_opcode, program),
-        .RegisterSubtract => wrap("RegisterSubtract", RegisterSubtract, raw_opcode, program),
-        .RenderVideoBuffer => wrap("RenderVideoBuffer", RenderVideoBuffer, raw_opcode, program),
-        .Return => wrap("Return", Return, raw_opcode, program),
-        .SelectPalette => wrap("SelectPalette", SelectPalette, raw_opcode, program),
-        .SelectVideoBuffer => wrap("SelectVideoBuffer", SelectVideoBuffer, raw_opcode, program),
-        .Yield => wrap("Yield", Yield, raw_opcode, program),
+        .ActivateThread => parse(ActivateThread, raw_opcode, program),
+        .Call => parse(Call, raw_opcode, program),
+        .ControlMusic => parse(ControlMusic, raw_opcode, program),
+        .ControlResources => parse(ControlResources, raw_opcode, program),
+        .ControlSound => parse(ControlSound, raw_opcode, program),
+        .ControlThreads => parse(ControlThreads, raw_opcode, program),
+        .CopyVideoBuffer => parse(CopyVideoBuffer, raw_opcode, program),
+        .DrawBackgroundPolygon => parse(DrawBackgroundPolygon, raw_opcode, program),
+        .DrawSpritePolygon => parse(DrawSpritePolygon, raw_opcode, program),
+        .DrawString => parse(DrawString, raw_opcode, program),
+        .FillVideoBuffer => parse(FillVideoBuffer, raw_opcode, program),
+        .Jump => parse(Jump, raw_opcode, program),
+        .JumpConditional => parse(JumpConditional, raw_opcode, program),
+        .JumpIfNotZero => parse(JumpIfNotZero, raw_opcode, program),
+        .Kill => parse(Kill, raw_opcode, program),
+        .RegisterAdd => parse(RegisterAdd, raw_opcode, program),
+        .RegisterAddConstant => parse(RegisterAddConstant, raw_opcode, program),
+        .RegisterAnd => parse(RegisterAnd, raw_opcode, program),
+        .RegisterCopy => parse(RegisterCopy, raw_opcode, program),
+        .RegisterOr => parse(RegisterOr, raw_opcode, program),
+        .RegisterSet => parse(RegisterSet, raw_opcode, program),
+        .RegisterShiftLeft => parse(RegisterShiftLeft, raw_opcode, program),
+        .RegisterShiftRight => parse(RegisterShiftRight, raw_opcode, program),
+        .RegisterSubtract => parse(RegisterSubtract, raw_opcode, program),
+        .RenderVideoBuffer => parse(RenderVideoBuffer, raw_opcode, program),
+        .Return => parse(Return, raw_opcode, program),
+        .SelectPalette => parse(SelectPalette, raw_opcode, program),
+        .SelectVideoBuffer => parse(SelectVideoBuffer, raw_opcode, program),
+        .Yield => parse(Yield, raw_opcode, program),
     };
 }
 
 /// Parse an instruction of the specified type from the program,
 /// and wrap it in a Wrapped union type initialized to the appropriate field.
-fn wrap(comptime field_name: []const u8, comptime Instruction: type, raw_opcode: Opcode.Raw, program: *Program.Instance) !Wrapped {
-    return @unionInit(Wrapped, field_name, try Instruction.parse(raw_opcode, program));
+fn parse(comptime Instruction: type, raw_opcode: Opcode.Raw, program: *Program.Instance) !Wrapped {
+    const opcode_name = @tagName(Instruction.opcode);
+    return @unionInit(Wrapped, opcode_name, try Instruction.parse(raw_opcode, program));
 }
 
 // -- Test helpers --

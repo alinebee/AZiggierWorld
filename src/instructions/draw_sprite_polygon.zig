@@ -6,6 +6,8 @@ const Point = @import("../values/point.zig");
 const RegisterID = @import("../values/register_id.zig");
 const PolygonScale = @import("../values/polygon_scale.zig");
 
+pub const opcode = Opcode.Enum.DrawSpritePolygon;
+
 /// Draw a polygon at a location and zoom level that are either hardcoded constants
 /// or dynamic values read from registers.
 pub const Instance = struct {
@@ -59,12 +61,10 @@ pub const Instance = struct {
     }
 };
 
-pub const Error = Program.Error;
-
 /// Parse the next instruction from a bytecode program.
 /// Consumes 5-8 bytes from the bytecode on success, including the opcode.
 /// Returns an error if the bytecode could not be read or contained an invalid instruction.
-pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instance {
+pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) ParseError!Instance {
     var self: Instance = undefined;
 
     // Unlike DrawBackgroundPolygon, which treats the lower 7 bits of the opcode as the top part
@@ -138,6 +138,8 @@ pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instance 
 
     return self;
 }
+
+pub const ParseError = Program.Error;
 
 // -- Bytecode examples --
 

@@ -6,6 +6,8 @@ const Audio = @import("../machine/audio.zig");
 const ResourceID = @import("../values/resource_id.zig");
 const Channel = @import("../values/channel.zig");
 
+pub const opcode = Opcode.Enum.ControlSound;
+
 /// Play a sound on a channel, or stop a channel from playing.
 pub const Instance = union(enum) {
     play: struct {
@@ -36,12 +38,12 @@ pub const Instance = union(enum) {
     }
 };
 
-pub const Error = Program.Error || Channel.Error;
+pub const ParseError = Program.Error || Channel.Error;
 
 /// Parse the next instruction from a bytecode program.
 /// Consumes 6 bytes from the bytecode on success, including the opcode.
 /// Returns an error if the bytecode could not be read or contained an invalid instruction.
-pub fn parse(_: Opcode.Raw, program: *Program.Instance) Error!Instance {
+pub fn parse(_: Opcode.Raw, program: *Program.Instance) ParseError!Instance {
     const resource_id = try program.read(ResourceID.Raw);
     const frequency = try program.read(Audio.Frequency);
     const volume = try program.read(Audio.Volume);
@@ -64,7 +66,7 @@ pub fn parse(_: Opcode.Raw, program: *Program.Instance) Error!Instance {
 // -- Bytecode examples --
 
 pub const Fixtures = struct {
-    const raw_opcode = @enumToInt(Opcode.Enum.ControlSound);
+    const raw_opcode = @enumToInt(opcode);
 
     /// Example bytecode that should produce a valid instruction.
     pub const valid = play;

@@ -3,6 +3,8 @@ const Program = @import("../machine/program.zig");
 const Machine = @import("../machine/machine.zig");
 const RegisterID = @import("../values/register_id.zig");
 
+pub const opcode = Opcode.Enum.RegisterSubtract;
+
 /// Subtract the value in one register from another, wrapping on overflow.
 pub const Instance = struct {
     /// The ID of the register to subtract from.
@@ -24,19 +26,19 @@ pub const Instance = struct {
 /// Parse the next instruction from a bytecode program.
 /// Consumes 3 bytes from the bytecode on success, including the opcode.
 /// Returns an error if the bytecode could not be read or contained an invalid instruction.
-pub fn parse(_: Opcode.Raw, program: *Program.Instance) Error!Instance {
+pub fn parse(_: Opcode.Raw, program: *Program.Instance) ParseError!Instance {
     return Instance{
         .destination = RegisterID.parse(try program.read(RegisterID.Raw)),
         .source = RegisterID.parse(try program.read(RegisterID.Raw)),
     };
 }
 
-pub const Error = Program.Error;
+pub const ParseError = Program.Error;
 
 // -- Bytecode examples --
 
 pub const Fixtures = struct {
-    const raw_opcode = @enumToInt(Opcode.Enum.RegisterSubtract);
+    const raw_opcode = @enumToInt(opcode);
 
     /// Example bytecode that should produce a valid instruction.
     pub const valid = [3]u8{ raw_opcode, 16, 17 };

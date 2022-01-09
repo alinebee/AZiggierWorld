@@ -3,6 +3,8 @@ const Program = @import("../machine/program.zig");
 const Machine = @import("../machine/machine.zig");
 const ExecutionResult = @import("execution_result.zig");
 
+pub const opcode = Opcode.Enum.Yield;
+
 /// Immediately moves execution to the next thread.
 pub const Instance = struct {
     pub fn execute(_: Instance, machine: *Machine.Instance) ExecutionError!ExecutionResult.Enum {
@@ -42,7 +44,7 @@ pub const ParseError = Program.Error;
 // -- Bytecode examples --
 
 pub const Fixtures = struct {
-    const raw_opcode = @enumToInt(Opcode.Enum.Yield);
+    const raw_opcode = @enumToInt(opcode);
 
     /// Example bytecode that should produce a valid instruction.
     pub const valid = [1]u8{raw_opcode};

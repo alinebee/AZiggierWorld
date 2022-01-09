@@ -5,6 +5,8 @@ const Point = @import("../values/point.zig");
 const BufferID = @import("../values/buffer_id.zig");
 const RegisterID = @import("../values/register_id.zig");
 
+pub const opcode = Opcode.Enum.CopyVideoBuffer;
+
 /// Copies the contents of one video buffer into another.
 pub const Instance = struct {
     /// The buffer to copy from.
@@ -35,7 +37,7 @@ pub const Instance = struct {
 /// Parse the next instruction from a bytecode program.
 /// Consumes 3 bytes from the bytecode on success, including the opcode.
 /// Returns an error if the bytecode could not be read or contained an invalid instruction.
-pub fn parse(_: Opcode.Raw, program: *Program.Instance) Error!Instance {
+pub fn parse(_: Opcode.Raw, program: *Program.Instance) ParseError!Instance {
     const raw_source = try program.read(BufferID.Raw);
     const raw_destination = try program.read(BufferID.Raw);
 
@@ -67,12 +69,12 @@ pub fn parse(_: Opcode.Raw, program: *Program.Instance) Error!Instance {
     };
 }
 
-pub const Error = Program.Error || BufferID.Error;
+pub const ParseError = Program.Error || BufferID.Error;
 
 // -- Bytecode examples --
 
 pub const Fixtures = struct {
-    const raw_opcode = @enumToInt(Opcode.Enum.CopyVideoBuffer);
+    const raw_opcode = @enumToInt(opcode);
 
     /// Example bytecode that should produce a valid instruction.
     pub const valid = specific_buffer_ignore_offset;

@@ -5,6 +5,8 @@ const Video = @import("../machine/video.zig");
 const Point = @import("../values/point.zig");
 const PolygonScale = @import("../values/polygon_scale.zig");
 
+pub const opcode = Opcode.Enum.DrawBackgroundPolygon;
+
 /// Draw a polygon at the default zoom level and a constant position hardcoded in the bytecode.
 /// Unlike DrawSpritePolygon this is likely intended for drawing backgrounds,
 /// since the polygons cannot be scaled or repositioned programmatically.
@@ -25,12 +27,10 @@ pub const Instance = struct {
     }
 };
 
-pub const Error = Program.Error;
-
 /// Parse the next instruction from a bytecode program.
 /// Consumes 4 bytes from the bytecode on success, including the opcode.
 /// Returns an error if the bytecode could not be read or contained an invalid instruction.
-pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instance {
+pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) ParseError!Instance {
     var self: Instance = undefined;
 
     // Unlike all other instructions except DrawSpritePolygon, this instruction reuses bits from
@@ -66,6 +66,8 @@ pub fn parse(raw_opcode: Opcode.Raw, program: *Program.Instance) Error!Instance 
 
     return self;
 }
+
+pub const ParseError = Program.Error;
 
 // -- Bytecode examples --
 

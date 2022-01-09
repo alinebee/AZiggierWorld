@@ -4,6 +4,8 @@ const Program = @import("../machine/program.zig");
 const Machine = @import("../machine/machine.zig");
 const Operation = @import("thread_operation.zig");
 
+pub const opcode = Opcode.Enum.ControlThreads;
+
 /// Resumes, pauses or deactivates one or more threads on the next game tic.
 /// Note that any threads paused or deactivated by this instruction will still
 /// run to completion this tic, including the thread that executed this instruction.
@@ -63,7 +65,7 @@ pub const ParseError = Program.Error || ThreadID.Error || Operation.Error || err
 // -- Bytecode examples --
 
 pub const Fixtures = struct {
-    const raw_opcode = @enumToInt(Opcode.Enum.ControlThreads);
+    const raw_opcode = @enumToInt(opcode);
 
     /// Example bytecode that should produce a valid instruction.
     pub const valid = [4]u8{ raw_opcode, 62, 63, 0x02 };

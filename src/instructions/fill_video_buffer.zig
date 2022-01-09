@@ -5,6 +5,8 @@ const Video = @import("../machine/video.zig");
 const BufferID = @import("../values/buffer_id.zig");
 const ColorID = @import("../values/color_id.zig");
 
+pub const opcode = Opcode.Enum.FillVideoBuffer;
+
 /// Fill a specified video buffer with a single color.
 pub const Instance = struct {
     /// The buffer to fill.
@@ -26,7 +28,7 @@ pub const Instance = struct {
 /// Parse the next instruction from a bytecode program.
 /// Consumes 3 bytes from the bytecode on success, including the opcode.
 /// Returns an error if the bytecode could not be read or contained an invalid instruction.
-pub fn parse(_: Opcode.Raw, program: *Program.Instance) Error!Instance {
+pub fn parse(_: Opcode.Raw, program: *Program.Instance) ParseError!Instance {
     const raw_buffer_id = try program.read(BufferID.Raw);
     const raw_color_id = try program.read(ColorID.Raw);
 
@@ -36,12 +38,12 @@ pub fn parse(_: Opcode.Raw, program: *Program.Instance) Error!Instance {
     };
 }
 
-pub const Error = Program.Error || BufferID.Error || ColorID.Error;
+pub const ParseError = Program.Error || BufferID.Error || ColorID.Error;
 
 // -- Bytecode examples --
 
 pub const Fixtures = struct {
-    const raw_opcode = @enumToInt(Opcode.Enum.FillVideoBuffer);
+    const raw_opcode = @enumToInt(opcode);
 
     /// Example bytecode that should produce a valid instruction.
     pub const valid = [3]u8{ raw_opcode, 0x00, 0x01 };

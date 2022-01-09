@@ -4,6 +4,8 @@ const Program = @import("../machine/program.zig");
 const Machine = @import("../machine/machine.zig");
 const RegisterID = @import("../values/register_id.zig");
 
+pub const opcode = Opcode.Enum.RegisterAddConstant;
+
 /// Adds a signed constant value to a specific register, wrapping on overflow.
 pub const Instance = struct {
     /// The ID of the register to add to.
@@ -23,19 +25,19 @@ pub const Instance = struct {
 /// Parse the next instruction from a bytecode program.
 /// Consumes 4 bytes from the bytecode on success, including the opcode.
 /// Returns an error if the bytecode could not be read or contained an invalid instruction.
-pub fn parse(_: Opcode.Raw, program: *Program.Instance) Error!Instance {
+pub fn parse(_: Opcode.Raw, program: *Program.Instance) ParseError!Instance {
     return Instance{
         .destination = RegisterID.parse(try program.read(RegisterID.Raw)),
         .value = try program.read(Register.Signed),
     };
 }
 
-pub const Error = Program.Error;
+pub const ParseError = Program.Error;
 
 // -- Bytecode examples --
 
 pub const Fixtures = struct {
-    const raw_opcode = @enumToInt(Opcode.Enum.RegisterAddConstant);
+    const raw_opcode = @enumToInt(opcode);
 
     /// Example bytecode that should produce a valid instruction.
     pub const valid = [4]u8{ raw_opcode, 16, 0b1011_0110, 0b0010_1011 }; // -18901 in two's complement

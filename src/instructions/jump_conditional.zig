@@ -6,6 +6,8 @@ const Comparison = @import("comparison.zig");
 const Address = @import("../values/address.zig");
 const RegisterID = @import("../values/register_id.zig");
 
+pub const opcode = Opcode.Enum.JumpConditional;
+
 /// Compares the value in a register against another register or constant
 /// and jumps to a new address in the program if the comparison succeeds.
 pub const Instance = struct {
@@ -40,7 +42,7 @@ pub const Instance = struct {
 /// Parse the next instruction from a bytecode program.
 /// Consumes 6 or 7 bytes from the bytecode on success, including the opcode.
 /// Returns an error if the bytecode could not be read or contained an invalid instruction.
-pub fn parse(_: Opcode.Raw, program: *Program.Instance) Error!Instance {
+pub fn parse(_: Opcode.Raw, program: *Program.Instance) ParseError!Instance {
     var self: Instance = undefined;
 
     // A conditional jump instruction has a control byte with the layout: `rr|000|ccc`, where:
@@ -81,13 +83,13 @@ pub fn parse(_: Opcode.Raw, program: *Program.Instance) Error!Instance {
     return self;
 }
 
-pub const Error = Program.Error || Comparison.Error;
+pub const ParseError = Program.Error || Comparison.Error;
 
 // -- Bytecode examples --
 
 // zig fmt: off
 pub const Fixtures = struct {
-    const raw_opcode = @enumToInt(Opcode.Enum.JumpConditional);
+    const raw_opcode = @enumToInt(opcode);
 
     /// Example bytecode that should produce a valid instruction.
     pub const valid = equal_to_const16;

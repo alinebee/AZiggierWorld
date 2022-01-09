@@ -6,6 +6,8 @@ const Machine = @import("../machine/machine.zig");
 
 const introspection = @import("../utils/introspection.zig");
 
+pub const opcode = Opcode.Enum.RegisterShiftRight;
+
 /// Right-shift (>>) the bits in a register's value by a specified distance.
 pub const Instance = struct {
     /// The ID of the register to add to.
@@ -27,7 +29,7 @@ pub const Instance = struct {
 /// Parse the next instruction from a bytecode program.
 /// Consumes 3 bytes from the bytecode on success, including the opcode.
 /// Returns an error if the bytecode could not be read or contained an invalid instruction.
-pub fn parse(_: Opcode.Raw, program: *Program.Instance) Error!Instance {
+pub fn parse(_: Opcode.Raw, program: *Program.Instance) ParseError!Instance {
     const destination = RegisterID.parse(try program.read(RegisterID.Raw));
 
     // Bytecode stored the shift distance as an unsigned 16-bit integer,
@@ -47,7 +49,7 @@ pub fn parse(_: Opcode.Raw, program: *Program.Instance) Error!Instance {
     };
 }
 
-pub const Error = Program.Error || error{
+pub const ParseError = Program.Error || error{
     /// Bytecode specified a shift distance that was too large.
     ShiftTooLarge,
 };
@@ -55,7 +57,7 @@ pub const Error = Program.Error || error{
 // -- Bytecode examples --
 
 pub const Fixtures = struct {
-    const raw_opcode = @enumToInt(Opcode.Enum.RegisterShiftLeft);
+    const raw_opcode = @enumToInt(opcode);
 
     /// Example bytecode that should produce a valid instruction.
     pub const valid = [4]u8{ raw_opcode, 16, 0, 8 };

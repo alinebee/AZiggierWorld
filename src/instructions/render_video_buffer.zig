@@ -5,6 +5,8 @@ const Video = @import("../machine/video.zig");
 const BufferID = @import("../values/buffer_id.zig");
 const RegisterID = @import("../values/register_id.zig");
 
+pub const opcode = Opcode.Enum.RenderVideoBuffer;
+
 /// This instruction reads a variable from a specific register to decide how long to leave
 /// the previous frame on screen before displaying the next one.
 /// That register's value is a number of abstract frame units and needs to be multiplied
@@ -41,7 +43,7 @@ pub const Instance = struct {
 /// Parse the next instruction from a bytecode program.
 /// Consumes 2 bytes from the bytecode on success, including the opcode.
 /// Returns an error if the bytecode could not be read or contained an invalid instruction.
-pub fn parse(_: Opcode.Raw, program: *Program.Instance) Error!Instance {
+pub fn parse(_: Opcode.Raw, program: *Program.Instance) ParseError!Instance {
     const raw_id = try program.read(BufferID.Raw);
 
     return Instance{
@@ -49,12 +51,12 @@ pub fn parse(_: Opcode.Raw, program: *Program.Instance) Error!Instance {
     };
 }
 
-pub const Error = Program.Error || BufferID.Error;
+pub const ParseError = Program.Error || BufferID.Error;
 
 // -- Bytecode examples --
 
 pub const Fixtures = struct {
-    const raw_opcode = @enumToInt(Opcode.Enum.RenderVideoBuffer);
+    const raw_opcode = @enumToInt(opcode);
 
     /// Example bytecode that should produce a valid instruction.
     pub const valid = [2]u8{ raw_opcode, 0xFF };

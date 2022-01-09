@@ -6,7 +6,7 @@ const Point = @import("../values/point.zig");
 const StringID = @import("../values/string_id.zig");
 const ColorID = @import("../values/color_id.zig");
 
-pub const Error = Program.Error || StringID.Error || ColorID.Error;
+pub const opcode = Opcode.Enum.DrawString;
 
 pub const Instance = struct {
     /// The ID of the string to draw.
@@ -30,7 +30,7 @@ pub const Instance = struct {
 /// Parse the next instruction from a bytecode program.
 /// Consumes 6 bytes from the bytecode on success, including the opcode.
 /// Returns an error if the bytecode could not be read or contained an invalid instruction.
-pub fn parse(_: Opcode.Raw, program: *Program.Instance) Error!Instance {
+pub fn parse(_: Opcode.Raw, program: *Program.Instance) ParseError!Instance {
     const string_id = try program.read(StringID.Raw);
 
     const raw_x = try program.read(u8);
@@ -51,13 +51,15 @@ pub fn parse(_: Opcode.Raw, program: *Program.Instance) Error!Instance {
     };
 }
 
+pub const ParseError = Program.Error || StringID.Error || ColorID.Error;
+
 /// The width in pixels of each column of glyphs.
 const column_width = 8;
 
 // -- Bytecode examples --
 
 pub const Fixtures = struct {
-    const raw_opcode = @enumToInt(Opcode.Enum.DrawString);
+    const raw_opcode = @enumToInt(opcode);
 
     /// Example bytecode that should produce a valid instruction.
     pub const valid = [6]u8{ raw_opcode, 0xDE, 0xAD, 20, 100, 15 };

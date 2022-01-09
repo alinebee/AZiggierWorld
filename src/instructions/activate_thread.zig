@@ -4,7 +4,7 @@ const Program = @import("../machine/program.zig");
 const Machine = @import("../machine/machine.zig");
 const Address = @import("../values/address.zig");
 
-pub const Error = Program.Error || ThreadID.Error;
+pub const opcode = Opcode.Enum.ActivateThread;
 
 /// Activate a specific thread and move its program counter to the specified address.
 /// Takes effect on the next iteration of the run loop.
@@ -23,7 +23,7 @@ pub const Instance = struct {
 /// Parse the next instruction from a bytecode program.
 /// Consumes 4 bytes from the bytecode on success, including the opcode.
 /// Returns an error if the bytecode could not be read or contained an invalid instruction.
-pub fn parse(_: Opcode.Raw, program: *Program.Instance) Error!Instance {
+pub fn parse(_: Opcode.Raw, program: *Program.Instance) ParseError!Instance {
     const raw_thread_id = try program.read(ThreadID.Raw);
     const address = try program.read(Address.Raw);
 
@@ -35,10 +35,12 @@ pub fn parse(_: Opcode.Raw, program: *Program.Instance) Error!Instance {
     };
 }
 
+pub const ParseError = Program.Error || ThreadID.Error;
+
 // -- Bytecode examples --
 
 pub const Fixtures = struct {
-    const raw_opcode = @enumToInt(Opcode.Enum.ActivateThread);
+    const raw_opcode = @enumToInt(opcode);
 
     /// Example bytecode that should produce a valid instruction.
     pub const valid = [4]u8{ raw_opcode, 63, 0xDE, 0xAD };

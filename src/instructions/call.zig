@@ -4,7 +4,7 @@ const Machine = @import("../machine/machine.zig");
 const Stack = @import("../machine/stack.zig");
 const Address = @import("../values/address.zig");
 
-pub const Error = Program.Error || Stack.Error;
+pub const opcode = Opcode.Enum.Call;
 
 /// Call into a subroutine and increment the program execution stack.
 pub const Instance = struct {
@@ -20,16 +20,18 @@ pub const Instance = struct {
 /// Parse the next instruction from a bytecode program.
 /// Consumes 3 bytes from the bytecode on success, including the opcode.
 /// Returns an error if the bytecode could not be read or contained an invalid instruction.
-pub fn parse(_: Opcode.Raw, program: *Program.Instance) Error!Instance {
+pub fn parse(_: Opcode.Raw, program: *Program.Instance) ParseError!Instance {
     return Instance{
         .address = try program.read(Address.Raw),
     };
 }
 
+pub const ParseError = Program.Error || Stack.Error;
+
 // -- Bytecode examples --
 
 pub const Fixtures = struct {
-    const raw_opcode = @enumToInt(Opcode.Enum.Call);
+    const raw_opcode = @enumToInt(opcode);
 
     /// Example bytecode that should produce a valid instruction.
     pub const valid = [3]u8{ raw_opcode, 0xDE, 0xAD };

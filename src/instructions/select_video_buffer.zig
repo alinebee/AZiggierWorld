@@ -3,6 +3,8 @@ const Program = @import("../machine/program.zig");
 const Machine = @import("../machine/machine.zig");
 const BufferID = @import("../values/buffer_id.zig");
 
+pub const opcode = Opcode.Enum.SelectVideoBuffer;
+
 /// Select the video buffer all subsequent DrawBackgroundPolygon, DrawSpritePolygon
 /// and DrawString operations will draw into.
 pub const Instance = struct {
@@ -23,7 +25,7 @@ pub const Instance = struct {
 /// Parse the next instruction from a bytecode program.
 /// Consumes 2 bytes from the bytecode on success, including the opcode.
 /// Returns an error if the bytecode could not be read or contained an invalid instruction.
-pub fn parse(_: Opcode.Raw, program: *Program.Instance) Error!Instance {
+pub fn parse(_: Opcode.Raw, program: *Program.Instance) ParseError!Instance {
     const raw_id = try program.read(BufferID.Raw);
 
     return Instance{
@@ -31,12 +33,12 @@ pub fn parse(_: Opcode.Raw, program: *Program.Instance) Error!Instance {
     };
 }
 
-pub const Error = Program.Error || BufferID.Error;
+pub const ParseError = Program.Error || BufferID.Error;
 
 // -- Bytecode examples --
 
 pub const Fixtures = struct {
-    const raw_opcode = @enumToInt(Opcode.Enum.SelectVideoBuffer);
+    const raw_opcode = @enumToInt(opcode);
 
     /// Example bytecode that should produce a valid instruction.
     pub const valid = [2]u8{ raw_opcode, 0x00 };

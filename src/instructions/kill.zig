@@ -3,7 +3,7 @@ const Program = @import("../machine/program.zig");
 const Machine = @import("../machine/machine.zig");
 const ExecutionResult = @import("execution_result.zig");
 
-pub const Error = Program.Error;
+pub const opcode = Opcode.Enum.Kill;
 
 /// Deactivates the current thread and immediately moves execution to the next thread.
 pub const Instance = struct {
@@ -15,14 +15,16 @@ pub const Instance = struct {
 /// Parse the next instruction from a bytecode program.
 /// Consumes 1 byte from the bytecode on success, including the opcode.
 /// Returns an error if the bytecode could not be read or contained an invalid instruction.
-pub fn parse(_: Opcode.Raw, _: *Program.Instance) Error!Instance {
+pub fn parse(_: Opcode.Raw, _: *Program.Instance) ParseError!Instance {
     return Instance{};
 }
+
+pub const ParseError = Program.Error;
 
 // -- Bytecode examples --
 
 pub const Fixtures = struct {
-    const raw_opcode = @enumToInt(Opcode.Enum.Kill);
+    const raw_opcode = @enumToInt(opcode);
 
     /// Example bytecode that should produce a valid instruction.
     pub const valid = [1]u8{raw_opcode};

@@ -3,11 +3,11 @@ const Program = @import("../machine/program.zig");
 const Machine = @import("../machine/machine.zig");
 const Stack = @import("../machine/stack.zig");
 
-pub const Error = Program.Error || Stack.Error;
+pub const opcode = Opcode.Enum.Return;
 
 /// Return from the current subroutine and decrement the program execution stack.
 pub const Instance = struct {
-    pub fn execute(_: Instance, machine: *Machine.Instance) !void {
+    pub fn execute(_: Instance, machine: *Machine.Instance) ExecutionError!void {
         const return_address = try machine.stack.pop();
         try machine.program.jump(return_address);
     }
@@ -15,14 +15,17 @@ pub const Instance = struct {
 
 /// Parse the next instruction from a bytecode program.
 /// Consumes 1 byte from the bytecode on success, including the opcode.
-pub fn parse(_: Opcode.Raw, _: *Program.Instance) Error!Instance {
+pub fn parse(_: Opcode.Raw, _: *Program.Instance) ParseError!Instance {
     return Instance{};
 }
+
+pub const ExecutionError = Program.Error || Stack.Error;
+pub const ParseError = Program.Error;
 
 // -- Bytecode examples --
 
 pub const Fixtures = struct {
-    const raw_opcode = @enumToInt(Opcode.Enum.Return);
+    const raw_opcode = @enumToInt(opcode);
 
     /// Example bytecode that should produce a valid instruction.
     pub const valid = [1]u8{raw_opcode};
