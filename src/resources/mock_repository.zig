@@ -146,8 +146,8 @@ pub const Fixtures = struct {
         .type = .bytecode,
         .bank_id = 0,
         .bank_offset = 0,
-        .compressed_size = 2000,
-        .uncompressed_size = 2000,
+        .compressed_size = 0,
+        .uncompressed_size = 0,
     };
 
     const polygons_descriptor = ResourceDescriptor.Instance{

@@ -130,6 +130,33 @@ pub const Instance = struct {
         }
     }
 
+    /// Run the virtual machine for a single game tic.
+    /// This will:
+    /// 1. load a new game part if one was scheduled on the previous tic;
+    /// 2. apply the specified user input to the state of the VM;
+    /// 3. apply any thread state changes that were scheduled on the previous tic;
+    /// 4. run every thread using the bytecode for the current game part.
+    pub fn runTic(self: *Self, input: UserInput.Instance) !void {
+        if (self.scheduled_game_part) |game_part| {
+            try self.startGamePart(game_part);
+        }
+
+        // Apply user input only after loading any scheduled game part, as certain inputs
+        // are only handled when running the password entry game part.
+        self.applyUserInput(input);
+
+        // All threads must be updated to apply any requested pause, resume etc. state changes
+        // *before* we start running the current tic, because the program may schedule new states
+        // this tic that should not be applied until next tic.
+        for (self.threads) |*thread| {
+            thread.applyScheduledStates();
+        }
+
+        for (self.threads) |*thread| {
+            try thread.run(self, static_limits.max_instructions_per_tic);
+        }
+    }
+
     /// Immediately unload all resources, load the resources for the specified game part,
     /// and prepare to execute its bytecode.
     /// Returns an error if one or more resources do not exist or could not be loaded.
@@ -141,10 +168,12 @@ pub const Instance = struct {
         self.program = Program.new(resource_locations.bytecode);
         self.video.setResourceLocations(resource_locations.palettes, resource_locations.polygons, resource_locations.animations);
 
-        // Stop all threads and reset the main thread to begin execution at the start of the current program
+        // Deactivate and unpause all threads.
         for (self.threads) |*thread| {
             thread.execution_state = .inactive;
+            thread.pause_state = .running;
         }
+        // Reset the main thread to begin execution at the start of the current program.
         self.threads[ThreadID.main].execution_state = .{ .active = 0 };
 
         self.current_game_part = game_part;
@@ -285,6 +314,8 @@ pub fn testInstance(possible_bytecode: ?[]const u8) Instance {
 const testing = @import("../utils/testing.zig");
 const meta = @import("std").meta;
 
+// - Initialization tests -
+
 test "new creates virtual machine instance with expected initial state" {
     const initial_game_part = GamePart.Enum.gameplay1;
     const random_seed = 12345;
@@ -334,13 +365,74 @@ test "new creates virtual machine instance with expected initial state" {
     try testing.expectEqual(animations_address.?, machine.video.animations.?.data);
 }
 
+// - Game-part loading tests -
+
+test "startGamePart resets previous thread state, loads resources for new game part, and unloads previously-loaded resources, but leaves register state alone" {
+    var machine = testInstance(null);
+    defer machine.deinit();
+
+    // Pollute the thread state
+    for (machine.threads) |*thread| {
+        thread.execution_state = .{ .active = 0xDEAD };
+        thread.pause_state = .paused;
+    }
+
+    // Pollute the register state
+    for (machine.registers.unsignedSlice()) |*register| {
+        register.* = 0xBEEF;
+    }
+
+    const next_game_part = GamePart.Enum.arena_cinematic;
+    try testing.expect(machine.current_game_part != next_game_part);
+
+    const current_resource_ids = machine.current_game_part.resourceIDs();
+    const next_resource_ids = next_game_part.resourceIDs();
+
+    try testing.expect((try machine.memory.resourceLocation(current_resource_ids.bytecode)) != null);
+    try testing.expect((try machine.memory.resourceLocation(current_resource_ids.palettes)) != null);
+    try testing.expect((try machine.memory.resourceLocation(current_resource_ids.polygons)) != null);
+
+    try testing.expectEqual(null, try machine.memory.resourceLocation(next_resource_ids.bytecode));
+    try testing.expectEqual(null, try machine.memory.resourceLocation(next_resource_ids.palettes));
+    try testing.expectEqual(null, try machine.memory.resourceLocation(next_resource_ids.polygons));
+
+    try machine.startGamePart(next_game_part);
+
+    for (machine.threads) |thread, id| {
+        if (id == ThreadID.main) {
+            try testing.expectEqual(.{ .active = 0 }, thread.execution_state);
+        } else {
+            try testing.expectEqual(.inactive, thread.execution_state);
+        }
+        try testing.expectEqual(.running, thread.pause_state);
+    }
+
+    for (machine.registers.unsignedSlice()) |register| {
+        try testing.expectEqual(0xBEEF, register);
+    }
+
+    try testing.expectEqual(next_game_part, machine.current_game_part);
+    try testing.expectEqual(null, machine.scheduled_game_part);
+
+    try testing.expectEqual(null, try machine.memory.resourceLocation(current_resource_ids.bytecode));
+    try testing.expectEqual(null, try machine.memory.resourceLocation(current_resource_ids.palettes));
+    try testing.expectEqual(null, try machine.memory.resourceLocation(current_resource_ids.polygons));
+
+    try testing.expect((try machine.memory.resourceLocation(next_resource_ids.bytecode)) != null);
+    try testing.expect((try machine.memory.resourceLocation(next_resource_ids.palettes)) != null);
+    try testing.expect((try machine.memory.resourceLocation(next_resource_ids.polygons)) != null);
+}
+
 test "scheduleGamePart schedules a new game part without loading it" {
-    var machine = try new(testing.allocator, MockRepository.test_reader, MockHost.test_host, .copy_protection, 0);
+    var machine = testInstance(null);
     defer machine.deinit();
 
     try testing.expectEqual(null, machine.scheduled_game_part);
 
-    const next_game_part = GamePart.Enum.intro_cinematic;
+    const current_game_part = machine.current_game_part;
+    const next_game_part = GamePart.Enum.arena_cinematic;
+    try testing.expect(current_game_part != next_game_part);
+
     const resource_ids = next_game_part.resourceIDs();
 
     try testing.expectEqual(null, try machine.memory.resourceLocation(resource_ids.bytecode));
@@ -349,13 +441,14 @@ test "scheduleGamePart schedules a new game part without loading it" {
 
     machine.scheduleGamePart(next_game_part);
     try testing.expectEqual(next_game_part, machine.scheduled_game_part);
+    try testing.expectEqual(current_game_part, machine.current_game_part);
 
     try testing.expectEqual(null, try machine.memory.resourceLocation(resource_ids.bytecode));
     try testing.expectEqual(null, try machine.memory.resourceLocation(resource_ids.palettes));
     try testing.expectEqual(null, try machine.memory.resourceLocation(resource_ids.polygons));
 }
 
-// - LoadResource tests -
+// - loadResource tests -
 
 test "loadResource loads audio resource into main memory" {
     var machine = testInstance(null);
@@ -493,4 +586,99 @@ test "applyUserInput does not open password screen when already in password scre
     machine.applyUserInput(input);
 
     try testing.expectEqual(null, machine.scheduled_game_part);
+}
+
+// - runTic tests -
+
+const Opcode = @import("../values/opcode.zig");
+const ThreadOperation = @import("../instructions/thread_operation.zig");
+
+test "runTic starts next game part if scheduled" {
+    var machine = testInstance(null);
+    defer machine.deinit();
+
+    const next_game_part = .arena_cinematic;
+    try testing.expect(machine.current_game_part != next_game_part);
+
+    machine.scheduleGamePart(next_game_part);
+
+    // FIXME: The mock repository provides empty programs that will produce an error as soon as they are executed.
+    // Have the mock repository supply a bytecode program containing a single kill instruction instead.
+    try testing.expectError(error.InvalidAddress, machine.runTic(UserInput.Instance{}));
+
+    try testing.expectEqual(next_game_part, machine.current_game_part);
+    try testing.expectEqual(null, machine.scheduled_game_part);
+}
+
+test "runTic applies user input only after loading scheduled game part" {
+    var machine = testInstance(null);
+    defer machine.deinit();
+
+    machine.scheduleGamePart(.password_entry);
+
+    try testing.expect(machine.current_game_part != .password_entry);
+    try testing.expectEqual(0, machine.registers.signed(.left_right_input));
+    try testing.expectEqual(0, machine.registers.unsigned(.last_pressed_character));
+
+    const input = UserInput.Instance{ .left = true, .last_pressed_character = 'A' };
+
+    // FIXME: The mock repository provides empty programs that will produce an error as soon as they are executed.
+    // Have the mock repository supply a bytecode program containing a single kill instruction instead.
+    try testing.expectError(error.InvalidAddress, machine.runTic(input));
+
+    try testing.expectEqual(.password_entry, machine.current_game_part);
+    try testing.expectEqual(-1, machine.registers.signed(.left_right_input));
+    // This would have remained 0 if user input was processed *before* the game part was switched.
+    try testing.expectEqual('A', machine.registers.unsigned(.last_pressed_character));
+}
+
+test "runTic updates each thread with its scheduled state before running each thread" {
+    var bytecode = [_]u8{
+        // Schedule threads 1-63 to unpause on the next tic
+        @enumToInt(Opcode.Enum.ControlThreads), 1, 63, @enumToInt(ThreadOperation.Enum.@"resume"),
+        // Deactivate the current thread (expected to be 0) immediately on this tic
+        @enumToInt(Opcode.Enum.Kill),
+    };
+
+    var machine = testInstance(&bytecode);
+    defer machine.deinit();
+
+    const main_thread = &machine.threads[0];
+
+    // Schedule every thread except the main thread to pause when the next tic is run.
+    for (machine.threads[1..64]) |*thread| {
+        thread.schedulePause();
+
+        try testing.expectEqual(.running, thread.pause_state);
+        try testing.expectEqual(.inactive, thread.execution_state);
+
+        try testing.expectEqual(.paused, thread.scheduled_pause_state);
+        try testing.expectEqual(null, thread.scheduled_execution_state);
+    }
+
+    // Make sure the main thread is ready to execute the program.
+    try testing.expectEqual(.{ .active = 0x0 }, main_thread.execution_state);
+    try testing.expectEqual(.running, main_thread.pause_state);
+    try testing.expectEqual(null, main_thread.scheduled_pause_state);
+    try testing.expectEqual(null, main_thread.scheduled_execution_state);
+
+    try machine.runTic(UserInput.Instance{});
+
+    for (machine.threads[1..64]) |*thread| {
+        // Every thread except main should have remained inactive.
+        try testing.expectEqual(.inactive, thread.execution_state);
+        // Every thread except main should now be paused by applying its scheduled state.
+        try testing.expectEqual(.paused, thread.pause_state);
+
+        // Every thread except main should now be scheduled to resume next tic
+        // thanks to the ControlThreads instruction.
+        try testing.expectEqual(.running, thread.scheduled_pause_state);
+        try testing.expectEqual(null, thread.scheduled_execution_state);
+    }
+
+    // The main thread should now be be deactivated thanks to the Kill instruction.
+    try testing.expectEqual(.inactive, main_thread.execution_state);
+    try testing.expectEqual(.running, main_thread.pause_state);
+    try testing.expectEqual(null, main_thread.scheduled_execution_state);
+    try testing.expectEqual(null, main_thread.scheduled_pause_state);
 }

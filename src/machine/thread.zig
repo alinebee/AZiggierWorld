@@ -89,7 +89,7 @@ pub const Instance = struct {
     }
 
     /// Apply any scheduled changes to the thread's execution and pause states.
-    pub fn update(self: *Instance) void {
+    pub fn applyScheduledStates(self: *Instance) void {
         if (self.scheduled_execution_state) |new_state| {
             self.execution_state = new_state;
             self.scheduled_execution_state = null;
@@ -167,14 +167,14 @@ test "schedulePause schedules pausing for next tic" {
     try testing.expectEqual(.paused, thread.scheduled_pause_state);
 }
 
-test "update applies scheduled execution state" {
+test "applyScheduledStates applies scheduled execution state" {
     var thread = Instance{};
 
     thread.scheduleJump(0xDEAD);
     try testing.expectEqual(.inactive, thread.execution_state);
     try testing.expectEqual(.{ .active = 0xDEAD }, thread.scheduled_execution_state);
 
-    thread.update();
+    thread.applyScheduledStates();
     try testing.expectEqual(.{ .active = 0xDEAD }, thread.execution_state);
     try testing.expectEqual(null, thread.scheduled_execution_state);
 
@@ -182,12 +182,12 @@ test "update applies scheduled execution state" {
     try testing.expectEqual(.{ .active = 0xDEAD }, thread.execution_state);
     try testing.expectEqual(.inactive, thread.scheduled_execution_state);
 
-    thread.update();
+    thread.applyScheduledStates();
     try testing.expectEqual(.inactive, thread.execution_state);
     try testing.expectEqual(null, thread.scheduled_execution_state);
 }
 
-test "update applies scheduled pause state" {
+test "applyScheduledStates applies scheduled pause state" {
     var thread = Instance{};
 
     try testing.expectEqual(.running, thread.pause_state);
@@ -197,7 +197,7 @@ test "update applies scheduled pause state" {
     try testing.expectEqual(.running, thread.pause_state);
     try testing.expectEqual(.paused, thread.scheduled_pause_state);
 
-    thread.update();
+    thread.applyScheduledStates();
     try testing.expectEqual(.paused, thread.pause_state);
     try testing.expectEqual(null, thread.scheduled_pause_state);
 
@@ -205,7 +205,7 @@ test "update applies scheduled pause state" {
     try testing.expectEqual(.paused, thread.pause_state);
     try testing.expectEqual(.running, thread.scheduled_pause_state);
 
-    thread.update();
+    thread.applyScheduledStates();
     try testing.expectEqual(.running, thread.pause_state);
     try testing.expectEqual(null, thread.scheduled_pause_state);
 }

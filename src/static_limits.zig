@@ -73,6 +73,11 @@ pub const virtual_screen_height = 200;
 /// The DOS version of Another World capped the stack at 64 entries.
 pub const max_stack_depth = 64;
 
+/// The maximum number of instructions that a program can execute before
+/// it must yield or deactivate the current thread.
+/// If a program exceeds this, it likely indicates an infinite loop.
+pub const max_instructions_per_tic = 10_000;
+
 /// The maximum number of resource descriptors that will be parsed from the MEMLIST.BIN file
 /// in an Another World game directory.
 /// Determines the size of arrays that hold descriptors and memory state for resources.
