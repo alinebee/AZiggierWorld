@@ -38,7 +38,7 @@ pub fn parse(_: Opcode.Raw, program: *Program.Instance) ParseError!Instance {
     };
 }
 
-pub const ParseError = Program.Error || BufferID.Error || ColorID.Error;
+pub const ParseError = Program.ReadError || BufferID.Error || ColorID.Error;
 
 // -- Bytecode examples --
 

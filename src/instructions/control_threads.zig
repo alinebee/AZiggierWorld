@@ -57,7 +57,7 @@ pub fn parse(_: Opcode.Raw, program: *Program.Instance) ParseError!Instance {
     return instruction;
 }
 
-pub const ParseError = Program.Error || ThreadID.Error || Operation.Error || error{
+pub const ParseError = Program.ReadError || ThreadID.Error || Operation.Error || error{
     /// The end thread came before the start thread.
     InvalidThreadRange,
 };

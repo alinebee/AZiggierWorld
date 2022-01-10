@@ -47,7 +47,7 @@ const EmptyInstruction = struct {};
 
 /// A fake instruction parse function that does nothing but consume 5 bytes
 /// from the passed-in program after the opcode byte.
-fn parse5MoreBytes(_: Opcode.Raw, program: *Program.Instance) Program.Error!EmptyInstruction {
+fn parse5MoreBytes(_: Opcode.Raw, program: *Program.Instance) Program.ReadError!EmptyInstruction {
     try program.skip(5);
     return EmptyInstruction{};
 }

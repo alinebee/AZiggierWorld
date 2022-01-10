@@ -15,7 +15,7 @@ pub const Instance = struct {
     /// The program address that the thread should jump to when activated.
     address: Address.Raw,
 
-    pub fn execute(self: Instance, machine: *Machine.Instance) void {
+    pub fn execute(self: Instance, machine: *Machine.Instance) ExecutionError!void {
         machine.threads[self.thread_id].scheduleJump(self.address);
     }
 };
@@ -35,7 +35,8 @@ pub fn parse(_: Opcode.Raw, program: *Program.Instance) ParseError!Instance {
     };
 }
 
-pub const ParseError = Program.Error || ThreadID.Error;
+pub const ExecutionError = error{};
+pub const ParseError = Program.ReadError || ThreadID.Error;
 
 // -- Bytecode examples --
 
@@ -77,7 +78,7 @@ test "execute schedules specified thread to jump to specified address" {
     var machine = Machine.testInstance(null);
     defer machine.deinit();
 
-    instruction.execute(&machine);
+    try instruction.execute(&machine);
 
     try testing.expectEqual(.{ .active = 0xDEAD }, machine.threads[63].scheduled_execution_state);
 }

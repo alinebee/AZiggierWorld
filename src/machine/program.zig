@@ -12,13 +12,6 @@ const introspection = @import("../utils/introspection.zig");
 
 const Address = @import("../values/address.zig");
 
-pub const Error = error{
-    /// The program was asked to seek to an address beyond the end of the program.
-    InvalidAddress,
-    /// A read operation unexpectedly encountered the end of the program.
-    EndOfProgram,
-};
-
 /// An Another World bytecode program, which maintains a counter to the next instruction to execute.
 pub const Instance = struct {
     /// The bytecode making up the program.
@@ -32,7 +25,7 @@ pub const Instance = struct {
     /// and advances the counter by the byte width of the integer.
     /// Returns error.EndOfProgram and leaves the counter at the end of the program
     /// if there are not enough bytes left in the program.
-    pub fn read(self: *Instance, comptime Integer: type) Error!Integer {
+    pub fn read(self: *Instance, comptime Integer: type) ReadError!Integer {
         // readIntSliceBig uses this construction internally.
         // @sizeOf would be nicer, but may include padding bytes.
         const byte_width = comptime @divExact(introspection.bitCount(Integer), 8);
@@ -53,7 +46,7 @@ pub const Instance = struct {
     /// Skip n bytes from the program, moving the counter forward by that amount.
     /// Returns error.EndOfProgram and leaves the counter at the end of the program
     /// if there are not enough bytes left in the program to skip the full amount.
-    pub fn skip(self: *Instance, byte_count: usize) Error!void {
+    pub fn skip(self: *Instance, byte_count: usize) ReadError!void {
         const upper_bound = self.counter + byte_count;
         if (upper_bound > self.bytecode.len) {
             self.counter = self.bytecode.len;
@@ -65,7 +58,7 @@ pub const Instance = struct {
     /// Move the program counter to the specified address,
     /// so that program execution continues from that point.
     /// Returns error.InvalidAddress if the address is beyond the end of the program.
-    pub fn jump(self: *Instance, address: Address.Native) Error!void {
+    pub fn jump(self: *Instance, address: Address.Native) SeekError!void {
         if (address >= self.bytecode.len) {
             return error.InvalidAddress;
         }
@@ -83,6 +76,16 @@ pub const Instance = struct {
 pub fn new(bytecode: []const u8) Instance {
     return .{ .bytecode = bytecode };
 }
+
+pub const ReadError = error{
+    /// A read operation unexpectedly encountered the end of the program.
+    EndOfProgram,
+};
+
+pub const SeekError = error{
+    /// The program was asked to seek to an address beyond the end of the program.
+    InvalidAddress,
+};
 
 /// -- Tests --
 const testing = @import("../utils/testing.zig");

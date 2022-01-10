@@ -11,7 +11,7 @@ pub const Instance = struct {
     /// The address of the subroutine to call.
     address: Address.Raw,
 
-    pub fn execute(self: Instance, machine: *Machine.Instance) !void {
+    pub fn execute(self: Instance, machine: *Machine.Instance) ExecutionError!void {
         try machine.stack.push(machine.program.counter);
         try machine.program.jump(self.address);
     }
@@ -26,7 +26,8 @@ pub fn parse(_: Opcode.Raw, program: *Program.Instance) ParseError!Instance {
     };
 }
 
-pub const ParseError = Program.Error || Stack.Error;
+pub const ExecutionError = Program.SeekError || Stack.Error || error{};
+pub const ParseError = Program.ReadError;
 
 // -- Bytecode examples --
 

@@ -32,7 +32,7 @@ pub const Instance = union(enum) {
     }
 };
 
-pub const ParseError = Program.Error;
+pub const ParseError = Program.ReadError;
 
 /// Parse the next instruction from a bytecode program.
 /// Consumes 3 bytes from the bytecode on success, including the opcode.

@@ -83,7 +83,7 @@ pub fn parse(_: Opcode.Raw, program: *Program.Instance) ParseError!Instance {
     return self;
 }
 
-pub const ParseError = Program.Error || Comparison.Error;
+pub const ParseError = Program.ReadError || Comparison.Error;
 
 // -- Bytecode examples --
 

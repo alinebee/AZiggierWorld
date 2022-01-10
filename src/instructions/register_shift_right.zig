@@ -49,7 +49,7 @@ pub fn parse(_: Opcode.Raw, program: *Program.Instance) ParseError!Instance {
     };
 }
 
-pub const ParseError = Program.Error || error{
+pub const ParseError = Program.ReadError || error{
     /// Bytecode specified a shift distance that was too large.
     ShiftTooLarge,
 };

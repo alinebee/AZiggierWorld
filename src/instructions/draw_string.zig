@@ -51,7 +51,7 @@ pub fn parse(_: Opcode.Raw, program: *Program.Instance) ParseError!Instance {
     };
 }
 
-pub const ParseError = Program.Error || StringID.Error || ColorID.Error;
+pub const ParseError = Program.ReadError || StringID.Error || ColorID.Error;
 
 /// The width in pixels of each column of glyphs.
 const column_width = 8;

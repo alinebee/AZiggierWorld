@@ -39,7 +39,7 @@ pub const ExecutionError = error{
     YieldWithinFunction,
 };
 
-pub const ParseError = Program.Error;
+pub const ParseError = Program.ReadError;
 
 // -- Bytecode examples --
 
