@@ -84,20 +84,28 @@ pub const Instance = struct {
     /// Returns an error if `buffer` was not large enough to hold the data or if the data
     /// could not be read or decompressed.
     /// In the event of an error, `buffer` may contain partially-loaded game data.
-    fn bufReadResource(self: *const Instance, buffer: []u8, descriptor: ResourceDescriptor.Instance) ![]const u8 {
+    fn bufReadResource(self: *const Instance, buffer: []u8, descriptor: ResourceDescriptor.Instance) Reader.BufReadResourceError![]const u8 {
         if (buffer.len < descriptor.uncompressed_size) {
             return error.BufferTooSmall;
         }
 
-        const bank_file = try self.openFile(.{ .bank = descriptor.bank_id });
+        const bank_file = self.openFile(.{ .bank = descriptor.bank_id }) catch |err| {
+            std.log.err("Could not open file for bank {}: {}", .{ descriptor.bank_id, err });
+            return error.RepositorySpecificFailure;
+        };
+
         // TODO: leave the files open and have a separate close function,
         // since during game loading we expect to read multiple resources from a single bank.
         defer bank_file.close();
 
-        try bank_file.seekTo(descriptor.bank_offset);
+        bank_file.seekTo(descriptor.bank_offset) catch |err| {
+            std.log.err("Could not seek file for bank {} to offset {}: {}", .{ descriptor.bank_id, descriptor.bank_offset, err });
+            return error.RepositorySpecificFailure;
+        };
 
         const destination = buffer[0..descriptor.uncompressed_size];
         try readAndDecompress(bank_file.reader(), destination, descriptor.compressed_size);
+
         return destination;
     }
 
@@ -152,7 +160,7 @@ fn ResourceListError(comptime IOReader: type) type {
 /// in place to fill the buffer.
 /// On success, `buffer` will be filled with uncompressed data.
 /// If reading fails, `buffer`'s contents should be treated as invalid.
-fn readAndDecompress(reader: anytype, buffer: []u8, compressed_size: usize) ReadAndDecompressError(@TypeOf(reader))!void {
+fn readAndDecompress(reader: anytype, buffer: []u8, compressed_size: usize) Reader.BufReadResourceError!void {
     // Normally this error case will be caught earlier when parsing resource descriptors:
     // See ResourceDescriptor.iterator.next.
     if (compressed_size > buffer.len) {
@@ -160,7 +168,13 @@ fn readAndDecompress(reader: anytype, buffer: []u8, compressed_size: usize) Read
     }
 
     const compressed_region = buffer[0..compressed_size];
-    try reader.readNoEof(compressed_region);
+    reader.readNoEof(compressed_region) catch |err| {
+        // Convert filesystem-specific errors into generic repository reader errors.
+        return switch (err) {
+            error.EndOfStream => error.TruncatedData,
+            else => error.RepositorySpecificFailure,
+        };
+    };
 
     // If the data was compressed, decompress it in place.
     if (compressed_size < buffer.len) {
@@ -170,18 +184,6 @@ fn readAndDecompress(reader: anytype, buffer: []u8, compressed_size: usize) Read
             return error.InvalidCompressedData;
         };
     }
-}
-
-/// The type of errors that can be returned from a call to `readAndDecompress`.
-fn ReadAndDecompressError(comptime IOReader: type) type {
-    const ReaderError = introspection.ErrorType(IOReader.readNoEof);
-
-    return ReaderError || error{
-        /// Attempted to copy a resource's data into a buffer that was too small for it.
-        InvalidResourceSize,
-        /// An error occurred when decompressing RLE-encoded data.
-        InvalidCompressedData,
-    };
 }
 
 // -- Test helpers --
@@ -194,6 +196,10 @@ const ResourceListExamples = struct {
 // -- Tests --
 
 const testing = @import("../utils/testing.zig");
+
+test "ensure everything compiles" {
+    testing.refAllDecls(Instance);
+}
 
 test "readAndDecompress reads uncompressed data into buffer" {
     const source = [_]u8{ 0xDE, 0xAD, 0xBE, 0xEF };
@@ -233,16 +239,20 @@ test "readAndDecompress returns error.InvalidResourceSize on mismatched compress
     );
 }
 
-test "readAndDecompress returns error.EndOfStream when source data is truncated" {
+test "readAndDecompress returns error.TruncatedData when source data is truncated" {
     const source = [_]u8{ 0xDE, 0xAD, 0xBE };
     const reader = io.fixedBufferStream(&source).reader();
 
     var destination: [4]u8 = undefined;
 
     try testing.expectError(
-        error.EndOfStream,
+        error.TruncatedData,
         readAndDecompress(reader, &destination, destination.len),
     );
+}
+
+test "readAndDecompress returns error.RepositorySpecificFailure when reader produced a non-EndOfStream error" {
+    // TODO: write a reader that will do this.
 }
 
 test "readResourceList parses all descriptors from a stream" {

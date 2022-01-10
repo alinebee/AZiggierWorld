@@ -231,7 +231,7 @@ const FailingAllocator = @import("std").testing.FailingAllocator;
 const test_descriptors = &MockRepository.Fixtures.descriptors;
 
 var test_repository = MockRepository.Instance.init(test_descriptors, null);
-var failing_repository = MockRepository.Instance.init(test_descriptors, error.ChecksumFailed);
+var failing_repository = MockRepository.Instance.init(test_descriptors, error.InvalidCompressedData);
 
 const test_reader = test_repository.reader();
 const failing_reader = failing_repository.reader();
@@ -341,7 +341,7 @@ test "loadIndividualResource returns load error from repository" {
     defer memory.deinit();
 
     const resource_id = MockRepository.Fixtures.bitmap_resource_id;
-    try testing.expectError(error.ChecksumFailed, memory.loadIndividualResource(resource_id));
+    try testing.expectError(error.InvalidCompressedData, memory.loadIndividualResource(resource_id));
 }
 
 test "loadIndividualResource returns error.OutOfMemory if allocation fails" {
@@ -494,7 +494,7 @@ test "loadGamePart returns load error from repository" {
     var memory = try new(testing.allocator, failing_reader);
     defer memory.deinit();
 
-    try testing.expectError(error.ChecksumFailed, memory.loadGamePart(.copy_protection));
+    try testing.expectError(error.InvalidCompressedData, memory.loadGamePart(.copy_protection));
 }
 
 test "loadGamePart returns error.OutOfMemory if allocation fails" {

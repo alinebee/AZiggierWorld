@@ -12,8 +12,7 @@
 //! Usage:
 //! ------
 //! const resource_descriptors = []ResourceDescriptor.Instance { descriptor1, descriptor2...descriptorN };
-//! const error_to_produce_on_read: ?anyerror = null;
-//! var repository = MockRepository.Instance.init(resource_descriptors, error_to_produce_on_read);
+//! var repository = MockRepository.Instance.init(resource_descriptors, null);
 //! const reader = repository.reader();
 //!
 //! const first_resource_descriptor = try reader.resourceDescriptor(0);
@@ -44,7 +43,7 @@ pub const Instance = struct {
 
     /// An optional error returned by `bufReadResource` to simulate file-reading or decompression errors.
     /// If `null`, `bufReadResource` will return a success response.
-    read_error: ?anyerror,
+    read_error: ?Reader.BufReadResourceError,
 
     /// The number of times a resource has been loaded, whether the load succeeded or failed.
     /// Incremented by calls to reader().bufReadResource() or any of its derived methods.
@@ -58,7 +57,7 @@ pub const Instance = struct {
     /// Create a new mock repository that exposes the specified resource descriptors,
     /// and produces either an error or an appropriately-sized buffer when
     /// a resource load method is called.
-    pub fn init(descriptors: []const ResourceDescriptor.Instance, read_error: ?anyerror) Instance {
+    pub fn init(descriptors: []const ResourceDescriptor.Instance, read_error: ?Reader.BufReadResourceError) Instance {
         return Instance{
             ._raw_descriptors = DescriptorStorage.fromSlice(descriptors) catch unreachable,
             .read_error = read_error,
@@ -75,7 +74,7 @@ pub const Instance = struct {
     /// a 0xAA bit pattern (the same pattern Zig fills `undefined` regions with in debug mode).
     /// Returns error.BufferTooSmall and leaves the buffer unchanged if the supplied buffer
     /// would not have been large enough to hold the real resource.
-    fn bufReadResource(self: *Instance, buffer: []u8, descriptor: ResourceDescriptor.Instance) ![]const u8 {
+    fn bufReadResource(self: *Instance, buffer: []u8, descriptor: ResourceDescriptor.Instance) Reader.BufReadResourceError![]const u8 {
         self.read_count += 1;
 
         if (buffer.len < descriptor.uncompressed_size) {
@@ -266,20 +265,20 @@ test "bufReadResource returns slice of original buffer filled with bit pattern w
 }
 
 test "bufReadResource returns supplied error and leaves buffer alone when buffer is appropriate size" {
-    var repository = Instance.init(&.{example_descriptor}, error.ChecksumFailed);
+    var repository = Instance.init(&.{example_descriptor}, error.InvalidCompressedData);
 
     var buffer = [_]u8{0} ** (example_descriptor.uncompressed_size * 2);
     // The whole buffer should be left untouched.
     const expected_buffer_contents = buffer;
 
     try testing.expectEqual(0, repository.read_count);
-    try testing.expectError(error.ChecksumFailed, repository.reader().bufReadResource(&buffer, example_descriptor));
+    try testing.expectError(error.InvalidCompressedData, repository.reader().bufReadResource(&buffer, example_descriptor));
     try testing.expectEqual(1, repository.read_count);
     try testing.expectEqual(expected_buffer_contents, buffer);
 }
 
 test "bufReadResource returns error.BufferTooSmall if buffer is too small for resource, even if another error was specified" {
-    var repository = Instance.init(&.{example_descriptor}, error.ChecksumFailed);
+    var repository = Instance.init(&.{example_descriptor}, error.InvalidCompressedData);
 
     var buffer = [_]u8{0} ** (example_descriptor.uncompressed_size - 1);
     // The whole buffer should be left untouched.

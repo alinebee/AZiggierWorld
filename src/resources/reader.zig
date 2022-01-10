@@ -15,7 +15,7 @@ pub const Interface = struct {
     vtable: *const TypeErasedVTable,
 
     const TypeErasedVTable = struct {
-        bufReadResource: fn (self: *anyopaque, buffer: []u8, descriptor: ResourceDescriptor.Instance) anyerror![]const u8,
+        bufReadResource: fn (self: *anyopaque, buffer: []u8, descriptor: ResourceDescriptor.Instance) BufReadResourceError![]const u8,
         resourceDescriptors: fn (self: *anyopaque) []const ResourceDescriptor.Instance,
     };
 
@@ -23,7 +23,7 @@ pub const Interface = struct {
 
     /// Create a new type-erased "fat pointer" that reads from a repository of Another World game data.
     /// Intended to be called by repositories to create a reader interface; should not be used directly.
-    pub fn init(implementation_ptr: anytype, comptime bufReadResourceFn: fn (self: @TypeOf(implementation_ptr), buffer: []u8, descriptor: ResourceDescriptor.Instance) anyerror![]const u8, comptime resourceDescriptorsFn: fn (self: @TypeOf(implementation_ptr)) []const ResourceDescriptor.Instance) Self {
+    pub fn init(implementation_ptr: anytype, comptime bufReadResourceFn: fn (self: @TypeOf(implementation_ptr), buffer: []u8, descriptor: ResourceDescriptor.Instance) BufReadResourceError![]const u8, comptime resourceDescriptorsFn: fn (self: @TypeOf(implementation_ptr)) []const ResourceDescriptor.Instance) Self {
         const Implementation = @TypeOf(implementation_ptr);
         const ptr_info = @typeInfo(Implementation);
 
@@ -33,7 +33,7 @@ pub const Interface = struct {
         const alignment = ptr_info.Pointer.alignment;
 
         const TypeUnerasedVTable = struct {
-            fn bufReadResourceImpl(type_erased_self: *anyopaque, buffer: []u8, descriptor: ResourceDescriptor.Instance) anyerror![]const u8 {
+            fn bufReadResourceImpl(type_erased_self: *anyopaque, buffer: []u8, descriptor: ResourceDescriptor.Instance) BufReadResourceError![]const u8 {
                 const self = @ptrCast(Implementation, @alignCast(alignment, type_erased_self));
                 return @call(.{ .modifier = .always_inline }, bufReadResourceFn, .{ self, buffer, descriptor });
             }
@@ -60,7 +60,7 @@ pub const Interface = struct {
     /// Returns an error if `buffer` was not large enough to hold the data or if the data
     /// could not be read or decompressed.
     /// In the event of an error, `buffer` may contain partially-loaded game data.
-    pub fn bufReadResource(self: Self, buffer: []u8, descriptor: ResourceDescriptor.Instance) ![]const u8 {
+    pub fn bufReadResource(self: Self, buffer: []u8, descriptor: ResourceDescriptor.Instance) BufReadResourceError![]const u8 {
         return self.vtable.bufReadResource(self.implementation, buffer, descriptor);
     }
 
@@ -70,7 +70,7 @@ pub const Interface = struct {
     /// Caller owns the returned slice and must free it with `allocator.free`.
     /// Returns an error if the allocator failed to allocate memory or if the data
     /// could not be read or decompressed.
-    pub fn allocReadResource(self: Self, allocator: mem.Allocator, descriptor: ResourceDescriptor.Instance) ![]const u8 {
+    pub fn allocReadResource(self: Self, allocator: mem.Allocator, descriptor: ResourceDescriptor.Instance) AllocReadResourceError![]const u8 {
         // Create a buffer just large enough to decompress the resource into.
         const destination = try allocator.alloc(u8, descriptor.uncompressed_size);
         errdefer allocator.free(destination);
@@ -84,7 +84,7 @@ pub const Interface = struct {
     /// Caller owns the returned slice and must free it with `allocator.free`.
     /// Returns an error if the resource ID was invalid, the allocator failed
     /// to allocate memory, or the data could not be read or decompressed.
-    pub fn allocReadResourceByID(self: Self, allocator: mem.Allocator, id: ResourceID.Raw) ![]const u8 {
+    pub fn allocReadResourceByID(self: Self, allocator: mem.Allocator, id: ResourceID.Raw) AllocReadResourceByIDError![]const u8 {
         return self.allocReadResource(allocator, try self.resourceDescriptor(id));
     }
 
@@ -96,13 +96,13 @@ pub const Interface = struct {
 
     /// Returns the descriptor matching the specified ID.
     /// Returns an InvalidResourceID error if the ID was out of range.
-    pub fn resourceDescriptor(self: Self, id: ResourceID.Raw) !ResourceDescriptor.Instance {
+    pub fn resourceDescriptor(self: Self, id: ResourceID.Raw) ValidationError!ResourceDescriptor.Instance {
         try self.validateResourceID(id);
         return self.resourceDescriptors()[id];
     }
 
     /// Returns an error if the specified resource ID is out of range for the underlying repository.
-    pub fn validateResourceID(self: Self, id: ResourceID.Raw) !void {
+    pub fn validateResourceID(self: Self, id: ResourceID.Raw) ValidationError!void {
         const descriptors = self.resourceDescriptors();
         if (id >= descriptors.len) {
             return error.InvalidResourceID;
@@ -110,13 +110,40 @@ pub const Interface = struct {
     }
 };
 
-pub const Error = error{
+// -- Errors --
+
+pub const ValidationError = error{
     /// The specified resource ID does not exist in the game's resource list.
     InvalidResourceID,
+};
 
+pub const BufReadResourceError = error{
+    /// A resource descriptor defined a compressed size that was larger than its uncompressed size.
+    InvalidResourceSize,
+
+    /// The provided buffer was not large enough to load the requested resource.
+    BufferTooSmall,
+
+    /// The data contained in a compressed game resource could not be decompressed.
+    InvalidCompressedData,
+
+    /// The data was shorter than expected for the descriptor.
+    TruncatedData,
+
+    /// The data could not be read for a repository-specific reason:
+    /// e.g. for a local filesystem repository, access was denied or the file became unavailable.
+    RepositorySpecificFailure,
+};
+
+pub const AllocReadResourceError = BufReadResourceError || error{
     /// The provided buffer is not large enough to load the requested resource.
     BufferTooSmall,
+
+    /// The reader's allocator could not allocate memory to load the requested resource.
+    OutOfMemory,
 };
+
+pub const AllocReadResourceByIDError = ValidationError || AllocReadResourceError;
 
 // -- Test data --
 
