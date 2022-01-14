@@ -602,9 +602,7 @@ test "runTic starts next game part if scheduled" {
 
     machine.scheduleGamePart(next_game_part);
 
-    // FIXME: The mock repository provides empty programs that will produce an error as soon as they are executed.
-    // Have the mock repository supply a bytecode program containing a single kill instruction instead.
-    try testing.expectError(error.InvalidAddress, machine.runTic(UserInput.Instance{}));
+    try machine.runTic(UserInput.Instance{});
 
     try testing.expectEqual(next_game_part, machine.current_game_part);
     try testing.expectEqual(null, machine.scheduled_game_part);
@@ -622,9 +620,7 @@ test "runTic applies user input only after loading scheduled game part" {
 
     const input = UserInput.Instance{ .left = true, .last_pressed_character = 'A' };
 
-    // FIXME: The mock repository provides empty programs that will produce an error as soon as they are executed.
-    // Have the mock repository supply a bytecode program containing a single kill instruction instead.
-    try testing.expectError(error.InvalidAddress, machine.runTic(input));
+    try machine.runTic(input);
 
     try testing.expectEqual(.password_entry, machine.current_game_part);
     try testing.expectEqual(-1, machine.registers.signed(.left_right_input));

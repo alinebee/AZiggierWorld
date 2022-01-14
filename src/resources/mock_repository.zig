@@ -22,6 +22,7 @@
 
 const ResourceDescriptor = @import("resource_descriptor.zig");
 const ResourceID = @import("../values/resource_id.zig");
+const Opcode = @import("../values/opcode.zig");
 const Reader = @import("reader.zig");
 
 const static_limits = @import("../static_limits.zig");
@@ -49,11 +50,6 @@ pub const Instance = struct {
     /// Incremented by calls to reader().bufReadResource() or any of its derived methods.
     read_count: usize = 0,
 
-    /// The bit pattern to fill loaded resource buffers with.
-    /// This is 0xAA, the same as Zig uses for `undefined` regions in Debug mode:
-    /// https://ziglang.org/documentation/0.9.0/#undefined
-    const bit_pattern: u8 = 0b1010_1010;
-
     /// Create a new mock repository that exposes the specified resource descriptors,
     /// and produces either an error or an appropriately-sized buffer when
     /// a resource load method is called.
@@ -69,11 +65,17 @@ pub const Instance = struct {
         return Reader.Interface.init(self, bufReadResource, resourceDescriptors);
     }
 
-    /// Returns a pointer to the region of the buffer that would have been filled by resource
-    /// data in a real implementation. This region of the buffer will instead be filled with
-    /// a 0xAA bit pattern (the same pattern Zig fills `undefined` regions with in debug mode).
+    /// Fills the specified buffer with sample game data, and returns a pointer to the region
+    /// of the buffer that was filled. The type of data depends on the type of `descriptor`:
+    ///
+    /// If `descriptor` is a bytecode resource, that region of the buffer will be filled with
+    /// a sample valid bytecode program that does nothing but yield.
+    ///
+    /// If `descriptor` is another kind of resource, it will be filled with a 0xAA bit pattern:
+    /// the same pattern that Zig fills `undefined` variables with in debug mode.
+    ///
     /// Returns error.BufferTooSmall and leaves the buffer unchanged if the supplied buffer
-    /// would not have been large enough to hold the real resource.
+    /// is not large enough to hold the descriptor's uncompressed size in bytes.
     fn bufReadResource(self: *Instance, buffer: []u8, descriptor: ResourceDescriptor.Instance) Reader.BufReadResourceError![]const u8 {
         self.read_count += 1;
 
@@ -85,10 +87,18 @@ pub const Instance = struct {
             return err;
         }
 
-        const filled_slice = buffer[0..descriptor.uncompressed_size];
-        mem.set(u8, filled_slice, bit_pattern);
+        const slice_to_fill = buffer[0..descriptor.uncompressed_size];
 
-        return filled_slice;
+        switch (descriptor.type) {
+            .bytecode => {
+                fill_with_program(slice_to_fill);
+            },
+            else => {
+                fill_with_pattern(slice_to_fill);
+            },
+        }
+
+        return slice_to_fill;
     }
 
     /// Returns a list of all valid resource descriptors,
@@ -96,7 +106,34 @@ pub const Instance = struct {
     fn resourceDescriptors(self: *const Instance) []const ResourceDescriptor.Instance {
         return self._raw_descriptors.constSlice();
     }
+
+    /// Fill the specified buffer with a valid program that does nothing but yield,
+    /// and - if there's enough space - that loops after the final yield instruction is reached.
+    fn fill_with_program(buffer: []u8) void {
+        mem.set(u8, buffer, yield_instruction);
+
+        // Only add a loop if there's enough room to fit it in after at least 1 yield.
+        if (buffer.len >= minimum_looped_program_length) {
+            const loop_index = buffer.len - loop_instruction.len;
+            mem.copy(u8, buffer[loop_index..], &loop_instruction);
+        }
+    }
+
+    fn fill_with_pattern(buffer: []u8) void {
+        mem.set(u8, buffer, resource_bit_pattern);
+    }
 };
+
+/// The bit pattern to fill non-bytecode resource buffers with.
+/// This is 0xAA, the same as Zig uses for `undefined` regions in Debug mode:
+/// https://ziglang.org/documentation/0.9.0/#undefined
+const resource_bit_pattern: u8 = 0b1010_1010;
+
+/// The program instructions to fill bytecode resource buffers with.
+const yield_instruction = @enumToInt(Opcode.Enum.Yield);
+const loop_instruction = [_]u8{ @enumToInt(Opcode.Enum.Jump), 0x0, 0x0 };
+
+const minimum_looped_program_length = loop_instruction.len + 1;
 
 // -- Resource descriptor fixture data --
 
@@ -145,8 +182,8 @@ pub const Fixtures = struct {
         .type = .bytecode,
         .bank_id = 0,
         .bank_offset = 0,
-        .compressed_size = 0,
-        .uncompressed_size = 0,
+        .compressed_size = minimum_looped_program_length,
+        .uncompressed_size = minimum_looped_program_length,
     };
 
     const polygons_descriptor = ResourceDescriptor.Instance{
@@ -241,22 +278,21 @@ pub const Fixtures = struct {
 const testing = @import("../utils/testing.zig");
 
 const example_descriptor = ResourceDescriptor.Instance{
-    .type = .bytecode,
+    .type = .music,
     .bank_id = 0,
     .bank_offset = 0,
     .compressed_size = 10,
     .uncompressed_size = 10,
 };
 
-test "bufReadResource returns slice of original buffer filled with bit pattern when buffer is appropriate size" {
-    var repository = Instance.init(&.{example_descriptor}, null);
-
+test "bufReadResource with music descriptor returns slice of original buffer filled with bit pattern when buffer is appropriate size" {
     var buffer = [_]u8{0} ** (example_descriptor.uncompressed_size * 2);
 
     // The region of the buffer representing the resource should be filled with the bit pattern
     // for loaded data, and the rest of the buffer left as-is.
-    const expected_buffer_contents = [_]u8{Instance.bit_pattern} ** example_descriptor.uncompressed_size ++ [_]u8{0x0} ** example_descriptor.uncompressed_size;
+    const expected_buffer_contents = [_]u8{resource_bit_pattern} ** example_descriptor.uncompressed_size ++ [_]u8{0x0} ** example_descriptor.uncompressed_size;
 
+    var repository = Instance.init(&.{example_descriptor}, null);
     try testing.expectEqual(0, repository.read_count);
     const result = try repository.reader().bufReadResource(&buffer, example_descriptor);
     try testing.expectEqual(@ptrToInt(&buffer), @ptrToInt(result.ptr));
@@ -264,13 +300,56 @@ test "bufReadResource returns slice of original buffer filled with bit pattern w
     try testing.expectEqual(expected_buffer_contents, buffer);
 }
 
-test "bufReadResource returns supplied error and leaves buffer alone when buffer is appropriate size" {
-    var repository = Instance.init(&.{example_descriptor}, error.InvalidCompressedData);
+test "bufReadResource with bytecode descriptor returns slice of original buffer filled with valid program" {
+    const expected_program = [_]u8{
+        @enumToInt(Opcode.Enum.Yield),
+        @enumToInt(Opcode.Enum.Yield),
+        @enumToInt(Opcode.Enum.Jump),
+        0x0,
+        0x0,
+    };
 
+    const example_bytecode_descriptor = ResourceDescriptor.Instance{
+        .type = .bytecode,
+        .bank_id = 0,
+        .bank_offset = 0,
+        .compressed_size = expected_program.len,
+        .uncompressed_size = expected_program.len,
+    };
+
+    var buffer: [expected_program.len]u8 = undefined;
+
+    var repository = Instance.init(&.{example_descriptor}, null);
+    try testing.expectEqual(0, repository.read_count);
+    _ = try repository.reader().bufReadResource(&buffer, example_bytecode_descriptor);
+    try testing.expectEqual(expected_program, buffer);
+}
+
+test "bufReadResource with bytecode descriptor omits loop instruction when buffer is too short" {
+    const expected_program = [_]u8{@enumToInt(Opcode.Enum.Yield)} ** 3;
+
+    const example_bytecode_descriptor = ResourceDescriptor.Instance{
+        .type = .bytecode,
+        .bank_id = 0,
+        .bank_offset = 0,
+        .compressed_size = expected_program.len,
+        .uncompressed_size = expected_program.len,
+    };
+
+    var buffer: [expected_program.len]u8 = undefined;
+
+    var repository = Instance.init(&.{example_descriptor}, null);
+    try testing.expectEqual(0, repository.read_count);
+    _ = try repository.reader().bufReadResource(&buffer, example_bytecode_descriptor);
+    try testing.expectEqual(expected_program, buffer);
+}
+
+test "bufReadResource returns supplied error and leaves buffer alone when buffer is appropriate size" {
     var buffer = [_]u8{0} ** (example_descriptor.uncompressed_size * 2);
     // The whole buffer should be left untouched.
     const expected_buffer_contents = buffer;
 
+    var repository = Instance.init(&.{example_descriptor}, error.InvalidCompressedData);
     try testing.expectEqual(0, repository.read_count);
     try testing.expectError(error.InvalidCompressedData, repository.reader().bufReadResource(&buffer, example_descriptor));
     try testing.expectEqual(1, repository.read_count);
@@ -278,12 +357,11 @@ test "bufReadResource returns supplied error and leaves buffer alone when buffer
 }
 
 test "bufReadResource returns error.BufferTooSmall if buffer is too small for resource, even if another error was specified" {
-    var repository = Instance.init(&.{example_descriptor}, error.InvalidCompressedData);
-
     var buffer = [_]u8{0} ** (example_descriptor.uncompressed_size - 1);
     // The whole buffer should be left untouched.
     const expected_buffer_contents = buffer;
 
+    var repository = Instance.init(&.{example_descriptor}, error.InvalidCompressedData);
     try testing.expectEqual(0, repository.read_count);
     try testing.expectError(error.BufferTooSmall, repository.reader().bufReadResource(&buffer, example_descriptor));
     try testing.expectEqual(1, repository.read_count);
