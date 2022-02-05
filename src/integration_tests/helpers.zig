@@ -26,6 +26,19 @@ pub fn validFixtureDir() !fs.Dir {
     return dir;
 }
 
+/// Returns an open directory handle for the fixture directory,
+/// or skips the current test if the necessary files are not available.
+pub fn ensureValidFixtureDir() !fs.Dir {
+    if (validFixtureDir()) |dir| {
+        return dir;
+    } else |err| {
+        return switch (err) {
+            error.FileNotFound => error.SkipZigTest,
+            else => err,
+        };
+    }
+}
+
 // -- Tests --
 
 test "Integration test fixture directory has been populated with game data" {

@@ -5,11 +5,11 @@ const ResourceDirectory = @import("../resources/resource_directory.zig");
 const ResourceID = @import("../values/resource_id.zig");
 
 const testing = @import("../utils/testing.zig");
-const validFixtureDir = @import("helpers.zig").validFixtureDir;
+const ensureValidFixtureDir = @import("helpers.zig").ensureValidFixtureDir;
 const log = @import("std").log;
 
 test "ResourceDirectory reads all game resources" {
-    var game_dir = validFixtureDir() catch return;
+    var game_dir = try ensureValidFixtureDir();
     defer game_dir.close();
 
     var resource_directory = try ResourceDirectory.new(&game_dir);
@@ -28,7 +28,7 @@ test "ResourceDirectory reads all game resources" {
 }
 
 test "Instance.readResourceAlloc returns error.OutOfMemory if it runs out of memory when loading a non-empty resource" {
-    var game_dir = validFixtureDir() catch return;
+    var game_dir = try ensureValidFixtureDir();
     defer game_dir.close();
 
     var resource_directory = try ResourceDirectory.new(&game_dir);
@@ -51,7 +51,7 @@ test "Instance.readResourceAlloc returns error.OutOfMemory if it runs out of mem
 }
 
 test "Instance.allocReadResourceByID returns error.InvalidResourceID when given a resource ID that is out of range" {
-    var game_dir = validFixtureDir() catch return;
+    var game_dir = try ensureValidFixtureDir();
     defer game_dir.close();
 
     var resource_directory = try ResourceDirectory.new(&game_dir);

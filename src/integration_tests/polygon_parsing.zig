@@ -15,7 +15,7 @@ const DrawSpritePolygon = @import("../instructions/draw_sprite_polygon.zig");
 
 const testing = @import("../utils/testing.zig");
 const log = @import("../utils/logging.zig").log;
-const validFixtureDir = @import("helpers.zig").validFixtureDir;
+const ensureValidFixtureDir = @import("helpers.zig").ensureValidFixtureDir;
 const std = @import("std");
 
 const PolygonDrawInstruction = union(enum) {
@@ -118,7 +118,7 @@ const PolygonVisitor = struct {
 };
 
 test "Parse polygon instructions for every game part" {
-    var game_dir = validFixtureDir() catch return;
+    var game_dir = try ensureValidFixtureDir();
     defer game_dir.close();
 
     var resource_directory = try ResourceDirectory.new(&game_dir);

@@ -5,7 +5,7 @@ const ResourceDirectory = @import("../resources/resource_directory.zig");
 const ResourceDescriptor = @import("../resources/resource_descriptor.zig");
 const GamePart = @import("../values/game_part.zig");
 
-const validFixtureDir = @import("helpers.zig").validFixtureDir;
+const ensureValidFixtureDir = @import("helpers.zig").ensureValidFixtureDir;
 const log = @import("../utils/logging.zig").log;
 const testing = @import("../utils/testing.zig");
 
@@ -14,7 +14,7 @@ const std = @import("std");
 test "Report sizes for each game part" {
     std.testing.log_level = .info;
 
-    var game_dir = validFixtureDir() catch return;
+    var game_dir = try ensureValidFixtureDir();
     defer game_dir.close();
 
     var resource_directory = try ResourceDirectory.new(&game_dir);

@@ -9,7 +9,7 @@ const ResourceDirectory = @import("../resources/resource_directory.zig");
 const testing = @import("../utils/testing.zig");
 const instrospection = @import("../utils/introspection.zig");
 const log = @import("../utils/logging.zig").log;
-const validFixtureDir = @import("helpers.zig").validFixtureDir;
+const ensureValidFixtureDir = @import("helpers.zig").ensureValidFixtureDir;
 const std = @import("std");
 
 /// Records and prints the details of a bytecode instruction that could not be parsed.
@@ -54,7 +54,7 @@ const ParseFailure = struct {
 };
 
 test "parseNextInstruction parses all programs in fixture bytecode" {
-    var game_dir = validFixtureDir() catch return;
+    var game_dir = try ensureValidFixtureDir();
     defer game_dir.close();
 
     var resource_directory = try ResourceDirectory.new(&game_dir);

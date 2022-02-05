@@ -9,7 +9,7 @@ const Video = @import("../machine/video.zig");
 const BufferID = @import("../values/buffer_id.zig");
 const UserInput = @import("../machine/user_input.zig");
 
-const validFixtureDir = @import("helpers.zig").validFixtureDir;
+const ensureValidFixtureDir = @import("helpers.zig").ensureValidFixtureDir;
 const testing = @import("../utils/testing.zig");
 const log = @import("../utils/logging.zig").log;
 const std = @import("std");
@@ -49,7 +49,7 @@ const CountingHost = struct {
 const max_tics = 10_000;
 
 test "Introduction runs successfully" {
-    var game_dir = validFixtureDir() catch return;
+    var game_dir = try ensureValidFixtureDir();
     defer game_dir.close();
 
     var resource_directory = try ResourceDirectory.new(&game_dir);
