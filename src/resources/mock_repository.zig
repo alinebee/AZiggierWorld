@@ -101,8 +101,7 @@ pub const Instance = struct {
         return slice_to_fill;
     }
 
-    /// Returns a list of all valid resource descriptors,
-    /// loaded from the MEMLIST.BIN file in the game directory.
+    /// Returns a list of all resource descriptors provided to the mock repository instance.
     fn resourceDescriptors(self: *const Instance) []const ResourceDescriptor.Instance {
         return self._raw_descriptors.constSlice();
     }

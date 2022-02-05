@@ -137,7 +137,7 @@ const EntryHeader = union(enum) {
     group: void,
 
     /// Parses an entry header from a byte stream containing polygon resource data.
-    /// Consumes 1-4 bytes from the reader.
+    /// Consumes 1 byte from the reader.
     /// Fails with an error if there are not enough bytes in the stream or the header was an unrecognized type.
     fn parse(reader: anytype) !EntryHeader {
         // Adapted from the reference implementation:
@@ -281,6 +281,7 @@ const EntryPointer = struct {
 };
 
 // Parse the polygon offset for a group header or entry pointer.
+// Consumes 2 bytes from the reader.
 fn parseOffset(reader: anytype, scale: PolygonScale.Raw) !Point.Instance {
     const raw_x = try reader.readByte();
     const raw_y = try reader.readByte();
