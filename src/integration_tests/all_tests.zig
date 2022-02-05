@@ -6,4 +6,5 @@ test "Run all integration tests" {
     testing.refAllDecls(@import("bytecode_parsing.zig"));
     testing.refAllDecls(@import("polygon_parsing.zig"));
     testing.refAllDecls(@import("palette_parsing.zig"));
+    testing.refAllDecls(@import("intro_execution.zig"));
 }
