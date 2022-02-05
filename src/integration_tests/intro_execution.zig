@@ -22,7 +22,7 @@ const CountingHost = struct {
 
     const Self = @This();
 
-    pub fn host(self: *Self) Host.Interface {
+    fn host(self: *Self) Host.Interface {
         return Host.Interface.init(self, bufferReady);
     }
 
