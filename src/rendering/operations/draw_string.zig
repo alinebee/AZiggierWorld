@@ -19,20 +19,22 @@ pub fn drawString(comptime Buffer: type, buffer: anytype, string: []const u8, co
             },
             else => {
                 const glyph = try Font.glyph(char);
-                try drawGlyph(Buffer, buffer, glyph, cursor, operation);
+                drawGlyph(Buffer, buffer, glyph, cursor, operation);
                 cursor.x += Font.glyph_width;
             },
         }
     }
 }
 
-/// Draws the specified 8x8 glyph in a solid color, positioning its top left corner at the specified point.
-/// Returns error.GlyphOutOfBounds if the glyph's bounds do not lie fully inside the buffer.
-fn drawGlyph(comptime Buffer: type, buffer: *Buffer, glyph: Font.Glyph, origin: Point.Instance, operation: Buffer.DrawOperation) Error!void {
+/// Draws the specified 8x8 glyph in a solid color into the specified buffer,
+/// positioning the top left corner of the glyph at the specified point.
+/// Does not draw the glyph if any part of the glyph would be outside the buffer.
+fn drawGlyph(comptime Buffer: type, buffer: *Buffer, glyph: Font.Glyph, origin: Point.Instance, operation: Buffer.DrawOperation) void {
     const glyph_bounds = BoundingBox.new(origin.x, origin.y, origin.x + Font.glyph_width, origin.y + Font.glyph_height);
 
+    // Skip characters that are fully or partially outside the buffer.
     if (Buffer.bounds.encloses(glyph_bounds) == false) {
-        return error.GlyphOutOfBounds;
+        return;
     }
 
     var cursor = origin;
@@ -71,10 +73,7 @@ fn drawGlyph(comptime Buffer: type, buffer: *Buffer, glyph: Font.Glyph, origin: 
 }
 
 /// The possible errors from a string drawing operation.
-pub const Error = Font.Error || error{
-    /// Attempted to draw a glyph partially or entirely outside the buffer.
-    GlyphOutOfBounds,
-};
+pub const Error = Font.Error;
 
 // -- Tests --
 
@@ -122,9 +121,15 @@ fn runTests(comptime BufferFn: anytype) void {
             const Buffer = BufferFn(10, 10);
 
             var buffer = Buffer{};
+            buffer.fill(0x0);
 
-            try testing.expectError(error.GlyphOutOfBounds, drawString(Buffer, &buffer, "_", 0xB, .{ .x = -1, .y = -2 }));
-            try testing.expectError(error.GlyphOutOfBounds, drawString(Buffer, &buffer, "_", 0xB, .{ .x = 312, .y = 192 }));
+            const expected = buffer;
+
+            try drawString(Buffer, &buffer, "a", 0xB, .{ .x = -1, .y = -2 });
+            try testing.expectEqual(expected, buffer);
+
+            try drawString(Buffer, &buffer, "a", 0xB, .{ .x = 312, .y = 192 });
+            try testing.expectEqual(expected, buffer);
         }
 
         test "drawString returns error.InvalidCharacter for characters that don't have glyphs defined" {
