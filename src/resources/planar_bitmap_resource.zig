@@ -149,7 +149,6 @@ pub const Fixtures = struct {
 // -- Tests --
 
 const testing = @import("../utils/testing.zig");
-const print = @import("std").debug.print;
 
 test "Parses planar data properly" {
     const data = &Fixtures.valid_16px;

@@ -28,7 +28,7 @@ const static_limits = @import("../static_limits.zig");
 const mem = @import("std").mem;
 const fs = @import("std").fs;
 
-const log_unimplemented = @import("../utils/logging.zig").log_unimplemented;
+const log = @import("../utils/logging.zig").log;
 
 const thread_count = static_limits.thread_count;
 pub const Threads = [thread_count]Thread.Instance;
@@ -251,7 +251,7 @@ pub const Instance = struct {
     /// Start playing a music track from a specified resource.
     /// Returns an error if the resource does not exist or could not be loaded.
     pub fn playMusic(_: *Self, resource_id: ResourceID.Raw, offset: Audio.Offset, delay: Audio.Delay) !void {
-        log_unimplemented("Audio.playMusic: play #{X} at offset {} after delay {}", .{
+        log.debug("Audio.playMusic: play #{X} at offset {} after delay {}", .{
             resource_id,
             offset,
             delay,
@@ -260,18 +260,18 @@ pub const Instance = struct {
 
     /// Set on the current or subsequent music track.
     pub fn setMusicDelay(_: *Self, delay: Audio.Delay) void {
-        log_unimplemented("Audio.setMusicDelay: set delay to {}", .{delay});
+        log.debug("Audio.setMusicDelay: set delay to {}", .{delay});
     }
 
     /// Stop playing any current music track.
     pub fn stopMusic(_: *Self) void {
-        log_unimplemented("Audio.stopMusic: stop playing", .{});
+        log.debug("Audio.stopMusic: stop playing", .{});
     }
 
     /// Play a sound effect from the specified resource on the specified channel.
     /// Returns an error if the resource does not exist or could not be loaded.
     pub fn playSound(_: *Self, resource_id: ResourceID.Raw, channel: Channel.Trusted, volume: Audio.Volume, frequency: Audio.Frequency) !void {
-        log_unimplemented("Audio.playSound: play #{X} on channel {} at volume {}, frequency {}", .{
+        log.debug("Audio.playSound: play #{X} on channel {} at volume {}, frequency {}", .{
             resource_id,
             channel,
             volume,
@@ -281,7 +281,7 @@ pub const Instance = struct {
 
     /// Stop any sound effect playing on the specified channel.
     pub fn stopChannel(_: *Self, channel: Channel.Trusted) void {
-        log_unimplemented("Audio.stopChannel: stop playing on channel {}", .{channel});
+        log.debug("Audio.stopChannel: stop playing on channel {}", .{channel});
     }
 };
 

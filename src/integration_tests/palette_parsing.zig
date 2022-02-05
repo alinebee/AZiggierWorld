@@ -1,5 +1,4 @@
-//! Tests that look up polygon draw instructions and test that the corresponding
-//! polygon addresses can be parsed from Another World's original resource data.
+//! Tests that palettes are correctly parsed from Another World's original resource data.
 //! Requires that the `fixtures/dos` folder contains Another World DOS game files.
 
 const PaletteResource = @import("../resources/palette_resource.zig");
@@ -18,7 +17,6 @@ test "Parse all palettes in original game files" {
     var resource_directory = try ResourceDirectory.new(&game_dir);
     const reader = resource_directory.reader();
 
-    // For each resource, test that it can be parsed and decompressed without errors.
     for (reader.resourceDescriptors()) |descriptor| {
         if (descriptor.type != .palettes) continue;
 

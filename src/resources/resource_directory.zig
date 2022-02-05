@@ -21,6 +21,7 @@ const Filename = @import("filename.zig");
 const decode = @import("../run_length_decoder/decode.zig").decode;
 
 const introspection = @import("../utils/introspection.zig");
+const log = @import("../utils/logging.zig").log;
 
 const static_limits = @import("../static_limits.zig");
 
@@ -90,7 +91,7 @@ pub const Instance = struct {
         }
 
         const bank_file = self.openFile(.{ .bank = descriptor.bank_id }) catch |err| {
-            std.log.err("Could not open file for bank {}: {}", .{ descriptor.bank_id, err });
+            log.err("Could not open file for bank {}: {}", .{ descriptor.bank_id, err });
             return error.RepositorySpecificFailure;
         };
 
@@ -99,7 +100,7 @@ pub const Instance = struct {
         defer bank_file.close();
 
         bank_file.seekTo(descriptor.bank_offset) catch |err| {
-            std.log.err("Could not seek file for bank {} to offset {}: {}", .{ descriptor.bank_id, descriptor.bank_offset, err });
+            log.err("Could not seek file for bank {} to offset {}: {}", .{ descriptor.bank_id, descriptor.bank_offset, err });
             return error.RepositorySpecificFailure;
         };
 

@@ -1,16 +1,19 @@
-//! This file dumps data about the sizes of each game part's data.
-//! It does not test functionality and so is kept out of the main suite of integration tests.
+//! This test dumps data about the sizes of each game part's data.
+//! It does not test functionality, and so is kept out of the main suite of integration tests.
 
 const ResourceDirectory = @import("../resources/resource_directory.zig");
 const ResourceDescriptor = @import("../resources/resource_descriptor.zig");
 const GamePart = @import("../values/game_part.zig");
 
 const validFixtureDir = @import("helpers.zig").validFixtureDir;
-const debugPrint = @import("std").debug.print;
+const log = @import("../utils/logging.zig").log;
 const testing = @import("../utils/testing.zig");
-const math = @import("std").math;
+
+const std = @import("std");
 
 test "Report sizes for each game part" {
+    std.testing.log_level = .info;
+
     var game_dir = validFixtureDir() catch return;
     defer game_dir.close();
 
@@ -22,46 +25,49 @@ test "Report sizes for each game part" {
     var max_polygons_size: usize = 0;
     var max_animations_size: usize = 0;
 
+    // Uncomment to print out statistics
+    // std.testing.log_level = .info;
+
     for (GamePart.Enum.all) |part| {
         const resource_ids = part.resourceIDs();
 
-        debugPrint("\nPart: {s}\n----\n", .{@tagName(part)});
+        log.info("\nPart: {s}\n----\n", .{@tagName(part)});
 
         var total_size: usize = 0;
         const bytecode = try reader.resourceDescriptor(resource_ids.bytecode);
-        debugPrint("bytecode: #{}, {} bytes\n", .{ resource_ids.bytecode, bytecode.uncompressed_size });
+        log.info("bytecode: #{}, {} bytes\n", .{ resource_ids.bytecode, bytecode.uncompressed_size });
         total_size += bytecode.uncompressed_size;
-        max_bytecode_size = math.max(max_bytecode_size, bytecode.uncompressed_size);
+        max_bytecode_size = @maximum(max_bytecode_size, bytecode.uncompressed_size);
 
         const palettes = try reader.resourceDescriptor(resource_ids.palettes);
-        debugPrint("palette: #{}, {} bytes\n", .{ resource_ids.palettes, palettes.uncompressed_size });
+        log.info("palette: #{}, {} bytes", .{ resource_ids.palettes, palettes.uncompressed_size });
         total_size += palettes.uncompressed_size;
-        max_palettes_size = math.max(max_palettes_size, palettes.uncompressed_size);
+        max_palettes_size = @maximum(max_palettes_size, palettes.uncompressed_size);
 
         const polygons = try reader.resourceDescriptor(resource_ids.polygons);
-        debugPrint("polygons: #{}, {} bytes\n", .{ resource_ids.polygons, polygons.uncompressed_size });
+        log.info("polygons: #{}, {} bytes", .{ resource_ids.polygons, polygons.uncompressed_size });
         total_size += polygons.uncompressed_size;
-        max_polygons_size = math.max(max_polygons_size, polygons.uncompressed_size);
+        max_polygons_size = @maximum(max_polygons_size, polygons.uncompressed_size);
 
         if (resource_ids.animations) |animation_id| {
             const animations = try reader.resourceDescriptor(animation_id);
-            debugPrint("animations: #{}, {} bytes\n", .{ animation_id, animations.uncompressed_size });
+            log.info("animations: #{}, {} bytes", .{ animation_id, animations.uncompressed_size });
             total_size += animations.uncompressed_size;
-            max_animations_size = math.max(max_animations_size, animations.uncompressed_size);
+            max_animations_size = @maximum(max_animations_size, animations.uncompressed_size);
         } else {
-            debugPrint("animations: UNUSED\n", .{});
+            log.info("animations: UNUSED", .{});
         }
-        debugPrint("----\ntotal size: {} bytes\n", .{total_size});
+        log.info("----\ntotal size: {} bytes", .{total_size});
 
-        debugPrint("\n====\n", .{});
+        log.info("\n====", .{});
     }
 
-    debugPrint("\nMax sizes:\n----\n", .{});
-    debugPrint("bytecode: {} bytes\n", .{max_bytecode_size});
-    debugPrint("palettes: {} bytes\n", .{max_palettes_size});
-    debugPrint("polygons: {} bytes\n", .{max_polygons_size});
-    debugPrint("animations: {} bytes\n", .{max_animations_size});
+    log.info("\nMax sizes:\n----", .{});
+    log.info("bytecode: {} bytes", .{max_bytecode_size});
+    log.info("palettes: {} bytes", .{max_palettes_size});
+    log.info("polygons: {} bytes", .{max_polygons_size});
+    log.info("animations: {} bytes", .{max_animations_size});
 
     const max_total_size = max_bytecode_size + max_palettes_size + max_polygons_size + max_animations_size;
-    debugPrint("----\nmax possible size for game part: {} bytes\n\n", .{max_total_size});
+    log.info("----\nmax possible size for game part: {} bytes\n", .{max_total_size});
 }

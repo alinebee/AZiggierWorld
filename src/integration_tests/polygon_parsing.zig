@@ -1,4 +1,4 @@
-//! Tests that look up polygon draw instructions and test that the corresponding
+//! Looks up polygon draw instructions from bytecode and tests that the corresponding
 //! polygon addresses can be parsed from Another World's original resource data.
 //! Requires that the `fixtures/dos` folder contains Another World DOS game files.
 
@@ -14,6 +14,7 @@ const DrawBackgroundPolygon = @import("../instructions/draw_background_polygon.z
 const DrawSpritePolygon = @import("../instructions/draw_sprite_polygon.zig");
 
 const testing = @import("../utils/testing.zig");
+const log = @import("../utils/logging.zig").log;
 const validFixtureDir = @import("helpers.zig").validFixtureDir;
 const std = @import("std");
 
@@ -127,5 +128,5 @@ test "Parse polygon instructions for every game part" {
         count += try parsePolygonInstructionsForGamePart(testing.allocator, &resource_directory, game_part);
     }
 
-    std.log.debug("\n{} polygon(s) successfully parsed.\n", .{count});
+    log.info("\n{} polygon(s) successfully parsed.\n", .{count});
 }

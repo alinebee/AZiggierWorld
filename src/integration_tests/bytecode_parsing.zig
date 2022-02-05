@@ -1,4 +1,4 @@
-//! Tests that parseNextInstruction all bytecode programs from the original Another World.
+//! Tests that parseNextInstruction parses all bytecode programs from the original Another World.
 //! Requires that the `fixtures/dos` folder contains Another World DOS game files.
 
 const Instruction = @import("../instructions/instruction.zig");
@@ -8,6 +8,7 @@ const ResourceDirectory = @import("../resources/resource_directory.zig");
 
 const testing = @import("../utils/testing.zig");
 const instrospection = @import("../utils/introspection.zig");
+const log = @import("../utils/logging.zig").log;
 const validFixtureDir = @import("helpers.zig").validFixtureDir;
 const std = @import("std");
 
@@ -42,7 +43,7 @@ const ParseFailure = struct {
     }
 
     pub fn format(self: ParseFailure, comptime _: []const u8, _: std.fmt.FormatOptions, writer: anytype) !void {
-        try std.fmt.format(writer, "Resource #{} at {}\nOpcode: {s}\nBytes: {s}\nError: {s}", .{
+        try std.fmt.format(writer, "Program resource #{} at offset {}\nOpcode: {s}\nParsed bytes: {s}\nError: {s}", .{
             self.resource_id,
             self.offset,
             self.opcodeName(),
@@ -76,7 +77,7 @@ test "parseNextInstruction parses all programs in fixture bytecode" {
                 switch (instruction) {
                     // .ControlResources => |control_resources| {
                     //     switch (control_resources) {
-                    //         .start_game_part => |game_part| std.debug.print("\nGame part: {X}\n", .{game_part}),
+                    //         .start_game_part => |game_part| log.debug("\nGame part: {X}\n", .{game_part}),
                     //         else => {},
                     //     }
                     // },
@@ -95,9 +96,9 @@ test "parseNextInstruction parses all programs in fixture bytecode" {
     }
 
     if (failures.items.len > 0) {
-        std.debug.print("\n{} instruction(s) failed to parse:\n", .{failures.items.len});
+        log.err("\n{} instruction(s) failed to parse:\n", .{failures.items.len});
         for (failures.items) |failure| {
-            std.debug.print("\n{s}\n\n", .{failure});
+            log.err("\n{s}\n\n", .{failure});
         }
     }
 
