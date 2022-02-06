@@ -21,16 +21,24 @@ const max_iterations = 20;
 
 var general_purpose_allocator: std.heap.GeneralPurposeAllocator(.{}) = .{};
 
-const NoopHost = struct {
-    // Prevents spurious compile error when trying to cast *NoopHost to *anyopaque
-    _unused: usize = 0,
+/// A virtual machine host that renders each frame to a surface as soon as it is ready, with no delays.
+const RenderHost = struct {
+    surface: Video.HostSurface = undefined,
 
     const Self = @This();
 
     fn host(self: *Self) Host.Interface {
         return Host.Interface.init(self, bufferReady);
     }
-    fn bufferReady(_: *Self, _: *const Video.Instance, _: BufferID.Specific, _: Host.Milliseconds) void {}
+    fn bufferReady(self: *Self, video: *const Video.Instance, buffer_id: BufferID.Specific, _: Host.Milliseconds) void {
+        video.renderBufferToSurface(buffer_id, &self.surface) catch |err| {
+            switch (err) {
+                // The Another World intro attempts to render at least 4 times before any palette is selected.
+                error.PaletteNotSelected => log.debug("Rendered with no palette selected", .{}),
+                else => unreachable,
+            }
+        };
+    }
 };
 
 /// Execute the Another World intro until it switches to the first gameplay section or exceeds a maximum number of tics.
@@ -38,7 +46,7 @@ fn runIntro(allocator: std.mem.Allocator, game_dir: *std.fs.Dir) !void {
     const max_tics = 10000;
 
     var resource_directory = try ResourceDirectory.new(game_dir);
-    var host = NoopHost{};
+    var host = RenderHost{};
 
     const empty_input = UserInput.Instance{};
 
@@ -49,7 +57,11 @@ fn runIntro(allocator: std.mem.Allocator, game_dir: *std.fs.Dir) !void {
     while (tic_count < max_tics) : (tic_count += 1) {
         try machine.runTic(empty_input);
 
-        if (machine.scheduled_game_part != null) return;
+        // End the as soon as the intro
+        if (machine.scheduled_game_part != null) {
+            std.log.debug("Intro completed after {} tics", .{tic_count});
+            return;
+        }
     } else {
         return error.ExceededMaxTics;
     }

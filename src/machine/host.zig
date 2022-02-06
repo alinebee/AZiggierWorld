@@ -53,7 +53,7 @@ pub const Interface = struct {
 
     /// Called when the specified video subsystem has finished filling the specified buffer
     /// with frame data and is ready to display it. The host can request the contents
-    /// of the buffer into a 24-bit surface with `video.renderIntoSurface(buffer_id, surface).`
+    /// of the buffer into a 24-bit surface with `video.renderIntoSurface(buffer_id, &surface).`
     ///
     /// `delay` is the number of milliseconds that the host should continue displaying
     /// the *previous* frame before replacing it with this one.
