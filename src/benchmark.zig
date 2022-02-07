@@ -71,6 +71,9 @@ const Subject = struct {
     }
 };
 
+const max_duration_in_sec = 5;
+const max_iterations = 10_000;
+
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa.deinit();
@@ -83,7 +86,7 @@ pub fn main() !void {
         .game_dir = game_dir,
     };
 
-    const result = try measure(&subject, 20);
+    const result = try measure(&subject, max_iterations, max_duration_in_sec * std.time.ns_per_s);
 
     log.info(
         \\

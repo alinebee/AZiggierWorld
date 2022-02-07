@@ -8,8 +8,8 @@ const std = @import("std");
 pub const Result = struct {
     /// The total number of iterations.
     iterations: usize,
-    /// The total time taken for all iterations, in nanoseconds.
-    total_time: u64,
+    /// The total time spent executing all iterations, in nanoseconds.
+    total_execution_time: u64,
     /// The minimum time a single iteration took, in nanoseconds.
     min_iteration_time: u64,
     /// The maximum time a single iteration took, in nanoseconds.
@@ -22,15 +22,15 @@ pub const Result = struct {
     /// Print the results in a human-readable format.
     pub fn format(self: Result, comptime _: []const u8, _: std.fmt.FormatOptions, writer: anytype) !void {
         try std.fmt.format(writer,
-            \\Iterations: {}
-            \\Total time: {}nsec
+            \\Iterations: {} within time limit
+            \\Total execution time: {}nsec
             \\Min iteration time: {}nsec
             \\Max iteration time: {}nsec
             \\Mean iteration time: {}nsec
             \\Median iteration time: {}nsec
         , .{
             self.iterations,
-            self.total_time,
+            self.total_execution_time,
             self.min_iteration_time,
             self.max_iteration_time,
             self.mean_iteration_time,
@@ -45,45 +45,57 @@ pub const Result = struct {
 /// Parameters:
 /// subject: A struct whose execute() function implements the behavior that should be measured.
 /// max_iterations: The number of times to run the subject's execute() function. Must be at least 3.
+/// max_duration: The maximum time in nanoseconds to run the measurement for.
 ///
 /// Returns: A Result struct describing the min, max and average times of the iterations.
-pub fn measure(subject: anytype, comptime max_iterations: usize) !Result {
+pub fn measure(subject: anytype, comptime max_iterations: usize, max_duration: u64) !Result {
+    const min_iterations = 3;
+
     // We throw away the fastest and slowest samples, so we need at least 1 other iteration on top of those.
-    std.debug.assert(max_iterations >= 3);
+    std.debug.assert(max_iterations >= min_iterations);
 
     var timer = try std.time.Timer.start();
+    const start = timer.read();
 
-    var samples: [max_iterations]u64 = undefined;
+    var all_samples: [max_iterations]u64 = undefined;
+    var total_iterations: usize = 0;
 
-    for (samples) |*sample| {
-        timer.reset();
+    for (all_samples) |*sample| {
+        const lap_start = timer.read();
         try subject.execute();
-        sample.* = timer.lap();
+        const lap_end = timer.read();
+
+        sample.* = lap_end - lap_start;
+        total_iterations += 1;
+
+        // Break early if we hit the maximum time before hitting the maximum iterations
+        if (total_iterations >= min_iterations and lap_end - start >= max_duration) break;
     }
 
-    std.sort.sort(u64, &samples, {}, comptime std.sort.asc(u64));
+    const used_samples = all_samples[0..total_iterations];
+    std.sort.sort(u64, used_samples, {}, comptime std.sort.asc(u64));
 
     // Discard lowest and highest samples to allow for system noise
-    const usable_samples = samples[1 .. samples.len - 1];
+    const usable_samples = used_samples[1 .. used_samples.len - 1];
 
-    var total: u64 = 0;
-    var min: u64 = std.math.maxInt(u64);
-    var max: u64 = 0;
+    var total_execution_time: u64 = 0;
+    var min_iteration_time: u64 = std.math.maxInt(u64);
+    var max_iteration_time: u64 = 0;
 
     for (usable_samples) |sample| {
-        total += sample;
-        if (sample < min) min = sample;
-        if (sample > max) max = sample;
+        total_execution_time += sample;
+        if (sample < min_iteration_time) min_iteration_time = sample;
+        if (sample > max_iteration_time) max_iteration_time = sample;
     }
 
     const median = usable_samples[usable_samples.len / 2];
-    const mean = total / usable_samples.len;
+    const mean = total_execution_time / usable_samples.len;
 
     return Result{
-        .iterations = max_iterations,
-        .total_time = total,
-        .min_iteration_time = min,
-        .max_iteration_time = max,
+        .iterations = total_iterations,
+        .total_execution_time = total_execution_time,
+        .min_iteration_time = min_iteration_time,
+        .max_iteration_time = max_iteration_time,
         .mean_iteration_time = mean,
         .median_iteration_time = median,
     };
