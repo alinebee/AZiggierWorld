@@ -9,17 +9,12 @@ const BufferID = @import("values/buffer_id.zig");
 const UserInput = @import("machine/user_input.zig");
 
 const ensureValidFixtureDir = @import("integration_tests/helpers.zig").ensureValidFixtureDir;
+const measure = @import("utils/measure.zig").measure;
 const log = @import("utils/logging.zig").log;
 
 const std = @import("std");
 
-const Timer = std.time.Timer;
-
 pub const log_level: std.log.Level = .info;
-
-const max_iterations = 20;
-
-var general_purpose_allocator: std.heap.GeneralPurposeAllocator(.{}) = .{};
 
 /// A virtual machine host that renders each frame to a surface as soon as it is ready, with no delays.
 const RenderHost = struct {
@@ -41,84 +36,61 @@ const RenderHost = struct {
     }
 };
 
-/// Execute the Another World intro until it switches to the first gameplay section or exceeds a maximum number of tics.
-fn runIntro(allocator: std.mem.Allocator, game_dir: *std.fs.Dir) !void {
-    const max_tics = 10000;
+/// Creates a new VM and executes the Another World intro until it switches
+/// to the first gameplay section or exceeds a maximum number of tics.
+const Subject = struct {
+    allocator: std.mem.Allocator,
+    game_dir: std.fs.Dir,
+    iteration_count: usize = 0,
 
-    var resource_directory = try ResourceDirectory.new(game_dir);
-    var host = RenderHost{};
+    pub fn execute(self: *Subject) !void {
+        self.iteration_count += 1;
+        log.debug("Iteration #{}", .{self.iteration_count});
 
-    const empty_input = UserInput.Instance{};
+        const max_tics = 10000;
 
-    var machine = try Machine.new(allocator, resource_directory.reader(), host.host(), .intro_cinematic, 0);
-    defer machine.deinit();
+        var resource_directory = try ResourceDirectory.new(&self.game_dir);
+        var host = RenderHost{};
 
-    var tic_count: usize = 0;
-    while (tic_count < max_tics) : (tic_count += 1) {
-        try machine.runTic(empty_input);
+        const empty_input = UserInput.Instance{};
 
-        // End the as soon as the intro
-        if (machine.scheduled_game_part != null) {
-            std.log.debug("Intro completed after {} tics", .{tic_count});
-            return;
+        var machine = try Machine.new(self.allocator, resource_directory.reader(), host.host(), .intro_cinematic, 0);
+        defer machine.deinit();
+
+        var tic_count: usize = 0;
+        while (tic_count < max_tics) : (tic_count += 1) {
+            try machine.runTic(empty_input);
+
+            if (machine.scheduled_game_part != null) {
+                log.debug("Intro completed after {} tics", .{tic_count});
+                return;
+            }
+        } else {
+            return error.ExceededMaxTics;
         }
-    } else {
-        return error.ExceededMaxTics;
     }
-}
+};
 
 pub fn main() !void {
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    defer _ = gpa.deinit();
+
     var game_dir = try ensureValidFixtureDir();
     defer game_dir.close();
 
-    const allocator = general_purpose_allocator.allocator();
+    var subject = Subject{
+        .allocator = gpa.allocator(),
+        .game_dir = game_dir,
+    };
 
-    var samples: [max_iterations]u64 = undefined;
-
-    var timer = try Timer.start();
-    for (samples) |*iteration, iteration_count| {
-        std.log.info("Iteration #{}", .{iteration_count});
-        timer.reset();
-
-        runIntro(allocator, &game_dir) catch |err| {
-            log.warn("Iteration #{} failed with error {}", .{ iteration_count, err });
-        };
-
-        iteration.* = timer.lap();
-    }
-
-    std.sort.sort(u64, &samples, {}, comptime std.sort.asc(u64));
-
-    // Discard lowest and highest samples to account for noise
-    const usable_samples = samples[1 .. samples.len - 1];
-
-    var total: u64 = 0;
-    var min: u64 = std.math.maxInt(u64);
-    var max: u64 = 0;
-    for (usable_samples) |sample| {
-        total += sample;
-        if (sample < min) min = sample;
-        if (sample > max) max = sample;
-    }
-
-    const median = usable_samples[usable_samples.len / 2];
-    const mean = total / usable_samples.len;
+    const result = try measure(&subject, 20);
 
     log.info(
-        \\Iterations: {}
-        \\Total time: {}nsec
-        \\Min iteration time: {}nsec
-        \\Max iteration time: {}nsec
-        \\Mean iteration time: {}nsec
-        \\Median iteration time: {}nsec
-    , .{
-        max_iterations,
-        total,
-        min,
-        max,
-        mean,
-        median,
-    });
+        \\
+        \\Another World intro benchmark:
+        \\------------------------------
+        \\{}
+    , .{result});
 }
 
 const testing = @import("utils/testing.zig");
