@@ -64,11 +64,12 @@ pub const Instance = struct {
 
     const Self = @This();
 
-    // -- Virtual machine lifecycle --
+    // - Virtual machine lifecycle -
+    // The methods below are intended to be called by the host.
 
-    /// Create a new virtual machine that uses the specified allocator to allocate memory
-    /// and reads game data from the specified reader. The virtual machine will attempt
-    /// to load the resources for the specified game part.
+    /// Create a new virtual machine that uses the specified allocator to allocate memory,
+    /// reads game data from the specified reader, and sends frame-ready signals to the specified host.
+    /// At startup, the virtual machine will attempt to load the resources for the specified game part.
     /// On success, returns a machine instance that is ready to simulate.
     fn init(allocator: mem.Allocator, reader: Reader.Interface, host: Host.Interface, initial_game_part: GamePart.Enum, random_seed: Register.Unsigned) !Self {
         var memory = try Memory.new(allocator, reader);
@@ -81,7 +82,7 @@ pub const Instance = struct {
             .memory = memory,
             .host = host,
             // The video and program will be populated once the first game part is loaded.
-            // TODO: the machine shouldn't know which fields of the Video instance need to be marked undefined.
+            // FIXME: the machine shouldn't know which fields of the Video instance need to be marked undefined.
             .video = .{
                 .polygons = undefined,
                 .animations = undefined,
@@ -94,8 +95,8 @@ pub const Instance = struct {
         // Initialize registers to their expected values.
         // Copypasta from reference implementation:
         // https://github.com/fabiensanglard/Another-World-Bytecode-Interpreter/blob/master/src/vm.cpp#L37
-        self.registers.setUnsigned(.virtual_machine_startup_UNKNOWN, 0x81);
         self.registers.setUnsigned(.random_seed, random_seed);
+        self.registers.setUnsigned(.virtual_machine_startup_UNKNOWN, 0x81);
 
         // Load the resources for the initial game part.
         // This will populate the previously `undefined` program and video struct.
@@ -107,27 +108,6 @@ pub const Instance = struct {
     pub fn deinit(self: *Self) void {
         self.memory.deinit();
         self.* = undefined;
-    }
-
-    pub fn applyUserInput(self: *Self, input: UserInput.Instance) void {
-        const register_values = input.registerValues();
-
-        self.registers.setSigned(.left_right_input, register_values.left_right_input);
-        self.registers.setSigned(.up_down_input, register_values.up_down_input);
-        self.registers.setSigned(.up_down_input_2, register_values.up_down_input);
-        self.registers.setSigned(.action_input, register_values.action_input);
-        self.registers.setBitPattern(.movement_inputs, register_values.movement_inputs);
-        self.registers.setBitPattern(.all_inputs, register_values.all_inputs);
-
-        // TODO: check if the `last_pressed_character` register is read by any other game part;
-        // we may be able to unconditionally set it.
-        if (self.current_game_part == .password_entry) {
-            self.registers.setUnsigned(.last_pressed_character, register_values.last_pressed_character);
-        }
-
-        if (input.show_password_screen and self.current_game_part.allowsPasswordEntry()) {
-            self.scheduleGamePart(.password_entry);
-        }
     }
 
     /// Run the virtual machine for a single game tic.
@@ -157,28 +137,8 @@ pub const Instance = struct {
         }
     }
 
-    /// Immediately unload all resources, load the resources for the specified game part,
-    /// and prepare to execute its bytecode.
-    /// Returns an error if one or more resources do not exist or could not be loaded.
-    /// Not intended to be called outside of execution: instead call `scheduleGamePart`,
-    /// which will let the current game cycle finish executing before beginning the new
-    /// game part on the next run loop.
-    fn startGamePart(self: *Self, game_part: GamePart.Enum) !void {
-        const resource_locations = try self.memory.loadGamePart(game_part);
-        self.program = Program.new(resource_locations.bytecode);
-        self.video.setResourceLocations(resource_locations.palettes, resource_locations.polygons, resource_locations.animations);
-
-        // Deactivate and unpause all threads.
-        for (self.threads) |*thread| {
-            thread.execution_state = .inactive;
-            thread.pause_state = .running;
-        }
-        // Reset the main thread to begin execution at the start of the current program.
-        self.threads[ThreadID.main].execution_state = .{ .active = 0 };
-
-        self.current_game_part = game_part;
-        self.scheduled_game_part = null;
-    }
+    // - System calls -
+    // The methods below are only intended to be called by bytecode instructions.
 
     // -- Resource subsystem interface --
 
@@ -282,6 +242,55 @@ pub const Instance = struct {
     /// Stop any sound effect playing on the specified channel.
     pub fn stopChannel(_: *Self, channel: Channel.Trusted) void {
         log.debug("Audio.stopChannel: stop playing on channel {}", .{channel});
+    }
+
+    // - Private methods -
+
+    /// Update the machine's registers to reflect the current state of the user's input.
+    fn applyUserInput(self: *Self, input: UserInput.Instance) void {
+        const register_values = input.registerValues();
+
+        self.registers.setSigned(.left_right_input, register_values.left_right_input);
+        self.registers.setSigned(.up_down_input, register_values.up_down_input);
+        // TODO: explore why the reference implementation recorded the up/down state
+        // into two different registers, by checking which game parts read from each register.
+        self.registers.setSigned(.up_down_input_2, register_values.up_down_input);
+        self.registers.setSigned(.action_input, register_values.action_input);
+        self.registers.setBitPattern(.movement_inputs, register_values.movement_inputs);
+        self.registers.setBitPattern(.all_inputs, register_values.all_inputs);
+
+        // TODO: check if the `last_pressed_character` register is read during any other game part;
+        // we may be able to unconditionally set it.
+        if (self.current_game_part == .password_entry) {
+            self.registers.setUnsigned(.last_pressed_character, register_values.last_pressed_character);
+        }
+
+        if (input.show_password_screen and self.current_game_part.allowsPasswordEntry()) {
+            self.scheduleGamePart(.password_entry);
+        }
+    }
+
+    /// Immediately unload all resources, load the resources for the specified game part,
+    /// and prepare to execute its bytecode.
+    /// Returns an error if one or more resources do not exist or could not be loaded.
+    /// Not intended to be called during thread execution: instead call `scheduleGamePart`,
+    /// which will let the current game tic finish executing all threads before beginning
+    /// the new game part on the next run loop.
+    fn startGamePart(self: *Self, game_part: GamePart.Enum) !void {
+        const resource_locations = try self.memory.loadGamePart(game_part);
+        self.program = Program.new(resource_locations.bytecode);
+        self.video.setResourceLocations(resource_locations.palettes, resource_locations.polygons, resource_locations.animations);
+
+        // Deactivate and unpause all threads.
+        for (self.threads) |*thread| {
+            thread.execution_state = .inactive;
+            thread.pause_state = .running;
+        }
+        // Reset the main thread to begin execution at the start of the current program.
+        self.threads[ThreadID.main].execution_state = .{ .active = 0 };
+
+        self.current_game_part = game_part;
+        self.scheduled_game_part = null;
     }
 };
 

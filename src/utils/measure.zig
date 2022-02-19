@@ -62,7 +62,9 @@ pub fn measure(subject: anytype, comptime max_iterations: usize, max_duration: u
 
     for (all_samples) |*sample| {
         const lap_start = timer.read();
+
         try subject.execute();
+
         const lap_end = timer.read();
 
         sample.* = lap_end - lap_start;

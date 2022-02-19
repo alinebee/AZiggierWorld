@@ -182,7 +182,7 @@ pub const Instance = struct {
     }
 
     /// Render the contents of the specified buffer into the specified 24-bit host surface.
-    /// Returns an error and leaves the surface unchanged if palette data was corrupt.
+    /// Returns an error and leaves the surface unchanged if no palette has been chosen with `selectPalette` yet.
     pub fn renderBufferToSurface(self: Self, buffer_id: BufferID.Specific, surface: *HostSurface) !void {
         if (self.current_palette) |palette| {
             self.buffers[buffer_id].renderToSurface(surface, palette);
