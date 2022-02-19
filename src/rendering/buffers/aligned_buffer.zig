@@ -1,9 +1,9 @@
-//! This file defines a video buffer storage type that stores each 16-color pixel as a separate byte.
+//! This file defines a video buffer type that stores each 16-color pixel as a separate byte.
 //! Since pixels are aligned to byte boundaries, individual pixels can be addressed by indexing
-//! into a two-dimensional byte array, greatly simplifying draw routines compared to packed_storage.zig.
+//! into a two-dimensional byte array, greatly simplifying draw routines compared to packed_buffer.zig.
 //!
-//! As a tradeoff, storage takes twice the bytes: a 320x200 buffer takes 64,000 bytes,
-//! versus 32,000 for the packed storage implementation.
+//! As a tradeoff, buffer takes twice the bytes: a 320x200 buffer takes 64,000 bytes,
+//! versus 32,000 for the packed buffer implementation.
 
 const ColorID = @import("../../values/color_id.zig");
 const Palette = @import("../../values/palette.zig");
@@ -20,7 +20,7 @@ const mem = @import("std").mem;
 const math = @import("std").math;
 const debug = @import("std").debug;
 
-/// Returns a video buffer storage that stores a single pixel per byte.
+/// Returns a video buffer that stores a single pixel per byte.
 pub fn Instance(comptime width: usize, comptime height: usize) type {
     // Store pixel data in a two-dimensional array
     const Row = [width]ColorID.Trusted;
@@ -85,7 +85,7 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
                 };
             }
 
-            /// Given a byte-aligned range of bytes within the buffer storage, fills all pixels within those bytes
+            /// Given a byte-aligned range of bytes within the buffer, fills all pixels within those bytes
             /// using this draw operation to determine the appropriate color(s).
             /// `range` is not bounds-checked: specifying a range outside the buffer, or with a negative length,
             /// results in undefined behaviour.
@@ -133,7 +133,7 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
             mem.set(ColorID.Trusted, raw_bytes, color);
         }
 
-        /// Copy the contents of the specified storage into this one,
+        /// Copy the contents of the specified buffer into this one,
         /// positioning the top left of the destination at the specified Y offset.
         pub fn copy(self: *Self, other: *const Self, y: Point.Coordinate) void {
             // Early-out: if no offset is specified, just replace the destination with the source.
@@ -234,16 +234,16 @@ const NativeColor = ColorID.Trusted;
 
 const testing = @import("../../utils/testing.zig");
 
-test "Instance produces storage of the expected size filled with zeroes." {
-    const storage = Instance(320, 200){};
+test "Instance produces buffer of the expected size filled with zeroes." {
+    const buffer = Instance(320, 200){};
 
     const ExpectedData = [200][320]NativeColor;
 
-    try testing.expectEqual(ExpectedData, @TypeOf(storage.data));
+    try testing.expectEqual(ExpectedData, @TypeOf(buffer.data));
 
     const expected_data = mem.zeroes(ExpectedData);
 
-    try testing.expectEqual(expected_data, storage.data);
+    try testing.expectEqual(expected_data, buffer.data);
 }
 
 test "Instance handles 0 width or height gracefully" {
@@ -257,8 +257,8 @@ test "Instance handles 0 width or height gracefully" {
     try testing.expectEqual([0][0]NativeColor, @TypeOf(zero_dimensions.data));
 }
 
-const storage_test_suite = @import("../test_helpers/storage_test_suite.zig");
+const buffer_test_suite = @import("../test_helpers/buffer_test_suite.zig");
 
-test "Run storage interface tests" {
-    storage_test_suite.runTests(Instance);
+test "Run buffer interface tests" {
+    buffer_test_suite.runTests(Instance);
 }

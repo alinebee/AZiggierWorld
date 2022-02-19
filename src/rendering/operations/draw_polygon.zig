@@ -162,10 +162,10 @@ fn stepDistance(delta_x: Point.Coordinate, delta_y: TrustedVerticalDelta) FixedP
 // -- Tests --
 
 const testing = @import("../../utils/testing.zig");
-const expectPixels = @import("../test_helpers/storage_test_suite.zig").expectPixels;
+const expectPixels = @import("../test_helpers/buffer_test_suite.zig").expectPixels;
 
-/// Given a function that takes a width and a height and returns a type that implements the storage interface,
-/// test drawPolygon against that storage type.
+/// Given a function that takes a width and a height and returns a type that implements the buffer interface,
+/// test drawPolygon against that buffer type.
 fn runTests(comptime BufferFn: anytype) void {
     _ = struct {
         test "drawPolygon draws a single-unit square polygon as a dot" {
@@ -313,13 +313,13 @@ fn runTests(comptime BufferFn: anytype) void {
     };
 }
 
-const AlignedStorage = @import("../storage/aligned_storage.zig");
-const PackedStorage = @import("../storage/packed_storage.zig");
+const AlignedBuffer = @import("../buffers/aligned_buffer.zig");
+const PackedBuffer = @import("../buffers/packed_buffer.zig");
 
-test "Run tests with aligned storage" {
-    runTests(AlignedStorage.Instance);
+test "Run tests with aligned buffer" {
+    runTests(AlignedBuffer.Instance);
 }
 
-test "Run tests with packed storage" {
-    runTests(PackedStorage.Instance);
+test "Run tests with packed buffer" {
+    runTests(PackedBuffer.Instance);
 }

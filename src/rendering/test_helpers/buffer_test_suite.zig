@@ -7,7 +7,7 @@ const expectBitmap = @import("indexed_bitmap.zig").expectBitmap;
 
 // -- Test helpers --
 
-/// Compare the contents of a storage buffer against an expected string.
+/// Compare the contents of a video buffer against an expected string.
 pub fn expectPixels(expected: []const u8, actual: anytype) !void {
     const bitmap = actual.toBitmap();
     try expectBitmap(expected, bitmap);
@@ -15,22 +15,22 @@ pub fn expectPixels(expected: []const u8, actual: anytype) !void {
 
 // -- Tests --
 
-/// Given a function that takes a width and height and constructs a buffer storage type,
+/// Given a function that takes a width and height and constructs a video buffer type,
 /// runs a suite of tests against the public interface of that type.
 ///
 /// Usage:
 /// ------
-///   const storage_test_suite = @import("storage_test_suite.zig");
+///   const buffer_test_suite = @import("buffer_test_suite.zig");
 ///
-///   test "Run storage interface tests" {
-///      storage_test_suite.runTests(FnThatReturnsStorageType);
+///   test "Run buffer interface tests" {
+///      buffer_test_suite.runTests(FnThatReturnsBufferType);
 ///   }
 pub fn runTests(comptime Instance: anytype) void {
-    // Wrap the set of tests in a generic struct, where each test uses the specified storage constructor function.
+    // Wrap the set of tests in a generic struct, where each test uses the specified buffer constructor function.
     _ = struct {
         test "fill replaces all bytes in buffer with specified color" {
-            var storage = Instance(4, 4){};
-            storage.fill(0xA);
+            var buffer = Instance(4, 4){};
+            buffer.fill(0xA);
 
             const expected =
                 \\AAAA
@@ -39,89 +39,89 @@ pub fn runTests(comptime Instance: anytype) void {
                 \\AAAA
             ;
 
-            try expectPixels(expected, storage);
+            try expectPixels(expected, buffer);
         }
 
         test "uncheckedDrawSpan with byte-aligned span sets solid color in slice" {
-            const Storage = Instance(10, 3);
-            var storage = Storage{};
-            storage.fill(0x0);
+            const Buffer = Instance(10, 3);
+            var buffer = Buffer{};
+            buffer.fill(0x0);
 
-            const operation = Storage.DrawOperation.solidColor(0xD);
+            const operation = Buffer.DrawOperation.solidColor(0xD);
 
-            storage.uncheckedDrawSpan(.{ .min = 2, .max = 7 }, 1, operation);
+            buffer.uncheckedDrawSpan(.{ .min = 2, .max = 7 }, 1, operation);
 
             const expected =
                 \\0000000000
                 \\00DDDDDD00
                 \\0000000000
             ;
-            try expectPixels(expected, storage);
+            try expectPixels(expected, buffer);
         }
 
         test "uncheckedDrawSpan with non-byte-aligned start sets start pixel correctly" {
-            const Storage = Instance(10, 3);
-            var storage = Storage{};
-            storage.fill(0x0);
+            const Buffer = Instance(10, 3);
+            var buffer = Buffer{};
+            buffer.fill(0x0);
 
-            const operation = Storage.DrawOperation.solidColor(0xC);
+            const operation = Buffer.DrawOperation.solidColor(0xC);
 
-            storage.uncheckedDrawSpan(.{ .min = 1, .max = 7 }, 1, operation);
+            buffer.uncheckedDrawSpan(.{ .min = 1, .max = 7 }, 1, operation);
 
             const expected =
                 \\0000000000
                 \\0CCCCCCC00
                 \\0000000000
             ;
-            try expectPixels(expected, storage);
+            try expectPixels(expected, buffer);
         }
 
         test "uncheckedDrawSpan with non-byte-aligned end sets end pixel correctly" {
-            const Storage = Instance(10, 3);
-            var storage = Storage{};
-            storage.fill(0x0);
+            const Buffer = Instance(10, 3);
+            var buffer = Buffer{};
+            buffer.fill(0x0);
 
-            const operation = Storage.DrawOperation.solidColor(0x3);
+            const operation = Buffer.DrawOperation.solidColor(0x3);
 
-            storage.uncheckedDrawSpan(.{ .min = 2, .max = 8 }, 1, operation);
+            buffer.uncheckedDrawSpan(.{ .min = 2, .max = 8 }, 1, operation);
 
             const expected =
                 \\0000000000
                 \\0033333330
                 \\0000000000
             ;
-            try expectPixels(expected, storage);
+            try expectPixels(expected, buffer);
         }
 
         test "uncheckedDrawSpan with non-byte-aligned start and end sets start and end pixels correctly" {
-            const Storage = Instance(10, 3);
-            var storage = Storage{};
-            storage.fill(0x0);
+            const Buffer = Instance(10, 3);
+            var buffer = Buffer{};
+            buffer.fill(0x0);
 
-            const operation = Storage.DrawOperation.solidColor(0x7);
+            const operation = Buffer.DrawOperation.solidColor(0x7);
 
-            storage.uncheckedDrawSpan(.{ .min = 1, .max = 8 }, 1, operation);
+            buffer.uncheckedDrawSpan(.{ .min = 1, .max = 8 }, 1, operation);
 
             const expected =
                 \\0000000000
                 \\0777777770
                 \\0000000000
             ;
-            try expectPixels(expected, storage);
+            try expectPixels(expected, buffer);
         }
 
         test "uncheckedDrawSpan highlights colors in slice" {
-            const Storage = Instance(16, 3);
-            var storage = Storage{};
-            storage.fillFromString(
+            const Buffer = Instance(16, 3);
+            var buffer = Buffer{};
+            buffer.fillFromString(
                 \\0123456789ABCDEF
                 \\0123456789ABCDEF
                 \\0123456789ABCDEF
             );
 
-            const operation = Storage.DrawOperation.highlight();
+            const operation = Buffer.DrawOperation.highlight();
 
-            storage.uncheckedDrawSpan(.{ .min = 0, .max = 15 }, 1, operation);
+            buffer.uncheckedDrawSpan(.{ .min = 0, .max = 15 }, 1, operation);
 
             // Colors from 0-7 should have been ramped up to 8-F;
             // Colors from 8-F should have been left as they were.
@@ -130,37 +130,37 @@ pub fn runTests(comptime Instance: anytype) void {
                 \\89ABCDEF89ABCDEF
                 \\0123456789ABCDEF
             ;
-            try expectPixels(expected, storage);
+            try expectPixels(expected, buffer);
         }
 
         test "uncheckedDrawSpan replaces colors in slice with mask" {
-            const Storage = Instance(10, 3);
-            var storage = Storage{};
-            storage.fill(0x0);
+            const Buffer = Instance(10, 3);
+            var buffer = Buffer{};
+            buffer.fill(0x0);
 
-            var mask_storage = Storage{};
-            mask_storage.fillFromString(
+            var mask_buffer = Buffer{};
+            mask_buffer.fillFromString(
                 \\0123456789
                 \\9876543210
                 \\0123456789
             );
 
-            const operation = Storage.DrawOperation.mask(&mask_storage);
+            const operation = Buffer.DrawOperation.mask(&mask_buffer);
 
-            storage.uncheckedDrawSpan(.{ .min = 3, .max = 6 }, 1, operation);
+            buffer.uncheckedDrawSpan(.{ .min = 3, .max = 6 }, 1, operation);
 
             const expected =
                 \\0000000000
                 \\0006543000
                 \\0000000000
             ;
-            try expectPixels(expected, storage);
+            try expectPixels(expected, buffer);
         }
 
         test "copy replaces contents of destination buffer when offset is 0" {
-            const Storage = Instance(4, 4);
-            var source = Storage{};
-            var destination = Storage{};
+            const Buffer = Instance(4, 4);
+            var source = Buffer{};
+            var destination = Buffer{};
 
             source.fillFromString(
                 \\0123
@@ -183,9 +183,9 @@ pub fn runTests(comptime Instance: anytype) void {
         }
 
         test "copy copies contents of destination buffer into correct positive offset" {
-            const Storage = Instance(4, 4);
-            var source = Storage{};
-            var destination = Storage{};
+            const Buffer = Instance(4, 4);
+            var source = Buffer{};
+            var destination = Buffer{};
 
             source.fillFromString(
                 \\0123
@@ -209,9 +209,9 @@ pub fn runTests(comptime Instance: anytype) void {
         }
 
         test "copy copies contents of destination buffer into correct negative offset" {
-            const Storage = Instance(4, 4);
-            var source = Storage{};
-            var destination = Storage{};
+            const Buffer = Instance(4, 4);
+            var source = Buffer{};
+            var destination = Buffer{};
 
             source.fillFromString(
                 \\0123
@@ -235,9 +235,9 @@ pub fn runTests(comptime Instance: anytype) void {
         }
 
         test "copy copies does nothing when offset is too far above the top of the buffer" {
-            const Storage = Instance(4, 4);
-            var source = Storage{};
-            var destination = Storage{};
+            const Buffer = Instance(4, 4);
+            var source = Buffer{};
+            var destination = Buffer{};
 
             source.fillFromString(
                 \\0123
@@ -260,9 +260,9 @@ pub fn runTests(comptime Instance: anytype) void {
         }
 
         test "copy copies does nothing when offset is too far below the bottom of the buffer" {
-            const Storage = Instance(4, 4);
-            var source = Storage{};
-            var destination = Storage{};
+            const Buffer = Instance(4, 4);
+            var source = Buffer{};
+            var destination = Buffer{};
 
             source.fillFromString(
                 \\0123
@@ -286,9 +286,9 @@ pub fn runTests(comptime Instance: anytype) void {
 
         test "loadBitmapResource correctly parses planar bitmap data" {
             const data = &PlanarBitmapResource.Fixtures.valid_16px;
-            const Storage = Instance(4, 4);
+            const Buffer = Instance(4, 4);
 
-            var buffer = Storage{};
+            var buffer = Buffer{};
             try buffer.loadBitmapResource(data);
 
             const expected =
@@ -302,10 +302,10 @@ pub fn runTests(comptime Instance: anytype) void {
         }
 
         test "renderToSurface correctly renders 24-bit colors from specified palette" {
-            const Storage = Instance(4, 4);
+            const Buffer = Instance(4, 4);
             const DestinationSurface = Surface.Instance(4, 4);
 
-            var source = Storage{};
+            var source = Buffer{};
             var destination: DestinationSurface = undefined;
 
             source.fillFromString(

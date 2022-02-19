@@ -10,7 +10,7 @@ const Surface = @import("../rendering/surface.zig");
 const PolygonResource = @import("../resources/polygon_resource.zig");
 const PaletteResource = @import("../resources/palette_resource.zig");
 
-const PackedStorage = @import("../rendering/storage/packed_storage.zig");
+const PackedBuffer = @import("../rendering/buffers/packed_buffer.zig");
 const drawPolygonImpl = @import("../rendering/operations/draw_polygon.zig").drawPolygon;
 const drawStringImpl = @import("../rendering/operations/draw_string.zig").drawString;
 const Host = @import("host.zig");
@@ -39,7 +39,7 @@ pub const Milliseconds = usize;
 pub const PolygonAddress = PolygonResource.Address;
 
 /// The type used for the video buffers.
-const Buffer = PackedStorage.Instance(static_limits.virtual_screen_width, static_limits.virtual_screen_height);
+const Buffer = PackedBuffer.Instance(static_limits.virtual_screen_width, static_limits.virtual_screen_height);
 
 /// The type of 24-bit buffer that hosts are expected to provide for the video subsystem to render frames into.
 pub const HostSurface = Surface.Instance(static_limits.virtual_screen_width, static_limits.virtual_screen_height);

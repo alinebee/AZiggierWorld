@@ -1,4 +1,4 @@
-//! This file defines a video buffer storage type that matches the reference implementation's
+//! This file defines a video buffer type that matches the reference implementation's
 //! memory-saving technique of packing 2 16-color pixels into each byte of the buffer:
 //! This makes a 320x200 buffer only require 32,000 bytes instead of 64,0000.
 //!
@@ -25,7 +25,7 @@ const std = @import("std");
 const mem = std.mem;
 const math = std.math;
 
-/// Returns a video buffer storage that packs 2 pixels into a single byte,
+/// Returns a video buffer that packs 2 pixels into a single byte,
 /// like the original Another World's buffers did.
 pub fn Instance(comptime width: usize, comptime height: usize) type {
     const bytes_per_row = comptime try math.divCeil(usize, width, 2);
@@ -96,7 +96,7 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
                 self.draw_index_fn(self, buffer, index);
             }
 
-            /// Given a byte-aligned range of bytes within the buffer storage, fills all pixels within those bytes
+            /// Given a byte-aligned range of bytes within the buffer, fills all pixels within those bytes
             /// using this draw operation to determine the appropriate color(s).
             /// `range` is not bounds-checked: specifying a range outside the buffer, or with a negative length,
             /// results in undefined behaviour.
@@ -184,7 +184,7 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
             mem.set(NativeColor, &self.data, native_color);
         }
 
-        /// Copy the contents of the specified storage into this one,
+        /// Copy the contents of the specified buffer into this one,
         /// positioning the top left of the destination at the specified Y offset.
         pub fn copy(self: *Self, other: *const Self, y: Point.Coordinate) void {
             // Early-out: if no offset is specified, replace the contents of the destination with the source.
@@ -294,7 +294,7 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
         pub fn toBitmap(self: Self) IndexedBitmap.Instance(width, height) {
             var bitmap: IndexedBitmap.Instance(width, height) = .{ .data = undefined };
 
-            // TODO: this would probably be more efficient if we iterated the storage's data
+            // TODO: this would probably be more efficient if we iterated the buffer's data
             // instead of the bitmap's. But, this function is only used in tests right now.
             for (bitmap.data) |*row, y| {
                 for (row) |*column, x| {
@@ -362,7 +362,7 @@ fn highlightedColor(color: NativeColor) NativeColor {
     return @bitCast(NativeColor, ColorID.highlightByte(@bitCast(u8, color)));
 }
 
-/// The storage index for a pixel at a given X,Y point.
+/// The buffer index for a pixel at a given X,Y point.
 const Index = struct {
     /// The offset of the byte containing the pixel.
     offset: usize,
@@ -377,20 +377,20 @@ const Index = struct {
 
 const testing = @import("../../utils/testing.zig");
 
-test "Instance produces storage of the expected size filled with zeroes." {
-    const storage = Instance(320, 200){};
+test "Instance produces buffer of the expected size filled with zeroes." {
+    const buffer = Instance(320, 200){};
 
-    try testing.expectEqual(32_000, storage.data.len);
+    try testing.expectEqual(32_000, buffer.data.len);
 
-    const expected_data = [_]NativeColor{filledColor(0)} ** storage.data.len;
+    const expected_data = [_]NativeColor{filledColor(0)} ** buffer.data.len;
 
-    try testing.expectEqual(expected_data, storage.data);
+    try testing.expectEqual(expected_data, buffer.data);
 }
 
-test "Instance rounds up storage size for uneven widths." {
-    const storage = Instance(319, 199){};
+test "Instance rounds up buffer size for uneven widths." {
+    const buffer = Instance(319, 199){};
     const expected = 31_840; // 160 x 199
-    try testing.expectEqual(expected, storage.data.len);
+    try testing.expectEqual(expected, buffer.data.len);
 }
 
 test "Instance handles 0 width or height gracefully" {
@@ -405,22 +405,22 @@ test "Instance handles 0 width or height gracefully" {
 }
 
 test "uncheckedIndexOf returns expected offset and handedness" {
-    const Storage = Instance(320, 200);
+    const Buffer = Instance(320, 200);
 
-    try testing.expectEqual(.{ .offset = 0, .hand = .left }, Storage.uncheckedIndexOf(.{ .x = 0, .y = 0 }));
-    try testing.expectEqual(.{ .offset = 0, .hand = .right }, Storage.uncheckedIndexOf(.{ .x = 1, .y = 0 }));
-    try testing.expectEqual(.{ .offset = 1, .hand = .left }, Storage.uncheckedIndexOf(.{ .x = 2, .y = 0 }));
-    try testing.expectEqual(.{ .offset = 159, .hand = .right }, Storage.uncheckedIndexOf(.{ .x = 319, .y = 0 }));
-    try testing.expectEqual(.{ .offset = 160, .hand = .left }, Storage.uncheckedIndexOf(.{ .x = 0, .y = 1 }));
+    try testing.expectEqual(.{ .offset = 0, .hand = .left }, Buffer.uncheckedIndexOf(.{ .x = 0, .y = 0 }));
+    try testing.expectEqual(.{ .offset = 0, .hand = .right }, Buffer.uncheckedIndexOf(.{ .x = 1, .y = 0 }));
+    try testing.expectEqual(.{ .offset = 1, .hand = .left }, Buffer.uncheckedIndexOf(.{ .x = 2, .y = 0 }));
+    try testing.expectEqual(.{ .offset = 159, .hand = .right }, Buffer.uncheckedIndexOf(.{ .x = 319, .y = 0 }));
+    try testing.expectEqual(.{ .offset = 160, .hand = .left }, Buffer.uncheckedIndexOf(.{ .x = 0, .y = 1 }));
 
-    try testing.expectEqual(.{ .offset = 16_080, .hand = .left }, Storage.uncheckedIndexOf(.{ .x = 160, .y = 100 }));
-    try testing.expectEqual(.{ .offset = 31_840, .hand = .left }, Storage.uncheckedIndexOf(.{ .x = 0, .y = 199 }));
-    try testing.expectEqual(.{ .offset = 31_999, .hand = .right }, Storage.uncheckedIndexOf(.{ .x = 319, .y = 199 }));
+    try testing.expectEqual(.{ .offset = 16_080, .hand = .left }, Buffer.uncheckedIndexOf(.{ .x = 160, .y = 100 }));
+    try testing.expectEqual(.{ .offset = 31_840, .hand = .left }, Buffer.uncheckedIndexOf(.{ .x = 0, .y = 199 }));
+    try testing.expectEqual(.{ .offset = 31_999, .hand = .right }, Buffer.uncheckedIndexOf(.{ .x = 319, .y = 199 }));
 }
 
 // zig fmt: off
 test "toBitmap returns bitmap with expected contents" {
-    const storage = Instance(4, 4){
+    const buffer = Instance(4, 4){
         .data = @bitCast([8]NativeColor, [_]u8{
             0x01, 0x23,
             0x45, 0x67,
@@ -436,12 +436,12 @@ test "toBitmap returns bitmap with expected contents" {
         \\CDEF
     ;
 
-    try IndexedBitmap.expectBitmap(expected, storage.toBitmap());
+    try IndexedBitmap.expectBitmap(expected, buffer.toBitmap());
 }
 
 test "fromString fills buffer with expected contents" {
-    var storage = Instance(4, 4){};
-    storage.fillFromString(
+    var buffer = Instance(4, 4){};
+    buffer.fillFromString(
         \\0123
         \\4567
         \\89AB
@@ -455,12 +455,12 @@ test "fromString fills buffer with expected contents" {
         0xCD, 0xEF,
     });
 
-    try testing.expectEqual(expected, storage.data);
+    try testing.expectEqual(expected, buffer.data);
 }
 // zig fmt: on
 
-const storage_test_suite = @import("../test_helpers/storage_test_suite.zig");
+const buffer_test_suite = @import("../test_helpers/buffer_test_suite.zig");
 
-test "Run storage interface tests" {
-    storage_test_suite.runTests(Instance);
+test "Run buffer interface tests" {
+    buffer_test_suite.runTests(Instance);
 }
