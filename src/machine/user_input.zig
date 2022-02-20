@@ -74,7 +74,7 @@ pub const Instance = struct {
     }
 };
 
-/// The register values corresponding to the current input state.
+/// The Another World register values corresponding to an input state.
 pub const RegisterValues = struct {
     /// The value to insert into `RegisterID.up_down_input`.
     /// Will be -1 if left is active, 1 if right is active, 0 if neither is active.
@@ -85,11 +85,11 @@ pub const RegisterValues = struct {
     left_right_input: Register.Signed = 0,
 
     /// The value to insert into `RegisterID.action_input`.
-    /// Will be 0 if action is active, 0 otherwise.
+    /// Will be 1 if action is active, 0 otherwise.
     action_input: Register.Signed = 0,
 
     /// The value to insert into `RegisterID.movement_inputs`.
-    /// Bitflags of the currently active movement directions:
+    /// Contains bitflags of the currently active movement directions:
     /// Bits 0, 1, 2, 3 correspond to right, left, down, up.
     movement_inputs: Register.BitPattern = 0b0000,
 

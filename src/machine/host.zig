@@ -1,5 +1,5 @@
 //! Provides a standard interface for an Another World virtual machine to communicate
-//! with the host environment by sending video and audio output and polling for player input.
+//! with the host environment by sending it video and audio output.
 
 const std = @import("std");
 const assert = std.debug.assert;
@@ -9,7 +9,7 @@ const Video = @import("video.zig");
 pub const Milliseconds = Video.Milliseconds;
 
 /// An interface that the virtual machine uses to communicate with the host.
-/// The host handles video and audio output from the virtual machine as well as input from the player.
+/// The host handles video and audio output from the virtual machine.
 pub const Interface = struct {
     implementation: *anyopaque,
     vtable: *const TypeErasedVTable,
@@ -53,7 +53,7 @@ pub const Interface = struct {
 
     /// Called when the specified video subsystem has finished filling the specified buffer
     /// with frame data and is ready to display it. The host can request the contents
-    /// of the buffer into a 24-bit surface with `video.renderIntoSurface(buffer_id, &surface).`
+    /// of the buffer to be rendered into a 24-bit surface using `video.renderIntoSurface(buffer_id, &surface).`
     ///
     /// `delay` is the number of milliseconds that the host should continue displaying
     /// the *previous* frame before replacing it with this one.

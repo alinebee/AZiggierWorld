@@ -5,20 +5,21 @@
 //! https://github.com/fabiensanglard/Another-World-Bytecode-Interpreter/blob/master/src/sysImplementation.cpp#L88-L90
 //!
 //! That algorithm uses bit-shifting to spread each 4-bit channel value out to 8 bits,
-//! and produces colors where the lower 2 bits of each channel are 0. This results in
-//! a jagged color ramp where the full range of 0...15 maps to 0...252 instead of 0...255.
+//! and it produces colors where the lower 2 bits of each channel are always 0. This results
+//! in a jagged color ramp where the full range of 0...15 maps to 0...252 instead of 0...255.
 //!
 //! The algorithm was probably adapted directly from the MS-DOS port of the game,
 //! which targeted the VGA adapter: VGA used 6 bits per channel rather than 8.
 //! https://en.wikipedia.org/wiki/Video_Graphics_Array
 //!
-//! We could get a smooth ramp that covers the full range by simply multiplying the 4-bit
-//! values by 17, since 17 * 15 == 255. For now though, this sticks with the original algorithm
-//! under the assumption that it better matches the rendering of the original MS-DOS game.
+//! The reference implementation first spread colors evenly out to 6 bits, then shifted
+//! to get to 8. We could get a smooth ramp that covers the full range by simply multiplying
+//! the 4-bit values by 17, since 17 * 15 == 255. For now though, this sticks with the original
+//! algorithm under the assumption that it better matches the rendering of the original MS-DOS game.
 //!
 //! (This may be an erroneous assumption: the 6-bit-per-channel values would have covered
-//! their full range too, and it's inaccurate to widen them to 8 bits by leaving the lower
-//! 2 bits empty.)
+//! the full VGA gamut, so it's inaccurate to widen them to an 8-bit-per-channel gamut
+//! by leaving the lower 2 bits empty.)
 
 /// A 24-bit color value parsed from Another World's resource data.
 pub const Instance = struct {

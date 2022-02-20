@@ -5,13 +5,14 @@
 //! the stack will be decremented and program execution will resume from the return address.
 //!
 //! In Another World's VM, the stack is thread-specific and will be cleared between threads.
+//! The reference implementation supported a maximum stack depth of 64:
+//! https://github.com/fabiensanglard/Another-World-Bytecode-Interpreter/blob/master/src/vm.h#L81
+//! However, it's not clear that the stack depth will ever exceed 1 in the original DOS bytecode
+//! (i.e. the game may never use nested subroutines).
 
 const Address = @import("../values/address.zig");
 const static_limits = @import("../static_limits.zig");
 
-/// The maximum number of subroutines that can be on the stack.
-/// This matches the reference implementation:
-/// https://github.com/fabiensanglard/Another-World-Bytecode-Interpreter/blob/master/src/vm.h#L81
 pub const max_depth = static_limits.max_stack_depth;
 
 /// Represents the state of the program execution stack.
