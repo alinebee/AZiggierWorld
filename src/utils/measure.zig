@@ -4,37 +4,39 @@
 
 const std = @import("std");
 
+const Nanoseconds = u64;
+
 /// The result of a measure operation.
 pub const Result = struct {
     /// The total number of iterations.
     iterations: usize,
-    /// The total time spent executing all iterations, in nanoseconds.
-    total_execution_time: u64,
-    /// The minimum time a single iteration took, in nanoseconds.
-    min_iteration_time: u64,
-    /// The maximum time a single iteration took, in nanoseconds.
-    max_iteration_time: u64,
-    /// The mean time a single iteration took, in nanoseconds.
-    mean_iteration_time: u64,
-    /// The median time a single iteration took, in nanoseconds.
-    median_iteration_time: u64,
+    /// The total time in ns spent executing all iterations.
+    total_execution_time: Nanoseconds,
+    /// The minimum time in ns that a single iteration took.
+    min_iteration_time: Nanoseconds,
+    /// The maximum time in ns that a single iteration took.
+    max_iteration_time: Nanoseconds,
+    /// The mean time in ns that a single iteration took.
+    mean_iteration_time: Nanoseconds,
+    /// The median time in ns that a single iteration took.
+    median_iteration_time: Nanoseconds,
 
     /// Print the results in a human-readable format.
     pub fn format(self: Result, comptime _: []const u8, _: std.fmt.FormatOptions, writer: anytype) !void {
         try std.fmt.format(writer,
             \\Iterations: {} within time limit
-            \\Total execution time: {}nsec
-            \\Min iteration time: {}nsec
-            \\Max iteration time: {}nsec
-            \\Mean iteration time: {}nsec
-            \\Median iteration time: {}nsec
+            \\Total execution time: {d:.2}ms
+            \\Min iteration time: {d:.2}ms
+            \\Max iteration time: {d:.2}ms
+            \\Mean iteration time: {d:.2}ms
+            \\Median iteration time: {d:.2}ms
         , .{
             self.iterations,
-            self.total_execution_time,
-            self.min_iteration_time,
-            self.max_iteration_time,
-            self.mean_iteration_time,
-            self.median_iteration_time,
+            @intToFloat(f64, self.total_execution_time) / std.time.ns_per_ms,
+            @intToFloat(f64, self.min_iteration_time) / std.time.ns_per_ms,
+            @intToFloat(f64, self.max_iteration_time) / std.time.ns_per_ms,
+            @intToFloat(f64, self.mean_iteration_time) / std.time.ns_per_ms,
+            @intToFloat(f64, self.median_iteration_time) / std.time.ns_per_ms,
         });
     }
 };
