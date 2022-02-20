@@ -17,7 +17,7 @@
 //! Another optimization was to draw polygons with 4 vertices that were 1 pixel tall and wide after scaling
 //! as single-pixel dots.
 //!
-//! (See video_buffer.zig for the draw algorithm.)
+//! (See draw_polygon.zig for the draw algorithm.)
 
 const Point = @import("../values/point.zig");
 const DrawMode = @import("../values/draw_mode.zig");

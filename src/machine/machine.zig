@@ -1,3 +1,33 @@
+//! Represents a virtual machine that loads and executes Another World game data.
+//!
+//! The virtual machine comprises several pieces of state:
+//! - The program for the currently-loaded part of the game.
+//! - A bank of 256 "registers", used to track game state and player input.
+//! - A list of 64 "threads", which each execute their own block of the current program
+//!   and then yield control to the next active thread.
+//! - A list of the memory addresses of each currently-loaded resource
+//!   (polygon data, audio and bytecode).
+//! - A set of 4 320x200x16 video buffers that the game draws polygons and fonts into.
+//! - Sundry state like the currently-loaded palette, active draw buffer, subroutine stack,
+//!   and next game part to load.
+//!
+//! (See https://fabiensanglard.net/anotherWorld_code_review/index.php for a detailed exploration
+//! of this architecture.)
+//!
+//! The virtual machine does not know how to interact with the host operating system directly.
+//! Instead, a host process is expected to:
+//! - create a window or rendering surface in the host OS to display video output,
+//! - manage an event loop in the host OS to process user input,
+//! - provide a reader for a source of binary game data (e.g. a filesystem directory),
+//! - create a new virtual machine, and finally
+//! - run the virtual machine's runTic function in a loop until the player exits the game.
+//!
+//! On each game tic, the virtual machine will produce zero or more frames of video output,
+//! notifying the host process that each new frame is ready via a callback function: see `host.zig`.
+//! Each frame has a delay determining how long the previous frame should be left on-screen:
+//! the host is expected to sleep for that long before allowing execution to continue, which indirectly
+//! decides the framerate of the game.
+
 const ThreadID = @import("../values/thread_id.zig");
 const BufferID = @import("../values/buffer_id.zig");
 const ResourceID = @import("../values/resource_id.zig");
@@ -52,13 +82,13 @@ pub const Instance = struct {
     /// The current state of resources loaded into memory.
     memory: Memory.Instance,
 
-    /// The host which the machine will send video and audio output to and read player input from.
+    /// The host which the machine will send video and audio output to.
     host: Host.Interface,
 
     /// The currently-active game part.
     current_game_part: GamePart.Enum,
 
-    /// The next game part that has been scheduled to be started by a program instruction.
+    /// The game part that has been scheduled to start on the next game tic.
     /// Null if no game part is scheduled.
     scheduled_game_part: ?GamePart.Enum = null,
 
@@ -68,9 +98,9 @@ pub const Instance = struct {
     // The methods below are intended to be called by the host.
 
     /// Create a new virtual machine that uses the specified allocator to allocate memory,
-    /// reads game data from the specified reader, and sends frame-ready signals to the specified host.
+    /// reads game data from the specified reader, and sends video and audio output to the specified host.
     /// At startup, the virtual machine will attempt to load the resources for the specified game part.
-    /// On success, returns a machine instance that is ready to simulate.
+    /// On success, returns a machine instance that is ready to begin simulating.
     fn init(allocator: mem.Allocator, reader: Reader.Interface, host: Host.Interface, initial_game_part: GamePart.Enum, random_seed: Register.Unsigned) !Self {
         var memory = try Memory.new(allocator, reader);
         errdefer memory.deinit();
@@ -81,7 +111,7 @@ pub const Instance = struct {
             .stack = .{},
             .memory = memory,
             .host = host,
-            // The video and program will be populated once the first game part is loaded.
+            // The video and program will be populated once the first game part is loaded at the end of this function.
             // FIXME: the machine shouldn't know which fields of the Video instance need to be marked undefined.
             .video = .{
                 .polygons = undefined,

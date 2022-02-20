@@ -77,7 +77,7 @@ pub fn parse(_: Opcode.Raw, program: *Program.Instance) ParseError!Instance {
     self.address = try program.read(Address.Raw);
 
     // Do failable parsing *after* loading all the bytes that this instruction would normally consume;
-    // This way, tests that recover from failed parsing will parse the rest of the bytecode correctly.
+    // This way, tests that recover from failed parsing can parse the rest of the program correctly.
     self.comparison = try Comparison.parse(raw_comparison);
 
     return self;
