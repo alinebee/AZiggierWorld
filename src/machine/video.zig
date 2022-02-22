@@ -448,7 +448,7 @@ test "renderBufferToSurface returns error.PaletteNotSelected and leaves surface 
     instance.buffers[buffer_id].fill(0);
 
     // This color is not present in the palette and should never be rendered normally
-    const untouched_color = .{ .r = 1, .g = 2, .b = 3 };
+    const untouched_color = .{ .r = 1, .g = 2, .b = 3, .a = 0 };
 
     var surface: HostSurface = Surface.filled(HostSurface, untouched_color);
     const expected_surface = surface;

@@ -1,5 +1,5 @@
 //! This file defines types and functions for converting from Another World's 12-bit RGB
-//! palette data into 24-bit colors that can be consumed by the emulator's host.
+//! palette data into 32-bit colors that can be more easily consumed by the emulator's host.
 //!
 //! The conversion from 4-bit channels to 8-bit matches the reference implementation here:
 //! https://github.com/fabiensanglard/Another-World-Bytecode-Interpreter/blob/master/src/sysImplementation.cpp#L88-L90
@@ -21,11 +21,12 @@
 //! the full VGA gamut, so it's inaccurate to widen them to an 8-bit-per-channel gamut
 //! by leaving the lower 2 bits empty.)
 
-/// A 24-bit color value parsed from Another World's resource data.
-pub const Instance = struct {
+/// A 32-bit color value parsed from Another World's resource data.
+pub const Instance = packed struct {
     r: u8,
     g: u8,
     b: u8,
+    a: u8,
 };
 
 /// Color values are stored in resource data as 16-bit big-endian integers.
@@ -45,6 +46,7 @@ pub fn parse(raw: Raw) Instance {
         .r = spread(raw_r),
         .g = spread(raw_g),
         .b = spread(raw_b),
+        .a = 255,
     };
 }
 
@@ -96,11 +98,11 @@ test "spread converts 4-bit values to expected 8-bit values" {
 
 test "parse converts 12-bit colors to expected 24-bit colors" {
     // zig fmt: off
-    try testing.expectEqual(.{ .r = 252, .g = 0,   .b = 0 },    parse(Fixtures.red));
-    try testing.expectEqual(.{ .r = 0,   .g = 252, .b = 0 },    parse(Fixtures.green));
-    try testing.expectEqual(.{ .r = 0,   .g = 0,   .b = 252 },  parse(Fixtures.blue));
-    try testing.expectEqual(.{ .r = 252, .g = 252, .b = 252 },  parse(Fixtures.white));
-    try testing.expectEqual(.{ .r = 136, .g = 136, .b = 136 },  parse(Fixtures.grey));
-    try testing.expectEqual(.{ .r = 0,   .g = 0,   .b = 0 },    parse(Fixtures.black));
+    try testing.expectEqual(.{ .r = 252, .g = 0,   .b = 0, .a = 255 },    parse(Fixtures.red));
+    try testing.expectEqual(.{ .r = 0,   .g = 252, .b = 0, .a = 255 },    parse(Fixtures.green));
+    try testing.expectEqual(.{ .r = 0,   .g = 0,   .b = 252, .a = 255 },  parse(Fixtures.blue));
+    try testing.expectEqual(.{ .r = 252, .g = 252, .b = 252, .a = 255 },  parse(Fixtures.white));
+    try testing.expectEqual(.{ .r = 136, .g = 136, .b = 136, .a = 255 },  parse(Fixtures.grey));
+    try testing.expectEqual(.{ .r = 0,   .g = 0,   .b = 0, .a = 255 },    parse(Fixtures.black));
     // zig fmt: on
 }

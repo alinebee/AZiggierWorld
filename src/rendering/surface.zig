@@ -20,7 +20,7 @@ const testing = @import("../utils/testing.zig");
 test "Instance matches the size of a raw u8 buffer" {
     const width = 320;
     const height = 200;
-    const expected_size = width * height * 3;
+    const expected_size = width * height * 4;
 
     const RawType = [expected_size]u8;
     const SurfaceType = Instance(width, height);
@@ -31,7 +31,7 @@ test "Instance matches the size of a raw u8 buffer" {
 
 test "filled fills entire buffer with specified color" {
     const SurfaceType = Instance(10, 10);
-    const color = Color.Instance{ .r = 1, .g = 2, .b = 3 };
+    const color = Color.Instance{ .r = 1, .g = 2, .b = 3, .a = 255 };
 
     var expected: SurfaceType = undefined;
     mem.set(Color.Instance, &expected, color);
