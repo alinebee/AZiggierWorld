@@ -6,22 +6,22 @@ const intToEnum = @import("../utils/introspection.zig").intToEnum;
 /// cinematics, or menu screens. The VM can have a single game part loaded and running at a time.
 // zig fmt: off
 pub const Enum = enum(Raw) {
-    copy_protection = 0x3E80,
-    intro_cinematic = 0x3E81,
+    copy_protection     = 0x3E80,
+    intro_cinematic     = 0x3E81,
     /// Starting in tentacle pool, escaping from beast
-    gameplay1       = 0x3E82,
+    gameplay1           = 0x3E82,
     /// Breaking out of prison
-    gameplay2       = 0x3E83,
+    gameplay2           = 0x3E83,
     /// Fleeing through the caves
-    gameplay3       = 0x3E84,
+    gameplay3           = 0x3E84,
     /// Arena in giant vehicle
-    arena_cinematic = 0x3E85,
+    arena_cinematic     = 0x3E85,
     /// Final gameplay section
-    gameplay4       = 0x3E86,
-    /// Credits sequence?
-    gameplay5       = 0x3E87,
+    gameplay4           = 0x3E86,
+    /// Ending and credits sequence
+    ending_cinematic    = 0x3E87,
     /// Password entry screen
-    password_entry  = 0x3E88,
+    password_entry      = 0x3E88,
 
     const Self = @This();
 
@@ -37,7 +37,7 @@ pub const Enum = enum(Raw) {
             .gameplay3          => .{ .palettes = 0x20, .bytecode = 0x21, .polygons = 0x22, .animations = 0x11 },
             .arena_cinematic    => .{ .palettes = 0x23, .bytecode = 0x24, .polygons = 0x25 },
             .gameplay4          => .{ .palettes = 0x26, .bytecode = 0x27, .polygons = 0x28, .animations = 0x11 },
-            .gameplay5          => .{ .palettes = 0x29, .bytecode = 0x2A, .polygons = 0x2B, .animations = 0x11 },
+            .ending_cinematic   => .{ .palettes = 0x29, .bytecode = 0x2A, .polygons = 0x2B, .animations = 0x11 },
             .password_entry     => .{ .palettes = 0x7D, .bytecode = 0x7E, .polygons = 0x7F },
         };
     }
@@ -63,7 +63,7 @@ pub const Enum = enum(Raw) {
         .gameplay3,
         .arena_cinematic,
         .gameplay4,
-        .gameplay5,
+        .ending_cinematic,
         .password_entry,
     };
 };
@@ -113,7 +113,7 @@ test "parse returns expected enum cases" {
     try testing.expectEqual(.gameplay3, parse(0x3E84));
     try testing.expectEqual(.arena_cinematic, parse(0x3E85));
     try testing.expectEqual(.gameplay4, parse(0x3E86));
-    try testing.expectEqual(.gameplay5, parse(0x3E87));
+    try testing.expectEqual(.ending_cinematic, parse(0x3E87));
     try testing.expectEqual(.password_entry, parse(0x3E88));
 
     try testing.expectError(error.InvalidGamePart, parse(0x0000));
@@ -130,6 +130,6 @@ test "allowsPasswordEntry returns expected values" {
     try testing.expectEqual(true, Enum.gameplay3.allowsPasswordEntry());
     try testing.expectEqual(true, Enum.arena_cinematic.allowsPasswordEntry());
     try testing.expectEqual(true, Enum.gameplay4.allowsPasswordEntry());
-    try testing.expectEqual(true, Enum.gameplay5.allowsPasswordEntry());
+    try testing.expectEqual(true, Enum.ending_cinematic.allowsPasswordEntry());
     try testing.expectEqual(false, Enum.password_entry.allowsPasswordEntry());
 }

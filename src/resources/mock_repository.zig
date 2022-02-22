@@ -258,7 +258,7 @@ pub const Fixtures = struct {
         d[0x27] = bytecode_descriptor;
         d[0x28] = polygons_descriptor;
 
-        // GamePart.Enum.gameplay5
+        // GamePart.Enum.ending_cinematic
         d[0x29] = palettes_descriptor;
         d[0x2A] = bytecode_descriptor;
         d[0x2B] = polygons_descriptor;
