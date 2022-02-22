@@ -10,6 +10,15 @@ pub const Enum = enum(Raw) {
     /// https://github.com/fabiensanglard/Another-World-Bytecode-Interpreter/blob/master/src/vm.cpp#L37
     virtual_machine_startup_UNKNOWN = 0x54,
 
+    /// Set by the reference implementation to bypass copy protection:
+    /// https://github.com/fabiensanglard/Another-World-Bytecode-Interpreter/blob/master/src/vm.cpp#L40-L45
+    /// The first gameplay sequence will freeze if these are not set to the correct values.
+    /// These may be incomplete, because the 3rd gameplay sequence will freeze even if these are all set.
+    copy_protection_bypass_1 = 0xBC,
+    copy_protection_bypass_2 = 0xC6,
+    copy_protection_bypass_3 = 0xDC,
+    copy_protection_bypass_4 = 0xF2,
+
     /// The seed used for random calculations, set at VM startup.
     /// The reference implementation seeded this with the current system time.
     random_seed = 0x3C,

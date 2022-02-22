@@ -123,10 +123,12 @@ pub const Instance = struct {
         };
 
         // Initialize registers to their expected values.
-        // Copypasta from reference implementation:
-        // https://github.com/fabiensanglard/Another-World-Bytecode-Interpreter/blob/master/src/vm.cpp#L37
         self.registers.setUnsigned(.random_seed, random_seed);
-        self.registers.setUnsigned(.virtual_machine_startup_UNKNOWN, 0x81);
+        self.registers.setUnsigned(.virtual_machine_startup_UNKNOWN, 0x0081);
+        self.registers.setUnsigned(.copy_protection_bypass_1, 0b0001_0000); // Bit 4 needs to be set, other bits aren't checked
+        self.registers.setUnsigned(.copy_protection_bypass_2, 0x0080); // Doesn't seem to be checked by the 1st gameplay sequence
+        self.registers.setUnsigned(.copy_protection_bypass_3, 0x0021);
+        self.registers.setUnsigned(.copy_protection_bypass_4, 0x0FA0);
 
         // Load the resources for the initial game part.
         // This will populate the previously `undefined` program and video struct.
