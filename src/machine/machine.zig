@@ -376,6 +376,10 @@ test "new creates virtual machine instance with expected initial state" {
     for (machine.registers.unsignedSlice()) |register, id| {
         const expected_value: Register.Unsigned = switch (@intToEnum(RegisterID.Enum, id)) {
             .virtual_machine_startup_UNKNOWN => 0x81,
+            .copy_protection_bypass_1 => 0b0001_0000,
+            .copy_protection_bypass_2 => 0x0080,
+            .copy_protection_bypass_3 => 0x0021,
+            .copy_protection_bypass_4 => 0x0FA0,
             .random_seed => random_seed,
             else => 0,
         };
