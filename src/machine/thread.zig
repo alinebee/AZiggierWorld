@@ -64,32 +64,34 @@ pub const Instance = struct {
     /// If `null`, the current state will continue unchanged next tic.
     scheduled_pause_state: ?PauseState = null,
 
+    const Self = @This();
+
     /// On the next game tic, activate this thread and jump to the specified address.
     /// If the thread is currently inactive, then it will remain so for the rest of the current tic.
-    pub fn scheduleJump(self: *Instance, address: Address.Native) void {
+    pub fn scheduleJump(self: *Self, address: Address.Native) void {
         self.scheduled_execution_state = .{ .active = address };
     }
 
     /// On the next game tic, deactivate this thread.
     /// If the thread is currently active, then it will remain so for the rest of the current tic.
-    pub fn scheduleDeactivate(self: *Instance) void {
+    pub fn scheduleDeactivate(self: *Self) void {
         self.scheduled_execution_state = .inactive;
     }
 
     /// On the next game tic, resume running this thread.
     /// If the thread is currently paused, then it will remain so for the rest of the current tic.
-    pub fn scheduleResume(self: *Instance) void {
+    pub fn scheduleResume(self: *Self) void {
         self.scheduled_pause_state = .running;
     }
 
     /// On the next game tic, pause this thread.
     /// If the thread is currently active and running, then it will still run for the current tic if it hasn't already.
-    pub fn schedulePause(self: *Instance) void {
+    pub fn schedulePause(self: *Self) void {
         self.scheduled_pause_state = .paused;
     }
 
     /// Apply any scheduled changes to the thread's execution and pause states.
-    pub fn applyScheduledStates(self: *Instance) void {
+    pub fn applyScheduledStates(self: *Self) void {
         if (self.scheduled_execution_state) |new_state| {
             self.execution_state = new_state;
             self.scheduled_execution_state = null;
@@ -99,6 +101,22 @@ pub const Instance = struct {
             self.pause_state = new_state;
             self.scheduled_pause_state = null;
         }
+    }
+
+    /// Reset the thread to its initial inactive state.
+    /// Intended to be called when the virtual machine loads a new game part,
+    /// to ensure thread state doesn't leak between parts.
+    pub fn reset(self: *Self) void {
+        self.execution_state = .inactive;
+        self.pause_state = .running;
+        self.scheduled_execution_state = null;
+        self.scheduled_pause_state = null;
+    }
+
+    /// Activate the thread at the start of the program.
+    /// Intended to be called on the primary thread when beginning a new game part.
+    pub fn start(self: *Self) void {
+        self.execution_state = .{ .active = 0 };
     }
 
     /// Execute the machine's current program on this thread, running until the thread yields

@@ -311,18 +311,21 @@ pub const Instance = struct {
     fn startGamePart(self: *Self, game_part: GamePart.Enum) !void {
         const resource_locations = try self.memory.loadGamePart(game_part);
         self.program = Program.new(resource_locations.bytecode);
+
         self.video.setResourceLocations(resource_locations.palettes, resource_locations.polygons, resource_locations.animations);
 
-        // Deactivate and unpause all threads.
+        // Clear the state of all threads.
         for (self.threads) |*thread| {
-            thread.execution_state = .inactive;
-            thread.pause_state = .running;
+            thread.reset();
         }
+
         // Reset the main thread to begin execution at the start of the current program.
-        self.threads[ThreadID.main].execution_state = .{ .active = 0 };
+        self.threads[ThreadID.main].start();
 
         self.current_game_part = game_part;
         self.scheduled_game_part = null;
+
+        log.debug("Started game part {}", .{game_part});
     }
 };
 
@@ -416,10 +419,12 @@ test "startGamePart resets previous thread state, loads resources for new game p
     var machine = testInstance(null);
     defer machine.deinit();
 
-    // Pollute the thread state
+    // Pollute the current and scheduled thread states
     for (machine.threads) |*thread| {
         thread.execution_state = .{ .active = 0xDEAD };
         thread.pause_state = .paused;
+        thread.scheduleJump(0xBEEF);
+        thread.schedulePause();
     }
 
     // Pollute the register state
@@ -450,6 +455,9 @@ test "startGamePart resets previous thread state, loads resources for new game p
             try testing.expectEqual(.inactive, thread.execution_state);
         }
         try testing.expectEqual(.running, thread.pause_state);
+
+        try testing.expectEqual(null, thread.scheduled_execution_state);
+        try testing.expectEqual(null, thread.scheduled_pause_state);
     }
 
     for (machine.registers.unsignedSlice()) |register| {
