@@ -1,6 +1,6 @@
 //! A type representing a filesystem directory that contains Another World game files.
 //! An instance of this type is intended to be created at game launch and kept around
-//! for the lifetime of the game. It will keep its directory open until `deinit` is called on it.
+//! for the lifetime of the game.
 //!
 //! Use the `reader()` method to get a Reader interface for loading game data.
 //! See reader.zig for the available methods on that interface.
