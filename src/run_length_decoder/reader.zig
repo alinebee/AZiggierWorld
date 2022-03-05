@@ -28,7 +28,7 @@ const Instance = struct {
     cursor: usize,
 
     /// The expected uncompressed size of the compressed data, read from the last byte of the data.
-    /// Only used as a sanity check, and is not used during parsing.
+    /// Only used as a correctness check, and is not used during parsing.
     uncompressed_size: usize,
 
     /// The current chunk that `readBit` is currently pulling bits from.

@@ -9,7 +9,7 @@
 //! 2. The *packed* data was read into that buffer.
 //! 1. Starting at the end of the packed data, the unpacker reads 2 32-bit integers:
 //!    - the unpacked size of the data. (Unused, since the expected size was already known,
-//!      but serves as a sanity check.)
+//!      but serves as a correctness check.)
 //!    - the initial CRC checksum for the packed data.
 //! 3. The decoder walks backwards through the rest of the packed data in 32-bit chunks: reading a run of bits,
 //!    deciding how to unpack them, and writing the unpacked bytes into the destination buffer, starting at the end

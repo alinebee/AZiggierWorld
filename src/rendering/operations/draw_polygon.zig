@@ -33,7 +33,7 @@ pub fn drawPolygon(comptime Buffer: type, buffer: *Buffer, mask_buffer: *const B
     }
 
     const vertices = polygon.vertices();
-    // Sanity check: we need at least 4 vertices to draw anything.
+    // Correctness check: we need at least 4 vertices to draw anything.
     // Invalid polygons would have been caught earlier when parsing,
     // but this method cannot prove that it hasn't received one.
     if (vertices.len < Polygon.min_vertices) return error.VertexCountTooLow;
