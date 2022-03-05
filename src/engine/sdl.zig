@@ -125,8 +125,8 @@ pub const Instance = struct {
             "A Ziggier World",
             .default,
             .default,
+            960,
             640,
-            480,
             .{ .shown = true, .allow_high_dpi = true },
         );
         errdefer self.window.destroy();
