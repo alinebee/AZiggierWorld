@@ -1,16 +1,12 @@
-# This is a basic workflow to help you get started with Actions
-
 name: CI
 
-# Controls when the action will run. Triggers the workflow on push or pull request
-# events but only for the main branch
 on:
   push:
     branches: [ main ]
   pull_request:
     branches: [ main ]
 
-# Copypasta from examples in https://github.com/goto-bus-stop/setup-zig
+# Adapted from examples in https://github.com/goto-bus-stop/setup-zig
 jobs:
   test:
     strategy:
@@ -19,6 +15,8 @@ jobs:
     runs-on: ${{matrix.os}}
     steps:
       - uses: actions/checkout@v2
+        with:
+          submodules: recursive
       - uses: goto-bus-stop/setup-zig@v1.3.0
         with:
           version: 0.9.0
@@ -27,6 +25,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+        # Don't include submodules in linter, as we don't want to lint those anyway
+        # with:
+        #   submodules: recursive
       - uses: goto-bus-stop/setup-zig@v1.3.0
         with:
           version: 0.9.0
