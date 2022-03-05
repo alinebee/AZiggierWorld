@@ -7,6 +7,7 @@ const FixedPrecision = @import("../../values/fixed_precision.zig");
 
 const static_limits = @import("../../static_limits.zig");
 const math = @import("std").math;
+const log = @import("../../utils/logging.zig").log;
 
 /// Draws a single polygon into a buffer using the position and draw mode specified in the polygon's data.
 /// Returns an error if:
@@ -14,17 +15,20 @@ const math = @import("std").math;
 /// - any vertex along the right-hand side of the polygon is higher than the previous vertex.
 /// - any vertex along the right-hand side of the polygon is > 1023 units below the previous vertex.
 pub fn drawPolygon(comptime Buffer: type, buffer: *Buffer, mask_buffer: *const Buffer, polygon: Polygon.Instance) Error!void {
-    // Skip if none of the polygon is on-screen
-    if (Buffer.bounds.intersects(polygon.bounds) == false) {
-        return;
-    }
-
     const operation = Buffer.DrawOperation.forMode(polygon.draw_mode, mask_buffer);
 
     // Early-out for polygons that cover a single screen pixel
     if (polygon.isDot()) {
         const origin = polygon.bounds.origin();
-        buffer.uncheckedDrawDot(origin, operation);
+        // Skip if the dot is offscreen
+        if (Buffer.bounds.contains(origin)) {
+            buffer.uncheckedDrawDot(origin, operation);
+        }
+        return;
+    }
+
+    // Skip if none of the polygon is on-screen
+    if (Buffer.bounds.intersects(polygon.bounds) == false) {
         return;
     }
 
