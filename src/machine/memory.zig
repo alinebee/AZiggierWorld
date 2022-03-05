@@ -35,14 +35,12 @@
 //! the entire type as move-only.
 const Reader = @import("../resources/reader.zig");
 const ResourceID = @import("../values/resource_id.zig");
-const ResourceType = @import("../values/resource_type.zig");
 const PlanarBitmapResource = @import("../resources/planar_bitmap_resource.zig");
 const GamePart = @import("../values/game_part.zig");
 
 const static_limits = @import("../static_limits.zig");
 
 const mem = @import("std").mem;
-const fs = @import("std").fs;
 
 /// The memory addresses of resources loaded via `loadGamePart`.
 pub const GamePartResourceLocations = struct {
@@ -82,7 +80,7 @@ const BitmapRegion = [bitmap_region_size]u8;
 /// and loads game data from the specified repository reader.
 /// All resources will begin initially unloaded.
 /// The returned instance must be destroyed by calling `deinit`.
-pub fn new(allocator: mem.Allocator, reader: Reader.Interface) !Instance {
+pub fn new(allocator: mem.Allocator, reader: Reader.Interface) InitError!Instance {
     return Instance.init(allocator, reader);
 }
 
@@ -103,7 +101,7 @@ pub const Instance = struct {
     /// and loads game data from the specified repository.
     /// All resources will begin initially unloaded.
     /// The returned instance must be destroyed by calling `deinit`.
-    pub fn init(allocator: mem.Allocator, reader: Reader.Interface) !Self {
+    pub fn init(allocator: mem.Allocator, reader: Reader.Interface) InitError!Self {
         return Self{
             .allocator = allocator,
             .reader = reader,
@@ -127,7 +125,7 @@ pub const Instance = struct {
 
     /// The memory location of the resource with the specified ID, or `null` if the resource is not loaded.
     /// Returns an error if the location is out of range.
-    pub fn resourceLocation(self: Self, id: ResourceID.Raw) !PossibleResourceLocation {
+    pub fn resourceLocation(self: Self, id: ResourceID.Raw) ResourceLocationError!PossibleResourceLocation {
         try self.reader.validateResourceID(id);
         return self.resource_locations[id];
     }
@@ -139,7 +137,7 @@ pub const Instance = struct {
     /// If an error occurs, all previously loaded resources will still have been unloaded,
     /// and some resources for the specified game part may remain loaded. In this situation,
     /// it is safe to call `loadGamePart` on the instance again.
-    pub fn loadGamePart(self: *Self, game_part: GamePart.Enum) !GamePartResourceLocations {
+    pub fn loadGamePart(self: *Self, game_part: GamePart.Enum) LoadGamePartError!GamePartResourceLocations {
         for (self.resource_locations) |*location| {
             self.unload(location);
         }
@@ -162,7 +160,7 @@ pub const Instance = struct {
     /// Returns an error if the specified resource ID is invalid, the resource at that ID
     /// could not be read from disk, or the resource is of a type that can only be loaded
     /// by `loadGamePart` (not individually).
-    pub fn loadIndividualResource(self: *Self, id: ResourceID.Raw) !IndividualResourceLocation {
+    pub fn loadIndividualResource(self: *Self, id: ResourceID.Raw) LoadIndividualResourceError!IndividualResourceLocation {
         const descriptor = try self.reader.resourceDescriptor(id);
 
         return switch (descriptor.type) {
@@ -217,7 +215,19 @@ pub const Instance = struct {
     }
 };
 
-pub const Error = error{
+// -- Error sets --
+
+/// The errors that can be returned by attempting to create a memory instance with `Memory.Instance.init` or `Memory.new`.
+pub const InitError = mem.Allocator.Error;
+
+/// The errors that can be returned by a call to `Memory.Instance.resourceLocation`.
+pub const ResourceLocationError = Reader.ValidationError;
+
+/// The errors that can be returned by a call to `Memory.Instance.loadGamePart`.
+pub const LoadGamePartError = Reader.AllocReadResourceByIDError;
+
+/// The errors that can be returned by a call to `Memory.Instance.loadIndividualResource`.
+pub const LoadIndividualResourceError = Reader.AllocReadResourceByIDError || error{
     /// `loadIndividualResource` attempted to load a resource that can only be loaded by `loadGamePart`.
     GamePartOnlyResourceType,
 };

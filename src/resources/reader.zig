@@ -112,11 +112,14 @@ pub const Interface = struct {
 
 // -- Errors --
 
+/// The errors that can be returned from a call to `Reader.Instance.validateResourceID`
+/// or `Reader.Instance.resourceDescriptor`.
 pub const ValidationError = error{
     /// The specified resource ID does not exist in the game's resource list.
     InvalidResourceID,
 };
 
+/// The errors that can be returned from a call to `Reader.Instance.bufReadResource`.
 pub const BufReadResourceError = error{
     /// A resource descriptor defined a compressed size that was larger than its uncompressed size.
     InvalidResourceSize,
@@ -135,14 +138,13 @@ pub const BufReadResourceError = error{
     RepositorySpecificFailure,
 };
 
+/// The errors that can be returned from a call to `Reader.Instance.allocReadResource`.
 pub const AllocReadResourceError = BufReadResourceError || error{
-    /// The provided buffer is not large enough to load the requested resource.
-    BufferTooSmall,
-
     /// The reader's allocator could not allocate memory to load the requested resource.
     OutOfMemory,
 };
 
+/// The errors that can be returned from a call to `Reader.Instance.allocReadResourceByID`.
 pub const AllocReadResourceByIDError = ValidationError || AllocReadResourceError;
 
 // -- Test data --
