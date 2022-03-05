@@ -122,7 +122,7 @@ pub const Instance = struct {
     fn openFile(self: Instance, filename: Filename.Instance) !fs.File {
         var buffer: Filename.Buffer = undefined;
         const dos_name = filename.dosName(&buffer);
-        return try self.dir.openFile(dos_name, .{ .read = true, .write = false });
+        return try self.dir.openFile(dos_name, .{});
     }
 };
 

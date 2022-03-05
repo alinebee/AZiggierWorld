@@ -21,7 +21,7 @@ pub fn validFixtureDir() !fs.Dir {
 
     // Test if MEMLIST.BIN exists in the fixture directory; if it does not,
     // the user hasn't populated the directory with game files yet.
-    try dir.access(test_filename, .{ .read = true, .write = false });
+    try dir.access(test_filename, .{});
 
     return dir;
 }
