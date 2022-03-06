@@ -1,13 +1,11 @@
 const Machine = @import("../machine/machine.zig");
 const Host = @import("../machine/host.zig");
 const ResourceDirectory = @import("../resources/resource_directory.zig");
-const Register = @import("../values/register.zig");
 const BufferID = @import("../values/buffer_id.zig");
 const Video = @import("../machine/video.zig");
 const GameInput = @import("../machine/user_input.zig");
 
 const SDL = @import("sdl2");
-
 const std = @import("std");
 const log = @import("../utils/logging.zig").log;
 
@@ -101,15 +99,11 @@ pub const Instance = struct {
 
         self.resource_directory = try ResourceDirectory.new(&self.game_dir);
 
-        // Yikes. The ergonomics of seeding this suck.
-        const random_seed = @bitCast(Register.Unsigned, @truncate(Register.Signed, std.time.milliTimestamp()));
-
         self.machine = try Machine.new(
             allocator,
             self.resource_directory.reader(),
             self.host(),
-            .intro_cinematic,
-            random_seed,
+            .{},
         );
         errdefer self.machine.deinit();
 

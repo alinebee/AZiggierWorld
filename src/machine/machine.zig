@@ -55,13 +55,24 @@ const Reader = @import("../resources/reader.zig");
 
 const static_limits = @import("../static_limits.zig");
 
-const mem = @import("std").mem;
-const fs = @import("std").fs;
+const std = @import("std");
+const mem = std.mem;
 
 const log = @import("../utils/logging.zig").log;
 
 const thread_count = static_limits.thread_count;
 pub const Threads = [thread_count]Thread.Instance;
+
+/// Optional configuration options for a virtual machine instance.
+pub const Options = struct {
+    /// Which game part to start up with.
+    /// TODO: default this to .intro_cinematic once the copy protection bypass is working fully.
+    initial_game_part: GamePart.Enum = .copy_protection,
+
+    /// The seed to use for the game's random number generator.
+    /// If null, a random seed will be chosen based on the system clock.
+    seed: ?Register.Signed = null,
+};
 
 pub const Instance = struct {
     /// The current state of the VM's 64 threads.
@@ -99,9 +110,9 @@ pub const Instance = struct {
 
     /// Create a new virtual machine that uses the specified allocator to allocate memory,
     /// reads game data from the specified reader, and sends video and audio output to the specified host.
-    /// At startup, the virtual machine will attempt to load the resources for the specified game part.
+    /// At startup, the virtual machine will attempt to load the resources for the initial game part.
     /// On success, returns a machine instance that is ready to begin simulating.
-    fn init(allocator: mem.Allocator, reader: Reader.Interface, host: Host.Interface, initial_game_part: GamePart.Enum, random_seed: Register.Unsigned) !Self {
+    fn init(allocator: mem.Allocator, reader: Reader.Interface, host: Host.Interface, options: Options) !Self {
         var memory = try Memory.new(allocator, reader);
         errdefer memory.deinit();
 
@@ -122,8 +133,13 @@ pub const Instance = struct {
             .current_game_part = undefined,
         };
 
+        const seed = options.seed orelse @truncate(Register.Signed, std.time.milliTimestamp());
         // Initialize registers to their expected values.
-        self.registers.setUnsigned(.random_seed, random_seed);
+        self.registers.setSigned(.random_seed, seed);
+
+        // This list of copy protection bypass values is incomplete:
+        // Some sections of the game will work, but other sections will still
+        // soft-lock unless the user has gone completed copy protection.
         self.registers.setUnsigned(.virtual_machine_startup_UNKNOWN, 0x0081);
         self.registers.setUnsigned(.copy_protection_bypass_1, 0b0001_0000); // Bit 4 needs to be set, other bits aren't checked
         self.registers.setUnsigned(.copy_protection_bypass_2, 0x0080); // Doesn't seem to be checked by the 1st gameplay sequence
@@ -132,7 +148,7 @@ pub const Instance = struct {
 
         // Load the resources for the initial game part.
         // This will populate the previously `undefined` program and video struct.
-        try self.startGamePart(initial_game_part);
+        try self.startGamePart(options.initial_game_part);
 
         return self;
     }
@@ -329,8 +345,8 @@ pub const Instance = struct {
     }
 };
 
-pub fn new(allocator: mem.Allocator, reader: Reader.Interface, host: Host.Interface, initial_game_part: GamePart.Enum, random_seed: Register.Unsigned) !Instance {
-    return Instance.init(allocator, reader, host, initial_game_part, random_seed);
+pub fn new(allocator: mem.Allocator, reader: Reader.Interface, host: Host.Interface, options: Options) !Instance {
+    return Instance.init(allocator, reader, host, options);
 }
 
 const MockRepository = @import("../resources/mock_repository.zig");
@@ -346,7 +362,8 @@ const MockHost = @import("test_helpers/mock_host.zig");
 /// defer machine.deinit();
 /// try testing.expectEqual(result, do_something_that_requires_a_machine(machine));
 pub fn testInstance(possible_bytecode: ?[]const u8) Instance {
-    var machine = new(testing.allocator, MockRepository.test_reader, MockHost.test_host, .intro_cinematic, 0) catch unreachable;
+    const options = Options{ .initial_game_part = .intro_cinematic, .seed = 0 };
+    var machine = new(testing.allocator, MockRepository.test_reader, MockHost.test_host, options) catch unreachable;
     if (possible_bytecode) |bytecode| {
         machine.program = Program.new(bytecode);
     }
@@ -361,10 +378,12 @@ const meta = @import("std").meta;
 // - Initialization tests -
 
 test "new creates virtual machine instance with expected initial state" {
-    const initial_game_part = GamePart.Enum.gameplay1;
-    const random_seed = 12345;
+    const options = Options{
+        .initial_game_part = .gameplay1,
+        .seed = 12345,
+    };
 
-    var machine = try new(testing.allocator, MockRepository.test_reader, MockHost.test_host, initial_game_part, random_seed);
+    var machine = try new(testing.allocator, MockRepository.test_reader, MockHost.test_host, options);
     defer machine.deinit();
 
     for (machine.threads) |thread, id| {
@@ -383,7 +402,7 @@ test "new creates virtual machine instance with expected initial state" {
             .copy_protection_bypass_2 => 0x0080,
             .copy_protection_bypass_3 => 0x0021,
             .copy_protection_bypass_4 => 0x0FA0,
-            .random_seed => random_seed,
+            .random_seed => 12345,
             else => 0,
         };
         try testing.expectEqual(expected_value, register);
@@ -393,7 +412,7 @@ test "new creates virtual machine instance with expected initial state" {
 
     // Ensure each resource was loaded for the requested game part
     // and passed to the program and video subsystems
-    const resource_ids = initial_game_part.resourceIDs();
+    const resource_ids = options.initial_game_part.resourceIDs();
 
     const bytecode_address = try machine.memory.resourceLocation(resource_ids.bytecode);
     try testing.expect(bytecode_address != null);

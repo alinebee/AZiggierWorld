@@ -54,7 +54,10 @@ const Subject = struct {
 
         const empty_input = UserInput.Instance{};
 
-        var machine = try Machine.new(self.allocator, resource_directory.reader(), host.host(), .intro_cinematic, 0);
+        var machine = try Machine.new(self.allocator, resource_directory.reader(), host.host(), .{
+            .initial_game_part = .intro_cinematic,
+            .seed = 0,
+        });
         defer machine.deinit();
 
         var tic_count: usize = 0;

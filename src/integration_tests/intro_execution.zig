@@ -55,7 +55,10 @@ test "Introduction runs successfully" {
     var resource_directory = try ResourceDirectory.new(&game_dir);
     var host = CountingHost{};
 
-    var machine = try Machine.new(testing.allocator, resource_directory.reader(), host.host(), .intro_cinematic, 0);
+    var machine = try Machine.new(testing.allocator, resource_directory.reader(), host.host(), .{
+        .initial_game_part = .intro_cinematic,
+        .seed = 0,
+    });
     defer machine.deinit();
 
     const empty_input = UserInput.Instance{};
