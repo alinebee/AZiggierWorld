@@ -235,6 +235,76 @@ fn runTests(comptime BufferFn: anytype) void {
             try expectPixels(expected, buffer);
         }
 
+        test "drawPolygon does not draw offscreen dot" {
+            // The bounding box for a "unit" polygon is overcounted by 1 vertically,
+            // so it technically covers 2 pixels even though only one pixel is drawn.
+            // the bounds for this polygon will place the top (drawn) pixel offscreen
+            // while the bottom (undrawn) pixel is onscreen.
+            // FIXME: this is a flaw in our bounds calculations, that should ideally
+            // be corrected upstream in the polygon parsing code.
+            const poly = Polygon.new(
+                .{ .solid_color = 0x1 },
+                &.{
+                    .{ .x = 1, .y = -1 },
+                    .{ .x = 1, .y = 0 },
+                    .{ .x = 1, .y = 0 },
+                    .{ .x = 1, .y = -1 },
+                },
+            );
+
+            try testing.expect(poly.isDot());
+
+            const Buffer = BufferFn(4, 4);
+            var buffer = Buffer{};
+            var mask_buffer = Buffer{};
+
+            buffer.fill(0x0);
+            mask_buffer.fill(0xF);
+
+            const expected =
+                \\0000
+                \\0000
+                \\0000
+                \\0000
+            ;
+
+            try drawPolygon(Buffer, &buffer, &mask_buffer, poly);
+            try expectPixels(expected, buffer);
+        }
+
+        test "drawPolygon crops partially-offscreen polygon" {
+            const poly = Polygon.new(
+                .{ .solid_color = 0x1 },
+                &.{
+                    .{ .x = 6, .y = -1 },
+                    .{ .x = 7, .y = 0 },
+                    .{ .x = 5, .y = 2 },
+                    .{ .x = 4, .y = 2 },
+                    .{ .x = 4, .y = 0 },
+                    .{ .x = 5, .y = -1 },
+                },
+            );
+
+            const Buffer = BufferFn(6, 6);
+            var buffer = Buffer{};
+            var mask_buffer = Buffer{};
+
+            buffer.fill(0x0);
+            mask_buffer.fill(0xF);
+
+            const expected =
+                \\000011
+                \\000011
+                \\000000
+                \\000000
+                \\000000
+                \\000000
+            ;
+
+            try drawPolygon(Buffer, &buffer, &mask_buffer, poly);
+            try expectPixels(expected, buffer);
+        }
+
         test "drawPolygon with malformed bounds does not draw offscreen" {
             var poly = Polygon.new(
                 .{ .solid_color = 0x1 },
