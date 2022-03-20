@@ -35,16 +35,17 @@ const DescriptorStorage = BoundedArray(ResourceDescriptor.Instance, static_limit
 /// A reader for a test repository that can safely load any game part,
 /// albeit with garbage data. Should only be used in tests.
 pub const test_reader = test_repository.reader();
-var test_repository = Instance.init(&Fixtures.descriptors, null);
+var test_repository = Instance.init(&Fixtures.descriptors, false);
 
 pub const Instance = struct {
     /// The list of resources vended by this mock repository.
     /// Access this via reader().resourceDescriptors() instead of directly.
     _raw_descriptors: DescriptorStorage,
 
-    /// An optional error returned by `bufReadResource` to simulate file-reading or decompression errors.
-    /// If `null`, `bufReadResource` will return a success response.
-    read_error: ?Reader.BufReadResourceError,
+    /// When true, `bufReadResource` will fail with error.InvalidCompressedData.
+    /// When false, `bufReadResource` will be successful as long as the buffer passed
+    /// to it is large enough for the data being allocated.
+    read_should_fail: bool,
 
     /// The number of times a resource has been loaded, whether the load succeeded or failed.
     /// Incremented by calls to reader().bufReadResource() or any of its derived methods.
@@ -53,10 +54,10 @@ pub const Instance = struct {
     /// Create a new mock repository that exposes the specified resource descriptors,
     /// and produces either an error or an appropriately-sized buffer when
     /// a resource load method is called.
-    pub fn init(descriptors: []const ResourceDescriptor.Instance, read_error: ?Reader.BufReadResourceError) Instance {
+    pub fn init(descriptors: []const ResourceDescriptor.Instance, read_should_fail: bool) Instance {
         return Instance{
             ._raw_descriptors = DescriptorStorage.fromSlice(descriptors) catch unreachable,
-            .read_error = read_error,
+            .read_should_fail = read_should_fail,
         };
     }
 
@@ -83,8 +84,8 @@ pub const Instance = struct {
             return error.BufferTooSmall;
         }
 
-        if (self.read_error) |err| {
-            return err;
+        if (self.read_should_fail) {
+            return error.InvalidCompressedData;
         }
 
         const slice_to_fill = buffer[0..descriptor.uncompressed_size];
@@ -291,7 +292,7 @@ test "bufReadResource with music descriptor returns slice of original buffer fil
     // for loaded data, and the rest of the buffer left as-is.
     const expected_buffer_contents = [_]u8{resource_bit_pattern} ** example_descriptor.uncompressed_size ++ [_]u8{0x0} ** example_descriptor.uncompressed_size;
 
-    var repository = Instance.init(&.{example_descriptor}, null);
+    var repository = Instance.init(&.{example_descriptor}, false);
     try testing.expectEqual(0, repository.read_count);
     const result = try repository.reader().bufReadResource(&buffer, example_descriptor);
     try testing.expectEqual(@ptrToInt(&buffer), @ptrToInt(result.ptr));
@@ -318,7 +319,7 @@ test "bufReadResource with bytecode descriptor returns slice of original buffer 
 
     var buffer: [expected_program.len]u8 = undefined;
 
-    var repository = Instance.init(&.{example_descriptor}, null);
+    var repository = Instance.init(&.{example_descriptor}, false);
     try testing.expectEqual(0, repository.read_count);
     _ = try repository.reader().bufReadResource(&buffer, example_bytecode_descriptor);
     try testing.expectEqual(expected_program, buffer);
@@ -337,7 +338,7 @@ test "bufReadResource with bytecode descriptor omits loop instruction when buffe
 
     var buffer: [expected_program.len]u8 = undefined;
 
-    var repository = Instance.init(&.{example_descriptor}, null);
+    var repository = Instance.init(&.{example_descriptor}, false);
     try testing.expectEqual(0, repository.read_count);
     _ = try repository.reader().bufReadResource(&buffer, example_bytecode_descriptor);
     try testing.expectEqual(expected_program, buffer);
@@ -348,7 +349,7 @@ test "bufReadResource returns supplied error and leaves buffer alone when buffer
     // The whole buffer should be left untouched.
     const expected_buffer_contents = buffer;
 
-    var repository = Instance.init(&.{example_descriptor}, error.InvalidCompressedData);
+    var repository = Instance.init(&.{example_descriptor}, true);
     try testing.expectEqual(0, repository.read_count);
     try testing.expectError(error.InvalidCompressedData, repository.reader().bufReadResource(&buffer, example_descriptor));
     try testing.expectEqual(1, repository.read_count);
@@ -360,7 +361,7 @@ test "bufReadResource returns error.BufferTooSmall if buffer is too small for re
     // The whole buffer should be left untouched.
     const expected_buffer_contents = buffer;
 
-    var repository = Instance.init(&.{example_descriptor}, error.InvalidCompressedData);
+    var repository = Instance.init(&.{example_descriptor}, true);
     try testing.expectEqual(0, repository.read_count);
     try testing.expectError(error.BufferTooSmall, repository.reader().bufReadResource(&buffer, example_descriptor));
     try testing.expectEqual(1, repository.read_count);
@@ -368,7 +369,7 @@ test "bufReadResource returns error.BufferTooSmall if buffer is too small for re
 }
 
 test "resourceDescriptors returns expected descriptors" {
-    var repository = Instance.init(&Fixtures.descriptors, null);
+    var repository = Instance.init(&Fixtures.descriptors, false);
 
     try testing.expectEqualSlices(ResourceDescriptor.Instance, repository.reader().resourceDescriptors(), &Fixtures.descriptors);
 }

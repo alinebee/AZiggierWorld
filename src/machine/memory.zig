@@ -240,8 +240,8 @@ const FailingAllocator = @import("std").testing.FailingAllocator;
 
 const test_descriptors = &MockRepository.Fixtures.descriptors;
 
-var test_repository = MockRepository.Instance.init(test_descriptors, null);
-var failing_repository = MockRepository.Instance.init(test_descriptors, error.InvalidCompressedData);
+var test_repository = MockRepository.Instance.init(test_descriptors, false);
+var failing_repository = MockRepository.Instance.init(test_descriptors, true);
 
 const test_reader = test_repository.reader();
 const failing_reader = failing_repository.reader();
@@ -375,7 +375,7 @@ test "loadIndividualResource does not allocate additional memory when loading bi
 }
 
 test "loadIndividualResource avoids reloading already-loaded audio resources" {
-    var counted_repository = MockRepository.Instance.init(test_descriptors, null);
+    var counted_repository = MockRepository.Instance.init(test_descriptors, false);
 
     var memory = try new(testing.allocator, counted_repository.reader());
     defer memory.deinit();
@@ -394,7 +394,7 @@ test "loadIndividualResource avoids reloading already-loaded audio resources" {
 }
 
 test "loadIndividualResource always reloads bitmap resources" {
-    var counted_repository = MockRepository.Instance.init(test_descriptors, null);
+    var counted_repository = MockRepository.Instance.init(test_descriptors, false);
 
     var memory = try new(testing.allocator, counted_repository.reader());
     defer memory.deinit();
@@ -492,7 +492,7 @@ test "loadGamePart unloads any previously loaded individual resources" {
 
 test "loadGamePart returns error.InvalidResourceID on out-of-bounds resource ID" {
     // Snip off the descriptor list halfway through the resource IDs for the first game part
-    var truncated_data_source = MockRepository.Instance.init(test_descriptors[0..0x15], null);
+    var truncated_data_source = MockRepository.Instance.init(test_descriptors[0..0x15], false);
 
     var memory = try new(testing.allocator, truncated_data_source.reader());
     defer memory.deinit();
