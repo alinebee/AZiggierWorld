@@ -12,6 +12,7 @@ const log = @import("../utils/logging.zig").log;
 const Input = struct {
     game_input: GameInput.Instance = .{},
     turbo: bool = false,
+    paused: bool = false,
     exited: bool = false,
 
     const Self = @This();
@@ -35,9 +36,9 @@ const Input = struct {
                     .right => self.game_input.right = true,
                     .down => self.game_input.down = true,
                     .up => self.game_input.up = true,
-                    .space => self.game_input.action = true,
-                    .@"return" => self.game_input.action = true,
+                    .space, .@"return" => self.game_input.action = true,
                     .delete, .backspace => self.turbo = true,
+                    .pause, .@"p" => self.paused = !self.paused,
 
                     else => {},
                 }
@@ -49,8 +50,7 @@ const Input = struct {
                     .right => self.game_input.right = false,
                     .down => self.game_input.down = false,
                     .up => self.game_input.up = false,
-                    .space => self.game_input.action = false,
-                    .@"return" => self.game_input.action = false,
+                    .space, .@"return" => self.game_input.action = false,
                     .delete, .backspace => self.turbo = false,
 
                     else => {},
@@ -139,7 +139,7 @@ pub const Instance = struct {
         });
         errdefer self.renderer.destroy();
 
-        // ABGR888 produces a single-plane pixel buffer where each sequence of 4 bytes
+        // .abgr8888 produces a single-plane pixel buffer where each sequence of 4 bytes
         // matches the byte layout of our RGBA color struct on little-endian architectures.
         // We may need to swap this out for .rgba8888 on big-endian, as internally SDL seems
         // to parse those sequences as 32-bit integers.
@@ -174,7 +174,13 @@ pub const Instance = struct {
             while (SDL.pollEvent()) |event| {
                 self.input.updateFromSDLEvent(event);
             }
+
             if (self.input.exited) break;
+
+            if (self.input.paused) {
+                std.time.sleep(100 * std.time.ns_per_ms);
+                continue;
+            }
 
             try self.machine.runTic(self.input.game_input);
 
@@ -213,8 +219,10 @@ fn resolvedFrameDelay(requested_delay: u64, possible_last_frame_time: ?i64, curr
     if (turbo) {
         return 0;
     } else if (possible_last_frame_time) |last_frame_time| {
-        // -| is the saturating subtraction operator, to ensure we don't overflow;
-        // both operands are signed, so the result may still be negative.
+        // -| is the saturating subtraction operator, to ensure we don't overflow.
+        // both operands are signed so the result may still be negative:
+        // that would indicate the frame timestamps were not monotonic.
+        // In such a case, ignore the elapsed time and use the requested delay as-is.
         const possibly_negative_elapsed_time = current_time -| last_frame_time;
 
         if (std.math.cast(u64, possibly_negative_elapsed_time)) |elapsed_time| {
