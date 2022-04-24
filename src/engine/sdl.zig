@@ -78,6 +78,10 @@ pub const Instance = struct {
     renderer: SDL.Renderer,
     texture: SDL.Texture,
 
+    /// The moment at which the previous frame was rendered.
+    /// Used for adjusting frame delays to account for processing time.
+    last_frame_time: ?i64 = null,
+
     const Self = @This();
 
     /// Heap-allocate a new game engine that loads data from the specified path.
@@ -174,9 +178,39 @@ pub const Instance = struct {
         }
     }
 
-    fn bufferReady(self: *Self, machine: *const Machine.Instance, buffer_id: BufferID.Specific, delay: Host.Milliseconds) void {
-        // TODO: reduce the delay by the time elapsed since the previous frame.
-        std.time.sleep(delay * std.time.ns_per_ms);
+    fn nanosecondsSinceLastFrame(self: Self) ?u64 {
+        // TODO: switch to using std.time.Instant once we're past 0.9.1.
+        if (self.last_frame_time) |last_frame_time| {
+            const current_time = @truncate(i64, std.time.nanoTimestamp());
+            if (std.math.cast(u64, current_time - last_frame_time)) |elapsed_time| {
+                return elapsed_time;
+            } else |_| {
+                // Ignore negative timestamps
+                return null;
+            }
+        } else {
+            // This is the first frame
+            return null;
+        }
+    }
+
+    fn bufferReady(self: *Self, machine: *const Machine.Instance, buffer_id: BufferID.Specific, requested_delay: Host.Milliseconds) void {
+        const requested_delay_in_ns = requested_delay * std.time.ns_per_ms;
+        var resolved_delay = requested_delay_in_ns;
+
+        // Reduce the delay by the time elapsed since the previous frame.
+        if (self.nanosecondsSinceLastFrame()) |elapsed_time| {
+            resolved_delay -= elapsed_time;
+            log.debug("Original delay: {d:.2}ms elapsed time: {d:.2}ms final delay {d:.2}ms", .{
+                @intToFloat(f64, requested_delay_in_ns) / std.time.ns_per_ms,
+                @intToFloat(f64, elapsed_time) / std.time.ns_per_ms,
+                @intToFloat(f64, resolved_delay) / std.time.ns_per_ms,
+            });
+        } else {
+            log.debug("Ignoring elapsed time", .{});
+        }
+
+        std.time.sleep(resolved_delay);
 
         var locked_texture = self.texture.lock(null) catch @panic("self.texture.lock failed");
         const raw_pixels = @ptrCast(*Video.HostSurface, locked_texture.pixels);
@@ -195,6 +229,8 @@ pub const Instance = struct {
 
         self.renderer.copy(self.texture, null, null) catch @panic("self.renderer.copy failed");
         self.renderer.present();
+
+        self.last_frame_time = @truncate(i64, std.time.nanoTimestamp());
     }
 };
 
