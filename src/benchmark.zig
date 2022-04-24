@@ -25,8 +25,8 @@ const RenderHost = struct {
     fn host(self: *Self) Host.Interface {
         return Host.Interface.init(self, bufferReady);
     }
-    fn bufferReady(self: *Self, video: *const Video.Instance, buffer_id: BufferID.Specific, _: Host.Milliseconds) void {
-        video.renderBufferToSurface(buffer_id, &self.surface) catch |err| {
+    fn bufferReady(self: *Self, machine: *const Machine.Instance, buffer_id: BufferID.Specific, _: Host.Milliseconds) void {
+        machine.renderBufferToSurface(buffer_id, &self.surface) catch |err| {
             switch (err) {
                 // The Another World intro attempts to render at least 4 times before any palette is selected.
                 error.PaletteNotSelected => log.debug("Rendered with no palette selected", .{}),

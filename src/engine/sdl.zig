@@ -174,14 +174,14 @@ pub const Instance = struct {
         }
     }
 
-    fn bufferReady(self: *Self, video: *const Video.Instance, buffer_id: BufferID.Specific, delay: Host.Milliseconds) void {
+    fn bufferReady(self: *Self, machine: *const Machine.Instance, buffer_id: BufferID.Specific, delay: Host.Milliseconds) void {
         // TODO: reduce the delay by the time elapsed since the previous frame.
         std.time.sleep(delay * std.time.ns_per_ms);
 
         var locked_texture = self.texture.lock(null) catch @panic("self.texture.lock failed");
         const raw_pixels = @ptrCast(*Video.HostSurface, locked_texture.pixels);
 
-        video.renderBufferToSurface(buffer_id, raw_pixels) catch |err| {
+        machine.renderBufferToSurface(buffer_id, raw_pixels) catch |err| {
             switch (err) {
                 // The Another World intro attempts to render at least 4 times before any palette is selected.
                 error.PaletteNotSelected => {

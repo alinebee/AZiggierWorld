@@ -3,7 +3,7 @@
 //! to perform arbitrary assertions in the body of each host method.
 
 const Host = @import("../host.zig");
-const Video = @import("../video.zig");
+const Machine = @import("../machine.zig");
 const BufferID = @import("../../values/buffer_id.zig");
 
 var test_host_implementation = new(DefaultImplementation);
@@ -26,16 +26,16 @@ pub fn Instance(comptime Implementation: type) type {
             return Host.Interface.init(self, bufferReady);
         }
 
-        fn bufferReady(self: *Self, video: *const Video.Instance, buffer_id: BufferID.Specific, delay: Host.Milliseconds) void {
+        fn bufferReady(self: *Self, machine: *const Machine.Instance, buffer_id: BufferID.Specific, delay: Host.Milliseconds) void {
             self.call_counts.bufferReady += 1;
-            Implementation.bufferReady(video, buffer_id, delay);
+            Implementation.bufferReady(machine, buffer_id, delay);
         }
     };
 }
 
 /// A default implementation for the mock host that does nothing in any method.
 pub const DefaultImplementation = struct {
-    pub fn bufferReady(_: *const Video.Instance, _: BufferID.Specific, _: Host.Milliseconds) void {}
+    pub fn bufferReady(_: *const Machine.Instance, _: BufferID.Specific, _: Host.Milliseconds) void {}
 };
 
 // -- Tests --

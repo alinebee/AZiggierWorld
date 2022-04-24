@@ -5,6 +5,7 @@ const std = @import("std");
 const assert = std.debug.assert;
 
 const BufferID = @import("../values/buffer_id.zig");
+const Machine = @import("machine.zig");
 const Video = @import("video.zig");
 pub const Milliseconds = Video.Milliseconds;
 
@@ -15,7 +16,7 @@ pub const Interface = struct {
     vtable: *const TypeErasedVTable,
 
     const TypeErasedVTable = struct {
-        bufferReady: fn (implementation: *anyopaque, video: *const Video.Instance, buffer_id: BufferID.Specific, delay: Milliseconds) void,
+        bufferReady: fn (implementation: *anyopaque, machine: *const Machine.Instance, buffer_id: BufferID.Specific, delay: Milliseconds) void,
     };
 
     const Self = @This();
@@ -24,7 +25,7 @@ pub const Interface = struct {
     /// Intended to be called by implementations to create a host interface; should not be used directly.
     pub fn init(
         implementation_ptr: anytype,
-        comptime bufferReadyFn: fn (self: @TypeOf(implementation_ptr), video: *const Video.Instance, buffer_id: BufferID.Specific, delay: Milliseconds) void,
+        comptime bufferReadyFn: fn (self: @TypeOf(implementation_ptr), machine: *const Machine.Instance, buffer_id: BufferID.Specific, delay: Milliseconds) void,
     ) Self {
         const Implementation = @TypeOf(implementation_ptr);
         const ptr_info = @typeInfo(Implementation);
@@ -35,9 +36,9 @@ pub const Interface = struct {
         const alignment = ptr_info.Pointer.alignment;
 
         const TypeUnerasedVTable = struct {
-            fn bufferReadyImpl(type_erased_self: *anyopaque, video: *const Video.Instance, buffer_id: BufferID.Specific, delay: Milliseconds) void {
+            fn bufferReadyImpl(type_erased_self: *anyopaque, machine: *const Machine.Instance, buffer_id: BufferID.Specific, delay: Milliseconds) void {
                 const self = @ptrCast(Implementation, @alignCast(alignment, type_erased_self));
-                return @call(.{ .modifier = .always_inline }, bufferReadyFn, .{ self, video, buffer_id, delay });
+                return @call(.{ .modifier = .always_inline }, bufferReadyFn, .{ self, machine, buffer_id, delay });
             }
 
             const vtable = TypeErasedVTable{
@@ -51,15 +52,15 @@ pub const Interface = struct {
         };
     }
 
-    /// Called when the specified video subsystem has finished filling the specified buffer
+    /// Called when the specified machine has finished filling the specified buffer
     /// with frame data and is ready to display it. The host can request the contents
-    /// of the buffer to be rendered into a 24-bit surface using `video.renderIntoSurface(buffer_id, &surface).`
+    /// of the buffer to be rendered into a 24-bit surface using `machine.renderBufferToSurface(buffer_id, &surface).`
     ///
     /// `delay` is the number of milliseconds that the host should continue displaying
     /// the *previous* frame before replacing it with this one.
     /// (The host may modify this delay to speed up or slow down gameplay.)
-    pub fn bufferReady(self: Self, video: *const Video.Instance, buffer_id: BufferID.Specific, delay: Milliseconds) void {
-        self.vtable.bufferReady(self.implementation, video, buffer_id, delay);
+    pub fn bufferReady(self: Self, machine: *const Machine.Instance, buffer_id: BufferID.Specific, delay: Milliseconds) void {
+        self.vtable.bufferReady(self.implementation, machine, buffer_id, delay);
     }
 };
 

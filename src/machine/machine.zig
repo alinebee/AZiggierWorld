@@ -251,7 +251,13 @@ pub const Instance = struct {
 
     /// Render the contents of the specified buffer to the host screen after the specified delay.
     pub fn renderVideoBuffer(self: *Self, buffer_id: BufferID.Enum, delay: Video.Milliseconds) void {
-        self.video.renderBuffer(buffer_id, delay, self.host);
+        const buffer_to_draw = self.video.markBufferAsReady(buffer_id);
+        self.host.bufferReady(self, buffer_to_draw, delay);
+    }
+
+    /// Called by the host to render the specified buffer into a 24-bit host surface.
+    pub fn renderBufferToSurface(self: *const Self, buffer_id: BufferID.Specific, surface: *Video.HostSurface) !void {
+        try self.video.renderBufferToSurface(buffer_id, surface);
     }
 
     // -- Audio subsystem interface --
@@ -759,4 +765,24 @@ test "runTic updates each thread with its scheduled state before running each th
     try testing.expectEqual(.running, main_thread.pause_state);
     try testing.expectEqual(null, main_thread.scheduled_execution_state);
     try testing.expectEqual(null, main_thread.scheduled_pause_state);
+}
+
+// - renderVideoBuffer tests -
+
+test "renderVideoBuffer notifies host of new frame with expected buffer ID and delay" {
+    const expected_buffer_id = 3;
+    const expected_delay = 24;
+
+    var host = MockHost.new(struct {
+        pub fn bufferReady(_: *const Instance, buffer_id: BufferID.Specific, delay: Host.Milliseconds) void {
+            testing.expectEqual(expected_buffer_id, buffer_id) catch unreachable;
+            testing.expectEqual(expected_delay, delay) catch unreachable;
+        }
+    });
+
+    var machine = testInstance(.{ .host = host.host() });
+    defer machine.deinit();
+
+    machine.renderVideoBuffer(.{ .specific = expected_buffer_id }, expected_delay);
+    try testing.expectEqual(1, host.call_counts.bufferReady);
 }

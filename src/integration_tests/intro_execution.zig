@@ -5,7 +5,6 @@
 const Machine = @import("../machine/machine.zig");
 const Host = @import("../machine/host.zig");
 const ResourceDirectory = @import("../resources/resource_directory.zig");
-const Video = @import("../machine/video.zig");
 const BufferID = @import("../values/buffer_id.zig");
 const UserInput = @import("../machine/user_input.zig");
 
@@ -26,7 +25,7 @@ const CountingHost = struct {
         return Host.Interface.init(self, bufferReady);
     }
 
-    fn bufferReady(self: *Self, _: *const Video.Instance, _: BufferID.Specific, delay: Host.Milliseconds) void {
+    fn bufferReady(self: *Self, _: *const Machine.Instance, _: BufferID.Specific, delay: Host.Milliseconds) void {
         self.render_count += 1;
         self.total_delay += delay;
 

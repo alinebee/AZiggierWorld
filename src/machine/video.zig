@@ -162,8 +162,10 @@ pub const Instance = struct {
         try drawStringImpl(Buffer, buffer, string, color_id, point);
     }
 
-    /// Render the contents of a video buffer to the host using the current palette.
-    pub fn renderBuffer(self: *Self, buffer_id: BufferID.Enum, delay: Milliseconds, host: Host.Interface) void {
+    /// Set the specified buffer as the front buffer, marking that it is ready to draw to the host screen.
+    /// If `.back_buffer` is specified, this will swap the front and back buffers.
+    /// Returns the resolved ID of the buffer that should be drawn to the host screen using `renderBufferToSurface`.
+    pub fn markBufferAsReady(self: *Self, buffer_id: BufferID.Enum) BufferID.Specific {
         switch (buffer_id) {
             // When re-rendering the front buffer, leave the current front and back buffers as they were.
             .front_buffer => {},
@@ -177,8 +179,7 @@ pub const Instance = struct {
                 self.front_buffer_id = resolved_id;
             },
         }
-
-        host.bufferReady(self, self.front_buffer_id, delay);
+        return self.front_buffer_id;
     }
 
     /// Render the contents of the specified buffer into the specified 24-bit host surface.
@@ -311,60 +312,31 @@ test "resolvedPolygonSource with animations returns error when animations are no
     try testing.expectError(error.AnimationsNotLoaded, instance.resolvedPolygonSource(.animations));
 }
 
-test "renderBuffer with specific buffer notifies host and sets front buffer while leaving back buffer alone" {
+test "markBufferAsReady with specific buffer sets front buffer while leaving back buffer alone" {
     const expected_buffer_id = 3;
-    const expected_delay = 24;
 
     var instance = testInstance();
-    var host = MockHost.new(struct {
-        pub fn bufferReady(_: *const Instance, buffer_id: BufferID.Specific, delay: Host.Milliseconds) void {
-            // TODO: compare video pointer against instance (not yet possible to close over runtime values in Zig.)
-            testing.expectEqual(expected_buffer_id, buffer_id) catch unreachable;
-            testing.expectEqual(expected_delay, delay) catch unreachable;
-        }
-    });
+    const resolved_buffer_id = instance.markBufferAsReady(BufferID.Enum{ .specific = expected_buffer_id });
 
-    instance.renderBuffer(BufferID.Enum{ .specific = expected_buffer_id }, expected_delay, host.host());
-
-    try testing.expectEqual(1, host.call_counts.bufferReady);
+    try testing.expectEqual(instance.front_buffer_id, resolved_buffer_id);
     try testing.expectEqual(expected_buffer_id, instance.front_buffer_id);
     try testing.expectEqual(Instance.initial_back_buffer_id, instance.back_buffer_id);
 }
 
-test "renderBuffer swaps front and back buffers when back buffer is rendered" {
-    const expected_buffer_id = Instance.initial_back_buffer_id;
-    const expected_delay = 24;
-
+test "markBufferAsReady swaps front and back buffers when back buffer is marked ready" {
     var instance = testInstance();
-    var host = MockHost.new(struct {
-        pub fn bufferReady(_: *const Instance, buffer_id: BufferID.Specific, delay: Host.Milliseconds) void {
-            testing.expectEqual(expected_buffer_id, buffer_id) catch unreachable;
-            testing.expectEqual(expected_delay, delay) catch unreachable;
-        }
-    });
+    const resolved_buffer_id = instance.markBufferAsReady(.back_buffer);
 
-    instance.renderBuffer(.back_buffer, expected_delay, host.host());
-
-    try testing.expectEqual(1, host.call_counts.bufferReady);
+    try testing.expectEqual(instance.front_buffer_id, resolved_buffer_id);
     try testing.expectEqual(Instance.initial_back_buffer_id, instance.front_buffer_id);
     try testing.expectEqual(Instance.initial_front_buffer_id, instance.back_buffer_id);
 }
 
-test "renderBuffer does not swap buffers when front buffer is re-rendered" {
-    const expected_buffer_id = Instance.initial_front_buffer_id;
-    const expected_delay = 24;
-
+test "markBufferAsReady does not swap buffers when front buffer is marked ready again" {
     var instance = testInstance();
-    var host = MockHost.new(struct {
-        pub fn bufferReady(_: *const Instance, buffer_id: BufferID.Specific, delay: Host.Milliseconds) void {
-            testing.expectEqual(expected_buffer_id, buffer_id) catch unreachable;
-            testing.expectEqual(expected_delay, delay) catch unreachable;
-        }
-    });
+    const resolved_buffer_id = instance.markBufferAsReady(.front_buffer);
 
-    instance.renderBuffer(.front_buffer, expected_delay, host.host());
-
-    try testing.expectEqual(1, host.call_counts.bufferReady);
+    try testing.expectEqual(instance.front_buffer_id, resolved_buffer_id);
     try testing.expectEqual(Instance.initial_front_buffer_id, instance.front_buffer_id);
     try testing.expectEqual(Instance.initial_back_buffer_id, instance.back_buffer_id);
 }
