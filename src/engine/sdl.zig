@@ -182,45 +182,10 @@ pub const Instance = struct {
         }
     }
 
-    fn nanosecondsSinceLastFrame(self: Self) ?u64 {
-        // TODO: switch to using std.time.Instant once we're past 0.9.1.
-        if (self.last_frame_time) |last_frame_time| {
-            const current_time = @truncate(i64, std.time.nanoTimestamp());
-            if (std.math.cast(u64, current_time - last_frame_time)) |elapsed_time| {
-                return elapsed_time;
-            } else |_| {
-                // Ignore negative timestamps
-                return null;
-            }
-        } else {
-            // This is the first frame
-            return null;
-        }
-    }
-
     fn bufferReady(self: *Self, machine: *const Machine.Instance, buffer_id: BufferID.Specific, requested_delay: Host.Milliseconds) void {
-        const requested_delay_in_ns = requested_delay * std.time.ns_per_ms;
-        var resolved_delay = requested_delay_in_ns;
+        const delay = resolvedFrameDelay(requested_delay * std.time.ns_per_ms, self.last_frame_time, @truncate(i64, std.time.nanoTimestamp()), self.input.turbo);
 
-        // Fast-forward when turbo mode is active.
-        if (self.input.turbo) {
-            resolved_delay = 0;
-        }
-
-        // Reduce the delay by the time elapsed since the previous frame.
-        if (self.nanosecondsSinceLastFrame()) |elapsed_time| {
-            // Saturating subtraction: minimum of 0
-            resolved_delay -|= elapsed_time;
-            log.debug("Original delay: {d:.2}ms elapsed time: {d:.2}ms final delay {d:.2}ms", .{
-                @intToFloat(f64, requested_delay_in_ns) / std.time.ns_per_ms,
-                @intToFloat(f64, elapsed_time) / std.time.ns_per_ms,
-                @intToFloat(f64, resolved_delay) / std.time.ns_per_ms,
-            });
-        } else {
-            log.debug("Ignoring elapsed time", .{});
-        }
-
-        std.time.sleep(resolved_delay);
+        std.time.sleep(delay);
 
         var locked_texture = self.texture.lock(null) catch @panic("self.texture.lock failed");
         const raw_pixels = @ptrCast(*Video.HostSurface, locked_texture.pixels);
@@ -244,8 +209,76 @@ pub const Instance = struct {
     }
 };
 
+fn resolvedFrameDelay(requested_delay: u64, possible_last_frame_time: ?i64, current_time: i64, turbo: bool) u64 {
+    if (turbo) {
+        return 0;
+    } else if (possible_last_frame_time) |last_frame_time| {
+        // -| is the saturating subtraction operator, to ensure we don't overflow;
+        // both operands are signed, so the result may still be negative.
+        const possibly_negative_elapsed_time = current_time -| last_frame_time;
+
+        if (std.math.cast(u64, possibly_negative_elapsed_time)) |elapsed_time| {
+            return requested_delay -| elapsed_time;
+        } else |_| {
+            return requested_delay;
+        }
+    } else {
+        return requested_delay;
+    }
+}
+
 const testing = @import("../utils/testing.zig");
 
 test "Ensure everything compiles" {
     testing.refAllDecls(Instance);
+}
+
+test "resolvedFrameDelay returns requested delay minus elapsed time between frames" {
+    const delay = resolvedFrameDelay(25, 0, 10, false);
+    try testing.expectEqual(15, delay);
+}
+
+test "resolvedFrameDelay returns requested delay when no time has elapsed between frames" {
+    const delay = resolvedFrameDelay(25, 0, 0, false);
+    try testing.expectEqual(25, delay);
+}
+
+test "resolvedFrameDelay returns 0 when more time has elapsed between frames than requested delay" {
+    const delay = resolvedFrameDelay(25, 0, 50, false);
+    try testing.expectEqual(0, delay);
+}
+
+test "resolvedFrameDelay returns requested delay when previous frame time is later than current time" {
+    const delay = resolvedFrameDelay(25, 50, 0, false);
+    try testing.expectEqual(25, delay);
+}
+
+test "resolvedFrameDelay returns requested delay when no previous frame time is available" {
+    const delay = resolvedFrameDelay(25, null, 50, false);
+    try testing.expectEqual(25, delay);
+}
+
+test "resolvedFrameDelay returns 0 when turbo mode is active, regardless of requested delay" {
+    const delay = resolvedFrameDelay(25, 0, 25, true);
+    try testing.expectEqual(0, delay);
+}
+
+test "resolvedFrameDelay handles negative timestamps before epoch" {
+    const delay = resolvedFrameDelay(25, -1000, -990, false);
+    try testing.expectEqual(15, delay);
+}
+
+test "resolvedFrameDelay does not trap on enormous positive differences between frame times" {
+    const delay = resolvedFrameDelay(25, std.math.minInt(i64), std.math.maxInt(i64), false);
+    try testing.expectEqual(0, delay);
+}
+
+test "resolvedFrameDelay does not trap on enormous negative differences between frame times" {
+    const delay = resolvedFrameDelay(25, std.math.maxInt(i64), std.math.minInt(i64), false);
+    try testing.expectEqual(25, delay);
+}
+
+test "resolvedFrameDelay does not trap on enormous requested frame time" {
+    const delay = resolvedFrameDelay(std.math.maxInt(u64), std.math.minInt(i64), std.math.maxInt(i64), false);
+    try testing.expectEqual(std.math.maxInt(u64) - @intCast(u64, std.math.maxInt(i64)), delay);
 }
