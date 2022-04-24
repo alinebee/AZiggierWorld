@@ -96,7 +96,7 @@ test "execute shifts destination register" {
         .shift = shift,
     };
 
-    var machine = Machine.testInstance(null);
+    var machine = Machine.testInstance(.{});
     defer machine.deinit();
 
     machine.registers.setBitPattern(instruction.destination, original_value);

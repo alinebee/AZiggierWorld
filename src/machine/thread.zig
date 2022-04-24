@@ -236,7 +236,7 @@ const Kill = @import("../instructions/kill.zig");
 test "run stores program counter in thread state upon reaching yield instruction" {
     const bytecode = Yield.Fixtures.valid;
 
-    var machine = Machine.testInstance(&bytecode);
+    var machine = Machine.testInstance(.{ .bytecode = &bytecode });
     defer machine.deinit();
 
     const thread = &machine.threads[0];
@@ -247,7 +247,7 @@ test "run stores program counter in thread state upon reaching yield instruction
 test "run deactivates thread upon reaching kill instruction" {
     const bytecode = Kill.Fixtures.valid;
 
-    var machine = Machine.testInstance(&bytecode);
+    var machine = Machine.testInstance(.{ .bytecode = &bytecode });
     defer machine.deinit();
 
     const thread = &machine.threads[0];

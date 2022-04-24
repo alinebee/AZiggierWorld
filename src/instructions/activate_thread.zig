@@ -75,7 +75,7 @@ test "execute schedules specified thread to jump to specified address" {
         .address = 0xDEAD,
     };
 
-    var machine = Machine.testInstance(null);
+    var machine = Machine.testInstance(.{});
     defer machine.deinit();
 
     try instruction.execute(&machine);

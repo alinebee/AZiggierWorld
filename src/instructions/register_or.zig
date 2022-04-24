@@ -66,7 +66,7 @@ test "execute masks destination register" {
         .value = mask,
     };
 
-    var machine = Machine.testInstance(null);
+    var machine = Machine.testInstance(.{});
     defer machine.deinit();
 
     machine.registers.setBitPattern(instruction.destination, original_value);

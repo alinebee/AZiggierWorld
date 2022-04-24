@@ -43,7 +43,7 @@ test "parse parses instruction from valid bytecode and consumes 1 byte" {
 test "execute returns ExecutionResult.deactivate" {
     const instruction = Instance{};
 
-    var machine = Machine.testInstance(null);
+    var machine = Machine.testInstance(.{});
     defer machine.deinit();
 
     try testing.expectEqual(.deactivate, instruction.execute(&machine));

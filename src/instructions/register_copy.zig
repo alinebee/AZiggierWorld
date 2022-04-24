@@ -58,7 +58,7 @@ test "execute updates specified register with value" {
         .source = RegisterID.parse(17),
     };
 
-    var machine = Machine.testInstance(null);
+    var machine = Machine.testInstance(.{});
     defer machine.deinit();
 
     machine.registers.setSigned(instruction.destination, 32767);

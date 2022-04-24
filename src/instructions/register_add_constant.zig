@@ -61,7 +61,7 @@ test "execute adds to destination register" {
         .value = -1000,
     };
 
-    var machine = Machine.testInstance(null);
+    var machine = Machine.testInstance(.{});
     defer machine.deinit();
 
     machine.registers.setSigned(instruction.destination, 125);
@@ -77,7 +77,7 @@ test "execute wraps on overflow" {
         .value = 32767,
     };
 
-    var machine = Machine.testInstance(null);
+    var machine = Machine.testInstance(.{});
     defer machine.deinit();
 
     machine.registers.setSigned(instruction.destination, 1);
@@ -93,7 +93,7 @@ test "execute wraps on underflow" {
         .value = -32768,
     };
 
-    var machine = Machine.testInstance(null);
+    var machine = Machine.testInstance(.{});
     defer machine.deinit();
 
     machine.registers.setSigned(instruction.destination, -1);

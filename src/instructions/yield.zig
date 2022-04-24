@@ -63,7 +63,7 @@ test "parse parses instruction from valid bytecode and consumes 1 byte" {
 test "execute returns ExecutionResult.yield" {
     const instruction = Instance{};
 
-    var machine = Machine.testInstance(null);
+    var machine = Machine.testInstance(.{});
     defer machine.deinit();
 
     try testing.expectEqual(.yield, try instruction.execute(&machine));
@@ -72,7 +72,7 @@ test "execute returns ExecutionResult.yield" {
 test "execute on a non-empty stack returns error.YieldWithinFunction" {
     const instruction = Instance{};
 
-    var machine = Machine.testInstance(null);
+    var machine = Machine.testInstance(.{});
     defer machine.deinit();
 
     try machine.stack.push(0x1);

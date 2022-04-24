@@ -268,7 +268,7 @@ test "parseNextInstruction returns error.InvalidOpcode error when it encounters 
 // - executeNextInstruction tests -
 
 test "executeNextInstruction executes arbitrary instruction on machine when given valid bytecode" {
-    var machine = Machine.testInstance(&ControlResources.Fixtures.valid);
+    var machine = Machine.testInstance(.{ .bytecode = &ControlResources.Fixtures.valid });
     defer machine.deinit();
 
     const result = try executeNextInstruction(&machine.program, &machine);
@@ -278,7 +278,7 @@ test "executeNextInstruction executes arbitrary instruction on machine when give
 }
 
 test "executeNextInstruction returns ExecutionResult.deactivate if specified" {
-    var machine = Machine.testInstance(&Kill.Fixtures.valid);
+    var machine = Machine.testInstance(.{ .bytecode = &Kill.Fixtures.valid });
     defer machine.deinit();
 
     const result = try executeNextInstruction(&machine.program, &machine);
@@ -287,7 +287,7 @@ test "executeNextInstruction returns ExecutionResult.deactivate if specified" {
 }
 
 test "executeNextInstruction returns ExecutionResult.yield if specified" {
-    var machine = Machine.testInstance(&Yield.Fixtures.valid);
+    var machine = Machine.testInstance(.{ .bytecode = &Yield.Fixtures.valid });
     defer machine.deinit();
 
     const result = try executeNextInstruction(&machine.program, &machine);
@@ -306,7 +306,7 @@ test "executeProgram ends execution on Yield instruction and returns ExecutionRe
         @enumToInt(Opcode.Enum.RegisterSet), @enumToInt(register_2), 0xF0, 0x0D, // Offset 5: Set register 2 to 0xF00D
     };
 
-    var machine = Machine.testInstance(&bytecode);
+    var machine = Machine.testInstance(.{ .bytecode = &bytecode });
     defer machine.deinit();
 
     const result = try executeProgram(&machine.program, &machine, 10);
@@ -327,7 +327,7 @@ test "executeProgram ends execution on Kill instruction and returns ExecutionRes
         @enumToInt(Opcode.Enum.RegisterSet), @enumToInt(register_2), 0xF0, 0x0D, // Offset 5: Set register 2 to 0xF00D
     };
 
-    var machine = Machine.testInstance(&bytecode);
+    var machine = Machine.testInstance(.{ .bytecode = &bytecode });
     defer machine.deinit();
 
     const result = try executeProgram(&machine.program, &machine, 10);
@@ -348,7 +348,7 @@ test "executeProgram returns error.InstructionLimitExceeded if program never yie
 
     const max_instructions = 10;
 
-    var machine = Machine.testInstance(&bytecode);
+    var machine = Machine.testInstance(.{ .bytecode = &bytecode });
     defer machine.deinit();
 
     try testing.expectError(error.InstructionLimitExceeded, executeProgram(&machine.program, &machine, max_instructions));

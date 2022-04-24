@@ -62,7 +62,7 @@ test "execute subtracts from destination register and leaves source register alo
         .source = RegisterID.parse(17),
     };
 
-    var machine = Machine.testInstance(null);
+    var machine = Machine.testInstance(.{});
     defer machine.deinit();
 
     machine.registers.setSigned(instruction.destination, 125);
@@ -80,7 +80,7 @@ test "execute wraps on overflow" {
         .source = RegisterID.parse(17),
     };
 
-    var machine = Machine.testInstance(null);
+    var machine = Machine.testInstance(.{});
     defer machine.deinit();
 
     machine.registers.setSigned(instruction.destination, 32767);
@@ -97,7 +97,7 @@ test "execute wraps on underflow" {
         .source = RegisterID.parse(17),
     };
 
-    var machine = Machine.testInstance(null);
+    var machine = Machine.testInstance(.{});
     defer machine.deinit();
 
     machine.registers.setSigned(instruction.destination, -32768);

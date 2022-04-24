@@ -212,7 +212,7 @@ test "execute compares expected registers and jumps to expected address when con
     const lhs_register = RegisterID.parse(1);
     const rhs_register = RegisterID.parse(2);
 
-    var machine = Machine.testInstance(&bytecode);
+    var machine = Machine.testInstance(.{ .bytecode = &bytecode });
     defer machine.deinit();
 
     machine.registers.setSigned(lhs_register, 0xFF);
@@ -236,7 +236,7 @@ test "execute compares expected register to constant and jumps to expected addre
     const bytecode = [_]u8{0} ** 10;
     const lhs_register = RegisterID.parse(1);
 
-    var machine = Machine.testInstance(&bytecode);
+    var machine = Machine.testInstance(.{ .bytecode = &bytecode });
     defer machine.deinit();
 
     machine.registers.setSigned(lhs_register, 0x41BD);
@@ -258,7 +258,7 @@ test "execute does not jump when condition fails" {
     const lhs_register = RegisterID.parse(1);
     const rhs_register = RegisterID.parse(2);
 
-    var machine = Machine.testInstance(&bytecode);
+    var machine = Machine.testInstance(.{ .bytecode = &bytecode });
     defer machine.deinit();
 
     machine.registers.setSigned(lhs_register, 0xFF);
@@ -283,7 +283,7 @@ test "execute returns error.InvalidAddress when address is out of range" {
     const lhs_register = RegisterID.parse(1);
     const rhs_register = RegisterID.parse(2);
 
-    var machine = Machine.testInstance(&bytecode);
+    var machine = Machine.testInstance(.{ .bytecode = &bytecode });
     defer machine.deinit();
 
     machine.registers.setSigned(lhs_register, 0xFF);

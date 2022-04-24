@@ -58,7 +58,7 @@ test "execute updates specified register with value" {
         .value = -1234,
     };
 
-    var machine = Machine.testInstance(null);
+    var machine = Machine.testInstance(.{});
     defer machine.deinit();
 
     instruction.execute(&machine);
