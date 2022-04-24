@@ -11,6 +11,7 @@ const log = @import("../utils/logging.zig").log;
 
 const Input = struct {
     game_input: GameInput.Instance = .{},
+    turbo: bool = false,
     exited: bool = false,
 
     const Self = @This();
@@ -36,6 +37,7 @@ const Input = struct {
                     .up => self.game_input.up = true,
                     .space => self.game_input.action = true,
                     .@"return" => self.game_input.action = true,
+                    .delete, .backspace => self.turbo = true,
 
                     else => {},
                 }
@@ -49,6 +51,7 @@ const Input = struct {
                     .up => self.game_input.up = false,
                     .space => self.game_input.action = false,
                     .@"return" => self.game_input.action = false,
+                    .delete, .backspace => self.turbo = false,
 
                     else => {},
                 }
@@ -81,6 +84,7 @@ pub const Instance = struct {
     /// The moment at which the previous frame was rendered.
     /// Used for adjusting frame delays to account for processing time.
     last_frame_time: ?i64 = null,
+    input: Input = .{},
 
     const Self = @This();
 
@@ -107,7 +111,7 @@ pub const Instance = struct {
             allocator,
             self.resource_directory.reader(),
             self.host(),
-            .{},
+            .{ .initial_game_part = .intro_cinematic },
         );
         errdefer self.machine.deinit();
 
@@ -164,17 +168,17 @@ pub const Instance = struct {
     // - VM execution
 
     pub fn runUntilExit(self: *Self) !void {
-        var input = Input{};
+        self.input = .{};
 
         while (true) {
             while (SDL.pollEvent()) |event| {
-                input.updateFromSDLEvent(event);
+                self.input.updateFromSDLEvent(event);
             }
-            if (input.exited) break;
+            if (self.input.exited) break;
 
-            try self.machine.runTic(input.game_input);
+            try self.machine.runTic(self.input.game_input);
 
-            input.clearPressedInputs();
+            self.input.clearPressedInputs();
         }
     }
 
@@ -198,9 +202,15 @@ pub const Instance = struct {
         const requested_delay_in_ns = requested_delay * std.time.ns_per_ms;
         var resolved_delay = requested_delay_in_ns;
 
+        // Fast-forward when turbo mode is active.
+        if (self.input.turbo) {
+            resolved_delay = 0;
+        }
+
         // Reduce the delay by the time elapsed since the previous frame.
         if (self.nanosecondsSinceLastFrame()) |elapsed_time| {
-            resolved_delay -= elapsed_time;
+            // Saturating subtraction: minimum of 0
+            resolved_delay -|= elapsed_time;
             log.debug("Original delay: {d:.2}ms elapsed time: {d:.2}ms final delay {d:.2}ms", .{
                 @intToFloat(f64, requested_delay_in_ns) / std.time.ns_per_ms,
                 @intToFloat(f64, elapsed_time) / std.time.ns_per_ms,
