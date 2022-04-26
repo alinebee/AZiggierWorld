@@ -61,7 +61,7 @@ const Input = struct {
         }
     }
 
-    // Clear the state of inputs that should register as discrete keypresses
+    // Clear the state of game inputs that should register as discrete keypresses
     // rather than being held down continuously. Should be called at the end
     // of each tic, after the input has been consumed by the virtual machine.
     fn clearPressedInputs(self: *Self) void {
@@ -84,6 +84,9 @@ pub const Instance = struct {
     /// The moment at which the previous frame was rendered.
     /// Used for adjusting frame delays to account for processing time.
     last_frame_time: ?i64 = null,
+
+    /// The current state of the player's inputs.
+    /// Updated on each tic while the host is running.
     input: Input = .{},
 
     const Self = @This();
@@ -169,6 +172,7 @@ pub const Instance = struct {
 
     pub fn runUntilExit(self: *Self) !void {
         self.input = .{};
+        self.last_frame_time = null;
 
         while (true) {
             while (SDL.pollEvent()) |event| {
