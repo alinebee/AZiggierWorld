@@ -1,7 +1,7 @@
 const Opcode = @import("../values/opcode.zig");
 const Program = @import("../machine/program.zig");
 const Machine = @import("../machine/machine.zig");
-const Video = @import("../machine/video.zig");
+const Video = @import("../machine/video.zig").Video;
 const BufferID = @import("../values/buffer_id.zig");
 const RegisterID = @import("../values/register_id.zig");
 

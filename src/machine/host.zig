@@ -6,7 +6,7 @@ const assert = std.debug.assert;
 
 const BufferID = @import("../values/buffer_id.zig");
 const Machine = @import("machine.zig");
-const Video = @import("video.zig");
+const Video = @import("video.zig").Video;
 pub const Milliseconds = Video.Milliseconds;
 
 /// An interface that the virtual machine uses to communicate with the host.

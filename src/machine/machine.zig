@@ -45,7 +45,7 @@ const Thread = @import("thread.zig");
 const Stack = @import("stack.zig");
 const Registers = @import("registers.zig");
 const Program = @import("program.zig");
-const Video = @import("video.zig");
+const Video = @import("video.zig").Video;
 const Audio = @import("audio.zig");
 const Memory = @import("memory.zig").Memory;
 const Host = @import("host.zig");
@@ -88,7 +88,7 @@ pub const Instance = struct {
     program: Program.Instance,
 
     /// The current state of the video subsystem.
-    video: Video.Instance,
+    video: Video,
 
     /// The current state of resources loaded into memory.
     memory: Memory,
@@ -553,7 +553,7 @@ test "loadResource copies bitmap resource directly into video buffer without per
     var machine = testInstance(.{});
     defer machine.deinit();
 
-    const buffer = &machine.video.buffers[Video.Instance.bitmap_buffer_id];
+    const buffer = &machine.video.buffers[Video.bitmap_buffer_id];
     buffer.fill(0x0);
     const original_buffer_contents = buffer.toBitmap();
 

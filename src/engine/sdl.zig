@@ -2,7 +2,7 @@ const Machine = @import("../machine/machine.zig");
 const Host = @import("../machine/host.zig");
 const ResourceDirectory = @import("../resources/resource_directory.zig").ResourceDirectory;
 const BufferID = @import("../values/buffer_id.zig");
-const Video = @import("../machine/video.zig");
+const Video = @import("../machine/video.zig").Video;
 const GameInput = @import("../machine/user_input.zig");
 
 const SDL = @import("sdl2");

@@ -1,5 +1,5 @@
 const Machine = @import("../machine.zig");
-const Video = @import("../video.zig");
+const Video = @import("../video.zig").Video;
 const Audio = @import("../audio.zig");
 const Registers = @import("../registers.zig");
 

@@ -21,31 +21,11 @@ const english = @import("../assets/english.zig");
 
 const mem = @import("std").mem;
 
-/// Defines where to read polygon from for a polygon draw operation.
-/// Another World's polygons may be stored in one of two locations:
-/// - polygons: A game-part-specific resource containing scene backgrounds and incidental animations.
-/// - animations: A shared resource containing common sprites like players, enemies, weapons etc.
-pub const PolygonSource = enum {
-    /// Draw polygon data from the currently-loaded polygon resource.
-    polygons,
-    /// Draw polygon data from the currently-loaded animation resource.
-    animations,
-};
-
-/// A length of time in milliseconds to leave a frame on screen.
-pub const Milliseconds = usize;
-
-/// The location of a polygon record within its containing resource.
-pub const PolygonAddress = PolygonResource.Address;
-
-/// The type used for the video buffers.
-const Buffer = PackedBuffer.Instance(static_limits.virtual_screen_width, static_limits.virtual_screen_height);
-
-/// The type of 24-bit buffer that hosts are expected to provide for the video subsystem to render frames into.
-pub const HostSurface = Surface.Instance(static_limits.virtual_screen_width, static_limits.virtual_screen_height);
-
 /// The video subsystem responsible for handling draw calls and sending frames to the host screen.
-pub const Instance = struct {
+pub const Video = struct {
+    /// The type used for the video buffers.
+    const Buffer = PackedBuffer.Instance(static_limits.virtual_screen_width, static_limits.virtual_screen_height);
+
     /// The resource from which part-specific polygon data will be read.
     polygons: PolygonResource.Instance,
 
@@ -212,25 +192,45 @@ pub const Instance = struct {
             .animations => return self.animations orelse error.AnimationsNotLoaded,
         }
     }
+
+    /// Defines where to read polygon from for a polygon draw operation.
+    /// Another World's polygons may be stored in one of two locations:
+    /// - polygons: A game-part-specific resource containing scene backgrounds and incidental animations.
+    /// - animations: A shared resource containing common sprites like players, enemies, weapons etc.
+    pub const PolygonSource = enum {
+        /// Draw polygon data from the currently-loaded polygon resource.
+        polygons,
+        /// Draw polygon data from the currently-loaded animation resource.
+        animations,
+    };
+
+    /// A length of time in milliseconds to leave a frame on screen.
+    pub const Milliseconds = usize;
+
+    /// The location of a polygon record within its containing resource.
+    pub const PolygonAddress = PolygonResource.Address;
+
+    /// The type of 24-bit buffer that hosts are expected to provide for the video subsystem to render frames into.
+    pub const HostSurface = Surface.Instance(static_limits.virtual_screen_width, static_limits.virtual_screen_height);
+
+    pub const Error = error{
+        /// Attempted to render polygons from the animations resource when it was not loaded by the current game part.
+        AnimationsNotLoaded,
+        /// Attempted to render a buffer to a surface before selectPalette has been called.
+        PaletteNotSelected,
+    };
 };
 
-pub const Error = error{
-    /// Attempted to render polygons from the animations resource when it was not loaded by the current game part.
-    AnimationsNotLoaded,
-    /// Attempted to render a buffer to a surface before selectPalette has been called.
-    PaletteNotSelected,
-};
-
-/// Used by `Instance.drawPolygon` to loop over polygons parsed from a resource.
+/// Used by `Video.drawPolygon` to loop over polygons parsed from a resource.
 const PolygonVisitor = struct {
     /// The buffer to draw polygons into.
-    target_buffer: *Buffer,
+    target_buffer: *Video.Buffer,
     /// The buffer to read from when drawing masked polygons.
-    mask_buffer: *const Buffer,
+    mask_buffer: *const Video.Buffer,
 
     /// Draw a single polygon into the target buffer, using the mask buffer to read from if necessary.
     pub fn visit(self: @This(), polygon: Polygon.Instance) !void {
-        try drawPolygonImpl(Buffer, self.target_buffer, self.mask_buffer, polygon);
+        try drawPolygonImpl(Video.Buffer, self.target_buffer, self.mask_buffer, polygon);
     }
 };
 
@@ -244,16 +244,16 @@ const PlanarBitmapResource = @import("../resources/planar_bitmap_resource.zig");
 const Bitmap = IndexedBitmap.Instance(static_limits.virtual_screen_width, static_limits.virtual_screen_height);
 
 test "Ensure everything compiles" {
-    testing.refAllDecls(Instance);
+    testing.refAllDecls(Video);
 }
 
 /// Construct a video instance populated with sample valid resource data,
 /// with all buffers filled with color ID 0.
-fn testInstance() Instance {
+fn testInstance() Video {
     const polygon_data = &PolygonResource.Fixtures.resource;
     const palette_data = &PaletteResource.Fixtures.resource;
 
-    var instance = Instance{
+    var instance = Video{
         .polygons = PolygonResource.new(polygon_data),
         .animations = PolygonResource.new(polygon_data),
         .palettes = PaletteResource.new(palette_data),
@@ -320,7 +320,7 @@ test "markBufferAsReady with specific buffer sets front buffer while leaving bac
 
     try testing.expectEqual(instance.front_buffer_id, resolved_buffer_id);
     try testing.expectEqual(expected_buffer_id, instance.front_buffer_id);
-    try testing.expectEqual(Instance.initial_back_buffer_id, instance.back_buffer_id);
+    try testing.expectEqual(Video.initial_back_buffer_id, instance.back_buffer_id);
 }
 
 test "markBufferAsReady swaps front and back buffers when back buffer is marked ready" {
@@ -328,8 +328,8 @@ test "markBufferAsReady swaps front and back buffers when back buffer is marked 
     const resolved_buffer_id = instance.markBufferAsReady(.back_buffer);
 
     try testing.expectEqual(instance.front_buffer_id, resolved_buffer_id);
-    try testing.expectEqual(Instance.initial_back_buffer_id, instance.front_buffer_id);
-    try testing.expectEqual(Instance.initial_front_buffer_id, instance.back_buffer_id);
+    try testing.expectEqual(Video.initial_back_buffer_id, instance.front_buffer_id);
+    try testing.expectEqual(Video.initial_front_buffer_id, instance.back_buffer_id);
 }
 
 test "markBufferAsReady does not swap buffers when front buffer is marked ready again" {
@@ -337,8 +337,8 @@ test "markBufferAsReady does not swap buffers when front buffer is marked ready 
     const resolved_buffer_id = instance.markBufferAsReady(.front_buffer);
 
     try testing.expectEqual(instance.front_buffer_id, resolved_buffer_id);
-    try testing.expectEqual(Instance.initial_front_buffer_id, instance.front_buffer_id);
-    try testing.expectEqual(Instance.initial_back_buffer_id, instance.back_buffer_id);
+    try testing.expectEqual(Video.initial_front_buffer_id, instance.front_buffer_id);
+    try testing.expectEqual(Video.initial_back_buffer_id, instance.back_buffer_id);
 }
 
 test "loadBitmapResource loads bitmap data into expected buffer" {
@@ -357,7 +357,7 @@ test "loadBitmapResource loads bitmap data into expected buffer" {
 
     for (instance.buffers) |buffer, index| {
         const actual = buffer.toBitmap();
-        if (index == Instance.bitmap_buffer_id) {
+        if (index == Video.bitmap_buffer_id) {
             try IndexedBitmap.expectEqualBitmaps(expected_bitmap_buffer_contents, actual);
         } else {
             try IndexedBitmap.expectEqualBitmaps(expected_untouched_buffer_contents, actual);
@@ -403,9 +403,9 @@ test "renderBufferToSurface renders colors from current palette into surface" {
 
     instance.buffers[buffer_id].fill(color_id);
 
-    var surface: HostSurface = undefined;
+    var surface: Video.HostSurface = undefined;
     const expected_color = instance.current_palette.?[color_id];
-    const expected_surface = Surface.filled(HostSurface, expected_color);
+    const expected_surface = Surface.filled(Video.HostSurface, expected_color);
 
     try instance.renderBufferToSurface(buffer_id, &surface);
     try testing.expectEqual(expected_surface, surface);
@@ -422,7 +422,7 @@ test "renderBufferToSurface returns error.PaletteNotSelected and leaves surface 
     // This color is not present in the palette and should never be rendered normally
     const untouched_color = .{ .r = 1, .g = 2, .b = 3, .a = 0 };
 
-    var surface: HostSurface = Surface.filled(HostSurface, untouched_color);
+    var surface = Surface.filled(Video.HostSurface, untouched_color);
     const expected_surface = surface;
 
     try testing.expectError(error.PaletteNotSelected, instance.renderBufferToSurface(buffer_id, &surface));

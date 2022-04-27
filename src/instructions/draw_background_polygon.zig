@@ -1,7 +1,7 @@
 const Opcode = @import("../values/opcode.zig");
 const Program = @import("../machine/program.zig");
 const Machine = @import("../machine/machine.zig");
-const Video = @import("../machine/video.zig");
+const Video = @import("../machine/video.zig").Video;
 const Point = @import("../values/point.zig");
 const PolygonScale = @import("../values/polygon_scale.zig");
 
