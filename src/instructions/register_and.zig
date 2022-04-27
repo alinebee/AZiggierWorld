@@ -4,42 +4,45 @@ const RegisterID = @import("../values/register_id.zig");
 const Program = @import("../machine/program.zig").Program;
 const Machine = @import("../machine/machine.zig").Machine;
 
-pub const opcode = Opcode.Enum.RegisterAnd;
-
 /// Applies a bitwise-AND mask to the value in a register.
-pub const Instance = struct {
+pub const RegisterAnd = struct {
     /// The ID of the register to apply the mask to.
     destination: RegisterID.Enum,
 
     /// The bitmask to apply to the value in the register.
     value: Register.BitPattern,
 
-    pub fn execute(self: Instance, machine: *Machine) void {
+    const Self = @This();
+
+    /// Parse the next instruction from a bytecode program.
+    /// Consumes 4 bytes from the bytecode on success, including the opcode.
+    /// Returns an error if the bytecode could not be read or contained an invalid instruction.
+    pub fn parse(_: Opcode.Raw, program: *Program) ParseError!Self {
+        return Self{
+            .destination = RegisterID.parse(try program.read(RegisterID.Raw)),
+            .value = try program.read(Register.BitPattern),
+        };
+    }
+
+    pub fn execute(self: Self, machine: *Machine) void {
         const original_value = machine.registers.bitPattern(self.destination);
         const masked_value = original_value & self.value;
         machine.registers.setBitPattern(self.destination, masked_value);
     }
-};
 
-/// Parse the next instruction from a bytecode program.
-/// Consumes 4 bytes from the bytecode on success, including the opcode.
-/// Returns an error if the bytecode could not be read or contained an invalid instruction.
-pub fn parse(_: Opcode.Raw, program: *Program) ParseError!Instance {
-    return Instance{
-        .destination = RegisterID.parse(try program.read(RegisterID.Raw)),
-        .value = try program.read(Register.BitPattern),
+    // - Exported constants -
+
+    pub const opcode = Opcode.Enum.RegisterAnd;
+    pub const ParseError = Program.ReadError;
+
+    // -- Bytecode examples --
+
+    pub const Fixtures = struct {
+        const raw_opcode = @enumToInt(opcode);
+
+        /// Example bytecode that should produce a valid instruction.
+        pub const valid = [4]u8{ raw_opcode, 16, 0b1100_0011, 0b1111_0000 };
     };
-}
-
-pub const ParseError = Program.ReadError;
-
-// -- Bytecode examples --
-
-pub const Fixtures = struct {
-    const raw_opcode = @enumToInt(opcode);
-
-    /// Example bytecode that should produce a valid instruction.
-    pub const valid = [4]u8{ raw_opcode, 16, 0b1100_0011, 0b1111_0000 };
 };
 
 // -- Tests --
@@ -48,7 +51,7 @@ const testing = @import("../utils/testing.zig");
 const expectParse = @import("test_helpers/parse.zig").expectParse;
 
 test "parse parses valid bytecode and consumes 3 bytes" {
-    const instruction = try expectParse(parse, &Fixtures.valid, 4);
+    const instruction = try expectParse(RegisterAnd.parse, &RegisterAnd.Fixtures.valid, 4);
 
     try testing.expectEqual(RegisterID.parse(16), instruction.destination);
     try testing.expectEqual(0b1100_0011_1111_0000, instruction.value);
@@ -61,7 +64,7 @@ test "execute masks destination register" {
     const expected_value: Register.BitPattern   = 0b1000_0001_1010_0000;
     // zig fmt: on
 
-    const instruction = Instance{
+    const instruction = RegisterAnd{
         .destination = RegisterID.parse(16),
         .value = mask,
     };

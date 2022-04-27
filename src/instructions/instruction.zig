@@ -21,24 +21,24 @@ const DrawBackgroundPolygon = @import("draw_background_polygon.zig").DrawBackgro
 const DrawSpritePolygon = @import("draw_sprite_polygon.zig").DrawSpritePolygon;
 const DrawString = @import("draw_string.zig").DrawString;
 const FillVideoBuffer = @import("fill_video_buffer.zig").FillVideoBuffer;
-const Jump = @import("jump.zig");
+const Jump = @import("jump.zig").Jump;
 const JumpConditional = @import("jump_conditional.zig").JumpConditional;
-const JumpIfNotZero = @import("jump_if_not_zero.zig");
-const Kill = @import("kill.zig");
-const RegisterAdd = @import("register_add.zig");
-const RegisterAddConstant = @import("register_add_constant.zig");
-const RegisterAnd = @import("register_and.zig");
-const RegisterCopy = @import("register_copy.zig");
-const RegisterOr = @import("register_or.zig");
-const RegisterSet = @import("register_set.zig");
-const RegisterShiftLeft = @import("register_shift_left.zig");
-const RegisterShiftRight = @import("register_shift_right.zig");
-const RegisterSubtract = @import("register_subtract.zig");
-const RenderVideoBuffer = @import("render_video_buffer.zig");
-const Return = @import("return.zig");
-const SelectPalette = @import("select_palette.zig");
-const SelectVideoBuffer = @import("select_video_buffer.zig");
-const Yield = @import("yield.zig");
+const JumpIfNotZero = @import("jump_if_not_zero.zig").JumpIfNotZero;
+const Kill = @import("kill.zig").Kill;
+const RegisterAdd = @import("register_add.zig").RegisterAdd;
+const RegisterAddConstant = @import("register_add_constant.zig").RegisterAddConstant;
+const RegisterAnd = @import("register_and.zig").RegisterAnd;
+const RegisterCopy = @import("register_copy.zig").RegisterCopy;
+const RegisterOr = @import("register_or.zig").RegisterOr;
+const RegisterSet = @import("register_set.zig").RegisterSet;
+const RegisterShiftLeft = @import("register_shift_left.zig").RegisterShiftLeft;
+const RegisterShiftRight = @import("register_shift_right.zig").RegisterShiftRight;
+const RegisterSubtract = @import("register_subtract.zig").RegisterSubtract;
+const RenderVideoBuffer = @import("render_video_buffer.zig").RenderVideoBuffer;
+const Return = @import("return.zig").Return;
+const SelectPalette = @import("select_palette.zig").SelectPalette;
+const SelectVideoBuffer = @import("select_video_buffer.zig").SelectVideoBuffer;
+const Yield = @import("yield.zig").Yield;
 
 const introspection = @import("../utils/introspection.zig");
 
@@ -148,24 +148,24 @@ pub const Wrapped = union(Opcode.Enum) {
     DrawSpritePolygon: DrawSpritePolygon,
     DrawString: DrawString,
     FillVideoBuffer: FillVideoBuffer,
-    Jump: Jump.Instance,
+    Jump: Jump,
     JumpConditional: JumpConditional,
-    JumpIfNotZero: JumpIfNotZero.Instance,
-    Kill: Kill.Instance,
-    RegisterAdd: RegisterAdd.Instance,
-    RegisterAddConstant: RegisterAddConstant.Instance,
-    RegisterAnd: RegisterAnd.Instance,
-    RegisterCopy: RegisterCopy.Instance,
-    RegisterOr: RegisterOr.Instance,
-    RegisterSet: RegisterSet.Instance,
-    RegisterShiftLeft: RegisterShiftLeft.Instance,
-    RegisterShiftRight: RegisterShiftRight.Instance,
-    RegisterSubtract: RegisterSubtract.Instance,
-    RenderVideoBuffer: RenderVideoBuffer.Instance,
-    Return: Return.Instance,
-    SelectPalette: SelectPalette.Instance,
-    SelectVideoBuffer: SelectVideoBuffer.Instance,
-    Yield: Yield.Instance,
+    JumpIfNotZero: JumpIfNotZero,
+    Kill: Kill,
+    RegisterAdd: RegisterAdd,
+    RegisterAddConstant: RegisterAddConstant,
+    RegisterAnd: RegisterAnd,
+    RegisterCopy: RegisterCopy,
+    RegisterOr: RegisterOr,
+    RegisterSet: RegisterSet,
+    RegisterShiftLeft: RegisterShiftLeft,
+    RegisterShiftRight: RegisterShiftRight,
+    RegisterSubtract: RegisterSubtract,
+    RenderVideoBuffer: RenderVideoBuffer,
+    Return: Return,
+    SelectPalette: SelectPalette,
+    SelectVideoBuffer: SelectVideoBuffer,
+    Yield: Yield,
 };
 
 /// Parse the next instruction from a bytecode program and wrap it in a Wrapped union type.

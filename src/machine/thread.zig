@@ -230,8 +230,8 @@ test "applyScheduledStates applies scheduled pause state" {
 
 // - Run tests -
 
-const Yield = @import("../instructions/yield.zig");
-const Kill = @import("../instructions/kill.zig");
+const Yield = @import("../instructions/yield.zig").Yield;
+const Kill = @import("../instructions/kill.zig").Kill;
 
 test "run stores program counter in thread state upon reaching yield instruction" {
     const bytecode = Yield.Fixtures.valid;

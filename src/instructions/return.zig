@@ -3,32 +3,35 @@ const Program = @import("../machine/program.zig").Program;
 const Machine = @import("../machine/machine.zig").Machine;
 const Stack = @import("../machine/stack.zig");
 
-pub const opcode = Opcode.Enum.Return;
-
 /// Return from the current subroutine and decrement the program execution stack.
-pub const Instance = struct {
-    pub fn execute(_: Instance, machine: *Machine) ExecutionError!void {
+pub const Return = struct {
+    const Self = @This();
+
+    /// Parse the next instruction from a bytecode program.
+    /// Consumes 1 byte from the bytecode on success, including the opcode.
+    pub fn parse(_: Opcode.Raw, _: *Program) ParseError!Self {
+        return Self{};
+    }
+
+    pub fn execute(_: Self, machine: *Machine) ExecutionError!void {
         const return_address = try machine.stack.pop();
         try machine.program.jump(return_address);
     }
-};
 
-/// Parse the next instruction from a bytecode program.
-/// Consumes 1 byte from the bytecode on success, including the opcode.
-pub fn parse(_: Opcode.Raw, _: *Program) ParseError!Instance {
-    return Instance{};
-}
+    // - Exported constants -
+    pub const opcode = Opcode.Enum.Return;
 
-pub const ExecutionError = Program.SeekError || Stack.Error;
-pub const ParseError = Program.ReadError;
+    pub const ExecutionError = Program.SeekError || Stack.Error;
+    pub const ParseError = Program.ReadError;
 
-// -- Bytecode examples --
+    // -- Bytecode examples --
 
-pub const Fixtures = struct {
-    const raw_opcode = @enumToInt(opcode);
+    pub const Fixtures = struct {
+        const raw_opcode = @enumToInt(opcode);
 
-    /// Example bytecode that should produce a valid instruction.
-    pub const valid = [1]u8{raw_opcode};
+        /// Example bytecode that should produce a valid instruction.
+        pub const valid = [1]u8{raw_opcode};
+    };
 };
 
 // -- Tests --
@@ -37,11 +40,11 @@ const testing = @import("../utils/testing.zig");
 const expectParse = @import("test_helpers/parse.zig").expectParse;
 
 test "parse parses instruction from valid bytecode and consumes 1 byte" {
-    _ = try expectParse(parse, &Fixtures.valid, 1);
+    _ = try expectParse(Return.parse, &Return.Fixtures.valid, 1);
 }
 
 test "execute jumps to previous address from the stack" {
-    const instruction = Instance{};
+    const instruction = Return{};
 
     const bytecode = [_]u8{0} ** 10;
 
@@ -60,7 +63,7 @@ test "execute jumps to previous address from the stack" {
 }
 
 test "execute returns error.StackUnderflow when stack is empty" {
-    const instruction = Instance{};
+    const instruction = Return{};
 
     var machine = Machine.testInstance(.{});
     defer machine.deinit();
