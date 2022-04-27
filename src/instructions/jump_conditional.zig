@@ -2,7 +2,7 @@ const Opcode = @import("../values/opcode.zig").Opcode;
 const Register = @import("../values/register.zig");
 const Program = @import("../machine/program.zig").Program;
 const Machine = @import("../machine/machine.zig").Machine;
-const Comparison = @import("comparison.zig");
+const Comparison = @import("comparison.zig").Comparison;
 const Address = @import("../values/address.zig");
 const RegisterID = @import("../values/register_id.zig");
 
@@ -19,7 +19,7 @@ pub const JumpConditional = struct {
     },
 
     /// How to compare the two sides of the condition.
-    comparison: Comparison.Enum,
+    comparison: Comparison,
 
     /// The program address to jump to if the condition succeeds.
     address: Address.Raw,
