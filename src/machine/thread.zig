@@ -12,7 +12,7 @@
 //! and overall housekeeping for the current section of the game.
 
 const Address = @import("../values/address.zig");
-const Machine = @import("machine.zig");
+const Machine = @import("machine.zig").Machine;
 const Program = @import("program.zig");
 const executeProgram = @import("../instructions/instruction.zig").executeProgram;
 
@@ -121,7 +121,7 @@ pub const Instance = struct {
 
     /// Execute the machine's current program on this thread, running until the thread yields
     /// or deactivates, or an error occurs, or the execution limit is exceeded.
-    pub fn run(self: *Instance, machine: *Machine.Instance, max_instructions: usize) !void {
+    pub fn run(self: *Instance, machine: *Machine, max_instructions: usize) !void {
         if (self.pause_state == .paused) return;
 
         // If this thread is active, resume executing the program from the previous address for this thread;

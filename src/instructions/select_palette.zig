@@ -1,6 +1,6 @@
 const Opcode = @import("../values/opcode.zig");
 const Program = @import("../machine/program.zig");
-const Machine = @import("../machine/machine.zig");
+const Machine = @import("../machine/machine.zig").Machine;
 const PaletteID = @import("../values/palette_id.zig");
 
 pub const opcode = Opcode.Enum.SelectPalette;
@@ -11,7 +11,7 @@ pub const Instance = struct {
     palette_id: PaletteID.Trusted,
 
     // Public implementation is constrained to concrete type so that instruction.zig can infer errors.
-    pub fn execute(self: Instance, machine: *Machine.Instance) !void {
+    pub fn execute(self: Instance, machine: *Machine) !void {
         return self._execute(machine);
     }
 
@@ -53,7 +53,7 @@ pub const Fixtures = struct {
 
 const testing = @import("../utils/testing.zig");
 const expectParse = @import("test_helpers/parse.zig").expectParse;
-const MockMachine = @import("../machine/test_helpers/mock_machine.zig");
+const mockMachine = @import("../machine/test_helpers/mock_machine.zig").mockMachine;
 
 test "parse parses valid bytecode and consumes 2 bytes" {
     const instruction = try expectParse(parse, &Fixtures.valid, 3);
@@ -73,7 +73,7 @@ test "execute calls selectPalette with correct parameters" {
         .palette_id = 16,
     };
 
-    var machine = MockMachine.new(struct {
+    var machine = mockMachine(struct {
         pub fn selectPalette(palette_id: PaletteID.Trusted) !void {
             try testing.expectEqual(16, palette_id);
         }

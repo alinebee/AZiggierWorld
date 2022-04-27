@@ -1,6 +1,6 @@
 const Opcode = @import("../values/opcode.zig");
 const Program = @import("../machine/program.zig");
-const Machine = @import("../machine/machine.zig");
+const Machine = @import("../machine/machine.zig").Machine;
 const Address = @import("../values/address.zig");
 const RegisterID = @import("../values/register_id.zig");
 
@@ -14,7 +14,7 @@ pub const Instance = struct {
     /// The address to jump to if the register value is non-zero.
     address: Address.Raw,
 
-    pub fn execute(self: Instance, machine: *Machine.Instance) !void {
+    pub fn execute(self: Instance, machine: *Machine) !void {
         // Subtract one from the specified register, wrapping on underflow.
         // (The standard `-=` would trap on underflow, which would probably indicate
         // a bytecode bug, but the Another World VM assumed C-style integer wrapping

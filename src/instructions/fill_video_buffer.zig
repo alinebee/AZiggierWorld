@@ -1,6 +1,6 @@
 const Opcode = @import("../values/opcode.zig");
 const Program = @import("../machine/program.zig");
-const Machine = @import("../machine/machine.zig");
+const Machine = @import("../machine/machine.zig").Machine;
 const Video = @import("../machine/video.zig").Video;
 const BufferID = @import("../values/buffer_id.zig");
 const ColorID = @import("../values/color_id.zig");
@@ -15,7 +15,7 @@ pub const Instance = struct {
     color_id: ColorID.Trusted,
 
     // Public implementation is constrained to concrete type so that instruction.zig can infer errors.
-    pub fn execute(self: Instance, machine: *Machine.Instance) void {
+    pub fn execute(self: Instance, machine: *Machine) void {
         return self._execute(machine);
     }
 
@@ -56,7 +56,7 @@ pub const Fixtures = struct {
 
 const testing = @import("../utils/testing.zig");
 const expectParse = @import("test_helpers/parse.zig").expectParse;
-const MockMachine = @import("../machine/test_helpers/mock_machine.zig");
+const mockMachine = @import("../machine/test_helpers/mock_machine.zig").mockMachine;
 
 test "parse parses valid bytecode and consumes 3 bytes" {
     const instruction = try expectParse(parse, &Fixtures.valid, 3);
@@ -85,7 +85,7 @@ test "execute calls fillVideoBuffer with correct parameters" {
         .color_id = 12,
     };
 
-    var machine = MockMachine.new(struct {
+    var machine = mockMachine(struct {
         pub fn fillVideoBuffer(buffer_id: BufferID.Enum, color_id: ColorID.Trusted) void {
             testing.expectEqual(.back_buffer, buffer_id) catch {
                 unreachable;

@@ -1,6 +1,6 @@
 const Opcode = @import("../values/opcode.zig");
 const Program = @import("../machine/program.zig");
-const Machine = @import("../machine/machine.zig");
+const Machine = @import("../machine/machine.zig").Machine;
 
 const Point = @import("../values/point.zig");
 const StringID = @import("../values/string_id.zig");
@@ -17,7 +17,7 @@ pub const Instance = struct {
     point: Point.Instance,
 
     // Public implementation is constrained to concrete type so that instruction.zig can infer errors.
-    pub fn execute(self: Instance, machine: *Machine.Instance) !void {
+    pub fn execute(self: Instance, machine: *Machine) !void {
         return self._execute(machine);
     }
 
@@ -71,7 +71,7 @@ pub const Fixtures = struct {
 
 const testing = @import("../utils/testing.zig");
 const expectParse = @import("test_helpers/parse.zig").expectParse;
-const MockMachine = @import("../machine/test_helpers/mock_machine.zig");
+const mockMachine = @import("../machine/test_helpers/mock_machine.zig").mockMachine;
 
 test "parse parses valid bytecode and consumes 6 bytes" {
     const instruction = try expectParse(parse, &Fixtures.valid, 6);
@@ -99,7 +99,7 @@ test "execute calls drawString with correct parameters" {
         },
     };
 
-    var machine = MockMachine.new(struct {
+    var machine = mockMachine(struct {
         pub fn drawString(string_id: StringID.Raw, color_id: ColorID.Trusted, point: Point.Instance) !void {
             try testing.expectEqual(0xDEAD, string_id);
             try testing.expectEqual(15, color_id);
@@ -122,7 +122,7 @@ test "execute passes along error.InvalidStringID if machine cannot find appropri
         },
     };
 
-    var machine = MockMachine.new(struct {
+    var machine = mockMachine(struct {
         pub fn drawString(_: StringID.Raw, _: ColorID.Trusted, _: Point.Instance) !void {
             return error.InvalidStringID;
         }

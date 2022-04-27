@@ -52,6 +52,8 @@ const Host = @import("host.zig").Host;
 const UserInput = @import("user_input.zig");
 
 const ResourceReader = @import("../resources/resource_reader.zig").ResourceReader;
+const MockRepository = @import("../resources/mock_repository.zig").MockRepository;
+const mock_host = @import("test_helpers/mock_host.zig");
 
 const static_limits = @import("../static_limits.zig");
 
@@ -63,18 +65,7 @@ const log = @import("../utils/logging.zig").log;
 const thread_count = static_limits.thread_count;
 const Threads = [thread_count]Thread.Instance;
 
-/// Optional configuration options for a virtual machine instance.
-pub const Options = struct {
-    /// Which game part to start up with.
-    /// TODO: default this to .intro_cinematic once the copy protection bypass is working fully.
-    initial_game_part: GamePart.Enum = .copy_protection,
-
-    /// The seed to use for the game's random number generator.
-    /// If null, a random seed will be chosen based on the system clock.
-    seed: ?Register.Signed = null,
-};
-
-pub const Instance = struct {
+pub const Machine = struct {
     /// The current state of the VM's 64 threads.
     threads: Threads,
 
@@ -112,7 +103,7 @@ pub const Instance = struct {
     /// reads game data from the specified reader, and sends video and audio output to the specified host.
     /// At startup, the virtual machine will attempt to load the resources for the initial game part.
     /// On success, returns a machine instance that is ready to begin simulating.
-    fn init(allocator: mem.Allocator, reader: ResourceReader, host: Host, options: Options) !Self {
+    pub fn init(allocator: mem.Allocator, reader: ResourceReader, host: Host, options: Options) !Self {
         var memory = try Memory.init(allocator, reader);
         errdefer memory.deinit();
 
@@ -349,42 +340,48 @@ pub const Instance = struct {
 
         log.debug("Started game part {}", .{game_part});
     }
-};
 
-pub fn new(allocator: mem.Allocator, reader: ResourceReader, host: Host, options: Options) !Instance {
-    return Instance.init(allocator, reader, host, options);
-}
+    // - Exported constants -
 
-const MockRepository = @import("../resources/mock_repository.zig").MockRepository;
-const mock_host = @import("test_helpers/mock_host.zig");
+    /// Optional configuration options for a virtual machine instance.
+    pub const Options = struct {
+        /// Which game part to start up with.
+        /// TODO: default this to .intro_cinematic once the copy protection bypass is working fully.
+        initial_game_part: GamePart.Enum = .copy_protection,
 
-/// Optional configuration settings for the test machine instance created by `testInstance`.
-const TestInstanceConfig = struct {
-    // Optional bytecode to load as the machine's program.
-    bytecode: ?[]const u8 = null,
-    // An optional host that the test instance should talk to.
-    host: ?Host = null,
-};
+        /// The seed to use for the game's random number generator.
+        /// If null, a random seed will be chosen based on the system clock.
+        seed: ?Register.Signed = null,
+    };
 
-/// Returns a machine instance suitable for use in tests.
-/// The machine will load game data from a fake repository,
-/// and will be optionally be initialized with the specified bytecode program and host.
-///
-/// Usage:
-/// ------
-/// const machine = Machine.testInstance(.{});
-/// defer machine.deinit();
-/// try testing.expectEqual(result, do_something_that_requires_a_machine(machine));
-pub fn testInstance(config: TestInstanceConfig) Instance {
-    const options = Options{ .initial_game_part = .intro_cinematic, .seed = 0 };
-    const host = config.host orelse mock_host.test_host;
+    /// Optional configuration settings for the test machine instance created by `testInstance`.
+    pub const TestInstanceConfig = struct {
+        // Optional bytecode to load as the machine's program.
+        bytecode: ?[]const u8 = null,
+        // An optional host that the test instance should talk to.
+        host: ?Host = null,
+    };
 
-    var machine = new(testing.allocator, MockRepository.test_reader, host, options) catch unreachable;
-    if (config.bytecode) |bytecode| {
-        machine.program = Program.new(bytecode);
+    /// Returns a machine instance suitable for use in tests.
+    /// The machine will load game data from a fake repository,
+    /// and will be optionally be initialized with the specified bytecode program and host.
+    ///
+    /// Usage:
+    /// ------
+    /// const machine = Machine.testInstance(.{});
+    /// defer machine.deinit();
+    /// try testing.expectEqual(result, do_something_that_requires_a_machine(machine));
+    pub fn testInstance(config: TestInstanceConfig) Self {
+        const options = Options{ .initial_game_part = .intro_cinematic, .seed = 0 };
+        const host = config.host orelse mock_host.test_host;
+
+        var machine = Self.init(testing.allocator, MockRepository.test_reader, host, options) catch unreachable;
+        if (config.bytecode) |bytecode| {
+            machine.program = Program.new(bytecode);
+        }
+        return machine;
     }
-    return machine;
-}
+};
 
 // -- Tests --
 
@@ -394,12 +391,12 @@ const meta = @import("std").meta;
 // - Initialization tests -
 
 test "new creates virtual machine instance with expected initial state" {
-    const options = Options{
+    const options = Machine.Options{
         .initial_game_part = .gameplay1,
         .seed = 12345,
     };
 
-    var machine = try new(testing.allocator, MockRepository.test_reader, mock_host.test_host, options);
+    var machine = try Machine.init(testing.allocator, MockRepository.test_reader, mock_host.test_host, options);
     defer machine.deinit();
 
     for (machine.threads) |thread, id| {
@@ -451,7 +448,7 @@ test "new creates virtual machine instance with expected initial state" {
 // - Game-part loading tests -
 
 test "startGamePart resets previous thread state, loads resources for new game part, and unloads previously-loaded resources, but leaves register state alone" {
-    var machine = testInstance(.{});
+    var machine = Machine.testInstance(.{});
     defer machine.deinit();
 
     // Pollute the current and scheduled thread states
@@ -512,7 +509,7 @@ test "startGamePart resets previous thread state, loads resources for new game p
 }
 
 test "scheduleGamePart schedules a new game part without loading it" {
-    var machine = testInstance(.{});
+    var machine = Machine.testInstance(.{});
     defer machine.deinit();
 
     try testing.expectEqual(null, machine.scheduled_game_part);
@@ -539,7 +536,7 @@ test "scheduleGamePart schedules a new game part without loading it" {
 // - loadResource tests -
 
 test "loadResource loads audio resource into main memory" {
-    var machine = testInstance(.{});
+    var machine = Machine.testInstance(.{});
     defer machine.deinit();
 
     const audio_resource_id = MockRepository.Fixtures.sfx_resource_id;
@@ -550,7 +547,7 @@ test "loadResource loads audio resource into main memory" {
 }
 
 test "loadResource copies bitmap resource directly into video buffer without persisting in main memory" {
-    var machine = testInstance(.{});
+    var machine = Machine.testInstance(.{});
     defer machine.deinit();
 
     const buffer = &machine.video.buffers[Video.bitmap_buffer_id];
@@ -569,7 +566,7 @@ test "loadResource copies bitmap resource directly into video buffer without per
 }
 
 test "loadResource returns error on invalid resource ID" {
-    var machine = testInstance(.{});
+    var machine = Machine.testInstance(.{});
     defer machine.deinit();
 
     const invalid_id = MockRepository.Fixtures.invalid_resource_id;
@@ -579,7 +576,7 @@ test "loadResource returns error on invalid resource ID" {
 // - applyUserInput tests -
 
 test "applyUserInput sets expected register values" {
-    var machine = testInstance(.{});
+    var machine = Machine.testInstance(.{});
     defer machine.deinit();
 
     const full_input = UserInput.Instance{
@@ -611,7 +608,7 @@ test "applyUserInput sets expected register values" {
 }
 
 test "applyUserInput sets RegisterID.last_pressed_character when in password entry screen" {
-    var machine = testInstance(.{});
+    var machine = Machine.testInstance(.{});
     defer machine.deinit();
 
     try machine.startGamePart(.password_entry);
@@ -626,7 +623,7 @@ test "applyUserInput sets RegisterID.last_pressed_character when in password ent
 }
 
 test "applyUserInput does not touch RegisterID.last_pressed_character during other game parts" {
-    var machine = testInstance(.{});
+    var machine = Machine.testInstance(.{});
     defer machine.deinit();
 
     try testing.expect(machine.current_game_part != .password_entry);
@@ -641,7 +638,7 @@ test "applyUserInput does not touch RegisterID.last_pressed_character during oth
 }
 
 test "applyUserInput opens password screen if permitted for current game part" {
-    var machine = testInstance(.{});
+    var machine = Machine.testInstance(.{});
     defer machine.deinit();
 
     try testing.expectEqual(.intro_cinematic, machine.current_game_part);
@@ -653,7 +650,7 @@ test "applyUserInput opens password screen if permitted for current game part" {
 }
 
 test "applyUserInput does not open password screen when in copy protection" {
-    var machine = testInstance(.{});
+    var machine = Machine.testInstance(.{});
     defer machine.deinit();
 
     try machine.startGamePart(.copy_protection);
@@ -665,7 +662,7 @@ test "applyUserInput does not open password screen when in copy protection" {
 }
 
 test "applyUserInput does not open password screen when already in password screen" {
-    var machine = testInstance(.{});
+    var machine = Machine.testInstance(.{});
     defer machine.deinit();
 
     try machine.startGamePart(.password_entry);
@@ -682,7 +679,7 @@ const Opcode = @import("../values/opcode.zig");
 const ThreadOperation = @import("../instructions/thread_operation.zig");
 
 test "runTic starts next game part if scheduled" {
-    var machine = testInstance(.{});
+    var machine = Machine.testInstance(.{});
     defer machine.deinit();
 
     const next_game_part = .arena_cinematic;
@@ -697,7 +694,7 @@ test "runTic starts next game part if scheduled" {
 }
 
 test "runTic applies user input only after loading scheduled game part" {
-    var machine = testInstance(.{});
+    var machine = Machine.testInstance(.{});
     defer machine.deinit();
 
     machine.scheduleGamePart(.password_entry);
@@ -724,7 +721,7 @@ test "runTic updates each thread with its scheduled state before running each th
         @enumToInt(Opcode.Enum.Kill),
     };
 
-    var machine = testInstance(.{ .bytecode = &bytecode });
+    var machine = Machine.testInstance(.{ .bytecode = &bytecode });
     defer machine.deinit();
 
     const main_thread = &machine.threads[0];
@@ -774,7 +771,7 @@ test "renderVideoBuffer notifies host of new frame with expected buffer ID and d
     const expected_delay = 24;
 
     const HostType = mock_host.MockHost(struct {
-        pub fn bufferReady(_: *const Instance, buffer_id: BufferID.Specific, delay: Host.Milliseconds) void {
+        pub fn bufferReady(_: *const Machine, buffer_id: BufferID.Specific, delay: Host.Milliseconds) void {
             testing.expectEqual(expected_buffer_id, buffer_id) catch unreachable;
             testing.expectEqual(expected_delay, delay) catch unreachable;
         }
@@ -782,7 +779,7 @@ test "renderVideoBuffer notifies host of new frame with expected buffer ID and d
 
     var host = HostType{};
 
-    var machine = testInstance(.{ .host = host.host() });
+    var machine = Machine.testInstance(.{ .host = host.host() });
     defer machine.deinit();
 
     machine.renderVideoBuffer(.{ .specific = expected_buffer_id }, expected_delay);

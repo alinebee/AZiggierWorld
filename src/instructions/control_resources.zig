@@ -1,6 +1,6 @@
 const Opcode = @import("../values/opcode.zig");
 const Program = @import("../machine/program.zig");
-const Machine = @import("../machine/machine.zig");
+const Machine = @import("../machine/machine.zig").Machine;
 const ResourceID = @import("../values/resource_id.zig");
 const GamePart = @import("../values/game_part.zig");
 
@@ -18,7 +18,7 @@ pub const Instance = union(enum) {
     load_resource: ResourceID.Raw,
 
     // Public implementation is constrained to concrete type so that instruction.zig can infer errors.
-    pub fn execute(self: Instance, machine: *Machine.Instance) !void {
+    pub fn execute(self: Instance, machine: *Machine) !void {
         return self._execute(machine);
     }
 
@@ -67,7 +67,7 @@ pub const Fixtures = struct {
 
 const testing = @import("../utils/testing.zig");
 const expectParse = @import("test_helpers/parse.zig").expectParse;
-const MockMachine = @import("../machine/test_helpers/mock_machine.zig");
+const mockMachine = @import("../machine/test_helpers/mock_machine.zig").mockMachine;
 
 test "parse parses unload_all instruction and consumes 3 bytes" {
     const instruction = try expectParse(parse, &Fixtures.unload_all, 3);
@@ -90,7 +90,7 @@ test "parse parses load_resource instruction and consumes 3 bytes" {
 test "execute with unload_all instruction calls unloadAllResources with correct parameters" {
     const instruction: Instance = .unload_all;
 
-    var machine = MockMachine.new(struct {
+    var machine = mockMachine(struct {
         pub fn scheduleGamePart(_: GamePart.Enum) void {
             unreachable;
         }
@@ -109,7 +109,7 @@ test "execute with unload_all instruction calls unloadAllResources with correct 
 test "execute with start_game_part instruction calls scheduleGamePart with correct parameters" {
     const instruction = Instance{ .start_game_part = .arena_cinematic };
 
-    var machine = MockMachine.new(struct {
+    var machine = mockMachine(struct {
         pub fn scheduleGamePart(game_part: GamePart.Enum) void {
             testing.expectEqual(.arena_cinematic, game_part) catch unreachable;
         }
@@ -130,7 +130,7 @@ test "execute with start_game_part instruction calls scheduleGamePart with corre
 test "execute with load_resource instruction calls loadResource with correct parameters" {
     const instruction = Instance{ .load_resource = 0xBEEF };
 
-    var machine = MockMachine.new(struct {
+    var machine = mockMachine(struct {
         pub fn scheduleGamePart(_: GamePart.Enum) void {
             unreachable;
         }

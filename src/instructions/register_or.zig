@@ -2,7 +2,7 @@ const Opcode = @import("../values/opcode.zig");
 const Register = @import("../values/register.zig");
 const RegisterID = @import("../values/register_id.zig");
 const Program = @import("../machine/program.zig");
-const Machine = @import("../machine/machine.zig");
+const Machine = @import("../machine/machine.zig").Machine;
 
 pub const opcode = Opcode.Enum.RegisterOr;
 
@@ -14,7 +14,7 @@ pub const Instance = struct {
     /// The bitmask to apply to the value in the register.
     value: Register.BitPattern,
 
-    pub fn execute(self: Instance, machine: *Machine.Instance) void {
+    pub fn execute(self: Instance, machine: *Machine) void {
         const original_value = machine.registers.bitPattern(self.destination);
         const masked_value = original_value | self.value;
         machine.registers.setBitPattern(self.destination, masked_value);

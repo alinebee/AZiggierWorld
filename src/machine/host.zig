@@ -5,7 +5,7 @@ const std = @import("std");
 const assert = std.debug.assert;
 
 const BufferID = @import("../values/buffer_id.zig");
-const Machine = @import("machine.zig");
+const Machine = @import("machine.zig").Machine;
 const Video = @import("video.zig").Video;
 
 /// An interface that the virtual machine uses to communicate with the host.
@@ -15,7 +15,7 @@ pub const Host = struct {
     vtable: *const TypeErasedVTable,
 
     const TypeErasedVTable = struct {
-        bufferReady: fn (implementation: *anyopaque, machine: *const Machine.Instance, buffer_id: BufferID.Specific, delay: Milliseconds) void,
+        bufferReady: fn (implementation: *anyopaque, machine: *const Machine, buffer_id: BufferID.Specific, delay: Milliseconds) void,
     };
 
     const Self = @This();
@@ -24,7 +24,7 @@ pub const Host = struct {
     /// Intended to be called by implementations to create a host interface; should not be used directly.
     pub fn init(
         implementation_ptr: anytype,
-        comptime bufferReadyFn: fn (self: @TypeOf(implementation_ptr), machine: *const Machine.Instance, buffer_id: BufferID.Specific, delay: Milliseconds) void,
+        comptime bufferReadyFn: fn (self: @TypeOf(implementation_ptr), machine: *const Machine, buffer_id: BufferID.Specific, delay: Milliseconds) void,
     ) Self {
         const Implementation = @TypeOf(implementation_ptr);
         const ptr_info = @typeInfo(Implementation);
@@ -35,7 +35,7 @@ pub const Host = struct {
         const alignment = ptr_info.Pointer.alignment;
 
         const TypeUnerasedVTable = struct {
-            fn bufferReadyImpl(type_erased_self: *anyopaque, machine: *const Machine.Instance, buffer_id: BufferID.Specific, delay: Milliseconds) void {
+            fn bufferReadyImpl(type_erased_self: *anyopaque, machine: *const Machine, buffer_id: BufferID.Specific, delay: Milliseconds) void {
                 const self = @ptrCast(Implementation, @alignCast(alignment, type_erased_self));
                 return @call(.{ .modifier = .always_inline }, bufferReadyFn, .{ self, machine, buffer_id, delay });
             }
@@ -58,7 +58,7 @@ pub const Host = struct {
     /// `delay` is the number of milliseconds that the host should continue displaying
     /// the *previous* frame before replacing it with this one.
     /// (The host may modify this delay to speed up or slow down gameplay.)
-    pub fn bufferReady(self: Self, machine: *const Machine.Instance, buffer_id: BufferID.Specific, delay: Milliseconds) void {
+    pub fn bufferReady(self: Self, machine: *const Machine, buffer_id: BufferID.Specific, delay: Milliseconds) void {
         self.vtable.bufferReady(self.implementation, machine, buffer_id, delay);
     }
 

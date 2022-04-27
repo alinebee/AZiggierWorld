@@ -1,6 +1,6 @@
 const Opcode = @import("../values/opcode.zig");
 const Program = @import("../machine/program.zig");
-const Machine = @import("../machine/machine.zig");
+const Machine = @import("../machine/machine.zig").Machine;
 const Video = @import("../machine/video.zig").Video;
 const Point = @import("../values/point.zig");
 const RegisterID = @import("../values/register_id.zig");
@@ -37,7 +37,7 @@ pub const Instance = struct {
     },
 
     // Public implementation is constrained to concrete type so that instruction.zig can infer errors.
-    pub fn execute(self: Instance, machine: *Machine.Instance) !void {
+    pub fn execute(self: Instance, machine: *Machine) !void {
         return self._execute(machine);
     }
 
@@ -194,7 +194,7 @@ pub const Fixtures = struct {
 
 const testing = @import("../utils/testing.zig");
 const expectParse = @import("test_helpers/parse.zig").expectParse;
-const MockMachine = @import("../machine/test_helpers/mock_machine.zig");
+const mockMachine = @import("../machine/test_helpers/mock_machine.zig").mockMachine;
 
 test "parse parses all-registers instruction and consumes 6 bytes" {
     const instruction = try expectParse(parse, &Fixtures.registers, 6);
@@ -266,7 +266,7 @@ test "execute with constants calls drawPolygon with correct parameters" {
         .scale = .default,
     };
 
-    var machine = MockMachine.new(struct {
+    var machine = mockMachine(struct {
         pub fn drawPolygon(source: Video.PolygonSource, address: Video.PolygonAddress, point: Point.Instance, scale: PolygonScale.Raw) !void {
             try testing.expectEqual(.animations, source);
             try testing.expectEqual(0xDEAD, address);
@@ -294,7 +294,7 @@ test "execute with registers calls drawPolygon with correct parameters" {
         .scale = .{ .register = scale_register },
     };
 
-    var machine = MockMachine.new(struct {
+    var machine = mockMachine(struct {
         pub fn drawPolygon(source: Video.PolygonSource, address: Video.PolygonAddress, point: Point.Instance, scale: PolygonScale.Raw) !void {
             try testing.expectEqual(.polygons, source);
             try testing.expectEqual(0xDEAD, address);
@@ -323,7 +323,7 @@ test "execute with register scale value interprets value as unsigned" {
         .scale = .{ .register = scale_register },
     };
 
-    var machine = MockMachine.new(struct {
+    var machine = mockMachine(struct {
         pub fn drawPolygon(_: Video.PolygonSource, _: Video.PolygonAddress, _: Point.Instance, scale: PolygonScale.Raw) !void {
             try testing.expectEqual(46635, scale);
         }

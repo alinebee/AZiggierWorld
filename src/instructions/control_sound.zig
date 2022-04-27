@@ -1,6 +1,6 @@
 const Opcode = @import("../values/opcode.zig");
 const Program = @import("../machine/program.zig");
-const Machine = @import("../machine/machine.zig");
+const Machine = @import("../machine/machine.zig").Machine;
 const Audio = @import("../machine/audio.zig");
 
 const ResourceID = @import("../values/resource_id.zig");
@@ -25,7 +25,7 @@ pub const Instance = union(enum) {
     stop: Channel.Trusted,
 
     // Public implementation is constrained to concrete type so that instruction.zig can infer errors.
-    pub fn execute(self: Instance, machine: *Machine.Instance) !void {
+    pub fn execute(self: Instance, machine: *Machine) !void {
         return self._execute(machine);
     }
 
@@ -81,7 +81,7 @@ pub const Fixtures = struct {
 
 const testing = @import("../utils/testing.zig");
 const expectParse = @import("test_helpers/parse.zig").expectParse;
-const MockMachine = @import("../machine/test_helpers/mock_machine.zig");
+const mockMachine = @import("../machine/test_helpers/mock_machine.zig").mockMachine;
 
 test "parse parses play instruction and consumes 6 bytes" {
     const instruction = try expectParse(parse, &Fixtures.play, 6);
@@ -119,7 +119,7 @@ test "execute with play instruction calls playSound with correct parameters" {
         },
     };
 
-    var machine = MockMachine.new(struct {
+    var machine = mockMachine(struct {
         pub fn playSound(resource_id: ResourceID.Raw, channel: Channel.Trusted, volume: Audio.Volume, frequency: Audio.Frequency) !void {
             try testing.expectEqual(0xDEAD, resource_id);
             try testing.expectEqual(0, channel);
@@ -139,7 +139,7 @@ test "execute with play instruction calls playSound with correct parameters" {
 test "execute with stop instruction runs on machine without errors" {
     const instruction = Instance{ .stop = 1 };
 
-    var machine = MockMachine.new(struct {
+    var machine = mockMachine(struct {
         pub fn playSound(_: ResourceID.Raw, _: Channel.Trusted, _: Audio.Volume, _: Audio.Frequency) !void {
             unreachable;
         }

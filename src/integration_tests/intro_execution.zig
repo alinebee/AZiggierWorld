@@ -2,7 +2,7 @@
 //! and ends by starting the first gameplay game part, without errors or looping indefinitely.
 //! Requires that the `fixtures/dos` folder contains Another World DOS game files.
 
-const Machine = @import("../machine/machine.zig");
+const Machine = @import("../machine/machine.zig").Machine;
 const Host = @import("../machine/host.zig").Host;
 const ResourceDirectory = @import("../resources/resource_directory.zig").ResourceDirectory;
 const BufferID = @import("../values/buffer_id.zig");
@@ -25,7 +25,7 @@ const CountingHost = struct {
         return Host.init(self, bufferReady);
     }
 
-    fn bufferReady(self: *Self, _: *const Machine.Instance, _: BufferID.Specific, delay: Host.Milliseconds) void {
+    fn bufferReady(self: *Self, _: *const Machine, _: BufferID.Specific, delay: Host.Milliseconds) void {
         self.render_count += 1;
         self.total_delay += delay;
 
@@ -54,7 +54,7 @@ test "Introduction runs successfully" {
     var resource_directory = try ResourceDirectory.init(&game_dir);
     var host = CountingHost{};
 
-    var machine = try Machine.new(testing.allocator, resource_directory.reader(), host.host(), .{
+    var machine = try Machine.init(testing.allocator, resource_directory.reader(), host.host(), .{
         .initial_game_part = .intro_cinematic,
         .seed = 0,
     });

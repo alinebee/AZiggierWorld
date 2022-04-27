@@ -1,13 +1,13 @@
 const Opcode = @import("../values/opcode.zig");
 const Program = @import("../machine/program.zig");
-const Machine = @import("../machine/machine.zig");
+const Machine = @import("../machine/machine.zig").Machine;
 const ExecutionResult = @import("execution_result.zig");
 
 pub const opcode = Opcode.Enum.Kill;
 
 /// Deactivates the current thread and immediately moves execution to the next thread.
 pub const Instance = struct {
-    pub fn execute(_: Instance, _: *Machine.Instance) ExecutionResult.Enum {
+    pub fn execute(_: Instance, _: *Machine) ExecutionResult.Enum {
         return .deactivate;
     }
 };

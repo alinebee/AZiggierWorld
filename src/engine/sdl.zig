@@ -1,4 +1,4 @@
-const Machine = @import("../machine/machine.zig");
+const Machine = @import("../machine/machine.zig").Machine;
 const Host = @import("../machine/host.zig").Host;
 const ResourceDirectory = @import("../resources/resource_directory.zig").ResourceDirectory;
 const BufferID = @import("../values/buffer_id.zig");
@@ -75,7 +75,7 @@ pub const Instance = struct {
 
     game_dir: std.fs.Dir,
     resource_directory: ResourceDirectory,
-    machine: Machine.Instance,
+    machine: Machine,
 
     window: SDL.Window,
     renderer: SDL.Renderer,
@@ -110,7 +110,7 @@ pub const Instance = struct {
 
         self.resource_directory = try ResourceDirectory.init(&self.game_dir);
 
-        self.machine = try Machine.new(
+        self.machine = try Machine.init(
             allocator,
             self.resource_directory.reader(),
             self.host(),
@@ -192,7 +192,7 @@ pub const Instance = struct {
         }
     }
 
-    fn bufferReady(self: *Self, machine: *const Machine.Instance, buffer_id: BufferID.Specific, requested_delay: Host.Milliseconds) void {
+    fn bufferReady(self: *Self, machine: *const Machine, buffer_id: BufferID.Specific, requested_delay: Host.Milliseconds) void {
         const delay = resolvedFrameDelay(requested_delay * std.time.ns_per_ms, self.last_frame_time, @truncate(i64, std.time.nanoTimestamp()), self.input.turbo);
 
         std.time.sleep(delay);

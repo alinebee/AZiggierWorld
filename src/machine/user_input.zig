@@ -1,4 +1,3 @@
-const Machine = @import("machine.zig");
 const Register = @import("../values/register.zig");
 
 /// The current state of user input. Expected to be provided by the host on each tic.

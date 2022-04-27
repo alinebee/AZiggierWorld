@@ -2,7 +2,7 @@ const Opcode = @import("../values/opcode.zig");
 const Register = @import("../values/register.zig");
 const RegisterID = @import("../values/register_id.zig");
 const Program = @import("../machine/program.zig");
-const Machine = @import("../machine/machine.zig");
+const Machine = @import("../machine/machine.zig").Machine;
 
 const introspection = @import("../utils/introspection.zig");
 
@@ -16,7 +16,7 @@ pub const Instance = struct {
     /// The distance to shift the value by.
     shift: Register.Shift,
 
-    pub fn execute(self: Instance, machine: *Machine.Instance) void {
+    pub fn execute(self: Instance, machine: *Machine) void {
         // Zig is currently happy to << and >> signed values without respecting their sign bit,
         // but that doesn't seem safe and may go away in future.
         // To be sure, treat the value as a raw bit pattern.

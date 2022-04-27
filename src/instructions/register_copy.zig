@@ -1,6 +1,6 @@
 const Opcode = @import("../values/opcode.zig");
 const Program = @import("../machine/program.zig");
-const Machine = @import("../machine/machine.zig");
+const Machine = @import("../machine/machine.zig").Machine;
 const RegisterID = @import("../values/register_id.zig");
 
 pub const opcode = Opcode.Enum.RegisterCopy;
@@ -13,7 +13,7 @@ pub const Instance = struct {
     /// The ID of the register to copy from.
     source: RegisterID.Enum,
 
-    pub fn execute(self: Instance, machine: *Machine.Instance) void {
+    pub fn execute(self: Instance, machine: *Machine) void {
         const value = machine.registers.signed(self.source);
         machine.registers.setSigned(self.destination, value);
     }

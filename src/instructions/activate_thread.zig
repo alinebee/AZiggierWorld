@@ -1,7 +1,7 @@
 const Opcode = @import("../values/opcode.zig");
 const ThreadID = @import("../values/thread_id.zig");
 const Program = @import("../machine/program.zig");
-const Machine = @import("../machine/machine.zig");
+const Machine = @import("../machine/machine.zig").Machine;
 const Address = @import("../values/address.zig");
 
 pub const opcode = Opcode.Enum.ActivateThread;
@@ -15,7 +15,7 @@ pub const Instance = struct {
     /// The program address that the thread should jump to when activated.
     address: Address.Raw,
 
-    pub fn execute(self: Instance, machine: *Machine.Instance) ExecutionError!void {
+    pub fn execute(self: Instance, machine: *Machine) ExecutionError!void {
         machine.threads[self.thread_id].scheduleJump(self.address);
     }
 };

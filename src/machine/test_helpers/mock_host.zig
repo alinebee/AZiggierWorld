@@ -3,13 +3,13 @@
 //! to perform arbitrary assertions in the body of each host method.
 
 const Host = @import("../host.zig").Host;
-const Machine = @import("../machine.zig");
+const Machine = @import("../machine.zig").Machine;
 const BufferID = @import("../../values/buffer_id.zig");
 
 // - Exported constants -
 
 const DefaultImplementation = struct {
-    pub fn bufferReady(_: *const Machine.Instance, _: BufferID.Specific, _: Host.Milliseconds) void {}
+    pub fn bufferReady(_: *const Machine, _: BufferID.Specific, _: Host.Milliseconds) void {}
 };
 
 var test_host_implementation = MockHost(DefaultImplementation){};
@@ -30,7 +30,7 @@ pub fn MockHost(comptime Implementation: type) type {
             return Host.init(self, bufferReady);
         }
 
-        fn bufferReady(self: *Self, machine: *const Machine.Instance, buffer_id: BufferID.Specific, delay: Host.Milliseconds) void {
+        fn bufferReady(self: *Self, machine: *const Machine, buffer_id: BufferID.Specific, delay: Host.Milliseconds) void {
             self.call_counts.bufferReady += 1;
             Implementation.bufferReady(machine, buffer_id, delay);
         }

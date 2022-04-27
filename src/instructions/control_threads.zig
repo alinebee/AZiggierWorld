@@ -1,7 +1,7 @@
 const Opcode = @import("../values/opcode.zig");
 const ThreadID = @import("../values/thread_id.zig");
 const Program = @import("../machine/program.zig");
-const Machine = @import("../machine/machine.zig");
+const Machine = @import("../machine/machine.zig").Machine;
 const Operation = @import("thread_operation.zig");
 
 pub const opcode = Opcode.Enum.ControlThreads;
@@ -21,7 +21,7 @@ pub const Instance = struct {
     /// The operation to perform on the threads in the range.
     operation: Operation.Enum,
 
-    pub fn execute(self: Instance, machine: *Machine.Instance) void {
+    pub fn execute(self: Instance, machine: *Machine) void {
         const start = self.start_thread_id;
         const end = @as(usize, self.end_thread_id) + 1;
         const affected_threads = machine.threads[start..end];

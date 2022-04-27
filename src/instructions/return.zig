@@ -1,13 +1,13 @@
 const Opcode = @import("../values/opcode.zig");
 const Program = @import("../machine/program.zig");
-const Machine = @import("../machine/machine.zig");
+const Machine = @import("../machine/machine.zig").Machine;
 const Stack = @import("../machine/stack.zig");
 
 pub const opcode = Opcode.Enum.Return;
 
 /// Return from the current subroutine and decrement the program execution stack.
 pub const Instance = struct {
-    pub fn execute(_: Instance, machine: *Machine.Instance) ExecutionError!void {
+    pub fn execute(_: Instance, machine: *Machine) ExecutionError!void {
         const return_address = try machine.stack.pop();
         try machine.program.jump(return_address);
     }

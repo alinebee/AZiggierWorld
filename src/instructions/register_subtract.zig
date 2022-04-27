@@ -1,6 +1,6 @@
 const Opcode = @import("../values/opcode.zig");
 const Program = @import("../machine/program.zig");
-const Machine = @import("../machine/machine.zig");
+const Machine = @import("../machine/machine.zig").Machine;
 const RegisterID = @import("../values/register_id.zig");
 
 pub const opcode = Opcode.Enum.RegisterSubtract;
@@ -13,7 +13,7 @@ pub const Instance = struct {
     /// The ID of the register containing the value to subtract.
     source: RegisterID.Enum,
 
-    pub fn execute(self: Instance, machine: *Machine.Instance) void {
+    pub fn execute(self: Instance, machine: *Machine) void {
         const source_value = machine.registers.signed(self.source);
         const destination_value = machine.registers.signed(self.destination);
 

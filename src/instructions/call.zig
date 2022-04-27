@@ -1,6 +1,6 @@
 const Opcode = @import("../values/opcode.zig");
 const Program = @import("../machine/program.zig");
-const Machine = @import("../machine/machine.zig");
+const Machine = @import("../machine/machine.zig").Machine;
 const Stack = @import("../machine/stack.zig");
 const Address = @import("../values/address.zig");
 
@@ -11,7 +11,7 @@ pub const Instance = struct {
     /// The address of the subroutine to call.
     address: Address.Raw,
 
-    pub fn execute(self: Instance, machine: *Machine.Instance) ExecutionError!void {
+    pub fn execute(self: Instance, machine: *Machine) ExecutionError!void {
         try machine.stack.push(machine.program.counter);
         try machine.program.jump(self.address);
     }

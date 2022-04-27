@@ -1,6 +1,6 @@
 const Opcode = @import("../values/opcode.zig");
 const Program = @import("../machine/program.zig");
-const Machine = @import("../machine/machine.zig");
+const Machine = @import("../machine/machine.zig").Machine;
 const Point = @import("../values/point.zig");
 const BufferID = @import("../values/buffer_id.zig");
 const RegisterID = @import("../values/register_id.zig");
@@ -19,7 +19,7 @@ pub const Instance = struct {
     use_vertical_offset: bool,
 
     // Public implementation is constrained to concrete type so that instruction.zig can infer errors.
-    pub fn execute(self: Instance, machine: *Machine.Instance) void {
+    pub fn execute(self: Instance, machine: *Machine) void {
         return self._execute(machine);
     }
 
@@ -92,7 +92,7 @@ pub const Fixtures = struct {
 
 const testing = @import("../utils/testing.zig");
 const expectParse = @import("test_helpers/parse.zig").expectParse;
-const MockMachine = @import("../machine/test_helpers/mock_machine.zig");
+const mockMachine = @import("../machine/test_helpers/mock_machine.zig").mockMachine;
 
 test "parse parses valid bytecode without vertical offset flag and consumes 3 bytes" {
     const instruction = try expectParse(parse, &Fixtures.specific_buffer_ignore_offset, 3);
@@ -147,7 +147,7 @@ test "execute calls copyVideoBuffer with offset when use_vertical_offset = true"
         .use_vertical_offset = true,
     };
 
-    var machine = MockMachine.new(struct {
+    var machine = mockMachine(struct {
         pub fn copyVideoBuffer(source: BufferID.Enum, destination: BufferID.Enum, vertical_offset: Point.Coordinate) void {
             testing.expectEqual(.front_buffer, source) catch {
                 unreachable;
@@ -173,7 +173,7 @@ test "execute ignores vertical offset when use_vertical_offset = false" {
         .use_vertical_offset = false,
     };
 
-    var machine = MockMachine.new(struct {
+    var machine = mockMachine(struct {
         pub fn copyVideoBuffer(source: BufferID.Enum, destination: BufferID.Enum, vertical_offset: Point.Coordinate) void {
             testing.expectEqual(.front_buffer, source) catch {
                 unreachable;

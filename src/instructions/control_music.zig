@@ -1,6 +1,6 @@
 const Opcode = @import("../values/opcode.zig");
 const Program = @import("../machine/program.zig");
-const Machine = @import("../machine/machine.zig");
+const Machine = @import("../machine/machine.zig").Machine;
 const Audio = @import("../machine/audio.zig");
 const ResourceID = @import("../values/resource_id.zig");
 
@@ -25,7 +25,7 @@ pub const Instance = union(enum) {
     stop,
 
     // Public implementation is constrained to concrete type so that instruction.zig can infer errors.
-    pub fn execute(self: Instance, machine: *Machine.Instance) !void {
+    pub fn execute(self: Instance, machine: *Machine) !void {
         return self._execute(machine);
     }
 
@@ -83,7 +83,7 @@ pub const Fixtures = struct {
 
 const testing = @import("../utils/testing.zig");
 const expectParse = @import("test_helpers/parse.zig").expectParse;
-const MockMachine = @import("../machine/test_helpers/mock_machine.zig");
+const mockMachine = @import("../machine/test_helpers/mock_machine.zig").mockMachine;
 
 test "parse parses play instruction and consumes 6 bytes" {
     const instruction = try expectParse(parse, &Fixtures.play, 6);
@@ -118,7 +118,7 @@ test "execute with play instruction calls playMusic with correct parameters" {
         },
     };
 
-    var machine = MockMachine.new(struct {
+    var machine = mockMachine(struct {
         pub fn playMusic(resource_id: ResourceID.Raw, offset: Audio.Offset, delay: Audio.Delay) !void {
             try testing.expectEqual(0x8BAD, resource_id);
             try testing.expectEqual(0x12, offset);
@@ -141,7 +141,7 @@ test "execute with play instruction calls playMusic with correct parameters" {
 test "execute with set_delay instruction calls setMusicDelay with correct parameters" {
     const instruction: Instance = .{ .set_delay = 0xF00D };
 
-    var machine = MockMachine.new(struct {
+    var machine = mockMachine(struct {
         pub fn playMusic(_: ResourceID.Raw, _: Audio.Offset, _: Audio.Delay) !void {
             unreachable;
         }
@@ -164,7 +164,7 @@ test "execute with set_delay instruction calls setMusicDelay with correct parame
 test "execute with stop instruction calls stopMusic with correct parameters" {
     const instruction: Instance = .stop;
 
-    var machine = MockMachine.new(struct {
+    var machine = mockMachine(struct {
         pub fn playMusic(_: ResourceID.Raw, _: Audio.Offset, _: Audio.Delay) !void {
             unreachable;
         }

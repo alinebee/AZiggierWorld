@@ -1,6 +1,6 @@
 const Opcode = @import("../values/opcode.zig");
 const Program = @import("../machine/program.zig");
-const Machine = @import("../machine/machine.zig");
+const Machine = @import("../machine/machine.zig").Machine;
 const Address = @import("../values/address.zig");
 
 pub const opcode = Opcode.Enum.Jump;
@@ -11,7 +11,7 @@ pub const Instance = struct {
     /// The address to jump to.
     address: Address.Raw,
 
-    pub fn execute(self: Instance, machine: *Machine.Instance) !void {
+    pub fn execute(self: Instance, machine: *Machine) !void {
         try machine.program.jump(self.address);
     }
 };

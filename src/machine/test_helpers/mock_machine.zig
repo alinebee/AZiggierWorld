@@ -1,4 +1,4 @@
-const Machine = @import("../machine.zig");
+const Machine = @import("../machine.zig").Machine;
 const Video = @import("../video.zig").Video;
 const Audio = @import("../audio.zig");
 const Registers = @import("../registers.zig");
@@ -14,13 +14,6 @@ const BufferID = @import("../../values/buffer_id.zig");
 const PolygonScale = @import("../../values/polygon_scale.zig");
 
 const zeroes = @import("std").mem.zeroes;
-
-/// Returns a fake Machine.Instance that defers to the specified struct to implement its functions.
-/// This allows testing of Machine function calls that would produce changes in state that are hard
-/// to measure (e.g. drawing on screen or producing audio).
-pub fn new(comptime Implementation: type) MockMachine(Implementation) {
-    return MockMachine(Implementation){};
-}
 
 const CallCounts = struct {
     drawPolygon: usize,
@@ -40,7 +33,11 @@ const CallCounts = struct {
     stopChannel: usize,
 };
 
-fn MockMachine(comptime Implementation: type) type {
+pub fn mockMachine(comptime Implementation: type) MockMachine(Implementation) {
+    return MockMachine(Implementation){};
+}
+
+pub fn MockMachine(comptime Implementation: type) type {
     return struct {
         registers: Registers.Instance = .{},
 
@@ -130,7 +127,7 @@ fn MockMachine(comptime Implementation: type) type {
 const testing = @import("../../utils/testing.zig");
 
 test "MockMachine calls drawPolygon correctly on stub implementation" {
-    var mock = new(struct {
+    var mock = mockMachine(struct {
         fn drawPolygon(source: Video.PolygonSource, address: Video.PolygonAddress, point: Point.Instance, scale: PolygonScale.Raw) !void {
             try testing.expectEqual(.animations, source);
             try testing.expectEqual(0xBEEF, address);
@@ -145,7 +142,7 @@ test "MockMachine calls drawPolygon correctly on stub implementation" {
 }
 
 test "MockMachine calls drawString correctly on stub implementation" {
-    var mock = new(struct {
+    var mock = mockMachine(struct {
         fn drawString(string_id: StringID.Raw, color_id: ColorID.Trusted, point: Point.Instance) !void {
             try testing.expectEqual(0xBEEF, string_id);
             try testing.expectEqual(2, color_id);
@@ -159,7 +156,7 @@ test "MockMachine calls drawString correctly on stub implementation" {
 }
 
 test "MockMachine calls selectPalette correctly on stub implementation" {
-    var mock = new(struct {
+    var mock = mockMachine(struct {
         fn selectPalette(palette_id: PaletteID.Trusted) !void {
             testing.expectEqual(16, palette_id) catch {
                 unreachable;
@@ -172,7 +169,7 @@ test "MockMachine calls selectPalette correctly on stub implementation" {
 }
 
 test "MockMachine calls selectVideoBuffer correctly on stub implementation" {
-    var mock = new(struct {
+    var mock = mockMachine(struct {
         fn selectVideoBuffer(buffer_id: BufferID.Enum) void {
             testing.expectEqual(.front_buffer, buffer_id) catch {
                 unreachable;
@@ -185,7 +182,7 @@ test "MockMachine calls selectVideoBuffer correctly on stub implementation" {
 }
 
 test "MockMachine calls fillVideoBuffer correctly on stub implementation" {
-    var mock = new(struct {
+    var mock = mockMachine(struct {
         fn fillVideoBuffer(buffer_id: BufferID.Enum, color_id: ColorID.Trusted) void {
             testing.expectEqual(.front_buffer, buffer_id) catch {
                 unreachable;
@@ -201,7 +198,7 @@ test "MockMachine calls fillVideoBuffer correctly on stub implementation" {
 }
 
 test "MockMachine calls copyVideoBuffer correctly on stub implementation" {
-    var mock = new(struct {
+    var mock = mockMachine(struct {
         fn copyVideoBuffer(source: BufferID.Enum, destination: BufferID.Enum, vertical_offset: Point.Coordinate) void {
             testing.expectEqual(.{ .specific = 1 }, source) catch {
                 unreachable;
@@ -220,7 +217,7 @@ test "MockMachine calls copyVideoBuffer correctly on stub implementation" {
 }
 
 test "MockMachine calls renderVideoBuffer correctly on stub implementation" {
-    var mock = new(struct {
+    var mock = mockMachine(struct {
         fn renderVideoBuffer(buffer_id: BufferID.Enum, delay: Video.Milliseconds) void {
             testing.expectEqual(.back_buffer, buffer_id) catch unreachable;
             testing.expectEqual(5, delay) catch unreachable;
@@ -232,7 +229,7 @@ test "MockMachine calls renderVideoBuffer correctly on stub implementation" {
 }
 
 test "MockMachine calls scheduleGamePart correctly on stub implementation" {
-    var mock = new(struct {
+    var mock = mockMachine(struct {
         fn scheduleGamePart(game_part: GamePart.Enum) void {
             testing.expectEqual(.copy_protection, game_part) catch unreachable;
         }
@@ -243,7 +240,7 @@ test "MockMachine calls scheduleGamePart correctly on stub implementation" {
 }
 
 test "MockMachine calls loadResource correctly on stub implementation" {
-    var mock = new(struct {
+    var mock = mockMachine(struct {
         fn loadResource(resource_id: ResourceID.Raw) !void {
             try testing.expectEqual(0x8BAD, resource_id);
         }
@@ -254,7 +251,7 @@ test "MockMachine calls loadResource correctly on stub implementation" {
 }
 
 test "MockMachine calls unloadAllResources correctly on stub implementation" {
-    var mock = new(struct {
+    var mock = mockMachine(struct {
         fn unloadAllResources() void {}
     });
 
@@ -263,7 +260,7 @@ test "MockMachine calls unloadAllResources correctly on stub implementation" {
 }
 
 test "MockMachine calls playMusic correctly on stub implementation" {
-    var mock = new(struct {
+    var mock = mockMachine(struct {
         fn playMusic(resource_id: ResourceID.Raw, offset: Audio.Offset, delay: Audio.Delay) !void {
             try testing.expectEqual(0xBEEF, resource_id);
             try testing.expectEqual(128, offset);
@@ -276,7 +273,7 @@ test "MockMachine calls playMusic correctly on stub implementation" {
 }
 
 test "MockMachine calls setMusicDelay correctly on stub implementation" {
-    var mock = new(struct {
+    var mock = mockMachine(struct {
         fn setMusicDelay(delay: Audio.Delay) void {
             testing.expectEqual(1234, delay) catch {
                 unreachable;
@@ -289,7 +286,7 @@ test "MockMachine calls setMusicDelay correctly on stub implementation" {
 }
 
 test "MockMachine calls stopMusic correctly on stub implementation" {
-    var mock = new(struct {
+    var mock = mockMachine(struct {
         fn stopMusic() void {}
     });
 
@@ -298,7 +295,7 @@ test "MockMachine calls stopMusic correctly on stub implementation" {
 }
 
 test "MockMachine calls playSound correctly on stub implementation" {
-    var mock = new(struct {
+    var mock = mockMachine(struct {
         fn playSound(resource_id: ResourceID.Raw, channel: Channel.Trusted, volume: Audio.Volume, frequency: Audio.Frequency) !void {
             try testing.expectEqual(0xBEEF, resource_id);
             try testing.expectEqual(2, channel);
@@ -312,7 +309,7 @@ test "MockMachine calls playSound correctly on stub implementation" {
 }
 
 test "MockMachine calls stopChannel correctly on stub implementation" {
-    var mock = new(struct {
+    var mock = mockMachine(struct {
         fn stopChannel(channel: Channel.Trusted) void {
             testing.expectEqual(2, channel) catch {
                 unreachable;

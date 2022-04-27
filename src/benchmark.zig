@@ -1,7 +1,7 @@
 //! Unlike the other integration tests, which can be run by `zig build test`,
 //! these benchmarks can only be run by `zig build benchmark`.
 
-const Machine = @import("machine/machine.zig");
+const Machine = @import("machine/machine.zig").Machine;
 const Host = @import("machine/host.zig").Host;
 const ResourceDirectory = @import("resources/resource_directory.zig").ResourceDirectory;
 const Video = @import("machine/video.zig").Video;
@@ -26,7 +26,7 @@ const RenderHost = struct {
         return Host.init(self, bufferReady);
     }
 
-    fn bufferReady(self: *Self, machine: *const Machine.Instance, buffer_id: BufferID.Specific, _: Host.Milliseconds) void {
+    fn bufferReady(self: *Self, machine: *const Machine, buffer_id: BufferID.Specific, _: Host.Milliseconds) void {
         machine.renderBufferToSurface(buffer_id, &self.surface) catch |err| {
             switch (err) {
                 // The Another World intro attempts to render at least 4 times before any palette is selected.
@@ -55,7 +55,7 @@ const Subject = struct {
 
         const empty_input = UserInput.Instance{};
 
-        var machine = try Machine.new(self.allocator, resource_directory.reader(), host.host(), .{
+        var machine = try Machine.init(self.allocator, resource_directory.reader(), host.host(), .{
             .initial_game_part = .intro_cinematic,
             .seed = 0,
         });

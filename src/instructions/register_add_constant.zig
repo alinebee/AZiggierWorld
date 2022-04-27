@@ -1,7 +1,7 @@
 const Opcode = @import("../values/opcode.zig");
 const Register = @import("../values/register.zig");
 const Program = @import("../machine/program.zig");
-const Machine = @import("../machine/machine.zig");
+const Machine = @import("../machine/machine.zig").Machine;
 const RegisterID = @import("../values/register_id.zig");
 
 pub const opcode = Opcode.Enum.RegisterAddConstant;
@@ -14,7 +14,7 @@ pub const Instance = struct {
     /// The constant value to add to the register.
     value: Register.Signed,
 
-    pub fn execute(self: Instance, machine: *Machine.Instance) void {
+    pub fn execute(self: Instance, machine: *Machine) void {
         const original_value = machine.registers.signed(self.destination);
         // Zig syntax: +% wraps on overflow, whereas + traps.
         const new_value = original_value +% self.value;
