@@ -47,7 +47,7 @@ const Registers = @import("registers.zig");
 const Program = @import("program.zig");
 const Video = @import("video.zig");
 const Audio = @import("audio.zig");
-const Memory = @import("memory.zig");
+const Memory = @import("memory.zig").Memory;
 const Host = @import("host.zig");
 const UserInput = @import("user_input.zig");
 
@@ -91,7 +91,7 @@ pub const Instance = struct {
     video: Video.Instance,
 
     /// The current state of resources loaded into memory.
-    memory: Memory.Instance,
+    memory: Memory,
 
     /// The host which the machine will send video and audio output to.
     host: Host.Interface,
@@ -113,7 +113,7 @@ pub const Instance = struct {
     /// At startup, the virtual machine will attempt to load the resources for the initial game part.
     /// On success, returns a machine instance that is ready to begin simulating.
     fn init(allocator: mem.Allocator, reader: ResourceReader, host: Host.Interface, options: Options) !Self {
-        var memory = try Memory.new(allocator, reader);
+        var memory = try Memory.init(allocator, reader);
         errdefer memory.deinit();
 
         var self = Self{
