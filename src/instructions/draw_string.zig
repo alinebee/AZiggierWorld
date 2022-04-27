@@ -6,9 +6,10 @@ const Point = @import("../values/point.zig");
 const StringID = @import("../values/string_id.zig");
 const ColorID = @import("../values/color_id.zig");
 
-pub const opcode = Opcode.Enum.DrawString;
+/// The width in pixels of each column of glyphs.
+const column_width = 8;
 
-pub const Instance = struct {
+pub const DrawString = struct {
     /// The ID of the string to draw.
     string_id: StringID.Raw,
     /// The color to draw the string in.
@@ -16,55 +17,58 @@ pub const Instance = struct {
     /// The point in screen space at which to draw the string, relative to the top left corner of the screen.
     point: Point.Instance,
 
+    const Self = @This();
+
+    /// Parse the next instruction from a bytecode program.
+    /// Consumes 6 bytes from the bytecode on success, including the opcode.
+    /// Returns an error if the bytecode could not be read or contained an invalid instruction.
+    pub fn parse(_: Opcode.Raw, program: *Program) ParseError!Self {
+        const string_id = try program.read(StringID.Raw);
+
+        const raw_x = try program.read(u8);
+        const raw_y = try program.read(u8);
+
+        const raw_color_id = try program.read(ColorID.Raw);
+
+        return Self{
+            .string_id = string_id,
+            .color_id = try ColorID.parse(raw_color_id),
+            .point = .{
+                // The raw X coordinate of a DrawString instruction goes from 0...39,
+                // dividing the 320x200 screen into 8-pixel-wide columns.
+                // Multiply it back out to get the location in pixels.
+                .x = @as(Point.Coordinate, raw_x) * column_width,
+                .y = @as(Point.Coordinate, raw_y),
+            },
+        };
+    }
+
     // Public implementation is constrained to concrete type so that instruction.zig can infer errors.
-    pub fn execute(self: Instance, machine: *Machine) !void {
+    pub fn execute(self: Self, machine: *Machine) !void {
         return self._execute(machine);
     }
 
     // Private implementation is generic to allow tests to use mocks.
-    fn _execute(self: Instance, machine: anytype) !void {
+    fn _execute(self: Self, machine: anytype) !void {
         return machine.drawString(self.string_id, self.color_id, self.point);
     }
-};
 
-/// Parse the next instruction from a bytecode program.
-/// Consumes 6 bytes from the bytecode on success, including the opcode.
-/// Returns an error if the bytecode could not be read or contained an invalid instruction.
-pub fn parse(_: Opcode.Raw, program: *Program) ParseError!Instance {
-    const string_id = try program.read(StringID.Raw);
+    // - Exported constants -
 
-    const raw_x = try program.read(u8);
-    const raw_y = try program.read(u8);
+    pub const opcode = Opcode.Enum.DrawString;
 
-    const raw_color_id = try program.read(ColorID.Raw);
+    pub const ParseError = Program.ReadError || StringID.Error || ColorID.Error;
 
-    return Instance{
-        .string_id = string_id,
-        .color_id = try ColorID.parse(raw_color_id),
-        .point = .{
-            // The raw X coordinate of a DrawString instruction goes from 0...39,
-            // dividing the 320x200 screen into 8-pixel-wide columns.
-            // Multiply it back out to get the location in pixels.
-            .x = @as(Point.Coordinate, raw_x) * column_width,
-            .y = @as(Point.Coordinate, raw_y),
-        },
+    // -- Bytecode examples --
+
+    pub const Fixtures = struct {
+        const raw_opcode = @enumToInt(opcode);
+
+        /// Example bytecode that should produce a valid instruction.
+        pub const valid = [6]u8{ raw_opcode, 0xDE, 0xAD, 20, 100, 15 };
+
+        const invalid_color_id = [6]u8{ raw_opcode, 0xDE, 0xAD, 20, 100, 255 };
     };
-}
-
-pub const ParseError = Program.ReadError || StringID.Error || ColorID.Error;
-
-/// The width in pixels of each column of glyphs.
-const column_width = 8;
-
-// -- Bytecode examples --
-
-pub const Fixtures = struct {
-    const raw_opcode = @enumToInt(opcode);
-
-    /// Example bytecode that should produce a valid instruction.
-    pub const valid = [6]u8{ raw_opcode, 0xDE, 0xAD, 20, 100, 15 };
-
-    const invalid_color_id = [6]u8{ raw_opcode, 0xDE, 0xAD, 20, 100, 255 };
 };
 
 // -- Tests --
@@ -74,7 +78,7 @@ const expectParse = @import("test_helpers/parse.zig").expectParse;
 const mockMachine = @import("../machine/test_helpers/mock_machine.zig").mockMachine;
 
 test "parse parses valid bytecode and consumes 6 bytes" {
-    const instruction = try expectParse(parse, &Fixtures.valid, 6);
+    const instruction = try expectParse(DrawString.parse, &DrawString.Fixtures.valid, 6);
 
     try testing.expectEqual(0xDEAD, instruction.string_id);
     try testing.expectEqual(15, instruction.color_id);
@@ -85,12 +89,12 @@ test "parse parses valid bytecode and consumes 6 bytes" {
 test "parse returns error.InvalidColorID on out of range color and consumes 6 bytes" {
     try testing.expectError(
         error.InvalidColorID,
-        expectParse(parse, &Fixtures.invalid_color_id, 6),
+        expectParse(DrawString.parse, &DrawString.Fixtures.invalid_color_id, 6),
     );
 }
 
 test "execute calls drawString with correct parameters" {
-    const instruction = Instance{
+    const instruction = DrawString{
         .string_id = 0xDEAD,
         .color_id = 15,
         .point = .{
@@ -113,7 +117,7 @@ test "execute calls drawString with correct parameters" {
 }
 
 test "execute passes along error.InvalidStringID if machine cannot find appropriate string" {
-    const instruction = Instance{
+    const instruction = DrawString{
         .string_id = 0xDEAD,
         .color_id = 15,
         .point = .{
