@@ -11,7 +11,7 @@ const Machine = @import("../machine/machine.zig").Machine;
 const ExecutionResult = @import("execution_result.zig");
 
 const ActivateThread = @import("activate_thread.zig").ActivateThread;
-const Call = @import("call.zig");
+const Call = @import("call.zig").Call;
 const ControlMusic = @import("control_music.zig");
 const ControlResources = @import("control_resources.zig");
 const ControlSound = @import("control_sound.zig");
@@ -138,7 +138,7 @@ fn execute(comptime Instruction: type, raw_opcode: Opcode.Raw, program: *Program
 /// individual instructions are executed immediately after being parsed.
 pub const Wrapped = union(Opcode.Enum) {
     ActivateThread: ActivateThread,
-    Call: Call.Instance,
+    Call: Call,
     ControlMusic: ControlMusic.Instance,
     ControlResources: ControlResources.Instance,
     ControlSound: ControlSound.Instance,
