@@ -1,4 +1,4 @@
-const Opcode = @import("../values/opcode.zig");
+const Opcode = @import("../values/opcode.zig").Opcode;
 const Program = @import("../machine/program.zig").Program;
 const Machine = @import("../machine/machine.zig").Machine;
 const RegisterID = @import("../values/register_id.zig");
@@ -34,7 +34,7 @@ pub const RegisterAdd = struct {
 
     // - Exported constants -
 
-    pub const opcode = Opcode.Enum.RegisterAdd;
+    pub const opcode = Opcode.RegisterAdd;
     pub const ParseError = Program.ReadError;
 
     // -- Bytecode examples --

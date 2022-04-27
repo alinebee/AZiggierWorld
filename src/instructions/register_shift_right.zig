@@ -1,4 +1,4 @@
-const Opcode = @import("../values/opcode.zig");
+const Opcode = @import("../values/opcode.zig").Opcode;
 const Register = @import("../values/register.zig");
 const RegisterID = @import("../values/register_id.zig");
 const Program = @import("../machine/program.zig").Program;
@@ -50,7 +50,7 @@ pub const RegisterShiftRight = struct {
 
     // - Exported constants -
 
-    pub const opcode = Opcode.Enum.RegisterShiftRight;
+    pub const opcode = Opcode.RegisterShiftRight;
     pub const ParseError = Program.ReadError || error{
         /// Bytecode specified a shift distance that was too large.
         ShiftTooLarge,

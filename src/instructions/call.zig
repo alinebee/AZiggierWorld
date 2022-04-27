@@ -1,4 +1,4 @@
-const Opcode = @import("../values/opcode.zig");
+const Opcode = @import("../values/opcode.zig").Opcode;
 const Program = @import("../machine/program.zig").Program;
 const Machine = @import("../machine/machine.zig").Machine;
 const Stack = @import("../machine/stack.zig");
@@ -27,7 +27,7 @@ pub const Call = struct {
 
     // - Exported constants -
 
-    pub const opcode = Opcode.Enum.Call;
+    pub const opcode = Opcode.Call;
 
     pub const ExecutionError = Program.SeekError || Stack.Error || error{};
     pub const ParseError = Program.ReadError;

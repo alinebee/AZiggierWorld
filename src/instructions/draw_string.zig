@@ -1,4 +1,4 @@
-const Opcode = @import("../values/opcode.zig");
+const Opcode = @import("../values/opcode.zig").Opcode;
 const Program = @import("../machine/program.zig").Program;
 const Machine = @import("../machine/machine.zig").Machine;
 
@@ -55,7 +55,7 @@ pub const DrawString = struct {
 
     // - Exported constants -
 
-    pub const opcode = Opcode.Enum.DrawString;
+    pub const opcode = Opcode.DrawString;
 
     pub const ParseError = Program.ReadError || StringID.Error || ColorID.Error;
 

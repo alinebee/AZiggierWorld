@@ -1,4 +1,4 @@
-const Opcode = @import("../values/opcode.zig");
+const Opcode = @import("../values/opcode.zig").Opcode;
 const Program = @import("../machine/program.zig").Program;
 const Machine = @import("../machine/machine.zig").Machine;
 const Address = @import("../values/address.zig");
@@ -42,7 +42,7 @@ pub const JumpIfNotZero = struct {
 
     // - Exported constants -
 
-    pub const opcode = Opcode.Enum.JumpIfNotZero;
+    pub const opcode = Opcode.JumpIfNotZero;
     pub const ParseError = Program.ReadError;
 
     // -- Bytecode examples --

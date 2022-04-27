@@ -1,4 +1,4 @@
-const Opcode = @import("../values/opcode.zig");
+const Opcode = @import("../values/opcode.zig").Opcode;
 const Program = @import("../machine/program.zig").Program;
 const Machine = @import("../machine/machine.zig").Machine;
 const ResourceID = @import("../values/resource_id.zig");
@@ -49,7 +49,7 @@ pub const ControlResources = union(enum) {
 
     // - Exported constants -
 
-    pub const opcode = Opcode.Enum.ControlResources;
+    pub const opcode = Opcode.ControlResources;
     pub const ParseError = Program.ReadError;
 
     // -- Bytecode examples --

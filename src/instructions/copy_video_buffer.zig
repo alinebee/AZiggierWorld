@@ -1,4 +1,4 @@
-const Opcode = @import("../values/opcode.zig");
+const Opcode = @import("../values/opcode.zig").Opcode;
 const Program = @import("../machine/program.zig").Program;
 const Machine = @import("../machine/machine.zig").Machine;
 const Point = @import("../values/point.zig");
@@ -69,7 +69,7 @@ pub const CopyVideoBuffer = struct {
     }
 
     // - Exported constants -
-    pub const opcode = Opcode.Enum.CopyVideoBuffer;
+    pub const opcode = Opcode.CopyVideoBuffer;
 
     pub const ParseError = Program.ReadError || BufferID.Error;
 

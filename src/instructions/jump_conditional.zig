@@ -1,4 +1,4 @@
-const Opcode = @import("../values/opcode.zig");
+const Opcode = @import("../values/opcode.zig").Opcode;
 const Register = @import("../values/register.zig");
 const Program = @import("../machine/program.zig").Program;
 const Machine = @import("../machine/machine.zig").Machine;
@@ -84,7 +84,7 @@ pub const JumpConditional = struct {
 
     // - Exported constants -
 
-    pub const opcode = Opcode.Enum.JumpConditional;
+    pub const opcode = Opcode.JumpConditional;
     pub const ParseError = Program.ReadError || Comparison.Error;
 
     // -- Bytecode examples --

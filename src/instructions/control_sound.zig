@@ -1,4 +1,4 @@
-const Opcode = @import("../values/opcode.zig");
+const Opcode = @import("../values/opcode.zig").Opcode;
 const Program = @import("../machine/program.zig").Program;
 const Machine = @import("../machine/machine.zig").Machine;
 const Audio = @import("../machine/audio.zig");
@@ -62,7 +62,7 @@ pub const ControlSound = union(enum) {
 
     // - Exported constants -
 
-    pub const opcode = Opcode.Enum.ControlSound;
+    pub const opcode = Opcode.ControlSound;
     pub const ParseError = Program.ReadError || Channel.Error;
 
     // -- Bytecode examples --

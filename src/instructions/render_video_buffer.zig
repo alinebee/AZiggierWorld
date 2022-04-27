@@ -1,4 +1,4 @@
-const Opcode = @import("../values/opcode.zig");
+const Opcode = @import("../values/opcode.zig").Opcode;
 const Program = @import("../machine/program.zig").Program;
 const Machine = @import("../machine/machine.zig").Machine;
 const Video = @import("../machine/video.zig").Video;
@@ -52,7 +52,7 @@ pub const RenderVideoBuffer = struct {
 
     // - Exported constants -
     pub const ParseError = Program.ReadError || BufferID.Error;
-    pub const opcode = Opcode.Enum.RenderVideoBuffer;
+    pub const opcode = Opcode.RenderVideoBuffer;
 
     // -- Bytecode examples --
 

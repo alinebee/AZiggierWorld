@@ -1,4 +1,4 @@
-const Opcode = @import("../values/opcode.zig");
+const Opcode = @import("../values/opcode.zig").Opcode;
 const Program = @import("../machine/program.zig").Program;
 const Machine = @import("../machine/machine.zig").Machine;
 const RegisterID = @import("../values/register_id.zig");
@@ -31,7 +31,7 @@ pub const RegisterSubtract = struct {
         machine.registers.setSigned(self.destination, new_value);
     }
 
-    pub const opcode = Opcode.Enum.RegisterSubtract;
+    pub const opcode = Opcode.RegisterSubtract;
     pub const ParseError = Program.ReadError;
 
     // -- Bytecode examples --

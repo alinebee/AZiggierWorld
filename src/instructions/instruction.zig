@@ -6,7 +6,7 @@
 //! be cleaned up with some Zig compile-time code generation.
 
 const Program = @import("../machine/program.zig").Program;
-const Opcode = @import("../values/opcode.zig");
+const Opcode = @import("../values/opcode.zig").Opcode;
 const Machine = @import("../machine/machine.zig").Machine;
 const ExecutionResult = @import("execution_result.zig");
 
@@ -136,7 +136,7 @@ fn execute(comptime Instruction: type, raw_opcode: Opcode.Raw, program: *Program
 /// This wrapped type is intended for introspection and reverse engineering of Another World
 /// bytecode programs, and is not used directly in the emulator; during normal emulator flow,
 /// individual instructions are executed immediately after being parsed.
-pub const Wrapped = union(Opcode.Enum) {
+pub const Wrapped = union(Opcode) {
     ActivateThread: ActivateThread,
     Call: Call,
     ControlMusic: ControlMusic,
@@ -301,9 +301,9 @@ test "executeProgram ends execution on Yield instruction and returns ExecutionRe
     const register_1 = RegisterID.parse(1);
     const register_2 = RegisterID.parse(2);
     const bytecode = [_]u8{
-        @enumToInt(Opcode.Enum.RegisterSet), @enumToInt(register_1), 0x0B, 0xAD, // Offset 0: Set register 1 to 0x0BAD
-        @enumToInt(Opcode.Enum.Yield), // Offset 3: Yield current thread
-        @enumToInt(Opcode.Enum.RegisterSet), @enumToInt(register_2), 0xF0, 0x0D, // Offset 5: Set register 2 to 0xF00D
+        @enumToInt(Opcode.RegisterSet), @enumToInt(register_1), 0x0B, 0xAD, // Offset 0: Set register 1 to 0x0BAD
+        @enumToInt(Opcode.Yield), // Offset 3: Yield current thread
+        @enumToInt(Opcode.RegisterSet), @enumToInt(register_2), 0xF0, 0x0D, // Offset 5: Set register 2 to 0xF00D
     };
 
     var machine = Machine.testInstance(.{ .bytecode = &bytecode });
@@ -322,9 +322,9 @@ test "executeProgram ends execution on Kill instruction and returns ExecutionRes
     const register_1 = RegisterID.parse(1);
     const register_2 = RegisterID.parse(2);
     const bytecode = [_]u8{
-        @enumToInt(Opcode.Enum.RegisterSet), @enumToInt(register_1), 0x0B, 0xAD, // Offset 0: Set register 1 to 0x0BAD
-        @enumToInt(Opcode.Enum.Kill), // Offset 3: Kill current thread
-        @enumToInt(Opcode.Enum.RegisterSet), @enumToInt(register_2), 0xF0, 0x0D, // Offset 5: Set register 2 to 0xF00D
+        @enumToInt(Opcode.RegisterSet), @enumToInt(register_1), 0x0B, 0xAD, // Offset 0: Set register 1 to 0x0BAD
+        @enumToInt(Opcode.Kill), // Offset 3: Kill current thread
+        @enumToInt(Opcode.RegisterSet), @enumToInt(register_2), 0xF0, 0x0D, // Offset 5: Set register 2 to 0xF00D
     };
 
     var machine = Machine.testInstance(.{ .bytecode = &bytecode });
@@ -342,8 +342,8 @@ test "executeProgram ends execution on Kill instruction and returns ExecutionRes
 test "executeProgram returns error.InstructionLimitExceeded if program never yields or deactivates" {
     const register_1 = RegisterID.parse(1);
     const bytecode = [_]u8{
-        @enumToInt(Opcode.Enum.RegisterAddConstant), @enumToInt(register_1), 0, 2, // Offset 0: add 2 to register 1
-        @enumToInt(Opcode.Enum.Jump), 0x00, 0x00, // Offset 4: jump to offset 0 (infinite loop)
+        @enumToInt(Opcode.RegisterAddConstant), @enumToInt(register_1), 0, 2, // Offset 0: add 2 to register 1
+        @enumToInt(Opcode.Jump), 0x00, 0x00, // Offset 4: jump to offset 0 (infinite loop)
     };
 
     const max_instructions = 10;

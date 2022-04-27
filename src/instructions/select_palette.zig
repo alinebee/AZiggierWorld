@@ -1,4 +1,4 @@
-const Opcode = @import("../values/opcode.zig");
+const Opcode = @import("../values/opcode.zig").Opcode;
 const Program = @import("../machine/program.zig").Program;
 const Machine = @import("../machine/machine.zig").Machine;
 const PaletteID = @import("../values/palette_id.zig");
@@ -37,7 +37,7 @@ pub const SelectPalette = struct {
 
     // - Exported constants -
 
-    pub const opcode = Opcode.Enum.SelectPalette;
+    pub const opcode = Opcode.SelectPalette;
     pub const ParseError = Program.ReadError || PaletteID.Error;
 
     // -- Bytecode examples --

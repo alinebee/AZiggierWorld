@@ -1,6 +1,6 @@
 //! Functions and types used when testing virtual machine instructions.
 
-const Opcode = @import("../../values/opcode.zig");
+const Opcode = @import("../../values/opcode.zig").Opcode;
 const Program = @import("../../machine/program.zig").Program;
 
 const introspection = @import("../../utils/introspection.zig");

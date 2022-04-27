@@ -1,4 +1,4 @@
-const Opcode = @import("../values/opcode.zig");
+const Opcode = @import("../values/opcode.zig").Opcode;
 const Program = @import("../machine/program.zig").Program;
 const Machine = @import("../machine/machine.zig").Machine;
 const ExecutionResult = @import("execution_result.zig");
@@ -34,7 +34,7 @@ pub const Yield = struct {
 
     // - Exported constants -
 
-    pub const opcode = Opcode.Enum.Yield;
+    pub const opcode = Opcode.Yield;
     pub const ExecutionError = error{
         /// Attempted to yield within a function call, which would lose stack information
         // and cause a stack underflow upon resuming and returning from the function.

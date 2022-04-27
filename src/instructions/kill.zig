@@ -1,4 +1,4 @@
-const Opcode = @import("../values/opcode.zig");
+const Opcode = @import("../values/opcode.zig").Opcode;
 const Program = @import("../machine/program.zig").Program;
 const Machine = @import("../machine/machine.zig").Machine;
 const ExecutionResult = @import("execution_result.zig");
@@ -18,7 +18,7 @@ pub const Kill = struct {
     }
 
     // - Exported constants -
-    pub const opcode = Opcode.Enum.Kill;
+    pub const opcode = Opcode.Kill;
     pub const ParseError = Program.ReadError;
 
     // -- Bytecode examples --

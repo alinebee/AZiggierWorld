@@ -1,4 +1,4 @@
-const Opcode = @import("../values/opcode.zig");
+const Opcode = @import("../values/opcode.zig").Opcode;
 const Program = @import("../machine/program.zig").Program;
 const Machine = @import("../machine/machine.zig").Machine;
 const Video = @import("../machine/video.zig").Video;
@@ -140,7 +140,7 @@ pub const DrawSpritePolygon = struct {
 
     // - Exported constants -
 
-    pub const opcode = Opcode.Enum.DrawSpritePolygon;
+    pub const opcode = Opcode.DrawSpritePolygon;
     pub const ParseError = Program.ReadError;
 
     // -- Bytecode examples --

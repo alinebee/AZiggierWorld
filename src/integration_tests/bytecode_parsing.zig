@@ -2,7 +2,7 @@
 //! Requires that the `fixtures/dos` folder contains Another World DOS game files.
 
 const Instruction = @import("../instructions/instruction.zig");
-const Opcode = @import("../values/opcode.zig");
+const Opcode = @import("../values/opcode.zig").Opcode;
 const Program = @import("../machine/program.zig").Program;
 const ResourceDirectory = @import("../resources/resource_directory.zig").ResourceDirectory;
 
@@ -35,7 +35,7 @@ const ParseFailure = struct {
     }
 
     fn opcodeName(self: ParseFailure) []const u8 {
-        if (instrospection.intToEnum(Opcode.Enum, self.parsed_bytes[0])) |value| {
+        if (instrospection.intToEnum(Opcode, self.parsed_bytes[0])) |value| {
             return @tagName(value);
         } else |_| {
             return "Unknown";
