@@ -20,7 +20,7 @@ const CopyVideoBuffer = @import("copy_video_buffer.zig").CopyVideoBuffer;
 const DrawBackgroundPolygon = @import("draw_background_polygon.zig").DrawBackgroundPolygon;
 const DrawSpritePolygon = @import("draw_sprite_polygon.zig").DrawSpritePolygon;
 const DrawString = @import("draw_string.zig").DrawString;
-const FillVideoBuffer = @import("fill_video_buffer.zig");
+const FillVideoBuffer = @import("fill_video_buffer.zig").FillVideoBuffer;
 const Jump = @import("jump.zig");
 const JumpConditional = @import("jump_conditional.zig");
 const JumpIfNotZero = @import("jump_if_not_zero.zig");
@@ -147,7 +147,7 @@ pub const Wrapped = union(Opcode.Enum) {
     DrawBackgroundPolygon: DrawBackgroundPolygon,
     DrawSpritePolygon: DrawSpritePolygon,
     DrawString: DrawString,
-    FillVideoBuffer: FillVideoBuffer.Instance,
+    FillVideoBuffer: FillVideoBuffer,
     Jump: Jump.Instance,
     JumpConditional: JumpConditional.Instance,
     JumpIfNotZero: JumpIfNotZero.Instance,
