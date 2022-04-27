@@ -770,14 +770,12 @@ test "renderVideoBuffer notifies host of new frame with expected buffer ID and d
     const expected_buffer_id = 3;
     const expected_delay = 24;
 
-    const HostType = mock_host.MockHost(struct {
+    var host = mock_host.mockHost(struct {
         pub fn bufferReady(_: *const Machine, buffer_id: BufferID.Specific, delay: Host.Milliseconds) void {
             testing.expectEqual(expected_buffer_id, buffer_id) catch unreachable;
             testing.expectEqual(expected_delay, delay) catch unreachable;
         }
     });
-
-    var host = HostType{};
 
     var machine = Machine.testInstance(.{ .host = host.host() });
     defer machine.deinit();

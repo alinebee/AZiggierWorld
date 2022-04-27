@@ -18,6 +18,10 @@ var test_host_implementation = MockHost(DefaultImplementation){};
 /// intended to be used as a mock in tests that need a real instance but do not test the host functionality.
 pub const test_host = test_host_implementation.host();
 
+pub fn mockHost(comptime Implementation: type) MockHost(Implementation) {
+    return MockHost(Implementation){};
+}
+
 pub fn MockHost(comptime Implementation: type) type {
     return struct {
         call_counts: struct {
