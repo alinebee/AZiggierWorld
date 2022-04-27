@@ -11,7 +11,7 @@ const Point = @import("../values/point.zig");
 const ResourceDirectory = @import("../resources/resource_directory.zig").ResourceDirectory;
 const GamePart = @import("../values/game_part.zig");
 const DrawBackgroundPolygon = @import("../instructions/draw_background_polygon.zig").DrawBackgroundPolygon;
-const DrawSpritePolygon = @import("../instructions/draw_sprite_polygon.zig");
+const DrawSpritePolygon = @import("../instructions/draw_sprite_polygon.zig").DrawSpritePolygon;
 
 const testing = @import("../utils/testing.zig");
 const log = @import("../utils/logging.zig").log;
@@ -20,7 +20,7 @@ const std = @import("std");
 
 const PolygonDrawInstruction = union(enum) {
     background: DrawBackgroundPolygon,
-    sprite: DrawSpritePolygon.Instance,
+    sprite: DrawSpritePolygon,
 };
 
 /// Parses an Another World bytecode program to find all the draw instructions in it.
