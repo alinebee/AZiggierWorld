@@ -16,7 +16,7 @@ const ControlMusic = @import("control_music.zig").ControlMusic;
 const ControlResources = @import("control_resources.zig").ControlResources;
 const ControlSound = @import("control_sound.zig").ControlSound;
 const ControlThreads = @import("control_threads.zig").ControlThreads;
-const CopyVideoBuffer = @import("copy_video_buffer.zig");
+const CopyVideoBuffer = @import("copy_video_buffer.zig").CopyVideoBuffer;
 const DrawBackgroundPolygon = @import("draw_background_polygon.zig");
 const DrawSpritePolygon = @import("draw_sprite_polygon.zig");
 const DrawString = @import("draw_string.zig");
@@ -143,7 +143,7 @@ pub const Wrapped = union(Opcode.Enum) {
     ControlResources: ControlResources,
     ControlSound: ControlSound,
     ControlThreads: ControlThreads,
-    CopyVideoBuffer: CopyVideoBuffer.Instance,
+    CopyVideoBuffer: CopyVideoBuffer,
     DrawBackgroundPolygon: DrawBackgroundPolygon.Instance,
     DrawSpritePolygon: DrawSpritePolygon.Instance,
     DrawString: DrawString.Instance,
