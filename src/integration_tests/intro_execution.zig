@@ -3,7 +3,7 @@
 //! Requires that the `fixtures/dos` folder contains Another World DOS game files.
 
 const Machine = @import("../machine/machine.zig");
-const Host = @import("../machine/host.zig");
+const Host = @import("../machine/host.zig").Host;
 const ResourceDirectory = @import("../resources/resource_directory.zig").ResourceDirectory;
 const BufferID = @import("../values/buffer_id.zig");
 const UserInput = @import("../machine/user_input.zig");
@@ -21,8 +21,8 @@ const CountingHost = struct {
 
     const Self = @This();
 
-    fn host(self: *Self) Host.Interface {
-        return Host.Interface.init(self, bufferReady);
+    fn host(self: *Self) Host {
+        return Host.init(self, bufferReady);
     }
 
     fn bufferReady(self: *Self, _: *const Machine.Instance, _: BufferID.Specific, delay: Host.Milliseconds) void {

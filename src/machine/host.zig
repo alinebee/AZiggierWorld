@@ -7,11 +7,10 @@ const assert = std.debug.assert;
 const BufferID = @import("../values/buffer_id.zig");
 const Machine = @import("machine.zig");
 const Video = @import("video.zig").Video;
-pub const Milliseconds = Video.Milliseconds;
 
 /// An interface that the virtual machine uses to communicate with the host.
 /// The host handles video and audio output from the virtual machine.
-pub const Interface = struct {
+pub const Host = struct {
     implementation: *anyopaque,
     vtable: *const TypeErasedVTable,
 
@@ -62,6 +61,9 @@ pub const Interface = struct {
     pub fn bufferReady(self: Self, machine: *const Machine.Instance, buffer_id: BufferID.Specific, delay: Milliseconds) void {
         self.vtable.bufferReady(self.implementation, machine, buffer_id, delay);
     }
+
+    // - Exported constants -
+    pub const Milliseconds = Video.Milliseconds;
 };
 
 // -- Tests --
@@ -69,5 +71,5 @@ pub const Interface = struct {
 const testing = @import("../utils/testing.zig");
 
 test "Ensure everything compiles" {
-    testing.refAllDecls(Interface);
+    testing.refAllDecls(Host);
 }

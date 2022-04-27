@@ -13,7 +13,6 @@ const PaletteResource = @import("../resources/palette_resource.zig");
 const PackedBuffer = @import("../rendering/buffers/packed_buffer.zig");
 const drawPolygonImpl = @import("../rendering/operations/draw_polygon.zig").drawPolygon;
 const drawStringImpl = @import("../rendering/operations/draw_string.zig").drawString;
-const Host = @import("host.zig");
 
 const static_limits = @import("../static_limits.zig");
 
@@ -237,7 +236,7 @@ const PolygonVisitor = struct {
 // -- Tests --
 
 const testing = @import("../utils/testing.zig");
-const MockHost = @import("test_helpers/mock_host.zig");
+const MockHost = @import("test_helpers/mock_host.zig").MockHost;
 const Color = @import("../values/color.zig");
 const IndexedBitmap = @import("../rendering/test_helpers/indexed_bitmap.zig");
 const PlanarBitmapResource = @import("../resources/planar_bitmap_resource.zig");

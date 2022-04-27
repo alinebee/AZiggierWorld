@@ -2,7 +2,7 @@
 //! these benchmarks can only be run by `zig build benchmark`.
 
 const Machine = @import("machine/machine.zig");
-const Host = @import("machine/host.zig");
+const Host = @import("machine/host.zig").Host;
 const ResourceDirectory = @import("resources/resource_directory.zig").ResourceDirectory;
 const Video = @import("machine/video.zig").Video;
 const BufferID = @import("values/buffer_id.zig");
@@ -22,9 +22,10 @@ const RenderHost = struct {
 
     const Self = @This();
 
-    fn host(self: *Self) Host.Interface {
-        return Host.Interface.init(self, bufferReady);
+    fn host(self: *Self) Host {
+        return Host.init(self, bufferReady);
     }
+
     fn bufferReady(self: *Self, machine: *const Machine.Instance, buffer_id: BufferID.Specific, _: Host.Milliseconds) void {
         machine.renderBufferToSurface(buffer_id, &self.surface) catch |err| {
             switch (err) {

@@ -48,7 +48,7 @@ const Program = @import("program.zig");
 const Video = @import("video.zig").Video;
 const Audio = @import("audio.zig");
 const Memory = @import("memory.zig").Memory;
-const Host = @import("host.zig");
+const Host = @import("host.zig").Host;
 const UserInput = @import("user_input.zig");
 
 const ResourceReader = @import("../resources/resource_reader.zig").ResourceReader;
@@ -94,7 +94,7 @@ pub const Instance = struct {
     memory: Memory,
 
     /// The host which the machine will send video and audio output to.
-    host: Host.Interface,
+    host: Host,
 
     /// The currently-active game part.
     current_game_part: GamePart.Enum,
@@ -112,7 +112,7 @@ pub const Instance = struct {
     /// reads game data from the specified reader, and sends video and audio output to the specified host.
     /// At startup, the virtual machine will attempt to load the resources for the initial game part.
     /// On success, returns a machine instance that is ready to begin simulating.
-    fn init(allocator: mem.Allocator, reader: ResourceReader, host: Host.Interface, options: Options) !Self {
+    fn init(allocator: mem.Allocator, reader: ResourceReader, host: Host, options: Options) !Self {
         var memory = try Memory.init(allocator, reader);
         errdefer memory.deinit();
 
@@ -351,19 +351,19 @@ pub const Instance = struct {
     }
 };
 
-pub fn new(allocator: mem.Allocator, reader: ResourceReader, host: Host.Interface, options: Options) !Instance {
+pub fn new(allocator: mem.Allocator, reader: ResourceReader, host: Host, options: Options) !Instance {
     return Instance.init(allocator, reader, host, options);
 }
 
 const MockRepository = @import("../resources/mock_repository.zig").MockRepository;
-const MockHost = @import("test_helpers/mock_host.zig");
+const mock_host = @import("test_helpers/mock_host.zig");
 
 /// Optional configuration settings for the test machine instance created by `testInstance`.
 const TestInstanceConfig = struct {
     // Optional bytecode to load as the machine's program.
     bytecode: ?[]const u8 = null,
     // An optional host that the test instance should talk to.
-    host: ?Host.Interface = null,
+    host: ?Host = null,
 };
 
 /// Returns a machine instance suitable for use in tests.
@@ -377,7 +377,7 @@ const TestInstanceConfig = struct {
 /// try testing.expectEqual(result, do_something_that_requires_a_machine(machine));
 pub fn testInstance(config: TestInstanceConfig) Instance {
     const options = Options{ .initial_game_part = .intro_cinematic, .seed = 0 };
-    const host = config.host orelse MockHost.test_host;
+    const host = config.host orelse mock_host.test_host;
 
     var machine = new(testing.allocator, MockRepository.test_reader, host, options) catch unreachable;
     if (config.bytecode) |bytecode| {
@@ -399,7 +399,7 @@ test "new creates virtual machine instance with expected initial state" {
         .seed = 12345,
     };
 
-    var machine = try new(testing.allocator, MockRepository.test_reader, MockHost.test_host, options);
+    var machine = try new(testing.allocator, MockRepository.test_reader, mock_host.test_host, options);
     defer machine.deinit();
 
     for (machine.threads) |thread, id| {
@@ -773,12 +773,14 @@ test "renderVideoBuffer notifies host of new frame with expected buffer ID and d
     const expected_buffer_id = 3;
     const expected_delay = 24;
 
-    var host = MockHost.new(struct {
+    const HostType = mock_host.MockHost(struct {
         pub fn bufferReady(_: *const Instance, buffer_id: BufferID.Specific, delay: Host.Milliseconds) void {
             testing.expectEqual(expected_buffer_id, buffer_id) catch unreachable;
             testing.expectEqual(expected_delay, delay) catch unreachable;
         }
     });
+
+    var host = HostType{};
 
     var machine = testInstance(.{ .host = host.host() });
     defer machine.deinit();

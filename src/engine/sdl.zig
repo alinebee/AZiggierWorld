@@ -1,5 +1,5 @@
 const Machine = @import("../machine/machine.zig");
-const Host = @import("../machine/host.zig");
+const Host = @import("../machine/host.zig").Host;
 const ResourceDirectory = @import("../resources/resource_directory.zig").ResourceDirectory;
 const BufferID = @import("../values/buffer_id.zig");
 const Video = @import("../machine/video.zig").Video;
@@ -164,8 +164,8 @@ pub const Instance = struct {
         self.allocator.destroy(self);
     }
 
-    fn host(self: *Self) Host.Interface {
-        return Host.Interface.init(self, bufferReady);
+    fn host(self: *Self) Host {
+        return Host.init(self, bufferReady);
     }
 
     // - VM execution

@@ -2,19 +2,23 @@
 //! Records the number of times each host method was called, and allows a test
 //! to perform arbitrary assertions in the body of each host method.
 
-const Host = @import("../host.zig");
+const Host = @import("../host.zig").Host;
 const Machine = @import("../machine.zig");
 const BufferID = @import("../../values/buffer_id.zig");
 
-var test_host_implementation = new(DefaultImplementation);
+// - Exported constants -
+
+const DefaultImplementation = struct {
+    pub fn bufferReady(_: *const Machine.Instance, _: BufferID.Specific, _: Host.Milliseconds) void {}
+};
+
+var test_host_implementation = MockHost(DefaultImplementation){};
+
+/// A default host implementation that responds to all host methods but does nothing:
+/// intended to be used as a mock in tests that need a real instance but do not test the host functionality.
 pub const test_host = test_host_implementation.host();
 
-/// Returns a fake instance that defers to the specified struct to implement its functions.
-pub fn new(comptime Implementation: type) Instance(Implementation) {
-    return .{};
-}
-
-pub fn Instance(comptime Implementation: type) type {
+pub fn MockHost(comptime Implementation: type) type {
     return struct {
         call_counts: struct {
             bufferReady: usize = 0,
@@ -22,8 +26,8 @@ pub fn Instance(comptime Implementation: type) type {
 
         const Self = @This();
 
-        pub fn host(self: *Self) Host.Interface {
-            return Host.Interface.init(self, bufferReady);
+        pub fn host(self: *Self) Host {
+            return Host.init(self, bufferReady);
         }
 
         fn bufferReady(self: *Self, machine: *const Machine.Instance, buffer_id: BufferID.Specific, delay: Host.Milliseconds) void {
@@ -33,15 +37,10 @@ pub fn Instance(comptime Implementation: type) type {
     };
 }
 
-/// A default implementation for the mock host that does nothing in any method.
-pub const DefaultImplementation = struct {
-    pub fn bufferReady(_: *const Machine.Instance, _: BufferID.Specific, _: Host.Milliseconds) void {}
-};
-
 // -- Tests --
 
 const testing = @import("../../utils/testing.zig");
 
 test "Ensure everything compiles" {
-    testing.refAllDecls(Instance(DefaultImplementation));
+    testing.refAllDecls(MockHost(DefaultImplementation));
 }
