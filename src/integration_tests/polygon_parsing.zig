@@ -10,7 +10,7 @@ const PolygonScale = @import("../values/polygon_scale.zig");
 const Point = @import("../values/point.zig");
 const ResourceDirectory = @import("../resources/resource_directory.zig").ResourceDirectory;
 const GamePart = @import("../values/game_part.zig");
-const DrawBackgroundPolygon = @import("../instructions/draw_background_polygon.zig");
+const DrawBackgroundPolygon = @import("../instructions/draw_background_polygon.zig").DrawBackgroundPolygon;
 const DrawSpritePolygon = @import("../instructions/draw_sprite_polygon.zig");
 
 const testing = @import("../utils/testing.zig");
@@ -19,7 +19,7 @@ const ensureValidFixtureDir = @import("helpers.zig").ensureValidFixtureDir;
 const std = @import("std");
 
 const PolygonDrawInstruction = union(enum) {
-    background: DrawBackgroundPolygon.Instance,
+    background: DrawBackgroundPolygon,
     sprite: DrawSpritePolygon.Instance,
 };
 
