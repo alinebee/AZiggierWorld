@@ -13,7 +13,7 @@ const ExecutionResult = @import("execution_result.zig");
 const ActivateThread = @import("activate_thread.zig").ActivateThread;
 const Call = @import("call.zig").Call;
 const ControlMusic = @import("control_music.zig").ControlMusic;
-const ControlResources = @import("control_resources.zig");
+const ControlResources = @import("control_resources.zig").ControlResources;
 const ControlSound = @import("control_sound.zig");
 const ControlThreads = @import("control_threads.zig");
 const CopyVideoBuffer = @import("copy_video_buffer.zig");
@@ -140,7 +140,7 @@ pub const Wrapped = union(Opcode.Enum) {
     ActivateThread: ActivateThread,
     Call: Call,
     ControlMusic: ControlMusic,
-    ControlResources: ControlResources.Instance,
+    ControlResources: ControlResources,
     ControlSound: ControlSound.Instance,
     ControlThreads: ControlThreads.Instance,
     CopyVideoBuffer: CopyVideoBuffer.Instance,

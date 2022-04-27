@@ -4,10 +4,8 @@ const Machine = @import("../machine/machine.zig").Machine;
 const ResourceID = @import("../values/resource_id.zig");
 const GamePart = @import("../values/game_part.zig");
 
-pub const opcode = Opcode.Enum.ControlResources;
-
 /// Loads individual resources or entire game parts into memory.
-pub const Instance = union(enum) {
+pub const ControlResources = union(enum) {
     /// Unload all loaded resources and stop audio.
     unload_all,
 
@@ -17,50 +15,55 @@ pub const Instance = union(enum) {
     /// Load the specified resource individually.
     load_resource: ResourceID.Raw,
 
+    const Self = @This();
+
+    /// Parse the next instruction from a bytecode program.
+    /// Consumes 3 bytes from the bytecode on success, including the opcode.
+    /// Returns an error if the bytecode could not be read or contained an invalid instruction.
+    pub fn parse(_: Opcode.Raw, program: *Program) ParseError!Self {
+        const resource_id_or_game_part = try program.read(ResourceID.Raw);
+
+        if (resource_id_or_game_part == 0) {
+            return .unload_all;
+        } else if (GamePart.parse(resource_id_or_game_part)) |game_part| {
+            return Self{ .start_game_part = game_part };
+        } else |_| {
+            // If the value doesn't match any game part, assume it's a resource ID
+            return Self{ .load_resource = resource_id_or_game_part };
+        }
+    }
+
     // Public implementation is constrained to concrete type so that instruction.zig can infer errors.
-    pub fn execute(self: Instance, machine: *Machine) !void {
+    pub fn execute(self: Self, machine: *Machine) !void {
         return self._execute(machine);
     }
 
     // Private implementation is generic to allow tests to use mocks.
-    fn _execute(self: Instance, machine: anytype) !void {
+    fn _execute(self: Self, machine: anytype) !void {
         switch (self) {
             .unload_all => machine.unloadAllResources(),
             .start_game_part => |game_part| machine.scheduleGamePart(game_part),
             .load_resource => |resource_id| try machine.loadResource(resource_id),
         }
     }
-};
 
-pub const ParseError = Program.ReadError;
+    // - Exported constants -
 
-/// Parse the next instruction from a bytecode program.
-/// Consumes 3 bytes from the bytecode on success, including the opcode.
-/// Returns an error if the bytecode could not be read or contained an invalid instruction.
-pub fn parse(_: Opcode.Raw, program: *Program) ParseError!Instance {
-    const resource_id_or_game_part = try program.read(ResourceID.Raw);
+    pub const opcode = Opcode.Enum.ControlResources;
+    pub const ParseError = Program.ReadError;
 
-    if (resource_id_or_game_part == 0) {
-        return .unload_all;
-    } else if (GamePart.parse(resource_id_or_game_part)) |game_part| {
-        return Instance{ .start_game_part = game_part };
-    } else |_| {
-        // If the value doesn't match any game part, assume it's a resource ID
-        return Instance{ .load_resource = resource_id_or_game_part };
-    }
-}
+    // -- Bytecode examples --
 
-// -- Bytecode examples --
+    pub const Fixtures = struct {
+        const raw_opcode = @enumToInt(opcode);
 
-pub const Fixtures = struct {
-    const raw_opcode = @enumToInt(opcode);
+        /// Example bytecode that should produce a valid instruction.
+        pub const valid = start_game_part;
 
-    /// Example bytecode that should produce a valid instruction.
-    pub const valid = start_game_part;
-
-    const unload_all = [3]u8{ raw_opcode, 0x0, 0x0 };
-    const start_game_part = [3]u8{ raw_opcode, 0x3E, 0x85 }; // GamePart.Enum.arena_cinematic
-    const load_resource = [3]u8{ raw_opcode, 0xDE, 0xAD };
+        const unload_all = [3]u8{ raw_opcode, 0x0, 0x0 };
+        const start_game_part = [3]u8{ raw_opcode, 0x3E, 0x85 }; // GamePart.Enum.arena_cinematic
+        const load_resource = [3]u8{ raw_opcode, 0xDE, 0xAD };
+    };
 };
 
 // -- Tests --
@@ -70,25 +73,25 @@ const expectParse = @import("test_helpers/parse.zig").expectParse;
 const mockMachine = @import("../machine/test_helpers/mock_machine.zig").mockMachine;
 
 test "parse parses unload_all instruction and consumes 3 bytes" {
-    const instruction = try expectParse(parse, &Fixtures.unload_all, 3);
+    const instruction = try expectParse(ControlResources.parse, &ControlResources.Fixtures.unload_all, 3);
 
     try testing.expectEqual(.unload_all, instruction);
 }
 
 test "parse parses start_game_part instruction and consumes 3 bytes" {
-    const instruction = try expectParse(parse, &Fixtures.start_game_part, 3);
+    const instruction = try expectParse(ControlResources.parse, &ControlResources.Fixtures.start_game_part, 3);
 
     try testing.expectEqual(.{ .start_game_part = .arena_cinematic }, instruction);
 }
 
 test "parse parses load_resource instruction and consumes 3 bytes" {
-    const instruction = try expectParse(parse, &Fixtures.load_resource, 3);
+    const instruction = try expectParse(ControlResources.parse, &ControlResources.Fixtures.load_resource, 3);
 
     try testing.expectEqual(.{ .load_resource = 0xDEAD }, instruction);
 }
 
 test "execute with unload_all instruction calls unloadAllResources with correct parameters" {
-    const instruction: Instance = .unload_all;
+    const instruction: ControlResources = .unload_all;
 
     var machine = mockMachine(struct {
         pub fn scheduleGamePart(_: GamePart.Enum) void {
@@ -107,7 +110,7 @@ test "execute with unload_all instruction calls unloadAllResources with correct 
 }
 
 test "execute with start_game_part instruction calls scheduleGamePart with correct parameters" {
-    const instruction = Instance{ .start_game_part = .arena_cinematic };
+    const instruction = ControlResources{ .start_game_part = .arena_cinematic };
 
     var machine = mockMachine(struct {
         pub fn scheduleGamePart(game_part: GamePart.Enum) void {
@@ -128,7 +131,7 @@ test "execute with start_game_part instruction calls scheduleGamePart with corre
 }
 
 test "execute with load_resource instruction calls loadResource with correct parameters" {
-    const instruction = Instance{ .load_resource = 0xBEEF };
+    const instruction = ControlResources{ .load_resource = 0xBEEF };
 
     var machine = mockMachine(struct {
         pub fn scheduleGamePart(_: GamePart.Enum) void {
