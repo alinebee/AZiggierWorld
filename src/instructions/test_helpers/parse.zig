@@ -1,7 +1,7 @@
 //! Functions and types used when testing virtual machine instructions.
 
 const Opcode = @import("../../values/opcode.zig");
-const Program = @import("../../machine/program.zig");
+const Program = @import("../../machine/program.zig").Program;
 
 const introspection = @import("../../utils/introspection.zig");
 
@@ -10,7 +10,7 @@ const introspection = @import("../../utils/introspection.zig");
 /// Try to parse a literal sequence of bytecode into a specific instruction;
 /// on success or failure, check that the expected number of bytes were consumed.
 pub fn expectParse(comptime parseFn: anytype, bytecode: []const u8, expected_bytes_consumed: usize) ReturnType(parseFn) {
-    var program = Program.new(bytecode);
+    var program = Program.init(bytecode);
     const raw_opcode = try program.read(Opcode.Raw);
 
     const instruction = parseFn(raw_opcode, &program);
@@ -47,7 +47,7 @@ const EmptyInstruction = struct {};
 
 /// A fake instruction parse function that does nothing but consume 5 bytes
 /// from the passed-in program after the opcode byte.
-fn parse5MoreBytes(_: Opcode.Raw, program: *Program.Instance) Program.ReadError!EmptyInstruction {
+fn parse5MoreBytes(_: Opcode.Raw, program: *Program) Program.ReadError!EmptyInstruction {
     try program.skip(5);
     return EmptyInstruction{};
 }
@@ -55,7 +55,7 @@ fn parse5MoreBytes(_: Opcode.Raw, program: *Program.Instance) Program.ReadError!
 const ParseError = error{ParsingFailed};
 /// A fake instruction parse function that parses an expected number of bytes
 /// but returns an error instead of an instruction.
-fn parse5MoreBytesAndFail(_: Opcode.Raw, program: *Program.Instance) !EmptyInstruction {
+fn parse5MoreBytesAndFail(_: Opcode.Raw, program: *Program) !EmptyInstruction {
     try program.skip(5);
     return error.ParsingFailed;
 }

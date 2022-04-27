@@ -1,5 +1,5 @@
 const Opcode = @import("../values/opcode.zig");
-const Program = @import("../machine/program.zig");
+const Program = @import("../machine/program.zig").Program;
 const Machine = @import("../machine/machine.zig").Machine;
 const Audio = @import("../machine/audio.zig");
 const ResourceID = @import("../values/resource_id.zig");
@@ -44,7 +44,7 @@ pub const ParseError = Program.ReadError;
 /// Parse the next instruction from a bytecode program.
 /// Consumes 6 bytes from the bytecode on success, including the opcode.
 /// Returns an error if the bytecode could not be read or contained an invalid instruction.
-pub fn parse(_: Opcode.Raw, program: *Program.Instance) ParseError!Instance {
+pub fn parse(_: Opcode.Raw, program: *Program) ParseError!Instance {
     const resource_id = try program.read(ResourceID.Raw);
     const delay = try program.read(Audio.Delay);
     const offset = try program.read(Audio.Offset);

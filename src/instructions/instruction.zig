@@ -5,7 +5,7 @@
 //! Right now this file feels like a mess; there is a lot of copypasta that could probably
 //! be cleaned up with some Zig compile-time code generation.
 
-const Program = @import("../machine/program.zig");
+const Program = @import("../machine/program.zig").Program;
 const Opcode = @import("../values/opcode.zig");
 const Machine = @import("../machine/machine.zig").Machine;
 const ExecutionResult = @import("execution_result.zig");
@@ -54,7 +54,7 @@ pub const ExecutionError = error{
 /// Returns `ExecutionResult` on success, reflecting whether the program yielded or killed the thread.
 /// Returns an instruction-specific error if an instruction failed, or `error.InstructionLimitExceeded`
 /// if the program exceeded `max_instructions` without reaching a `Yield` or `Kill` instruction.
-pub fn executeProgram(program: *Program.Instance, machine: *Machine, max_instructions: usize) !ExecutionResult.Enum {
+pub fn executeProgram(program: *Program, machine: *Machine, max_instructions: usize) !ExecutionResult.Enum {
     var instructions_remaining = max_instructions;
     while (instructions_remaining > 0) : (instructions_remaining -= 1) {
         const possible_result = try executeNextInstruction(program, machine);
@@ -68,7 +68,7 @@ pub fn executeProgram(program: *Program.Instance, machine: *Machine, max_instruc
 /// Parse and execute the next instruction from a bytecode program on the specified virtual machine.
 /// Returns an enum indicating whether execution should continue or stop as a result of that instruction.
 /// Returns an error if the bytecode could not be interpreted as an instruction.
-pub fn executeNextInstruction(program: *Program.Instance, machine: *Machine) !?ExecutionResult.Enum {
+pub fn executeNextInstruction(program: *Program, machine: *Machine) !?ExecutionResult.Enum {
     const raw_opcode = try program.read(Opcode.Raw);
     const opcode = try Opcode.parse(raw_opcode);
 
@@ -111,7 +111,7 @@ pub fn executeNextInstruction(program: *Program.Instance, machine: *Machine) !?E
     };
 }
 
-fn execute(comptime Instruction: type, raw_opcode: Opcode.Raw, program: *Program.Instance, machine: *Machine) !?ExecutionResult.Enum {
+fn execute(comptime Instruction: type, raw_opcode: Opcode.Raw, program: *Program, machine: *Machine) !?ExecutionResult.Enum {
     const instruction = try Instruction.parse(raw_opcode, program);
 
     // Zig 0.9.0 does not have a way to express "try this function if it returns an error set,
@@ -171,7 +171,7 @@ pub const Wrapped = union(Opcode.Enum) {
 /// Parse the next instruction from a bytecode program and wrap it in a Wrapped union type.
 /// Returns the wrapped instruction or an error if the program could not be read or the bytecode
 /// could not be interpreted as an instruction.
-pub fn parseNextInstruction(program: *Program.Instance) !Wrapped {
+pub fn parseNextInstruction(program: *Program) !Wrapped {
     const raw_opcode = try program.read(Opcode.Raw);
     const opcode = try Opcode.parse(raw_opcode);
 
@@ -210,7 +210,7 @@ pub fn parseNextInstruction(program: *Program.Instance) !Wrapped {
 
 /// Parse an instruction of the specified type from the program,
 /// and wrap it in a Wrapped union type initialized to the appropriate field.
-fn parse(comptime Instruction: type, raw_opcode: Opcode.Raw, program: *Program.Instance) !Wrapped {
+fn parse(comptime Instruction: type, raw_opcode: Opcode.Raw, program: *Program) !Wrapped {
     const opcode_name = @tagName(Instruction.opcode);
     return @unionInit(Wrapped, opcode_name, try Instruction.parse(raw_opcode, program));
 }
@@ -219,7 +219,7 @@ fn parse(comptime Instruction: type, raw_opcode: Opcode.Raw, program: *Program.I
 
 /// Try to parse a literal sequence of bytecode into an Instruction union value.
 fn expectParse(bytecode: []const u8) !Wrapped {
-    var program = Program.new(bytecode);
+    var program = Program.init(bytecode);
     return try parseNextInstruction(&program);
 }
 

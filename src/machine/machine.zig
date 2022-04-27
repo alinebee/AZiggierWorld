@@ -44,7 +44,7 @@ const GamePart = @import("../values/game_part.zig");
 const Thread = @import("thread.zig");
 const Stack = @import("stack.zig");
 const Registers = @import("registers.zig");
-const Program = @import("program.zig");
+const Program = @import("program.zig").Program;
 const Video = @import("video.zig").Video;
 const Audio = @import("audio.zig");
 const Memory = @import("memory.zig").Memory;
@@ -76,7 +76,7 @@ pub const Machine = struct {
     stack: Stack.Instance,
 
     /// The currently-running program.
-    program: Program.Instance,
+    program: Program,
 
     /// The current state of the video subsystem.
     video: Video,
@@ -323,7 +323,7 @@ pub const Machine = struct {
     /// the new game part on the next run loop.
     fn startGamePart(self: *Self, game_part: GamePart.Enum) !void {
         const resource_locations = try self.memory.loadGamePart(game_part);
-        self.program = Program.new(resource_locations.bytecode);
+        self.program = Program.init(resource_locations.bytecode);
 
         self.video.setResourceLocations(resource_locations.palettes, resource_locations.polygons, resource_locations.animations);
 
@@ -377,7 +377,7 @@ pub const Machine = struct {
 
         var machine = Self.init(testing.allocator, MockRepository.test_reader, host, options) catch unreachable;
         if (config.bytecode) |bytecode| {
-            machine.program = Program.new(bytecode);
+            machine.program = Program.init(bytecode);
         }
         return machine;
     }

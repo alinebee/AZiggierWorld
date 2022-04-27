@@ -3,7 +3,7 @@
 //! Requires that the `fixtures/dos` folder contains Another World DOS game files.
 
 const Instruction = @import("../instructions/instruction.zig");
-const Program = @import("../machine/program.zig");
+const Program = @import("../machine/program.zig").Program;
 const PolygonResource = @import("../resources/polygon_resource.zig");
 const Polygon = @import("../rendering/polygon.zig");
 const PolygonScale = @import("../values/polygon_scale.zig");
@@ -30,7 +30,7 @@ fn findPolygonDrawInstructions(allocator: std.mem.Allocator, bytecode: []const u
     var instructions = std.ArrayList(PolygonDrawInstruction).init(allocator);
     errdefer instructions.deinit();
 
-    var program = Program.new(bytecode);
+    var program = Program.init(bytecode);
     while (program.isAtEnd() == false) {
         switch (try Instruction.parseNextInstruction(&program)) {
             .DrawBackgroundPolygon => |instruction| {

@@ -1,6 +1,6 @@
 const Opcode = @import("../values/opcode.zig");
 const Register = @import("../values/register.zig");
-const Program = @import("../machine/program.zig");
+const Program = @import("../machine/program.zig").Program;
 const Machine = @import("../machine/machine.zig").Machine;
 const RegisterID = @import("../values/register_id.zig");
 
@@ -25,7 +25,7 @@ pub const Instance = struct {
 /// Parse the next instruction from a bytecode program.
 /// Consumes 4 bytes from the bytecode on success, including the opcode.
 /// Returns an error if the bytecode could not be read or contained an invalid instruction.
-pub fn parse(_: Opcode.Raw, program: *Program.Instance) ParseError!Instance {
+pub fn parse(_: Opcode.Raw, program: *Program) ParseError!Instance {
     return Instance{
         .destination = RegisterID.parse(try program.read(RegisterID.Raw)),
         .value = try program.read(Register.Signed),

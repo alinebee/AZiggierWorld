@@ -13,7 +13,7 @@
 
 const Address = @import("../values/address.zig");
 const Machine = @import("machine.zig").Machine;
-const Program = @import("program.zig");
+const Program = @import("program.zig").Program;
 const executeProgram = @import("../instructions/instruction.zig").executeProgram;
 
 const ExecutionState = union(enum) {

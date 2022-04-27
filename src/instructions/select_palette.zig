@@ -1,5 +1,5 @@
 const Opcode = @import("../values/opcode.zig");
-const Program = @import("../machine/program.zig");
+const Program = @import("../machine/program.zig").Program;
 const Machine = @import("../machine/machine.zig").Machine;
 const PaletteID = @import("../values/palette_id.zig");
 
@@ -24,7 +24,7 @@ pub const Instance = struct {
 /// Parse the next instruction from a bytecode program.
 /// Consumes 3 bytes from the bytecode on success, including the opcode.
 /// Returns an error if the bytecode could not be read or contained an invalid instruction.
-pub fn parse(_: Opcode.Raw, program: *Program.Instance) ParseError!Instance {
+pub fn parse(_: Opcode.Raw, program: *Program) ParseError!Instance {
     const raw_id = try program.read(PaletteID.Raw);
     // The reference implementation consumes 16 bits but only uses the top 8 for the palette ID,
     // ignoring the bottom 8. It's unclear why two bytes were used in the original bytecode.

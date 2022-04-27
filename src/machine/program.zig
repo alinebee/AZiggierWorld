@@ -13,7 +13,7 @@ const introspection = @import("../utils/introspection.zig");
 const Address = @import("../values/address.zig");
 
 /// An Another World bytecode program, which maintains a counter to the next instruction to execute.
-pub const Instance = struct {
+pub const Program = struct {
     /// The bytecode making up the program.
     bytecode: []const u8,
 
@@ -21,11 +21,18 @@ pub const Instance = struct {
     /// Invariant: this is less than or equal to bytecode.len.
     counter: Address.Native = 0,
 
+    const Self = @This();
+
+    /// Create a new program that will execute from the start of the specified bytecode.
+    pub fn init(bytecode: []const u8) Self {
+        return .{ .bytecode = bytecode };
+    }
+
     /// Reads an integer of the specified type from the current program counter
     /// and advances the counter by the byte width of the integer.
     /// Returns error.EndOfProgram and leaves the counter at the end of the program
     /// if there are not enough bytes left in the program.
-    pub fn read(self: *Instance, comptime Integer: type) ReadError!Integer {
+    pub fn read(self: *Self, comptime Integer: type) ReadError!Integer {
         // readIntSliceBig uses this construction internally.
         // @sizeOf would be nicer, but may include padding bytes.
         const byte_width = comptime @divExact(introspection.bitCount(Integer), 8);
@@ -46,7 +53,7 @@ pub const Instance = struct {
     /// Skip n bytes from the program, moving the counter forward by that amount.
     /// Returns error.EndOfProgram and leaves the counter at the end of the program
     /// if there are not enough bytes left in the program to skip the full amount.
-    pub fn skip(self: *Instance, byte_count: usize) ReadError!void {
+    pub fn skip(self: *Self, byte_count: usize) ReadError!void {
         const upper_bound = self.counter + byte_count;
         if (upper_bound > self.bytecode.len) {
             self.counter = self.bytecode.len;
@@ -58,7 +65,7 @@ pub const Instance = struct {
     /// Move the program counter to the specified address,
     /// so that program execution continues from that point.
     /// Returns error.InvalidAddress if the address is beyond the end of the program.
-    pub fn jump(self: *Instance, address: Address.Native) SeekError!void {
+    pub fn jump(self: *Self, address: Address.Native) SeekError!void {
         if (address >= self.bytecode.len) {
             return error.InvalidAddress;
         }
@@ -67,24 +74,21 @@ pub const Instance = struct {
     }
 
     /// Whether the end of the program has been reached.
-    pub fn isAtEnd(self: Instance) bool {
+    pub fn isAtEnd(self: Self) bool {
         return self.counter >= self.bytecode.len;
     }
-};
 
-/// Create a new program that will execute from the start of the specified bytecode.
-pub fn new(bytecode: []const u8) Instance {
-    return .{ .bytecode = bytecode };
-}
+    // - Exported constants -
 
-pub const ReadError = error{
-    /// A read operation unexpectedly encountered the end of the program.
-    EndOfProgram,
-};
+    pub const ReadError = error{
+        /// A read operation unexpectedly encountered the end of the program.
+        EndOfProgram,
+    };
 
-pub const SeekError = error{
-    /// The program was asked to seek to an address beyond the end of the program.
-    InvalidAddress,
+    pub const SeekError = error{
+        /// The program was asked to seek to an address beyond the end of the program.
+        InvalidAddress,
+    };
 };
 
 /// -- Tests --
@@ -92,7 +96,7 @@ const testing = @import("../utils/testing.zig");
 
 test "read(u8) returns byte at current program counter and advances program counter" {
     const bytecode = [_]u8{ 0xDE, 0xAD };
-    var program = new(&bytecode);
+    var program = Program.init(&bytecode);
 
     try testing.expectEqual(0, program.counter);
 
@@ -105,7 +109,7 @@ test "read(u8) returns byte at current program counter and advances program coun
 
 test "read(u16) returns big-endian u16 at current program counter and advances program counter by 2" {
     const bytecode = [_]u8{ 0xDE, 0xAD, 0xBE, 0xEF };
-    var program = new(&bytecode);
+    var program = Program.init(&bytecode);
 
     try testing.expectEqual(0, program.counter);
     try testing.expectEqual(0xDEAD, program.read(u16));
@@ -116,7 +120,7 @@ test "read(u16) returns big-endian u16 at current program counter and advances p
 
 test "read(u16) returns error.EndOfProgram and leaves program counter at end of program when it tries to read beyond end of program" {
     const bytecode = [_]u8{0xDE};
-    var program = new(&bytecode);
+    var program = Program.init(&bytecode);
 
     try testing.expectEqual(0, program.counter);
     try testing.expectError(error.EndOfProgram, program.read(u16));
@@ -130,7 +134,7 @@ test "read(i16) returns big-endian i16 at current program counter and advances p
         0b1011_0110, 0b0010_1011,
         0b0000_1101, 0b1000_1110,
     };
-    var program = new(&bytecode);
+    var program = Program.init(&bytecode);
 
     try testing.expectEqual(0, program.counter);
     try testing.expectEqual(int1, program.read(i16));
@@ -141,7 +145,7 @@ test "read(i16) returns big-endian i16 at current program counter and advances p
 
 test "read() returns error.EndOfProgram and leaves program counter at end of program when it tries to read beyond end of program" {
     const bytecode = [_]u8{0xDE};
-    var program = new(&bytecode);
+    var program = Program.init(&bytecode);
 
     try testing.expectEqual(0, program.counter);
     try testing.expectError(error.EndOfProgram, program.read(u16));
@@ -150,7 +154,7 @@ test "read() returns error.EndOfProgram and leaves program counter at end of pro
 
 test "skip() advances program counter" {
     const bytecode = [_]u8{ 0xDE, 0xAD };
-    var program = new(&bytecode);
+    var program = Program.init(&bytecode);
 
     try testing.expectEqual(0, program.counter);
     try program.skip(2);
@@ -159,7 +163,7 @@ test "skip() advances program counter" {
 
 test "skip() returns error.EndOfProgram and leaves program counter at end of program when it tries to read beyond end of program" {
     const bytecode = [_]u8{ 0xDE, 0xAD };
-    var program = new(&bytecode);
+    var program = Program.init(&bytecode);
 
     try testing.expectEqual(0, program.counter);
     try testing.expectError(error.EndOfProgram, program.skip(5));
@@ -168,7 +172,7 @@ test "skip() returns error.EndOfProgram and leaves program counter at end of pro
 
 test "jump() moves program counter to specified address" {
     const bytecode = [_]u8{ 0xDE, 0xAD, 0xBE, 0xEF };
-    var program = new(&bytecode);
+    var program = Program.init(&bytecode);
 
     try program.jump(3);
     try testing.expectEqual(3, program.counter);
@@ -178,7 +182,7 @@ test "jump() moves program counter to specified address" {
 
 test "jump() returns error.InvalidAddress program counter when given address beyond the end of program" {
     const bytecode = [_]u8{ 0xDE, 0xAD, 0xBE, 0xEF };
-    var program = new(&bytecode);
+    var program = Program.init(&bytecode);
 
     try testing.expectError(error.InvalidAddress, program.jump(6));
 }

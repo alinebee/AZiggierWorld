@@ -3,7 +3,7 @@
 
 const Instruction = @import("../instructions/instruction.zig");
 const Opcode = @import("../values/opcode.zig");
-const Program = @import("../machine/program.zig");
+const Program = @import("../machine/program.zig").Program;
 const ResourceDirectory = @import("../resources/resource_directory.zig").ResourceDirectory;
 
 const testing = @import("../utils/testing.zig");
@@ -20,7 +20,7 @@ const ParseFailure = struct {
     parsed_count: usize,
     err: anyerror,
 
-    fn init(resource_id: usize, program: *Program.Instance, offset: usize, err: anyerror) ParseFailure {
+    fn init(resource_id: usize, program: *Program, offset: usize, err: anyerror) ParseFailure {
         const parsed_bytes = program.bytecode[offset..program.counter];
 
         var self = ParseFailure{
@@ -69,7 +69,7 @@ test "parseNextInstruction parses all programs in fixture bytecode" {
         const data = try reader.allocReadResource(testing.allocator, descriptor);
         defer testing.allocator.free(data);
 
-        var program = Program.new(data);
+        var program = Program.init(data);
 
         while (program.isAtEnd() == false) {
             const last_valid_address = program.counter;

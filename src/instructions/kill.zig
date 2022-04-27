@@ -1,5 +1,5 @@
 const Opcode = @import("../values/opcode.zig");
-const Program = @import("../machine/program.zig");
+const Program = @import("../machine/program.zig").Program;
 const Machine = @import("../machine/machine.zig").Machine;
 const ExecutionResult = @import("execution_result.zig");
 
@@ -15,7 +15,7 @@ pub const Instance = struct {
 /// Parse the next instruction from a bytecode program.
 /// Consumes 1 byte from the bytecode on success, including the opcode.
 /// Returns an error if the bytecode could not be read or contained an invalid instruction.
-pub fn parse(_: Opcode.Raw, _: *Program.Instance) ParseError!Instance {
+pub fn parse(_: Opcode.Raw, _: *Program) ParseError!Instance {
     return Instance{};
 }
 
