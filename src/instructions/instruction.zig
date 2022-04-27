@@ -22,7 +22,7 @@ const DrawSpritePolygon = @import("draw_sprite_polygon.zig").DrawSpritePolygon;
 const DrawString = @import("draw_string.zig").DrawString;
 const FillVideoBuffer = @import("fill_video_buffer.zig").FillVideoBuffer;
 const Jump = @import("jump.zig");
-const JumpConditional = @import("jump_conditional.zig");
+const JumpConditional = @import("jump_conditional.zig").JumpConditional;
 const JumpIfNotZero = @import("jump_if_not_zero.zig");
 const Kill = @import("kill.zig");
 const RegisterAdd = @import("register_add.zig");
@@ -149,7 +149,7 @@ pub const Wrapped = union(Opcode.Enum) {
     DrawString: DrawString,
     FillVideoBuffer: FillVideoBuffer,
     Jump: Jump.Instance,
-    JumpConditional: JumpConditional.Instance,
+    JumpConditional: JumpConditional,
     JumpIfNotZero: JumpIfNotZero.Instance,
     Kill: Kill.Instance,
     RegisterAdd: RegisterAdd.Instance,
