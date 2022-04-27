@@ -10,7 +10,7 @@ const assert = std.debug.assert;
 
 /// A generic interface for enumerating available resources and loading resource data into buffers.
 /// This is passed around as a 'fat pointer', following zig 0.9.0's polymorphic allocator pattern.
-pub const Interface = struct {
+pub const ResourceReader = struct {
     implementation: *anyopaque,
     vtable: *const TypeErasedVTable,
 
@@ -108,44 +108,44 @@ pub const Interface = struct {
             return error.InvalidResourceID;
         }
     }
+
+    // -- Public error types --
+
+    /// The errors that can be returned from a call to `ResourceReader.validateResourceID`
+    /// or `ResourceReader.resourceDescriptor`.
+    pub const ValidationError = error{
+        /// The specified resource ID does not exist in the game's resource list.
+        InvalidResourceID,
+    };
+
+    /// The errors that can be returned from a call to `ResourceReader.bufReadResource`.
+    pub const BufReadResourceError = error{
+        /// A resource descriptor defined a compressed size that was larger than its uncompressed size.
+        InvalidResourceSize,
+
+        /// The provided buffer was not large enough to load the requested resource.
+        BufferTooSmall,
+
+        /// The data contained in a compressed game resource could not be decompressed.
+        InvalidCompressedData,
+
+        /// The data was shorter than expected for the descriptor.
+        TruncatedData,
+
+        /// The data could not be read for a repository-specific reason:
+        /// e.g. for a local filesystem repository, access was denied or the file became unavailable.
+        RepositorySpecificFailure,
+    };
+
+    /// The errors that can be returned from a call to `ResourceReader.allocReadResource`.
+    pub const AllocReadResourceError = BufReadResourceError || error{
+        /// The reader's allocator could not allocate memory to load the requested resource.
+        OutOfMemory,
+    };
+
+    /// The errors that can be returned from a call to `ResourceReader.allocReadResourceByID`.
+    pub const AllocReadResourceByIDError = ValidationError || AllocReadResourceError;
 };
-
-// -- Errors --
-
-/// The errors that can be returned from a call to `Reader.Instance.validateResourceID`
-/// or `Reader.Instance.resourceDescriptor`.
-pub const ValidationError = error{
-    /// The specified resource ID does not exist in the game's resource list.
-    InvalidResourceID,
-};
-
-/// The errors that can be returned from a call to `Reader.Instance.bufReadResource`.
-pub const BufReadResourceError = error{
-    /// A resource descriptor defined a compressed size that was larger than its uncompressed size.
-    InvalidResourceSize,
-
-    /// The provided buffer was not large enough to load the requested resource.
-    BufferTooSmall,
-
-    /// The data contained in a compressed game resource could not be decompressed.
-    InvalidCompressedData,
-
-    /// The data was shorter than expected for the descriptor.
-    TruncatedData,
-
-    /// The data could not be read for a repository-specific reason:
-    /// e.g. for a local filesystem repository, access was denied or the file became unavailable.
-    RepositorySpecificFailure,
-};
-
-/// The errors that can be returned from a call to `Reader.Instance.allocReadResource`.
-pub const AllocReadResourceError = BufReadResourceError || error{
-    /// The reader's allocator could not allocate memory to load the requested resource.
-    OutOfMemory,
-};
-
-/// The errors that can be returned from a call to `Reader.Instance.allocReadResourceByID`.
-pub const AllocReadResourceByIDError = ValidationError || AllocReadResourceError;
 
 // -- Test data --
 
@@ -173,8 +173,8 @@ const CountedRepository = struct {
 
     const Self = @This();
 
-    pub fn reader(self: *Self) Interface {
-        return Interface.init(self, bufReadResource, resourceDescriptors);
+    pub fn reader(self: *Self) ResourceReader {
+        return ResourceReader.init(self, bufReadResource, resourceDescriptors);
     }
 
     fn bufReadResource(self: *Self, buffer: []u8, descriptor: ResourceDescriptor.Instance) ![]const u8 {
@@ -195,7 +195,7 @@ const CountedRepository = struct {
 const testing = @import("../utils/testing.zig");
 
 test "Ensure everything compiles" {
-    testing.refAllDecls(Interface);
+    testing.refAllDecls(ResourceReader);
 }
 
 test "bufReadResource calls underlying implementation" {

@@ -4,7 +4,7 @@
 
 const Machine = @import("../machine/machine.zig");
 const Host = @import("../machine/host.zig");
-const ResourceDirectory = @import("../resources/resource_directory.zig");
+const ResourceDirectory = @import("../resources/resource_directory.zig").ResourceDirectory;
 const BufferID = @import("../values/buffer_id.zig");
 const UserInput = @import("../machine/user_input.zig");
 
@@ -51,7 +51,7 @@ test "Introduction runs successfully" {
     var game_dir = try ensureValidFixtureDir();
     defer game_dir.close();
 
-    var resource_directory = try ResourceDirectory.new(&game_dir);
+    var resource_directory = try ResourceDirectory.init(&game_dir);
     var host = CountingHost{};
 
     var machine = try Machine.new(testing.allocator, resource_directory.reader(), host.host(), .{

@@ -1,6 +1,6 @@
 const Machine = @import("../machine/machine.zig");
 const Host = @import("../machine/host.zig");
-const ResourceDirectory = @import("../resources/resource_directory.zig");
+const ResourceDirectory = @import("../resources/resource_directory.zig").ResourceDirectory;
 const BufferID = @import("../values/buffer_id.zig");
 const Video = @import("../machine/video.zig");
 const GameInput = @import("../machine/user_input.zig");
@@ -74,7 +74,7 @@ pub const Instance = struct {
     allocator: std.mem.Allocator,
 
     game_dir: std.fs.Dir,
-    resource_directory: ResourceDirectory.Instance,
+    resource_directory: ResourceDirectory,
     machine: Machine.Instance,
 
     window: SDL.Window,
@@ -108,7 +108,7 @@ pub const Instance = struct {
         self.game_dir = try std.fs.cwd().openDir(game_path, .{});
         errdefer self.game_dir.close();
 
-        self.resource_directory = try ResourceDirectory.new(&self.game_dir);
+        self.resource_directory = try ResourceDirectory.init(&self.game_dir);
 
         self.machine = try Machine.new(
             allocator,

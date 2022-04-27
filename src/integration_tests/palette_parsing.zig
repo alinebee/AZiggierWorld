@@ -2,7 +2,7 @@
 //! Requires that the `fixtures/dos` folder contains Another World DOS game files.
 
 const PaletteResource = @import("../resources/palette_resource.zig");
-const ResourceDirectory = @import("../resources/resource_directory.zig");
+const ResourceDirectory = @import("../resources/resource_directory.zig").ResourceDirectory;
 const PaletteID = @import("../values/palette_id.zig");
 const static_limits = @import("../static_limits.zig");
 
@@ -14,7 +14,7 @@ test "Parse all palettes in original game files" {
     var game_dir = try ensureValidFixtureDir();
     defer game_dir.close();
 
-    var resource_directory = try ResourceDirectory.new(&game_dir);
+    var resource_directory = try ResourceDirectory.init(&game_dir);
     const reader = resource_directory.reader();
 
     for (reader.resourceDescriptors()) |descriptor| {

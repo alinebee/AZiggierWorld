@@ -3,18 +3,18 @@
 //! for the lifetime of the game.
 //!
 //! Use the `reader()` method to get a Reader interface for loading game data.
-//! See reader.zig for the available methods on that interface.
+//! See resource_reader.zig for the available methods on that interface.
 //!
 //! Usage:
 //! ------
 //! const game_dir = try std.fs.openDirAbsolute("/path/to/another/world/", .{});
 //! defer game_dir.close();
-//! var repository = try ResourceDirectory.new(game_dir);
+//! var repository = try ResourceDirectory.init(game_dir);
 //! const reader = repository.reader();
 //! const first_resource_descriptor = try reader.resourceDescriptor(0);
 //! const game_data = try reader.allocReadResource(my_allocator, first_resource_descriptor);
 
-const Reader = @import("reader.zig");
+const ResourceReader = @import("resource_reader.zig").ResourceReader;
 const ResourceDescriptor = @import("resource_descriptor.zig");
 const ResourceID = @import("../values/resource_id.zig");
 const Filename = @import("filename.zig");
@@ -30,21 +30,12 @@ const mem = std.mem;
 const fs = std.fs;
 const io = std.io;
 
-/// The maximum number of resource descriptors that will be parsed from the MEMLIST.BIN file
-/// in an Another World game directory.
-pub const max_resource_descriptors = static_limits.max_resource_descriptors;
+const max_resource_descriptors = static_limits.max_resource_descriptors;
 const DescriptorStorage = std.BoundedArray(ResourceDescriptor.Instance, max_resource_descriptors);
 
-/// Creates a new instance that reads game data from the specified directory handle.
-/// The handle must have been opened with `.access_sub_paths = true` (the default).
-/// The instance does not take ownership of the directory handle; the calling context
-/// must ensure the handle stays open for the scope of the instance.
-/// Returns an error if the directory did not contain the expected game data files.
-pub fn new(dir: *const fs.Dir) !Instance {
-    return try Instance.init(dir);
-}
+pub const ResourceDirectory = struct {
+    const Self = @This();
 
-pub const Instance = struct {
     /// An handle for the directory that the instance will load files from.
     /// The instance does not own this handle; the parent context is expected to keep it open
     /// for as long as the instance is in scope.
@@ -54,13 +45,13 @@ pub const Instance = struct {
     /// Access this via resourceDescriptors() instead of directly.
     _raw_descriptors: DescriptorStorage,
 
-    /// Initializes a new instance that reads game data from the specified directory handle.
+    /// Creates a new instance that reads game data from the specified directory handle.
     /// The handle must have been opened with `.access_sub_paths = true` (the default).
     /// The instance does not take ownership of the directory handle; the calling context
     /// must ensure the handle stays open for the scope of the instance.
     /// Returns an error if the directory did not contain the expected game data files.
-    fn init(dir: *const fs.Dir) !Instance {
-        var self: Instance = .{
+    pub fn init(dir: *const fs.Dir) !Self {
+        var self: Self = .{
             .dir = dir,
             ._raw_descriptors = undefined,
         };
@@ -74,8 +65,8 @@ pub const Instance = struct {
     }
 
     /// Returns a reader interface for loading game data from this repository.
-    pub fn reader(self: *Instance) Reader.Interface {
-        return Reader.Interface.init(self, bufReadResource, resourceDescriptors);
+    pub fn reader(self: *Self) ResourceReader {
+        return ResourceReader.init(self, bufReadResource, resourceDescriptors);
     }
 
     // - Private methods -
@@ -85,7 +76,7 @@ pub const Instance = struct {
     /// Returns an error if `buffer` was not large enough to hold the data or if the data
     /// could not be read or decompressed.
     /// In the event of an error, `buffer` may contain partially-loaded game data.
-    fn bufReadResource(self: *const Instance, buffer: []u8, descriptor: ResourceDescriptor.Instance) Reader.BufReadResourceError![]const u8 {
+    fn bufReadResource(self: *const Self, buffer: []u8, descriptor: ResourceDescriptor.Instance) ResourceReader.BufReadResourceError![]const u8 {
         if (buffer.len < descriptor.uncompressed_size) {
             return error.BufferTooSmall;
         }
@@ -112,14 +103,14 @@ pub const Instance = struct {
 
     /// Returns a list of all valid resource descriptors,
     /// loaded from the MEMLIST.BIN file in the game directory.
-    fn resourceDescriptors(self: *const Instance) []const ResourceDescriptor.Instance {
+    fn resourceDescriptors(self: *const Self) []const ResourceDescriptor.Instance {
         return self._raw_descriptors.constSlice();
     }
 
     /// Given the filename of an Another World data file, opens the corresponding file
     /// in the game directory for reading.
     /// Returns an open file handle, or an error if the file could not be opened.
-    fn openFile(self: Instance, filename: Filename.Instance) !fs.File {
+    fn openFile(self: Self, filename: Filename.Instance) !fs.File {
         var buffer: Filename.Buffer = undefined;
         const dos_name = filename.dosName(&buffer);
         return try self.dir.openFile(dos_name, .{});
@@ -161,7 +152,7 @@ fn ResourceListError(comptime IOReader: type) type {
 /// in place to fill the buffer.
 /// On success, `buffer` will be filled with uncompressed data.
 /// If reading fails, `buffer`'s contents should be treated as invalid.
-fn readAndDecompress(reader: anytype, buffer: []u8, compressed_size: usize) Reader.BufReadResourceError!void {
+fn readAndDecompress(reader: anytype, buffer: []u8, compressed_size: usize) ResourceReader.BufReadResourceError!void {
     // Normally this error case will be caught earlier when parsing resource descriptors:
     // See ResourceDescriptor.iterator.next.
     if (compressed_size > buffer.len) {
@@ -199,7 +190,7 @@ const ResourceListExamples = struct {
 const testing = @import("../utils/testing.zig");
 
 test "ensure everything compiles" {
-    testing.refAllDecls(Instance);
+    testing.refAllDecls(ResourceDirectory);
 }
 
 test "readAndDecompress reads uncompressed data into buffer" {

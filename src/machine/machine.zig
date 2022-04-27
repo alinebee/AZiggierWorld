@@ -51,7 +51,7 @@ const Memory = @import("memory.zig");
 const Host = @import("host.zig");
 const UserInput = @import("user_input.zig");
 
-const Reader = @import("../resources/reader.zig");
+const ResourceReader = @import("../resources/resource_reader.zig").ResourceReader;
 
 const static_limits = @import("../static_limits.zig");
 
@@ -61,7 +61,7 @@ const mem = std.mem;
 const log = @import("../utils/logging.zig").log;
 
 const thread_count = static_limits.thread_count;
-pub const Threads = [thread_count]Thread.Instance;
+const Threads = [thread_count]Thread.Instance;
 
 /// Optional configuration options for a virtual machine instance.
 pub const Options = struct {
@@ -112,7 +112,7 @@ pub const Instance = struct {
     /// reads game data from the specified reader, and sends video and audio output to the specified host.
     /// At startup, the virtual machine will attempt to load the resources for the initial game part.
     /// On success, returns a machine instance that is ready to begin simulating.
-    fn init(allocator: mem.Allocator, reader: Reader.Interface, host: Host.Interface, options: Options) !Self {
+    fn init(allocator: mem.Allocator, reader: ResourceReader, host: Host.Interface, options: Options) !Self {
         var memory = try Memory.new(allocator, reader);
         errdefer memory.deinit();
 
@@ -351,11 +351,11 @@ pub const Instance = struct {
     }
 };
 
-pub fn new(allocator: mem.Allocator, reader: Reader.Interface, host: Host.Interface, options: Options) !Instance {
+pub fn new(allocator: mem.Allocator, reader: ResourceReader, host: Host.Interface, options: Options) !Instance {
     return Instance.init(allocator, reader, host, options);
 }
 
-const MockRepository = @import("../resources/mock_repository.zig");
+const MockRepository = @import("../resources/mock_repository.zig").MockRepository;
 const MockHost = @import("test_helpers/mock_host.zig");
 
 /// Optional configuration settings for the test machine instance created by `testInstance`.

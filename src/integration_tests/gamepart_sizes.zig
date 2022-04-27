@@ -1,7 +1,7 @@
 //! This test dumps data about the sizes of each game part's data.
 //! It does not test functionality, and so is kept out of the main suite of integration tests.
 
-const ResourceDirectory = @import("../resources/resource_directory.zig");
+const ResourceDirectory = @import("../resources/resource_directory.zig").ResourceDirectory;
 const ResourceDescriptor = @import("../resources/resource_descriptor.zig");
 const GamePart = @import("../values/game_part.zig");
 
@@ -17,7 +17,7 @@ test "Report sizes for each game part" {
     var game_dir = try ensureValidFixtureDir();
     defer game_dir.close();
 
-    var resource_directory = try ResourceDirectory.new(&game_dir);
+    var resource_directory = try ResourceDirectory.init(&game_dir);
     const reader = resource_directory.reader();
 
     var max_bytecode_size: usize = 0;

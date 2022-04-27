@@ -1,4 +1,4 @@
-//! A mock equivalent of ResourceDirectory.Instance, intended for unit tests
+//! A mock equivalent of ResourceDirectory, intended for unit tests
 //! that need to test resource-loading pathways but don't want to depend
 //! on the presence of real game files.
 //!
@@ -6,13 +6,13 @@
 //! attempts to load any descriptor will produce either a configurable error,
 //! or a pointer to garbage data of an appropriate length for that resource.
 //!
-//! Use the `reader()` method to get a Reader interface for loading game data.
-//! See reader.zig for the available methods on that interface.
+//! Use the `reader()` method to get a ResourceReader interface for loading game data.
+//! See resource_reader.zig for the available methods on that interface.
 //!
 //! Usage:
 //! ------
 //! const resource_descriptors = []ResourceDescriptor.Instance { descriptor1, descriptor2...descriptorN };
-//! var repository = MockRepository.Instance.init(resource_descriptors, null);
+//! var repository = MockRepository.init(resource_descriptors, null);
 //! const reader = repository.reader();
 //!
 //! const first_resource_descriptor = try reader.resourceDescriptor(0);
@@ -20,10 +20,10 @@
 //! const garbage_data = try reader.allocReadResource(testing.allocator, first_resource_descriptor);
 //! try testing.expectEqual(1, repository.read_count);
 
+const ResourceReader = @import("resource_reader.zig").ResourceReader;
 const ResourceDescriptor = @import("resource_descriptor.zig");
 const ResourceID = @import("../values/resource_id.zig");
 const Opcode = @import("../values/opcode.zig");
-const Reader = @import("reader.zig");
 
 const static_limits = @import("../static_limits.zig");
 
@@ -32,12 +32,7 @@ const BoundedArray = @import("std").BoundedArray;
 
 const DescriptorStorage = BoundedArray(ResourceDescriptor.Instance, static_limits.max_resource_descriptors);
 
-/// A reader for a test repository that can safely load any game part,
-/// albeit with garbage data. Should only be used in tests.
-pub const test_reader = test_repository.reader();
-var test_repository = Instance.init(&Fixtures.descriptors, false);
-
-pub const Instance = struct {
+pub const MockRepository = struct {
     /// The list of resources vended by this mock repository.
     /// Access this via reader().resourceDescriptors() instead of directly.
     _raw_descriptors: DescriptorStorage,
@@ -51,19 +46,21 @@ pub const Instance = struct {
     /// Incremented by calls to reader().bufReadResource() or any of its derived methods.
     read_count: usize = 0,
 
+    const Self = @This();
+
     /// Create a new mock repository that exposes the specified resource descriptors,
     /// and produces either an error or an appropriately-sized buffer when
     /// a resource load method is called.
-    pub fn init(descriptors: []const ResourceDescriptor.Instance, read_should_fail: bool) Instance {
-        return Instance{
+    pub fn init(descriptors: []const ResourceDescriptor.Instance, read_should_fail: bool) Self {
+        return Self{
             ._raw_descriptors = DescriptorStorage.fromSlice(descriptors) catch unreachable,
             .read_should_fail = read_should_fail,
         };
     }
 
     /// Returns a reader interface for loading game data from this repository.
-    pub fn reader(self: *Instance) Reader.Interface {
-        return Reader.Interface.init(self, bufReadResource, resourceDescriptors);
+    pub fn reader(self: *Self) ResourceReader {
+        return ResourceReader.init(self, bufReadResource, resourceDescriptors);
     }
 
     /// Fills the specified buffer with sample game data, and returns a pointer to the region
@@ -77,7 +74,7 @@ pub const Instance = struct {
     ///
     /// Returns error.BufferTooSmall and leaves the buffer unchanged if the supplied buffer
     /// is not large enough to hold the descriptor's uncompressed size in bytes.
-    fn bufReadResource(self: *Instance, buffer: []u8, descriptor: ResourceDescriptor.Instance) Reader.BufReadResourceError![]const u8 {
+    fn bufReadResource(self: *Self, buffer: []u8, descriptor: ResourceDescriptor.Instance) ResourceReader.BufReadResourceError![]const u8 {
         self.read_count += 1;
 
         if (buffer.len < descriptor.uncompressed_size) {
@@ -103,7 +100,7 @@ pub const Instance = struct {
     }
 
     /// Returns a list of all resource descriptors provided to the mock repository instance.
-    fn resourceDescriptors(self: *const Instance) []const ResourceDescriptor.Instance {
+    fn resourceDescriptors(self: *const Self) []const ResourceDescriptor.Instance {
         return self._raw_descriptors.constSlice();
     }
 
@@ -122,6 +119,17 @@ pub const Instance = struct {
     fn fill_with_pattern(buffer: []u8) void {
         mem.set(u8, buffer, resource_bit_pattern);
     }
+
+    // -- Exported constants
+
+    var test_repository = MockRepository.init(&TestFixtures.descriptors, false);
+    /// A reader for a test repository that can safely load any game part,
+    /// albeit with garbage data. Should only be used in tests.
+    pub const test_reader = test_repository.reader();
+
+    // Fake resource descriptors that other scripts can use
+    // to populate instances of MockRepository.
+    pub const Fixtures = TestFixtures;
 };
 
 /// The bit pattern to fill non-bytecode resource buffers with.
@@ -137,7 +145,7 @@ const minimum_looped_program_length = loop_instruction.len + 1;
 
 // -- Resource descriptor fixture data --
 
-pub const Fixtures = struct {
+const TestFixtures = struct {
     const empty_descriptor = ResourceDescriptor.Instance{
         .type = .sound_or_empty,
         .bank_id = 0,
@@ -292,7 +300,7 @@ test "bufReadResource with music descriptor returns slice of original buffer fil
     // for loaded data, and the rest of the buffer left as-is.
     const expected_buffer_contents = [_]u8{resource_bit_pattern} ** example_descriptor.uncompressed_size ++ [_]u8{0x0} ** example_descriptor.uncompressed_size;
 
-    var repository = Instance.init(&.{example_descriptor}, false);
+    var repository = MockRepository.init(&.{example_descriptor}, false);
     try testing.expectEqual(0, repository.read_count);
     const result = try repository.reader().bufReadResource(&buffer, example_descriptor);
     try testing.expectEqual(@ptrToInt(&buffer), @ptrToInt(result.ptr));
@@ -319,7 +327,7 @@ test "bufReadResource with bytecode descriptor returns slice of original buffer 
 
     var buffer: [expected_program.len]u8 = undefined;
 
-    var repository = Instance.init(&.{example_descriptor}, false);
+    var repository = MockRepository.init(&.{example_descriptor}, false);
     try testing.expectEqual(0, repository.read_count);
     _ = try repository.reader().bufReadResource(&buffer, example_bytecode_descriptor);
     try testing.expectEqual(expected_program, buffer);
@@ -338,7 +346,7 @@ test "bufReadResource with bytecode descriptor omits loop instruction when buffe
 
     var buffer: [expected_program.len]u8 = undefined;
 
-    var repository = Instance.init(&.{example_descriptor}, false);
+    var repository = MockRepository.init(&.{example_descriptor}, false);
     try testing.expectEqual(0, repository.read_count);
     _ = try repository.reader().bufReadResource(&buffer, example_bytecode_descriptor);
     try testing.expectEqual(expected_program, buffer);
@@ -349,7 +357,7 @@ test "bufReadResource returns supplied error and leaves buffer alone when buffer
     // The whole buffer should be left untouched.
     const expected_buffer_contents = buffer;
 
-    var repository = Instance.init(&.{example_descriptor}, true);
+    var repository = MockRepository.init(&.{example_descriptor}, true);
     try testing.expectEqual(0, repository.read_count);
     try testing.expectError(error.InvalidCompressedData, repository.reader().bufReadResource(&buffer, example_descriptor));
     try testing.expectEqual(1, repository.read_count);
@@ -361,7 +369,7 @@ test "bufReadResource returns error.BufferTooSmall if buffer is too small for re
     // The whole buffer should be left untouched.
     const expected_buffer_contents = buffer;
 
-    var repository = Instance.init(&.{example_descriptor}, true);
+    var repository = MockRepository.init(&.{example_descriptor}, true);
     try testing.expectEqual(0, repository.read_count);
     try testing.expectError(error.BufferTooSmall, repository.reader().bufReadResource(&buffer, example_descriptor));
     try testing.expectEqual(1, repository.read_count);
@@ -369,11 +377,11 @@ test "bufReadResource returns error.BufferTooSmall if buffer is too small for re
 }
 
 test "resourceDescriptors returns expected descriptors" {
-    var repository = Instance.init(&Fixtures.descriptors, false);
+    var repository = MockRepository.init(&TestFixtures.descriptors, false);
 
-    try testing.expectEqualSlices(ResourceDescriptor.Instance, repository.reader().resourceDescriptors(), &Fixtures.descriptors);
+    try testing.expectEqualSlices(ResourceDescriptor.Instance, repository.reader().resourceDescriptors(), &TestFixtures.descriptors);
 }
 
 test "Ensure everything compiles" {
-    testing.refAllDecls(Instance);
+    testing.refAllDecls(MockRepository);
 }

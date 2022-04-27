@@ -1,7 +1,7 @@
 //! Tests that ResourceDirectory correctly parses real game files from the original Another World.
 //! Requires that the `fixtures/dos` folder contains Another World DOS game files.
 
-const ResourceDirectory = @import("../resources/resource_directory.zig");
+const ResourceDirectory = @import("../resources/resource_directory.zig").ResourceDirectory;
 const ResourceID = @import("../values/resource_id.zig");
 
 const testing = @import("../utils/testing.zig");
@@ -12,7 +12,7 @@ test "ResourceDirectory reads all game resources" {
     var game_dir = try ensureValidFixtureDir();
     defer game_dir.close();
 
-    var resource_directory = try ResourceDirectory.new(&game_dir);
+    var resource_directory = try ResourceDirectory.init(&game_dir);
     const reader = resource_directory.reader();
 
     const descriptors = reader.resourceDescriptors();
@@ -31,7 +31,7 @@ test "Instance.readResourceAlloc returns error.OutOfMemory if it runs out of mem
     var game_dir = try ensureValidFixtureDir();
     defer game_dir.close();
 
-    var resource_directory = try ResourceDirectory.new(&game_dir);
+    var resource_directory = try ResourceDirectory.init(&game_dir);
     const reader = resource_directory.reader();
 
     // Some resources are zero-length; testing.failing_allocator would not fail if the memory required is 0.
@@ -54,7 +54,7 @@ test "Instance.allocReadResourceByID returns error.InvalidResourceID when given 
     var game_dir = try ensureValidFixtureDir();
     defer game_dir.close();
 
-    var resource_directory = try ResourceDirectory.new(&game_dir);
+    var resource_directory = try ResourceDirectory.init(&game_dir);
     const reader = resource_directory.reader();
 
     const invalid_id = @intCast(ResourceID.Raw, reader.resourceDescriptors().len);

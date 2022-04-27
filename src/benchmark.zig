@@ -3,7 +3,7 @@
 
 const Machine = @import("machine/machine.zig");
 const Host = @import("machine/host.zig");
-const ResourceDirectory = @import("resources/resource_directory.zig");
+const ResourceDirectory = @import("resources/resource_directory.zig").ResourceDirectory;
 const Video = @import("machine/video.zig");
 const BufferID = @import("values/buffer_id.zig");
 const UserInput = @import("machine/user_input.zig");
@@ -49,7 +49,7 @@ const Subject = struct {
 
         const max_tics = 10000;
 
-        var resource_directory = try ResourceDirectory.new(&self.game_dir);
+        var resource_directory = try ResourceDirectory.init(&self.game_dir);
         var host = RenderHost{};
 
         const empty_input = UserInput.Instance{};

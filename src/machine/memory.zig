@@ -33,7 +33,7 @@
 //! buffer for each loaded resource would break if the VM or memory instance is copied)
 //! but we don't need to support that anyway, and future Zig versions may allow us to mark
 //! the entire type as move-only.
-const Reader = @import("../resources/reader.zig");
+const ResourceReader = @import("../resources/resource_reader.zig").ResourceReader;
 const ResourceID = @import("../values/resource_id.zig");
 const PlanarBitmapResource = @import("../resources/planar_bitmap_resource.zig");
 const GamePart = @import("../values/game_part.zig");
@@ -80,7 +80,7 @@ const BitmapRegion = [bitmap_region_size]u8;
 /// and loads game data from the specified repository reader.
 /// All resources will begin initially unloaded.
 /// The returned instance must be destroyed by calling `deinit`.
-pub fn new(allocator: mem.Allocator, reader: Reader.Interface) InitError!Instance {
+pub fn new(allocator: mem.Allocator, reader: ResourceReader) InitError!Instance {
     return Instance.init(allocator, reader);
 }
 
@@ -88,7 +88,7 @@ pub const Instance = struct {
     /// The allocator used for loading resources into memory.
     allocator: mem.Allocator,
     /// A reader for the repository to load resource data from: typically a directory on the local filesystem.
-    reader: Reader.Interface,
+    reader: ResourceReader,
     /// The current location of each resource ID in memory, or null if that resource ID is not loaded.
     /// Should not be accessed directly: instead use resourceLocation(id).
     resource_locations: [static_limits.max_resource_descriptors]PossibleResourceLocation,
@@ -101,7 +101,7 @@ pub const Instance = struct {
     /// and loads game data from the specified repository.
     /// All resources will begin initially unloaded.
     /// The returned instance must be destroyed by calling `deinit`.
-    pub fn init(allocator: mem.Allocator, reader: Reader.Interface) InitError!Self {
+    pub fn init(allocator: mem.Allocator, reader: ResourceReader) InitError!Self {
         return Self{
             .allocator = allocator,
             .reader = reader,
@@ -221,13 +221,13 @@ pub const Instance = struct {
 pub const InitError = mem.Allocator.Error;
 
 /// The errors that can be returned by a call to `Memory.Instance.resourceLocation`.
-pub const ResourceLocationError = Reader.ValidationError;
+pub const ResourceLocationError = ResourceReader.ValidationError;
 
 /// The errors that can be returned by a call to `Memory.Instance.loadGamePart`.
-pub const LoadGamePartError = Reader.AllocReadResourceByIDError;
+pub const LoadGamePartError = ResourceReader.AllocReadResourceByIDError;
 
 /// The errors that can be returned by a call to `Memory.Instance.loadIndividualResource`.
-pub const LoadIndividualResourceError = Reader.AllocReadResourceByIDError || error{
+pub const LoadIndividualResourceError = ResourceReader.AllocReadResourceByIDError || error{
     /// `loadIndividualResource` attempted to load a resource that can only be loaded by `loadGamePart`.
     GamePartOnlyResourceType,
 };
@@ -235,13 +235,13 @@ pub const LoadIndividualResourceError = Reader.AllocReadResourceByIDError || err
 // -- Tests --
 
 const testing = @import("../utils/testing.zig");
-const MockRepository = @import("../resources/mock_repository.zig");
+const MockRepository = @import("../resources/mock_repository.zig").MockRepository;
 const FailingAllocator = @import("std").testing.FailingAllocator;
 
 const test_descriptors = &MockRepository.Fixtures.descriptors;
 
-var test_repository = MockRepository.Instance.init(test_descriptors, false);
-var failing_repository = MockRepository.Instance.init(test_descriptors, true);
+var test_repository = MockRepository.init(test_descriptors, false);
+var failing_repository = MockRepository.init(test_descriptors, true);
 
 const test_reader = test_repository.reader();
 const failing_reader = failing_repository.reader();
@@ -375,7 +375,7 @@ test "loadIndividualResource does not allocate additional memory when loading bi
 }
 
 test "loadIndividualResource avoids reloading already-loaded audio resources" {
-    var counted_repository = MockRepository.Instance.init(test_descriptors, false);
+    var counted_repository = MockRepository.init(test_descriptors, false);
 
     var memory = try new(testing.allocator, counted_repository.reader());
     defer memory.deinit();
@@ -394,7 +394,7 @@ test "loadIndividualResource avoids reloading already-loaded audio resources" {
 }
 
 test "loadIndividualResource always reloads bitmap resources" {
-    var counted_repository = MockRepository.Instance.init(test_descriptors, false);
+    var counted_repository = MockRepository.init(test_descriptors, false);
 
     var memory = try new(testing.allocator, counted_repository.reader());
     defer memory.deinit();
@@ -492,7 +492,7 @@ test "loadGamePart unloads any previously loaded individual resources" {
 
 test "loadGamePart returns error.InvalidResourceID on out-of-bounds resource ID" {
     // Snip off the descriptor list halfway through the resource IDs for the first game part
-    var truncated_data_source = MockRepository.Instance.init(test_descriptors[0..0x15], false);
+    var truncated_data_source = MockRepository.init(test_descriptors[0..0x15], false);
 
     var memory = try new(testing.allocator, truncated_data_source.reader());
     defer memory.deinit();
