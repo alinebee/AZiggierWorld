@@ -6,7 +6,7 @@ const Host = @import("machine/host.zig").Host;
 const ResourceDirectory = @import("resources/resource_directory.zig").ResourceDirectory;
 const Video = @import("machine/video.zig").Video;
 const BufferID = @import("values/buffer_id.zig");
-const UserInput = @import("machine/user_input.zig");
+const UserInput = @import("machine/user_input.zig").UserInput;
 
 const ensureValidFixtureDir = @import("integration_tests/helpers.zig").ensureValidFixtureDir;
 const measure = @import("utils/measure.zig").measure;
@@ -53,7 +53,7 @@ const Subject = struct {
         var resource_directory = try ResourceDirectory.init(&self.game_dir);
         var host = RenderHost{};
 
-        const empty_input = UserInput.Instance{};
+        const empty_input = UserInput{};
 
         var machine = try Machine.init(self.allocator, resource_directory.reader(), host.host(), .{
             .initial_game_part = .intro_cinematic,

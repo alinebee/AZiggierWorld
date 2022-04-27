@@ -3,14 +3,14 @@ const Host = @import("../machine/host.zig").Host;
 const ResourceDirectory = @import("../resources/resource_directory.zig").ResourceDirectory;
 const BufferID = @import("../values/buffer_id.zig");
 const Video = @import("../machine/video.zig").Video;
-const GameInput = @import("../machine/user_input.zig");
+const GameInput = @import("../machine/user_input.zig").UserInput;
 
 const SDL = @import("sdl2");
 const std = @import("std");
 const log = @import("../utils/logging.zig").log;
 
 const Input = struct {
-    game_input: GameInput.Instance = .{},
+    game_input: GameInput = .{},
     turbo: bool = false,
     paused: bool = false,
     exited: bool = false,

@@ -41,15 +41,15 @@ const RegisterID = @import("../values/register_id.zig");
 const Register = @import("../values/register.zig");
 const GamePart = @import("../values/game_part.zig");
 
-const Thread = @import("thread.zig");
-const Stack = @import("stack.zig");
-const Registers = @import("registers.zig");
+const Thread = @import("thread.zig").Thread;
+const Stack = @import("stack.zig").Stack;
+const Registers = @import("registers.zig").Registers;
 const Program = @import("program.zig").Program;
 const Video = @import("video.zig").Video;
-const Audio = @import("audio.zig");
+const Audio = @import("audio.zig").Audio;
 const Memory = @import("memory.zig").Memory;
 const Host = @import("host.zig").Host;
-const UserInput = @import("user_input.zig");
+const UserInput = @import("user_input.zig").UserInput;
 
 const ResourceReader = @import("../resources/resource_reader.zig").ResourceReader;
 const MockRepository = @import("../resources/mock_repository.zig").MockRepository;
@@ -63,17 +63,16 @@ const mem = std.mem;
 const log = @import("../utils/logging.zig").log;
 
 const thread_count = static_limits.thread_count;
-const Threads = [thread_count]Thread.Instance;
 
 pub const Machine = struct {
     /// The current state of the VM's 64 threads.
-    threads: Threads,
+    threads: [thread_count]Thread,
 
     /// The current state of the VM's 256 registers.
-    registers: Registers.Instance,
+    registers: Registers,
 
     /// The current program execution stack.
-    stack: Stack.Instance,
+    stack: Stack,
 
     /// The currently-running program.
     program: Program,
@@ -155,7 +154,7 @@ pub const Machine = struct {
     /// 2. apply the specified user input to the state of the VM;
     /// 3. apply any thread state changes that were scheduled on the previous tic;
     /// 4. run every thread using the bytecode for the current game part.
-    pub fn runTic(self: *Self, input: UserInput.Instance) !void {
+    pub fn runTic(self: *Self, input: UserInput) !void {
         if (self.scheduled_game_part) |game_part| {
             try self.startGamePart(game_part);
         }
@@ -292,7 +291,7 @@ pub const Machine = struct {
     // - Private methods -
 
     /// Update the machine's registers to reflect the current state of the user's input.
-    fn applyUserInput(self: *Self, input: UserInput.Instance) void {
+    fn applyUserInput(self: *Self, input: UserInput) void {
         const register_values = input.registerValues();
 
         self.registers.setSigned(.left_right_input, register_values.left_right_input);
@@ -579,7 +578,7 @@ test "applyUserInput sets expected register values" {
     var machine = Machine.testInstance(.{});
     defer machine.deinit();
 
-    const full_input = UserInput.Instance{
+    const full_input = UserInput{
         .action = true,
         .left = true,
         .right = true,
@@ -596,7 +595,7 @@ test "applyUserInput sets expected register values" {
     try testing.expectEqual(0b1111, machine.registers.bitPattern(.movement_inputs));
     try testing.expectEqual(0b1000_1111, machine.registers.bitPattern(.all_inputs));
 
-    const empty_input = UserInput.Instance{};
+    const empty_input = UserInput{};
     machine.applyUserInput(empty_input);
 
     try testing.expectEqual(0, machine.registers.signed(.action_input));
@@ -616,7 +615,7 @@ test "applyUserInput sets RegisterID.last_pressed_character when in password ent
     const original_value = 1234;
     machine.registers.setUnsigned(.last_pressed_character, original_value);
 
-    const input = UserInput.Instance{ .last_pressed_character = 'a' };
+    const input = UserInput{ .last_pressed_character = 'a' };
     machine.applyUserInput(input);
 
     try testing.expectEqual('A', machine.registers.unsigned(.last_pressed_character));
@@ -631,7 +630,7 @@ test "applyUserInput does not touch RegisterID.last_pressed_character during oth
     const original_value = 1234;
     machine.registers.setUnsigned(.last_pressed_character, original_value);
 
-    const input = UserInput.Instance{ .last_pressed_character = 'a' };
+    const input = UserInput{ .last_pressed_character = 'a' };
     machine.applyUserInput(input);
 
     try testing.expectEqual(original_value, machine.registers.unsigned(.last_pressed_character));
@@ -643,7 +642,7 @@ test "applyUserInput opens password screen if permitted for current game part" {
 
     try testing.expectEqual(.intro_cinematic, machine.current_game_part);
 
-    const input = UserInput.Instance{ .show_password_screen = true };
+    const input = UserInput{ .show_password_screen = true };
     machine.applyUserInput(input);
 
     try testing.expectEqual(.password_entry, machine.scheduled_game_part);
@@ -655,7 +654,7 @@ test "applyUserInput does not open password screen when in copy protection" {
 
     try machine.startGamePart(.copy_protection);
 
-    const input = UserInput.Instance{ .show_password_screen = true };
+    const input = UserInput{ .show_password_screen = true };
     machine.applyUserInput(input);
 
     try testing.expectEqual(null, machine.scheduled_game_part);
@@ -667,7 +666,7 @@ test "applyUserInput does not open password screen when already in password scre
 
     try machine.startGamePart(.password_entry);
 
-    const input = UserInput.Instance{ .show_password_screen = true };
+    const input = UserInput{ .show_password_screen = true };
     machine.applyUserInput(input);
 
     try testing.expectEqual(null, machine.scheduled_game_part);
@@ -687,7 +686,7 @@ test "runTic starts next game part if scheduled" {
 
     machine.scheduleGamePart(next_game_part);
 
-    try machine.runTic(UserInput.Instance{});
+    try machine.runTic(UserInput{});
 
     try testing.expectEqual(next_game_part, machine.current_game_part);
     try testing.expectEqual(null, machine.scheduled_game_part);
@@ -703,7 +702,7 @@ test "runTic applies user input only after loading scheduled game part" {
     try testing.expectEqual(0, machine.registers.signed(.left_right_input));
     try testing.expectEqual(0, machine.registers.unsigned(.last_pressed_character));
 
-    const input = UserInput.Instance{ .left = true, .last_pressed_character = 'A' };
+    const input = UserInput{ .left = true, .last_pressed_character = 'A' };
 
     try machine.runTic(input);
 
@@ -743,7 +742,7 @@ test "runTic updates each thread with its scheduled state before running each th
     try testing.expectEqual(null, main_thread.scheduled_pause_state);
     try testing.expectEqual(null, main_thread.scheduled_execution_state);
 
-    try machine.runTic(UserInput.Instance{});
+    try machine.runTic(UserInput{});
 
     for (machine.threads[1..64]) |*thread| {
         // Every thread except main should have remained inactive.

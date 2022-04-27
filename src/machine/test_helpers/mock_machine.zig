@@ -1,7 +1,7 @@
 const Machine = @import("../machine.zig").Machine;
 const Video = @import("../video.zig").Video;
-const Audio = @import("../audio.zig");
-const Registers = @import("../registers.zig");
+const Audio = @import("../audio.zig").Audio;
+const Registers = @import("../registers.zig").Registers;
 
 const Point = @import("../../values/point.zig");
 const GamePart = @import("../../values/game_part.zig");
@@ -39,7 +39,7 @@ pub fn mockMachine(comptime Implementation: type) MockMachine(Implementation) {
 
 pub fn MockMachine(comptime Implementation: type) type {
     return struct {
-        registers: Registers.Instance = .{},
+        registers: Registers = .{},
 
         call_counts: CallCounts = zeroes(CallCounts),
 

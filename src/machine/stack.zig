@@ -13,17 +13,17 @@
 const Address = @import("../values/address.zig");
 const static_limits = @import("../static_limits.zig");
 
-pub const max_depth = static_limits.max_stack_depth;
-
 /// Represents the state of the program execution stack.
-pub const Instance = struct {
+pub const Stack = struct {
     /// The addresses currently on the stack.
     return_addresses: [max_depth]Address.Native = undefined,
     /// The current depth on the stack, between 0 and 63.
     depth: usize = 0,
 
+    const Self = @This();
+
     /// Add a new return address onto the stack.
-    pub fn push(self: *Instance, address: Address.Native) Error!void {
+    pub fn push(self: *Self, address: Address.Native) Error!void {
         if (self.depth >= self.return_addresses.len) {
             return error.StackOverflow;
         }
@@ -32,7 +32,7 @@ pub const Instance = struct {
     }
 
     /// Decrement the stack and return the last return address that was on the stack.
-    pub fn pop(self: *Instance) Error!Address.Native {
+    pub fn pop(self: *Self) Error!Address.Native {
         if (self.depth == 0) {
             return error.StackUnderflow;
         }
@@ -41,17 +41,21 @@ pub const Instance = struct {
     }
 
     /// Empty the stack.
-    pub fn clear(self: *Instance) void {
+    pub fn clear(self: *Self) void {
         self.depth = 0;
     }
-};
 
-pub const Error = error{
-    /// Attempted to call into another subroutine when there were too many on the stack already.
-    StackOverflow,
-    /// Attempted to return when there were no more subroutines on the stack.
-    /// This indicates a programmer error in the original bytecode.
-    StackUnderflow,
+    // - Exported constants -
+
+    pub const max_depth = static_limits.max_stack_depth;
+
+    pub const Error = error{
+        /// Attempted to call into another subroutine when there were too many on the stack already.
+        StackOverflow,
+        /// Attempted to return when there were no more subroutines on the stack.
+        /// This indicates a programmer error in the original bytecode.
+        StackUnderflow,
+    };
 };
 
 // -- Tests --
@@ -59,7 +63,7 @@ pub const Error = error{
 const testing = @import("../utils/testing.zig");
 
 test "Pushing increments the stack" {
-    var stack = Instance{};
+    var stack = Stack{};
     try testing.expectEqual(0, stack.depth);
 
     try stack.push(0xBEEF);
@@ -67,7 +71,7 @@ test "Pushing increments the stack" {
 }
 
 test "Popping decrements the stack and returns the last pushed address" {
-    var stack = Instance{};
+    var stack = Stack{};
     try stack.push(0xDEAD);
     try stack.push(0xBEEF);
     try testing.expectEqual(2, stack.depth);
@@ -78,7 +82,7 @@ test "Popping decrements the stack and returns the last pushed address" {
 }
 
 test "Clearing empties the stack" {
-    var stack = Instance{};
+    var stack = Stack{};
     try stack.push(0x8BAD);
     try stack.push(0xF00D);
     try stack.push(0xDEAD);
@@ -90,13 +94,13 @@ test "Clearing empties the stack" {
 }
 
 test "Popping an empty stack returns error.StackUnderflow" {
-    var stack = Instance{};
+    var stack = Stack{};
     try testing.expectError(error.StackUnderflow, stack.pop());
 }
 
 test "Pushing onto a full stack returns error.StackOverflow" {
-    var stack = Instance{};
-    var remaining: usize = max_depth;
+    var stack = Stack{};
+    var remaining: usize = Stack.max_depth;
     while (remaining > 0) : (remaining -= 1) {
         try stack.push(0xBEEF);
     }

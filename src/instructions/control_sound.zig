@@ -1,7 +1,7 @@
 const Opcode = @import("../values/opcode.zig").Opcode;
 const Program = @import("../machine/program.zig").Program;
 const Machine = @import("../machine/machine.zig").Machine;
-const Audio = @import("../machine/audio.zig");
+const Audio = @import("../machine/audio.zig").Audio;
 
 const ResourceID = @import("../values/resource_id.zig");
 const Channel = @import("../values/channel.zig");

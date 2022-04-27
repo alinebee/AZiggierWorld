@@ -6,7 +6,7 @@ const static_limits = @import("../static_limits.zig");
 const register_count = static_limits.register_count;
 
 /// A bank of 256 16-bit registers, that can be read and written as either signed or unsigned values.
-pub const Instance = struct {
+pub const Registers = struct {
     const UnsignedValues = [register_count]Register.Unsigned;
     const SignedValues = [register_count]Register.Signed;
     const BitPatternValues = [register_count]Register.BitPattern;
@@ -66,5 +66,5 @@ pub const Instance = struct {
 const testing = @import("../utils/testing.zig");
 
 test "Ensure everything compiles" {
-    testing.refAllDecls(Instance);
+    testing.refAllDecls(Registers);
 }

@@ -6,7 +6,7 @@ const Machine = @import("../machine/machine.zig").Machine;
 const Host = @import("../machine/host.zig").Host;
 const ResourceDirectory = @import("../resources/resource_directory.zig").ResourceDirectory;
 const BufferID = @import("../values/buffer_id.zig");
-const UserInput = @import("../machine/user_input.zig");
+const UserInput = @import("../machine/user_input.zig").UserInput;
 
 const ensureValidFixtureDir = @import("helpers.zig").ensureValidFixtureDir;
 const testing = @import("../utils/testing.zig");
@@ -60,7 +60,7 @@ test "Introduction runs successfully" {
     });
     defer machine.deinit();
 
-    const empty_input = UserInput.Instance{};
+    const empty_input = UserInput{};
 
     var tics_without_render: usize = 0;
     var tics_with_single_render: usize = 0;

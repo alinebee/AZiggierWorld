@@ -1,7 +1,7 @@
 const Opcode = @import("../values/opcode.zig").Opcode;
 const Program = @import("../machine/program.zig").Program;
 const Machine = @import("../machine/machine.zig").Machine;
-const Stack = @import("../machine/stack.zig");
+const Stack = @import("../machine/stack.zig").Stack;
 const Address = @import("../values/address.zig");
 
 /// Call into a subroutine and increment the program execution stack.

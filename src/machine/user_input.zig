@@ -1,7 +1,7 @@
 const Register = @import("../values/register.zig");
 
 /// The current state of user input. Expected to be provided by the host on each tic.
-pub const Instance = struct {
+pub const UserInput = struct {
     /// Whether the left movement input is currently activated.
     left: bool = false,
 
@@ -74,7 +74,7 @@ pub const Instance = struct {
 };
 
 /// The Another World register values corresponding to an input state.
-pub const RegisterValues = struct {
+const RegisterValues = struct {
     /// The value to insert into `RegisterID.up_down_input`.
     /// Will be -1 if left is active, 1 if right is active, 0 if neither is active.
     up_down_input: Register.Signed = 0,
@@ -132,19 +132,19 @@ fn normalizedCharacterRegisterValue(char: u8) Register.Unsigned {
 const testing = @import("../utils/testing.zig");
 
 test "Ensure everything compiles" {
-    testing.refAllDecls(Instance);
+    testing.refAllDecls(UserInput);
 }
 
 // - registerValues tests -
 
 test "registerValues returns expected values on no input" {
-    const input = Instance{};
+    const input = UserInput{};
     const expected = RegisterValues{};
     try testing.expectEqual(expected, input.registerValues());
 }
 
 test "registerValues returns expected values on action input" {
-    const input = Instance{ .action = true };
+    const input = UserInput{ .action = true };
     const expected = RegisterValues{
         .action_input = 1,
         .all_inputs = 0b1000_0000,
@@ -153,7 +153,7 @@ test "registerValues returns expected values on action input" {
 }
 
 test "registerValues returns expected values on key character input" {
-    const input = Instance{ .last_pressed_character = 'a' };
+    const input = UserInput{ .last_pressed_character = 'a' };
     const expected = RegisterValues{
         .last_pressed_character = 'A',
     };
@@ -161,7 +161,7 @@ test "registerValues returns expected values on key character input" {
 }
 
 test "registerValues returns expected value on right input" {
-    const input = Instance{ .right = true };
+    const input = UserInput{ .right = true };
     const expected = RegisterValues{
         .left_right_input = 1,
         .movement_inputs = 0b0001,
@@ -171,7 +171,7 @@ test "registerValues returns expected value on right input" {
 }
 
 test "registerValues returns expected value on left input" {
-    const input = Instance{ .left = true };
+    const input = UserInput{ .left = true };
     const expected = RegisterValues{
         .left_right_input = -1,
         .movement_inputs = 0b0010,
@@ -181,7 +181,7 @@ test "registerValues returns expected value on left input" {
 }
 
 test "registerValues returns expected value on up input" {
-    const input = Instance{ .down = true };
+    const input = UserInput{ .down = true };
     const expected = RegisterValues{
         .up_down_input = 1,
         .movement_inputs = 0b0100,
@@ -191,7 +191,7 @@ test "registerValues returns expected value on up input" {
 }
 
 test "registerValues returns expected value on down input" {
-    const input = Instance{ .up = true };
+    const input = UserInput{ .up = true };
     const expected = RegisterValues{
         .up_down_input = -1,
         .movement_inputs = 0b1000,
@@ -201,7 +201,7 @@ test "registerValues returns expected value on down input" {
 }
 
 test "registerValues returns expected value on left-and-right combined input" {
-    const input = Instance{ .left = true, .right = true };
+    const input = UserInput{ .left = true, .right = true };
     const expected = RegisterValues{
         // Left input should take precedence over right
         .left_right_input = -1,
@@ -212,7 +212,7 @@ test "registerValues returns expected value on left-and-right combined input" {
 }
 
 test "registerValues returns expected value on up-and-down combined input" {
-    const input = Instance{ .up = true, .down = true };
+    const input = UserInput{ .up = true, .down = true };
     const expected = RegisterValues{
         // Up input should take precedence over down
         .up_down_input = -1,
@@ -223,7 +223,7 @@ test "registerValues returns expected value on up-and-down combined input" {
 }
 
 test "registerValues returns expected value on up-and-left combined input" {
-    const input = Instance{ .up = true, .left = true };
+    const input = UserInput{ .up = true, .left = true };
     const expected = RegisterValues{
         .left_right_input = -1,
         .up_down_input = -1,
@@ -234,7 +234,7 @@ test "registerValues returns expected value on up-and-left combined input" {
 }
 
 test "registerValues returns expected value on down-and-right combined input" {
-    const input = Instance{ .down = true, .right = true };
+    const input = UserInput{ .down = true, .right = true };
     const expected = RegisterValues{
         .left_right_input = 1,
         .up_down_input = 1,
@@ -245,7 +245,7 @@ test "registerValues returns expected value on down-and-right combined input" {
 }
 
 test "registerValues returns expected value on all directions combined" {
-    const input = Instance{ .up = true, .down = true, .left = true, .right = true };
+    const input = UserInput{ .up = true, .down = true, .left = true, .right = true };
     const expected = RegisterValues{
         // Left should take precedence over right
         .left_right_input = -1,
@@ -258,7 +258,7 @@ test "registerValues returns expected value on all directions combined" {
 }
 
 test "registerValues returns expected value on all inputs combined" {
-    const input = Instance{
+    const input = UserInput{
         .up = true,
         .down = true,
         .left = true,

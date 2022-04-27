@@ -1,7 +1,7 @@
 const Opcode = @import("../values/opcode.zig").Opcode;
 const Program = @import("../machine/program.zig").Program;
 const Machine = @import("../machine/machine.zig").Machine;
-const Stack = @import("../machine/stack.zig");
+const Stack = @import("../machine/stack.zig").Stack;
 
 /// Return from the current subroutine and decrement the program execution stack.
 pub const Return = struct {

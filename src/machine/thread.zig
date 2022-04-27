@@ -33,7 +33,7 @@ const PauseState = enum {
 };
 
 /// One of the program execution threads within the Another World virtual machine.
-pub const Instance = struct {
+pub const Thread = struct {
     // Theoretically, a thread can only be in three functional states:
     // 1. Running at program counter X
     // 2. Paused at program counter X
@@ -121,7 +121,7 @@ pub const Instance = struct {
 
     /// Execute the machine's current program on this thread, running until the thread yields
     /// or deactivates, or an error occurs, or the execution limit is exceeded.
-    pub fn run(self: *Instance, machine: *Machine, max_instructions: usize) !void {
+    pub fn run(self: *Self, machine: *Machine, max_instructions: usize) !void {
         if (self.pause_state == .paused) return;
 
         // If this thread is active, resume executing the program from the previous address for this thread;
@@ -150,7 +150,7 @@ const testing = @import("../utils/testing.zig");
 // - Schedule tests -
 
 test "scheduleJump schedules activation with specified program counter for next tic" {
-    var thread = Instance{};
+    var thread = Thread{};
 
     thread.scheduleJump(0xDEAD);
 
@@ -159,7 +159,7 @@ test "scheduleJump schedules activation with specified program counter for next 
 }
 
 test "scheduleDeactivate schedules deactivation for next tic" {
-    var thread = Instance{ .execution_state = .{ .active = 0xDEAD } };
+    var thread = Thread{ .execution_state = .{ .active = 0xDEAD } };
 
     thread.scheduleDeactivate();
 
@@ -168,7 +168,7 @@ test "scheduleDeactivate schedules deactivation for next tic" {
 }
 
 test "scheduleResume schedules resuming for next tic" {
-    var thread = Instance{ .pause_state = .paused };
+    var thread = Thread{ .pause_state = .paused };
 
     thread.scheduleResume();
 
@@ -177,7 +177,7 @@ test "scheduleResume schedules resuming for next tic" {
 }
 
 test "schedulePause schedules pausing for next tic" {
-    var thread = Instance{};
+    var thread = Thread{};
 
     thread.schedulePause();
 
@@ -186,7 +186,7 @@ test "schedulePause schedules pausing for next tic" {
 }
 
 test "applyScheduledStates applies scheduled execution state" {
-    var thread = Instance{};
+    var thread = Thread{};
 
     thread.scheduleJump(0xDEAD);
     try testing.expectEqual(.inactive, thread.execution_state);
@@ -206,7 +206,7 @@ test "applyScheduledStates applies scheduled execution state" {
 }
 
 test "applyScheduledStates applies scheduled pause state" {
-    var thread = Instance{};
+    var thread = Thread{};
 
     try testing.expectEqual(.running, thread.pause_state);
     try testing.expectEqual(null, thread.scheduled_pause_state);
