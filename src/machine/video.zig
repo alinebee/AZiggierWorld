@@ -7,8 +7,8 @@ const PaletteID = @import("../values/palette_id.zig");
 const Palette = @import("../values/palette.zig");
 const Polygon = @import("../rendering/polygon.zig");
 const Surface = @import("../rendering/surface.zig");
-const PolygonResource = @import("../resources/polygon_resource.zig");
-const PaletteResource = @import("../resources/palette_resource.zig");
+const PolygonResource = @import("../resources/polygon_resource.zig").PolygonResource;
+const PaletteResource = @import("../resources/palette_resource.zig").PaletteResource;
 
 const PackedBuffer = @import("../rendering/buffers/packed_buffer.zig");
 const drawPolygonImpl = @import("../rendering/operations/draw_polygon.zig").drawPolygon;
@@ -26,13 +26,13 @@ pub const Video = struct {
     const Buffer = PackedBuffer.Instance(static_limits.virtual_screen_width, static_limits.virtual_screen_height);
 
     /// The resource from which part-specific polygon data will be read.
-    polygons: PolygonResource.Instance,
+    polygons: PolygonResource,
 
     /// The resource from which global animation data will be read.
-    animations: ?PolygonResource.Instance,
+    animations: ?PolygonResource,
 
     /// The palettes used to render frames to the host screen.
-    palettes: PaletteResource.Instance,
+    palettes: PaletteResource,
 
     /// The currently selected palette, loaded from `palettes` when `selectPalette` is called.
     /// Frames will be rendered to the host screen using this palette.
@@ -72,12 +72,12 @@ pub const Video = struct {
 
     /// Called when a new game part is loaded to set the sources for polygon and palette data to new memory locations.
     pub fn setResourceLocations(self: *Self, palette_data: []const u8, polygon_data: []const u8, possible_animation_data: ?[]const u8) void {
-        self.palettes = PaletteResource.new(palette_data);
+        self.palettes = PaletteResource.init(palette_data);
         self.current_palette = null;
 
-        self.polygons = PolygonResource.new(polygon_data);
-        if (possible_animation_data) |data| {
-            self.animations = PolygonResource.new(data);
+        self.polygons = PolygonResource.init(polygon_data);
+        if (possible_animation_data) |animation_data| {
+            self.animations = PolygonResource.init(animation_data);
         } else {
             self.animations = null;
         }
@@ -185,7 +185,7 @@ pub const Video = struct {
         return &self.buffers[self.resolvedBufferID(buffer_id)];
     }
 
-    fn resolvedPolygonSource(self: Self, source: PolygonSource) !PolygonResource.Instance {
+    fn resolvedPolygonSource(self: Self, source: PolygonSource) !PolygonResource {
         switch (source) {
             .polygons => return self.polygons,
             .animations => return self.animations orelse error.AnimationsNotLoaded,
@@ -253,9 +253,9 @@ fn testInstance() Video {
     const palette_data = &PaletteResource.Fixtures.resource;
 
     var instance = Video{
-        .polygons = PolygonResource.new(polygon_data),
-        .animations = PolygonResource.new(polygon_data),
-        .palettes = PaletteResource.new(palette_data),
+        .polygons = PolygonResource.init(polygon_data),
+        .animations = PolygonResource.init(polygon_data),
+        .palettes = PaletteResource.init(palette_data),
     };
 
     for (instance.buffers) |*buffer| {
@@ -379,7 +379,7 @@ test "selectPalette returns error and leaves current palette unchanged when pale
     const empty_palette_data = [0]u8{};
 
     var instance = testInstance();
-    instance.palettes = PaletteResource.new(&empty_palette_data);
+    instance.palettes = PaletteResource.init(&empty_palette_data);
 
     try testing.expectEqual(null, instance.current_palette);
     try testing.expectError(error.EndOfStream, instance.selectPalette(0));

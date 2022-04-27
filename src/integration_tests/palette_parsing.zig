@@ -1,7 +1,7 @@
 //! Tests that palettes are correctly parsed from Another World's original resource data.
 //! Requires that the `fixtures/dos` folder contains Another World DOS game files.
 
-const PaletteResource = @import("../resources/palette_resource.zig");
+const PaletteResource = @import("../resources/palette_resource.zig").PaletteResource;
 const ResourceDirectory = @import("../resources/resource_directory.zig").ResourceDirectory;
 const PaletteID = @import("../values/palette_id.zig");
 const static_limits = @import("../static_limits.zig");
@@ -23,7 +23,7 @@ test "Parse all palettes in original game files" {
         const data = try reader.allocReadResource(testing.allocator, descriptor);
         defer testing.allocator.free(data);
 
-        const palettes = PaletteResource.new(data);
+        const palettes = PaletteResource.init(data);
 
         var idx: usize = 0;
         while (idx < static_limits.palette_count) : (idx += 1) {

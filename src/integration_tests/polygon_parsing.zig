@@ -4,7 +4,7 @@
 
 const Instruction = @import("../instructions/instruction.zig");
 const Program = @import("../machine/program.zig").Program;
-const PolygonResource = @import("../resources/polygon_resource.zig");
+const PolygonResource = @import("../resources/polygon_resource.zig").PolygonResource;
 const Polygon = @import("../rendering/polygon.zig");
 const PolygonScale = @import("../values/polygon_scale.zig");
 const Point = @import("../values/point.zig");
@@ -59,13 +59,13 @@ fn parsePolygonInstructionsForGamePart(allocator: std.mem.Allocator, resource_di
     const instructions = try findPolygonDrawInstructions(allocator, bytecode);
     defer allocator.free(instructions);
 
-    const polygons = PolygonResource.new(try reader.allocReadResourceByID(allocator, resource_ids.polygons));
+    const polygons = PolygonResource.init(try reader.allocReadResourceByID(allocator, resource_ids.polygons));
     defer allocator.free(polygons.data);
 
-    const maybe_animations: ?PolygonResource.Instance = init: {
+    const maybe_animations: ?PolygonResource = init: {
         if (resource_ids.animations) |id| {
             const data = try reader.allocReadResourceByID(allocator, id);
-            break :init PolygonResource.new(data);
+            break :init PolygonResource.init(data);
         } else {
             break :init null;
         }

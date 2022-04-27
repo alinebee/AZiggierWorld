@@ -23,15 +23,22 @@ const mem = @import("std").mem;
 const palette_count = static_limits.palette_count;
 
 /// The size in bytes of an individual palette within an Another World palette resource.
-pub const raw_palette_size = @sizeOf(Color.Raw) * static_limits.color_count; // 32 bytes
+const raw_palette_size = @sizeOf(Color.Raw) * static_limits.color_count; // 32 bytes
 
-pub const Instance = struct {
+pub const PaletteResource = struct {
     /// Raw palette data read from Another World's resource files.
     /// The instance does not own this data; the parent context must ensure
     /// the slice stays valid for as long as the instance is in scope.
     data: []const u8,
 
     const Self = @This();
+
+    /// Create a new resource instance that loads palette data from the specified buffer.
+    /// The instance does not take ownership of the buffer; the caller must ensure
+    /// the buffer stays valid for as long as the instance is in scope.
+    pub fn init(data: []const u8) Self {
+        return .{ .data = data };
+    }
 
     /// Returns the palette at the specified ID.
     /// Returns error.EndOfStream if the palette resource data was truncated.
@@ -53,41 +60,39 @@ pub const Instance = struct {
         }
         return pal;
     }
-};
 
-pub fn new(data: []const u8) Instance {
-    return .{ .data = data };
-}
+    // - Exported constants -
 
-pub const Error = error{
-    EndOfStream,
-};
-
-// -- Examples --
-
-pub const Fixtures = struct {
-    // zig fmt: off
-    const palette = [raw_palette_size]u8 {
-        0x00, 0x00, // color 0
-        0x01, 0x11, // color 1
-        0x02, 0x22, // color 2
-        0x03, 0x33, // color 3
-        0x04, 0x44, // color 4
-        0x05, 0x55, // color 5
-        0x06, 0x66, // color 6
-        0x07, 0x77, // color 7
-        0x08, 0x88, // color 8
-        0x09, 0x99, // color 9
-        0x0A, 0xAA, // color 10
-        0x0B, 0xBB, // color 11
-        0x0C, 0xCC, // color 12
-        0x0D, 0xDD, // color 13
-        0x0E, 0xEE, // color 14
-        0x0F, 0xFF, // color 15
+    pub const Error = error{
+        EndOfStream,
     };
-    // zig fmt: on
 
-    pub const resource = palette ** palette_count;
+    // -- Examples --
+
+    pub const Fixtures = struct {
+        // zig fmt: off
+        const raw_palette = [raw_palette_size]u8 {
+            0x00, 0x00, // color 0
+            0x01, 0x11, // color 1
+            0x02, 0x22, // color 2
+            0x03, 0x33, // color 3
+            0x04, 0x44, // color 4
+            0x05, 0x55, // color 5
+            0x06, 0x66, // color 6
+            0x07, 0x77, // color 7
+            0x08, 0x88, // color 8
+            0x09, 0x99, // color 9
+            0x0A, 0xAA, // color 10
+            0x0B, 0xBB, // color 11
+            0x0C, 0xCC, // color 12
+            0x0D, 0xDD, // color 13
+            0x0E, 0xEE, // color 14
+            0x0F, 0xFF, // color 15
+        };
+        // zig fmt: on
+
+        pub const resource = raw_palette ** palette_count;
+    };
 };
 
 // -- Tests --
@@ -118,8 +123,8 @@ test "Instance.at returns expected palettes from resource" {
     };
     // zig fmt: on
 
-    const data = &Fixtures.resource;
-    const palettes = new(data);
+    const data = &PaletteResource.Fixtures.resource;
+    const palettes = PaletteResource.init(data);
 
     var idx: usize = 0;
     while (idx < palette_count) : (idx += 1) {
@@ -131,8 +136,8 @@ test "Instance.at returns expected palettes from resource" {
 }
 
 test "Instance.palette returns error.EndOfStream on truncated data" {
-    const data = Fixtures.resource[0..1023];
-    const palettes = new(data);
+    const data = PaletteResource.Fixtures.resource[0..1023];
+    const palettes = PaletteResource.init(data);
 
     try testing.expectError(error.EndOfStream, palettes.palette(31));
 }
