@@ -18,8 +18,8 @@ const Range = @import("../../values/range.zig").Range;
 const BoundingBox = @import("../../values/bounding_box.zig").BoundingBox;
 
 const Surface = @import("../surface.zig").Surface;
-const IndexedBitmap = @import("../test_helpers/indexed_bitmap.zig");
-const PlanarBitmapResource = @import("../../resources/planar_bitmap_resource.zig");
+const indexed_bitmap = @import("../test_helpers/indexed_bitmap.zig");
+const planar_bitmap = @import("../../resources/planar_bitmap.zig");
 
 const std = @import("std");
 const mem = std.mem;
@@ -230,8 +230,8 @@ pub fn PackedBuffer(comptime width: usize, comptime height: usize) type {
 
         /// Load the contents of an Another World bitmap resource into this buffer,
         /// replacing all existing pixels.
-        pub fn loadBitmapResource(self: *Self, bitmap_data: []const u8) PlanarBitmapResource.Error!void {
-            var reader = try PlanarBitmapResource.new(width, height, bitmap_data);
+        pub fn loadBitmapResource(self: *Self, bitmap_data: []const u8) planar_bitmap.Error!void {
+            var reader = try planar_bitmap.planarBitmapReader(width, height, bitmap_data);
 
             for (self.data) |*native_color| {
                 native_color.* = .{
@@ -291,8 +291,8 @@ pub fn PackedBuffer(comptime width: usize, comptime height: usize) type {
         // -- Test helpers --
 
         /// Export the content of the buffer to a bitmap for easier comparison testing.
-        pub fn toBitmap(self: Self) IndexedBitmap.Instance(width, height) {
-            var bitmap: IndexedBitmap.Instance(width, height) = .{ .data = undefined };
+        pub fn toBitmap(self: Self) indexed_bitmap.IndexedBitmap(width, height) {
+            var bitmap: indexed_bitmap.IndexedBitmap(width, height) = .{ .data = undefined };
 
             // TODO: this would probably be more efficient if we iterated the buffer's data
             // instead of the bitmap's. But, this function is only used in tests right now.
@@ -316,7 +316,7 @@ pub fn PackedBuffer(comptime width: usize, comptime height: usize) type {
 
         /// Fill the buffer from the string representation of a bitmap.
         pub fn fillFromString(self: *Self, bitmap_string: []const u8) void {
-            const bitmap = IndexedBitmap.Instance(width, height).fromString(bitmap_string);
+            const bitmap = indexed_bitmap.IndexedBitmap(width, height).fromString(bitmap_string);
 
             for (bitmap.data) |row, y| {
                 for (row) |column, x| {
@@ -436,7 +436,7 @@ test "toBitmap returns bitmap with expected contents" {
         \\CDEF
     ;
 
-    try IndexedBitmap.expectBitmap(expected, buffer.toBitmap());
+    try indexed_bitmap.expectBitmap(expected, buffer.toBitmap());
 }
 
 test "fromString fills buffer with expected contents" {

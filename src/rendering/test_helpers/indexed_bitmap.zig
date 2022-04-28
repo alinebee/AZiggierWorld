@@ -7,7 +7,7 @@ const debug = std.debug;
 
 /// Stores a 16-color bitmap with the specified width and height, and converts its contents
 /// to and from a multiline string representation. Intended for unit-testing the contents of a draw buffer.
-pub fn Instance(comptime width: usize, comptime height: usize) type {
+pub fn IndexedBitmap(comptime width: usize, comptime height: usize) type {
     // Store pixel data in a two-dimensional array
     const Row = [width]ColorID.Trusted;
     const Data = [height]Row;
@@ -135,7 +135,7 @@ pub fn expectEqualBitmaps(expected: anytype, actual: @TypeOf(expected)) !void {
 const testing = @import("../../utils/testing.zig");
 
 test "fromString populates bitmap data correctly from multiline string" {
-    const bitmap = Instance(4, 4).fromString(
+    const bitmap = IndexedBitmap(4, 4).fromString(
         \\0123
         \\4567
         \\89AB
@@ -153,7 +153,7 @@ test "fromString populates bitmap data correctly from multiline string" {
 }
 
 test "fileld populates bitmap data correctly" {
-    const bitmap = Instance(4, 4).filled(15);
+    const bitmap = IndexedBitmap(4, 4).filled(15);
 
     const expected: @TypeOf(bitmap.data) = .{
         .{ 15, 15, 15, 15 },
@@ -166,7 +166,7 @@ test "fileld populates bitmap data correctly" {
 }
 
 test "format prints colors as lines of hex values" {
-    const bitmap = Instance(4, 4){
+    const bitmap = IndexedBitmap(4, 4){
         .data = .{
             .{ 00, 01, 02, 03 },
             .{ 04, 05, 06, 07 },
@@ -189,7 +189,7 @@ test "format prints colors as lines of hex values" {
 }
 
 test "expectBitmap compares bitmap correctly against string" {
-    const bitmap = Instance(4, 4){
+    const bitmap = IndexedBitmap(4, 4){
         .data = .{
             .{ 00, 01, 02, 03 },
             .{ 04, 05, 06, 07 },
@@ -208,7 +208,7 @@ test "expectBitmap compares bitmap correctly against string" {
 }
 
 test "expectedEqualBitmaps compares two bitmaps correctly" {
-    const expected = Instance(4, 4){
+    const expected = IndexedBitmap(4, 4){
         .data = .{
             .{ 00, 01, 02, 03 },
             .{ 04, 05, 06, 07 },
@@ -217,7 +217,7 @@ test "expectedEqualBitmaps compares two bitmaps correctly" {
         },
     };
 
-    const actual = Instance(4, 4){
+    const actual = IndexedBitmap(4, 4){
         .data = .{
             .{ 00, 01, 02, 03 },
             .{ 04, 05, 06, 07 },

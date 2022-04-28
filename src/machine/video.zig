@@ -240,9 +240,9 @@ const PolygonVisitor = struct {
 const testing = @import("../utils/testing.zig");
 const MockHost = @import("test_helpers/mock_host.zig").MockHost;
 const Color = @import("../values/color.zig").Color;
-const IndexedBitmap = @import("../rendering/test_helpers/indexed_bitmap.zig");
-const PlanarBitmapResource = @import("../resources/planar_bitmap_resource.zig");
-const Bitmap = IndexedBitmap.Instance(static_limits.virtual_screen_width, static_limits.virtual_screen_height);
+const indexed_bitmap = @import("../rendering/test_helpers/indexed_bitmap.zig");
+const planar_bitmap = @import("../resources/planar_bitmap.zig");
+const Bitmap = indexed_bitmap.IndexedBitmap(static_limits.virtual_screen_width, static_limits.virtual_screen_height);
 
 test "Ensure everything compiles" {
     testing.refAllDecls(Video);
@@ -345,7 +345,7 @@ test "markBufferAsReady does not swap buffers when front buffer is marked ready 
 test "loadBitmapResource loads bitmap data into expected buffer" {
     var instance = testInstance();
 
-    const bitmap_size = comptime PlanarBitmapResource.bytesRequiredForSize(
+    const bitmap_size = comptime planar_bitmap.bytesRequiredForSize(
         static_limits.virtual_screen_width,
         static_limits.virtual_screen_height,
     );
@@ -359,9 +359,9 @@ test "loadBitmapResource loads bitmap data into expected buffer" {
     for (instance.buffers) |buffer, index| {
         const actual = buffer.toBitmap();
         if (index == Video.bitmap_buffer_id) {
-            try IndexedBitmap.expectEqualBitmaps(expected_bitmap_buffer_contents, actual);
+            try indexed_bitmap.expectEqualBitmaps(expected_bitmap_buffer_contents, actual);
         } else {
-            try IndexedBitmap.expectEqualBitmaps(expected_untouched_buffer_contents, actual);
+            try indexed_bitmap.expectEqualBitmaps(expected_untouched_buffer_contents, actual);
         }
     }
 }

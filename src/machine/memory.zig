@@ -35,7 +35,7 @@
 //! the entire type as move-only.
 const ResourceReader = @import("../resources/resource_reader.zig").ResourceReader;
 const ResourceID = @import("../values/resource_id.zig");
-const PlanarBitmapResource = @import("../resources/planar_bitmap_resource.zig");
+const planar_bitmap = @import("../resources/planar_bitmap.zig");
 const GamePart = @import("../values/game_part.zig").GamePart;
 
 const static_limits = @import("../static_limits.zig");
@@ -69,7 +69,7 @@ const IndividualResourceLocation = union(enum) {
 /// The location of a resource in memory, or null if the resource is not loaded.
 const PossibleResourceLocation = ?[]const u8;
 
-const bitmap_region_size = PlanarBitmapResource.bytesRequiredForSize(
+const bitmap_region_size = planar_bitmap.bytesRequiredForSize(
     static_limits.virtual_screen_width,
     static_limits.virtual_screen_height,
 );

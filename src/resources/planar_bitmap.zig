@@ -23,8 +23,8 @@ const debug = @import("std").debug;
 /// Given a pair of image dimensions and a pointer to planar bitmap data, returns a reader
 /// that parses each pixel of an image with those dimensions, from top left to bottom right.
 /// Returns error.InvalidBitmapSize if the data is the wrong byte length for the dimensions.
-pub fn new(comptime width: usize, comptime height: usize, data: []const u8) Error!Reader(width, height) {
-    return Reader(width, height).init(data);
+pub fn planarBitmapReader(comptime width: usize, comptime height: usize, data: []const u8) Error!PlanarBitmapReader(width, height) {
+    return PlanarBitmapReader(width, height).init(data);
 }
 
 /// Returns the number of bytes required for storing a planar bitmap resource
@@ -35,7 +35,7 @@ pub fn bytesRequiredForSize(comptime width: usize, comptime height: usize) usize
 }
 
 /// Returns a reader suitable for reading a planar bitmap resource of the specified pixel width and height.
-pub fn Reader(comptime width: usize, comptime height: usize) type {
+pub fn PlanarBitmapReader(comptime width: usize, comptime height: usize) type {
     const plane_count = 4;
     const bytes_required = bytesRequiredForSize(width, height);
 
@@ -152,7 +152,7 @@ const testing = @import("../utils/testing.zig");
 
 test "Parses planar data properly" {
     const data = &Fixtures.valid_16px;
-    var reader = try new(4, 4, data);
+    var reader = try planarBitmapReader(4, 4, data);
     try testing.expectEqual(false, reader.isAtEnd());
 
     const expected = [16]ColorID.Trusted{
@@ -186,13 +186,13 @@ test "Parses planar data properly" {
 test "new returns error.InvalidBitmapSize if source data is the wrong length for requested dimensions" {
     const data = &Fixtures.valid_16px;
 
-    try testing.expectError(error.InvalidBitmapSize, new(4, 2, data));
-    try testing.expectError(error.InvalidBitmapSize, new(320, 200, data));
+    try testing.expectError(error.InvalidBitmapSize, planarBitmapReader(4, 2, data));
+    try testing.expectError(error.InvalidBitmapSize, planarBitmapReader(320, 200, data));
 }
 
 test "readColor returns error.EndOfStream once reader is exhausted" {
     const data = &Fixtures.valid_16px;
-    var reader = try new(4, 4, data);
+    var reader = try planarBitmapReader(4, 4, data);
     try testing.expectEqual(false, reader.isAtEnd());
 
     while (reader.isAtEnd() == false) {

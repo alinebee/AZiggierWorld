@@ -1,4 +1,4 @@
-const PlanarBitmapResource = @import("../../resources/planar_bitmap_resource.zig");
+const planar_bitmap = @import("../../resources/planar_bitmap.zig");
 const Surface = @import("../surface.zig").Surface;
 const Palette = @import("../../values/palette.zig");
 
@@ -285,7 +285,7 @@ pub fn runTests(comptime Instance: anytype) void {
         }
 
         test "loadBitmapResource correctly parses planar bitmap data" {
-            const data = &PlanarBitmapResource.Fixtures.valid_16px;
+            const data = &planar_bitmap.Fixtures.valid_16px;
             const Buffer = Instance(4, 4);
 
             var buffer = Buffer{};

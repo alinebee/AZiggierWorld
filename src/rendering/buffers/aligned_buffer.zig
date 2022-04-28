@@ -13,8 +13,8 @@ const Range = @import("../../values/range.zig").Range;
 const BoundingBox = @import("../../values/bounding_box.zig").BoundingBox;
 
 const Surface = @import("../surface.zig").Surface;
-const IndexedBitmap = @import("../test_helpers/indexed_bitmap.zig");
-const PlanarBitmapResource = @import("../../resources/planar_bitmap_resource.zig");
+const IndexedBitmap = @import("../test_helpers/indexed_bitmap.zig").IndexedBitmap;
+const planar_bitmap = @import("../../resources/planar_bitmap.zig");
 
 const mem = @import("std").mem;
 const math = @import("std").math;
@@ -179,8 +179,8 @@ pub fn AlignedBuffer(comptime width: usize, comptime height: usize) type {
 
         /// Load the contents of an Another World bitmap resource into this buffer,
         /// replacing all existing pixels.
-        pub fn loadBitmapResource(self: *Self, bitmap_data: []const u8) PlanarBitmapResource.Error!void {
-            var reader = try PlanarBitmapResource.new(width, height, bitmap_data);
+        pub fn loadBitmapResource(self: *Self, bitmap_data: []const u8) planar_bitmap.Error!void {
+            var reader = try planar_bitmap.planarBitmapReader(width, height, bitmap_data);
 
             for (self.data) |*row| {
                 for (row.*) |*color| {
@@ -215,13 +215,13 @@ pub fn AlignedBuffer(comptime width: usize, comptime height: usize) type {
         // -- Test helpers --
 
         /// Export the content of the buffer to a bitmap for easier comparison testing.
-        pub fn toBitmap(self: Self) IndexedBitmap.Instance(width, height) {
-            return IndexedBitmap.Instance(width, height){ .data = self.data };
+        pub fn toBitmap(self: Self) IndexedBitmap(width, height) {
+            return IndexedBitmap(width, height){ .data = self.data };
         }
 
         /// Create a new buffer from the string representation of a bitmap.
         pub fn fillFromString(self: *Self, bitmap_string: []const u8) void {
-            const bitmap = IndexedBitmap.Instance(width, height).fromString(bitmap_string);
+            const bitmap = IndexedBitmap(width, height).fromString(bitmap_string);
             self.data = bitmap.data;
         }
     };
