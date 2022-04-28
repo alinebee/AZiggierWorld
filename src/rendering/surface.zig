@@ -1,16 +1,16 @@
-const Color = @import("../values/color.zig");
+const Color = @import("../values/color.zig").Color;
 const mem = @import("std").mem;
 
-/// Creates a new 24-bit rendering surface of the specified width and height, filled with the specified color.
-pub fn filled(comptime Surface: type, color: Color.Instance) Surface {
-    var surface: Surface = undefined;
-    mem.set(Color.Instance, &surface, color);
-    return surface;
+/// Returns the type of a 24-bit rendering surface that has the specified width and height.
+pub fn Surface(comptime width: usize, comptime height: usize) type {
+    return [width * height]Color;
 }
 
-/// Returns the type of a 24-bit rendering surface that has the specified width and height.
-pub fn Instance(comptime width: usize, comptime height: usize) type {
-    return [width * height]Color.Instance;
+/// Creates a new 24-bit rendering surface of the specified width and height, filled with the specified color.
+pub fn filledSurface(comptime SurfaceType: type, color: Color) SurfaceType {
+    var surface: SurfaceType = undefined;
+    mem.set(Color, &surface, color);
+    return surface;
 }
 
 // -- Tests --
@@ -23,20 +23,20 @@ test "Instance matches the size of a raw u8 buffer" {
     const expected_size = width * height * 4;
 
     const RawType = [expected_size]u8;
-    const SurfaceType = Instance(width, height);
+    const SurfaceType = Surface(width, height);
 
     try testing.expectEqual(expected_size, @sizeOf(RawType));
     try testing.expectEqual(expected_size, @sizeOf(SurfaceType));
 }
 
-test "filled fills entire buffer with specified color" {
-    const SurfaceType = Instance(10, 10);
-    const color = Color.Instance{ .r = 1, .g = 2, .b = 3, .a = 255 };
+test "filledSurface fills entire buffer with specified color" {
+    const SurfaceType = Surface(10, 10);
+    const color = Color{ .r = 1, .g = 2, .b = 3, .a = 255 };
 
     var expected: SurfaceType = undefined;
-    mem.set(Color.Instance, &expected, color);
+    mem.set(Color, &expected, color);
 
-    const actual = filled(SurfaceType, color);
+    const actual = filledSurface(SurfaceType, color);
 
     try testing.expectEqual(expected, actual);
 }

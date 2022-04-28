@@ -12,7 +12,7 @@
 //! color space of the original Amiga hardware that the game was developed on, documented here:
 //! http://fabiensanglard.net/another_world_polygons_amiga500/index.html
 
-const Color = @import("../values/color.zig");
+const Color = @import("../values/color.zig").Color;
 const Palette = @import("../values/palette.zig");
 const PaletteID = @import("../values/palette_id.zig");
 
@@ -131,7 +131,7 @@ test "Instance.at returns expected palettes from resource" {
         const palette_id = @intCast(PaletteID.Trusted, idx);
         const palette = try palettes.palette(palette_id);
 
-        try testing.expectEqualSlices(Color.Instance, &expected_palette, &palette);
+        try testing.expectEqualSlices(Color, &expected_palette, &palette);
     }
 }
 

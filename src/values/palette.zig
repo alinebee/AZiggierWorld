@@ -1,11 +1,11 @@
-const Color = @import("color.zig");
+const Color = @import("color.zig").Color;
 const static_limits = @import("../static_limits.zig");
 
 /// The number of colors inside a palette.
 const color_count = static_limits.color_count;
 
 /// A 16-color palette of 24-bit colors.
-pub const Instance = [color_count]Color.Instance;
+pub const Instance = [color_count]Color;
 
 pub const Fixtures = struct {
     // zig fmt: off

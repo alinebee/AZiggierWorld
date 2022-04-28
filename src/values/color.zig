@@ -22,33 +22,37 @@
 //! by leaving the lower 2 bits empty.)
 
 /// A 32-bit color value parsed from Another World's resource data.
-pub const Instance = packed struct {
+pub const Color = packed struct {
     r: u8,
     g: u8,
     b: u8,
     a: u8,
+
+    const Self = @This();
+
+    /// Convert a 16-bit raw color value from Another World game data into an RGB color.
+    pub fn parse(raw: Raw) Self {
+        // Palette entries use 4 bits per channel but were stored
+        // as 16 bits with the layout xxxxRRRRGGGGBBBB:
+        // First 4 bits are unused and are just for alignment.
+        // Next 4 are red, next 4 are green, next 4 are blue.
+        const raw_r = @truncate(u4, raw >> 8);
+        const raw_g = @truncate(u4, raw >> 4);
+        const raw_b = @truncate(u4, raw >> 0);
+
+        return .{
+            .r = spread(raw_r),
+            .g = spread(raw_g),
+            .b = spread(raw_b),
+            .a = 255,
+        };
+    }
+
+    // - Exported constants -
+
+    /// Color values are stored in resource data as 16-bit big-endian integers.
+    pub const Raw = u16;
 };
-
-/// Color values are stored in resource data as 16-bit big-endian integers.
-pub const Raw = u16;
-
-/// Convert a 16-bit raw color value from Another World game data into an RGB color.
-pub fn parse(raw: Raw) Instance {
-    // Palette entries use 4 bits per channel but were stored
-    // as 16 bits with the layout xxxxRRRRGGGGBBBB:
-    // First 4 bits are unused and are just for alignment.
-    // Next 4 are red, next 4 are green, next 4 are blue.
-    const raw_r = @truncate(u4, raw >> 8);
-    const raw_g = @truncate(u4, raw >> 4);
-    const raw_b = @truncate(u4, raw >> 0);
-
-    return .{
-        .r = spread(raw_r),
-        .g = spread(raw_g),
-        .b = spread(raw_b),
-        .a = 255,
-    };
-}
 
 /// Take a 4-bit channel value and spread it into an 8-bit value.
 fn spread(value: u4) u8 {
@@ -61,12 +65,12 @@ fn spread(value: u4) u8 {
 
 const Fixtures = struct {
     // zig fmt: off
-    const red:      Raw = 0b0000_1111_0000_0000;
-    const green:    Raw = 0b0000_0000_1111_0000;
-    const blue:     Raw = 0b0000_0000_0000_1111;
-    const white:    Raw = 0b0000_1111_1111_1111;
-    const grey:     Raw = 0b0000_1000_1000_1000;
-    const black:    Raw = 0b0000_0000_0000_0000;
+    const red:      Color.Raw = 0b0000_1111_0000_0000;
+    const green:    Color.Raw = 0b0000_0000_1111_0000;
+    const blue:     Color.Raw = 0b0000_0000_0000_1111;
+    const white:    Color.Raw = 0b0000_1111_1111_1111;
+    const grey:     Color.Raw = 0b0000_1000_1000_1000;
+    const black:    Color.Raw = 0b0000_0000_0000_0000;
     // zig fmt: on
 };
 
@@ -98,11 +102,11 @@ test "spread converts 4-bit values to expected 8-bit values" {
 
 test "parse converts 12-bit colors to expected 24-bit colors" {
     // zig fmt: off
-    try testing.expectEqual(.{ .r = 252, .g = 0,   .b = 0, .a = 255 },    parse(Fixtures.red));
-    try testing.expectEqual(.{ .r = 0,   .g = 252, .b = 0, .a = 255 },    parse(Fixtures.green));
-    try testing.expectEqual(.{ .r = 0,   .g = 0,   .b = 252, .a = 255 },  parse(Fixtures.blue));
-    try testing.expectEqual(.{ .r = 252, .g = 252, .b = 252, .a = 255 },  parse(Fixtures.white));
-    try testing.expectEqual(.{ .r = 136, .g = 136, .b = 136, .a = 255 },  parse(Fixtures.grey));
-    try testing.expectEqual(.{ .r = 0,   .g = 0,   .b = 0, .a = 255 },    parse(Fixtures.black));
+    try testing.expectEqual(.{ .r = 252, .g = 0,   .b = 0, .a = 255 },    Color.parse(Fixtures.red));
+    try testing.expectEqual(.{ .r = 0,   .g = 252, .b = 0, .a = 255 },    Color.parse(Fixtures.green));
+    try testing.expectEqual(.{ .r = 0,   .g = 0,   .b = 252, .a = 255 },  Color.parse(Fixtures.blue));
+    try testing.expectEqual(.{ .r = 252, .g = 252, .b = 252, .a = 255 },  Color.parse(Fixtures.white));
+    try testing.expectEqual(.{ .r = 136, .g = 136, .b = 136, .a = 255 },  Color.parse(Fixtures.grey));
+    try testing.expectEqual(.{ .r = 0,   .g = 0,   .b = 0, .a = 255 },    Color.parse(Fixtures.black));
     // zig fmt: on
 }

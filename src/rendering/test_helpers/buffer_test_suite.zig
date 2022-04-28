@@ -1,5 +1,5 @@
 const PlanarBitmapResource = @import("../../resources/planar_bitmap_resource.zig");
-const Surface = @import("../surface.zig");
+const Surface = @import("../surface.zig").Surface;
 const Palette = @import("../../values/palette.zig");
 
 const testing = @import("../../utils/testing.zig");
@@ -303,7 +303,7 @@ pub fn runTests(comptime Instance: anytype) void {
 
         test "renderToSurface correctly renders 24-bit colors from specified palette" {
             const Buffer = Instance(4, 4);
-            const DestinationSurface = Surface.Instance(4, 4);
+            const DestinationSurface = Surface(4, 4);
 
             var source = Buffer{};
             var destination: DestinationSurface = undefined;

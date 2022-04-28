@@ -6,13 +6,15 @@ const BufferID = @import("../values/buffer_id.zig");
 const PaletteID = @import("../values/palette_id.zig");
 const Palette = @import("../values/palette.zig");
 const Polygon = @import("../rendering/polygon.zig").Polygon;
-const Surface = @import("../rendering/surface.zig");
 const PolygonResource = @import("../resources/polygon_resource.zig").PolygonResource;
 const PaletteResource = @import("../resources/palette_resource.zig").PaletteResource;
 
 const PackedBuffer = @import("../rendering/buffers/packed_buffer.zig");
 const drawPolygonImpl = @import("../rendering/operations/draw_polygon.zig").drawPolygon;
 const drawStringImpl = @import("../rendering/operations/draw_string.zig").drawString;
+
+const Surface = @import("../rendering/surface.zig").Surface;
+const filledSurface = @import("../rendering/surface.zig").filledSurface;
 
 const static_limits = @import("../static_limits.zig");
 
@@ -210,7 +212,7 @@ pub const Video = struct {
     pub const PolygonAddress = PolygonResource.Address;
 
     /// The type of 24-bit buffer that hosts are expected to provide for the video subsystem to render frames into.
-    pub const HostSurface = Surface.Instance(static_limits.virtual_screen_width, static_limits.virtual_screen_height);
+    pub const HostSurface = Surface(static_limits.virtual_screen_width, static_limits.virtual_screen_height);
 
     pub const Error = error{
         /// Attempted to render polygons from the animations resource when it was not loaded by the current game part.
@@ -237,7 +239,7 @@ const PolygonVisitor = struct {
 
 const testing = @import("../utils/testing.zig");
 const MockHost = @import("test_helpers/mock_host.zig").MockHost;
-const Color = @import("../values/color.zig");
+const Color = @import("../values/color.zig").Color;
 const IndexedBitmap = @import("../rendering/test_helpers/indexed_bitmap.zig");
 const PlanarBitmapResource = @import("../resources/planar_bitmap_resource.zig");
 const Bitmap = IndexedBitmap.Instance(static_limits.virtual_screen_width, static_limits.virtual_screen_height);
@@ -404,7 +406,7 @@ test "renderBufferToSurface renders colors from current palette into surface" {
 
     var surface: Video.HostSurface = undefined;
     const expected_color = instance.current_palette.?[color_id];
-    const expected_surface = Surface.filled(Video.HostSurface, expected_color);
+    const expected_surface = filledSurface(Video.HostSurface, expected_color);
 
     try instance.renderBufferToSurface(buffer_id, &surface);
     try testing.expectEqual(expected_surface, surface);
@@ -421,7 +423,7 @@ test "renderBufferToSurface returns error.PaletteNotSelected and leaves surface 
     // This color is not present in the palette and should never be rendered normally
     const untouched_color = .{ .r = 1, .g = 2, .b = 3, .a = 0 };
 
-    var surface = Surface.filled(Video.HostSurface, untouched_color);
+    var surface = filledSurface(Video.HostSurface, untouched_color);
     const expected_surface = surface;
 
     try testing.expectError(error.PaletteNotSelected, instance.renderBufferToSurface(buffer_id, &surface));
