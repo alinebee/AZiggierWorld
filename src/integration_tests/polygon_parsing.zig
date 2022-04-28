@@ -5,7 +5,7 @@
 const Instruction = @import("../instructions/instruction.zig");
 const Program = @import("../machine/program.zig").Program;
 const PolygonResource = @import("../resources/polygon_resource.zig").PolygonResource;
-const Polygon = @import("../rendering/polygon.zig");
+const Polygon = @import("../rendering/polygon.zig").Polygon;
 const PolygonScale = @import("../values/polygon_scale.zig");
 const Point = @import("../values/point.zig").Point;
 const ResourceDirectory = @import("../resources/resource_directory.zig").ResourceDirectory;
@@ -110,7 +110,7 @@ const Error = error{
 const PolygonVisitor = struct {
     count: usize = 0,
 
-    pub fn visit(self: *PolygonVisitor, polygon: Polygon.Instance) !void {
+    pub fn visit(self: *PolygonVisitor, polygon: Polygon) !void {
         self.count += 1;
         try polygon.validate();
     }

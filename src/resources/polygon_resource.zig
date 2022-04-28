@@ -17,10 +17,10 @@
 //!
 //! (It also allows potential recursion cycles, which this parser manually guards against.)
 
-const Polygon = @import("../rendering/polygon.zig");
+const Polygon = @import("../rendering/polygon.zig").Polygon;
 const PolygonScale = @import("../values/polygon_scale.zig");
 const Point = @import("../values/point.zig").Point;
-const DrawMode = @import("../values/draw_mode.zig");
+const DrawMode = @import("../values/draw_mode.zig").DrawMode;
 
 const introspection = @import("../utils/introspection.zig");
 const fixedBufferStream = @import("std").io.fixedBufferStream;
@@ -47,7 +47,7 @@ pub const PolygonResource = struct {
     /// Reads polygons from the specified address within the polygon data, and calls `visitor.visit` with each polygon.
     /// Polygons are positioned and scaled according to the `origin` and `scale` parameters.
     ///
-    /// `visitor.visit` must have the signature: fn (Polygon.Instance) !void.
+    /// `visitor.visit` must have the signature: fn (Polygon) !void.
     ///
     /// Returns one of Error if the address is invalid, if malformed data is encountered when reading polygon data,
     /// or if `visitor.visit` returns an error.
@@ -60,7 +60,7 @@ pub const PolygonResource = struct {
         try self.recursivelyParseEntry(address, origin, scale, null, 0, visitor);
     }
 
-    fn recursivelyParseEntry(self: Self, address: Address, origin: Point, scale: PolygonScale.Raw, draw_mode: ?DrawMode.Enum, recursion_depth: usize, visitor: anytype) Error(@TypeOf(visitor))!void {
+    fn recursivelyParseEntry(self: Self, address: Address, origin: Point, scale: PolygonScale.Raw, draw_mode: ?DrawMode, recursion_depth: usize, visitor: anytype) Error(@TypeOf(visitor))!void {
         if (address >= self.data.len) {
             return error.InvalidAddress;
         }
@@ -249,7 +249,7 @@ pub const PolygonResource = struct {
 const EntryHeader = union(enum) {
     /// The data following the header contains a single polygon,
     /// which should be drawn using the specified draw mode if no override mode has been applied.
-    single_polygon: DrawMode.Enum,
+    single_polygon: DrawMode,
     /// The data following the header contains a group of polygons or subgroups.
     group: void,
 
@@ -274,7 +274,7 @@ const EntryHeader = union(enum) {
         const raw = try reader.readByte();
 
         const top_2_bits = raw >> 6;
-        const remaining_6_bits = raw & 0b0011_1111;
+        const remaining_6_bits = @as(DrawMode.Raw, raw & 0b0011_1111);
 
         if (top_2_bits == 0b11) {
             const draw_mode = DrawMode.parse(remaining_6_bits);
@@ -321,7 +321,7 @@ const EntryPointer = struct {
     offset: Point,
     /// An optional overridden draw mode for this entry's polygon.
     /// Unused if the entry is a subgroup rather than a single polygon.
-    draw_mode: ?DrawMode.Enum,
+    draw_mode: ?DrawMode,
 
     /// Parses a single entry pointer from a byte stream containing polygon resource data.
     /// Consumes either 4 or 6 bytes from the stream, depending on the contents of the pointer record.
@@ -550,11 +550,11 @@ const ArrayList = @import("std").ArrayList;
 const Allocator = @import("std").mem.Allocator;
 
 const TestVisitor = struct {
-    polygons: ArrayList(Polygon.Instance),
+    polygons: ArrayList(Polygon),
 
     fn init(allocator: Allocator) TestVisitor {
         return .{
-            .polygons = ArrayList(Polygon.Instance).init(allocator),
+            .polygons = ArrayList(Polygon).init(allocator),
         };
     }
 
@@ -562,7 +562,7 @@ const TestVisitor = struct {
         self.polygons.deinit();
     }
 
-    fn visit(self: *TestVisitor, polygon: Polygon.Instance) !void {
+    fn visit(self: *TestVisitor, polygon: Polygon) !void {
         try self.polygons.append(polygon);
     }
 };

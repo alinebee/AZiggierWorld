@@ -7,7 +7,7 @@
 
 const ColorID = @import("../../values/color_id.zig");
 const Palette = @import("../../values/palette.zig");
-const DrawMode = @import("../../values/draw_mode.zig");
+const DrawMode = @import("../../values/draw_mode.zig").DrawMode;
 const Point = @import("../../values/point.zig").Point;
 const Range = @import("../../values/range.zig").Range;
 const BoundingBox = @import("../../values/bounding_box.zig").BoundingBox;
@@ -51,7 +51,7 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
 
             /// Creates a new draw operation that can render into an aligned buffer of this size
             /// using the specified draw mode.
-            pub fn forMode(draw_mode: DrawMode.Enum, mask_source: *const Self) DrawOperation {
+            pub fn forMode(draw_mode: DrawMode, mask_source: *const Self) DrawOperation {
                 return switch (draw_mode) {
                     .solid_color => |color| solidColor(color),
                     .highlight => highlight(),

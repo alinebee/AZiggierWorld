@@ -5,7 +5,7 @@ const StringID = @import("../values/string_id.zig");
 const BufferID = @import("../values/buffer_id.zig");
 const PaletteID = @import("../values/palette_id.zig");
 const Palette = @import("../values/palette.zig");
-const Polygon = @import("../rendering/polygon.zig");
+const Polygon = @import("../rendering/polygon.zig").Polygon;
 const Surface = @import("../rendering/surface.zig");
 const PolygonResource = @import("../resources/polygon_resource.zig").PolygonResource;
 const PaletteResource = @import("../resources/palette_resource.zig").PaletteResource;
@@ -228,7 +228,7 @@ const PolygonVisitor = struct {
     mask_buffer: *const Video.Buffer,
 
     /// Draw a single polygon into the target buffer, using the mask buffer to read from if necessary.
-    pub fn visit(self: @This(), polygon: Polygon.Instance) !void {
+    pub fn visit(self: @This(), polygon: Polygon) !void {
         try drawPolygonImpl(Video.Buffer, self.target_buffer, self.mask_buffer, polygon);
     }
 };

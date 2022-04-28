@@ -1,8 +1,7 @@
-const Polygon = @import("../polygon.zig");
-const DrawMode = @import("../../values/draw_mode.zig");
+const Polygon = @import("../polygon.zig").Polygon;
 const Point = @import("../../values/point.zig").Point;
 const Range = @import("../../values/range.zig").Range;
-const FixedPrecision = @import("../../values/fixed_precision.zig");
+const FixedPrecision = @import("../../values/fixed_precision.zig").FixedPrecision;
 
 const static_limits = @import("../../static_limits.zig");
 const math = @import("std").math;
@@ -13,7 +12,7 @@ const log = @import("../../utils/logging.zig").log;
 /// - the polygon contains < 4 vertices.
 /// - any vertex along the right-hand side of the polygon is higher than the previous vertex.
 /// - any vertex along the right-hand side of the polygon is > 1023 units below the previous vertex.
-pub fn drawPolygon(comptime Buffer: type, buffer: *Buffer, mask_buffer: *const Buffer, polygon: Polygon.Instance) Error!void {
+pub fn drawPolygon(comptime Buffer: type, buffer: *Buffer, mask_buffer: *const Buffer, polygon: Polygon) Error!void {
     const operation = Buffer.DrawOperation.forMode(polygon.draw_mode, mask_buffer);
 
     // Early-out for polygons that cover a single screen pixel
@@ -53,8 +52,8 @@ pub fn drawPolygon(comptime Buffer: type, buffer: *Buffer, mask_buffer: *const B
     // as the routine traverses the edges of the polygon.
     //
     // (We could rewrite all of this to use floating-point math instead but where's the fun in that?)
-    var x1 = FixedPrecision.new(vertices[cw_vertex].x);
-    var x2 = FixedPrecision.new(vertices[ccw_vertex].x);
+    var x1 = FixedPrecision.init(vertices[cw_vertex].x);
+    var x2 = FixedPrecision.init(vertices[ccw_vertex].x);
     var y = vertices[cw_vertex].y;
 
     cw_vertex += 1;
@@ -152,7 +151,7 @@ const precomputed_slopes = init: {
 
 /// Given an {x, y} vector, calculates the step to add to x for each unit of y
 /// to draw a slope along that vector.
-fn stepDistance(delta_x: Point.Coordinate, delta_y: TrustedVerticalDelta) FixedPrecision.Instance {
+fn stepDistance(delta_x: Point.Coordinate, delta_y: TrustedVerticalDelta) FixedPrecision {
     const slope = precomputed_slopes[delta_y];
 
     return .{
@@ -172,7 +171,7 @@ const expectPixels = @import("../test_helpers/buffer_test_suite.zig").expectPixe
 fn runTests(comptime BufferFn: anytype) void {
     _ = struct {
         test "drawPolygon draws a single-unit square polygon as a dot" {
-            const poly = Polygon.new(
+            const poly = Polygon.init(
                 .{ .solid_color = 0x1 },
                 &.{
                     .{ .x = 1, .y = 1 },
@@ -202,7 +201,7 @@ fn runTests(comptime BufferFn: anytype) void {
         }
 
         test "drawPolygon draws a many-sided polygon" {
-            const poly = Polygon.new(
+            const poly = Polygon.init(
                 .{ .solid_color = 0x1 },
                 &.{
                     .{ .x = 3, .y = 1 },
@@ -241,7 +240,7 @@ fn runTests(comptime BufferFn: anytype) void {
             // while the bottom (undrawn) pixel is onscreen.
             // FIXME: this is a flaw in our bounds calculations, that should ideally
             // be corrected upstream in the polygon parsing code.
-            const poly = Polygon.new(
+            const poly = Polygon.init(
                 .{ .solid_color = 0x1 },
                 &.{
                     .{ .x = 1, .y = -1 },
@@ -272,7 +271,7 @@ fn runTests(comptime BufferFn: anytype) void {
         }
 
         test "drawPolygon crops partially-offscreen polygon" {
-            const poly = Polygon.new(
+            const poly = Polygon.init(
                 .{ .solid_color = 0x1 },
                 &.{
                     .{ .x = 6, .y = -1 },
@@ -305,7 +304,7 @@ fn runTests(comptime BufferFn: anytype) void {
         }
 
         test "drawPolygon with malformed bounds does not draw offscreen" {
-            var poly = Polygon.new(
+            var poly = Polygon.init(
                 .{ .solid_color = 0x1 },
                 &.{
                     .{ .x = 3, .y = 6 },
@@ -341,7 +340,7 @@ fn runTests(comptime BufferFn: anytype) void {
         }
 
         test "drawPolygon with too few vertices returns error.VertexCountTooLow" {
-            const poly = Polygon.new(.highlight, &.{
+            const poly = Polygon.init(.highlight, &.{
                 .{ .x = 3, .y = 0 },
                 .{ .x = 4, .y = 1 },
                 .{ .x = 2, .y = 2 },
@@ -355,7 +354,7 @@ fn runTests(comptime BufferFn: anytype) void {
         }
 
         test "drawPolygon with vertices too far apart returns error.InvalidVertexDelta" {
-            const poly = Polygon.new(.highlight, &.{
+            const poly = Polygon.init(.highlight, &.{
                 .{ .x = 1, .y = 0 },
                 .{ .x = 1, .y = 16384 },
                 .{ .x = 0, .y = 16384 },
@@ -370,7 +369,7 @@ fn runTests(comptime BufferFn: anytype) void {
         }
 
         test "drawPolygon with backtracked vertices returns error.InvalidVertexDelta" {
-            const poly = Polygon.new(.highlight, &.{
+            const poly = Polygon.init(.highlight, &.{
                 .{ .x = 1, .y = 0 },
                 .{ .x = 1, .y = -1 },
                 .{ .x = 0, .y = -1 },
