@@ -27,7 +27,7 @@ const math = std.math;
 
 /// Returns a video buffer that packs 2 pixels into a single byte,
 /// like the original Another World's buffers did.
-pub fn Instance(comptime width: usize, comptime height: usize) type {
+pub fn PackedBuffer(comptime width: usize, comptime height: usize) type {
     const bytes_per_row = comptime try math.divCeil(usize, width, 2);
     const bytes_required = comptime height * bytes_per_row;
     const Data = [bytes_required]NativeColor;
@@ -377,8 +377,8 @@ const Index = struct {
 
 const testing = @import("../../utils/testing.zig");
 
-test "Instance produces buffer of the expected size filled with zeroes." {
-    const buffer = Instance(320, 200){};
+test "PackedBuffer produces buffer of the expected size filled with zeroes." {
+    const buffer = PackedBuffer(320, 200){};
 
     try testing.expectEqual(32_000, buffer.data.len);
 
@@ -387,25 +387,25 @@ test "Instance produces buffer of the expected size filled with zeroes." {
     try testing.expectEqual(expected_data, buffer.data);
 }
 
-test "Instance rounds up buffer size for uneven widths." {
-    const buffer = Instance(319, 199){};
+test "PackedBuffer rounds up buffer size for uneven widths." {
+    const buffer = PackedBuffer(319, 199){};
     const expected = 31_840; // 160 x 199
     try testing.expectEqual(expected, buffer.data.len);
 }
 
-test "Instance handles 0 width or height gracefully" {
-    const zero_height = Instance(320, 0){};
+test "PackedBuffer handles 0 width or height gracefully" {
+    const zero_height = PackedBuffer(320, 0){};
     try testing.expectEqual(0, zero_height.data.len);
 
-    const zero_width = Instance(0, 200){};
+    const zero_width = PackedBuffer(0, 200){};
     try testing.expectEqual(0, zero_width.data.len);
 
-    const zero_dimensions = Instance(0, 0){};
+    const zero_dimensions = PackedBuffer(0, 0){};
     try testing.expectEqual(0, zero_dimensions.data.len);
 }
 
 test "uncheckedIndexOf returns expected offset and handedness" {
-    const Buffer = Instance(320, 200);
+    const Buffer = PackedBuffer(320, 200);
 
     try testing.expectEqual(.{ .offset = 0, .hand = .left }, Buffer.uncheckedIndexOf(.{ .x = 0, .y = 0 }));
     try testing.expectEqual(.{ .offset = 0, .hand = .right }, Buffer.uncheckedIndexOf(.{ .x = 1, .y = 0 }));
@@ -420,7 +420,7 @@ test "uncheckedIndexOf returns expected offset and handedness" {
 
 // zig fmt: off
 test "toBitmap returns bitmap with expected contents" {
-    const buffer = Instance(4, 4){
+    const buffer = PackedBuffer(4, 4){
         .data = @bitCast([8]NativeColor, [_]u8{
             0x01, 0x23,
             0x45, 0x67,
@@ -440,7 +440,7 @@ test "toBitmap returns bitmap with expected contents" {
 }
 
 test "fromString fills buffer with expected contents" {
-    var buffer = Instance(4, 4){};
+    var buffer = PackedBuffer(4, 4){};
     buffer.fillFromString(
         \\0123
         \\4567
@@ -462,5 +462,5 @@ test "fromString fills buffer with expected contents" {
 const buffer_test_suite = @import("../test_helpers/buffer_test_suite.zig");
 
 test "Run buffer interface tests" {
-    buffer_test_suite.runTests(Instance);
+    buffer_test_suite.runTests(PackedBuffer);
 }

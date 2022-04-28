@@ -21,7 +21,7 @@ const math = @import("std").math;
 const debug = @import("std").debug;
 
 /// Returns a video buffer that stores a single pixel per byte.
-pub fn Instance(comptime width: usize, comptime height: usize) type {
+pub fn AlignedBuffer(comptime width: usize, comptime height: usize) type {
     // Store pixel data in a two-dimensional array
     const Row = [width]ColorID.Trusted;
     const Data = [height]Row;
@@ -234,8 +234,8 @@ const NativeColor = ColorID.Trusted;
 
 const testing = @import("../../utils/testing.zig");
 
-test "Instance produces buffer of the expected size filled with zeroes." {
-    const buffer = Instance(320, 200){};
+test "AlignedBuffer produces buffer of the expected size filled with zeroes." {
+    const buffer = AlignedBuffer(320, 200){};
 
     const ExpectedData = [200][320]NativeColor;
 
@@ -246,19 +246,19 @@ test "Instance produces buffer of the expected size filled with zeroes." {
     try testing.expectEqual(expected_data, buffer.data);
 }
 
-test "Instance handles 0 width or height gracefully" {
-    const zero_height = Instance(320, 0){};
+test "AlignedBuffer handles 0 width or height gracefully" {
+    const zero_height = AlignedBuffer(320, 0){};
     try testing.expectEqual([0][320]NativeColor, @TypeOf(zero_height.data));
 
-    const zero_width = Instance(0, 200){};
+    const zero_width = AlignedBuffer(0, 200){};
     try testing.expectEqual([200][0]NativeColor, @TypeOf(zero_width.data));
 
-    const zero_dimensions = Instance(0, 0){};
+    const zero_dimensions = AlignedBuffer(0, 0){};
     try testing.expectEqual([0][0]NativeColor, @TypeOf(zero_dimensions.data));
 }
 
 const buffer_test_suite = @import("../test_helpers/buffer_test_suite.zig");
 
 test "Run buffer interface tests" {
-    buffer_test_suite.runTests(Instance);
+    buffer_test_suite.runTests(AlignedBuffer);
 }

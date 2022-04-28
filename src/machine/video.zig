@@ -9,7 +9,7 @@ const Polygon = @import("../rendering/polygon.zig").Polygon;
 const PolygonResource = @import("../resources/polygon_resource.zig").PolygonResource;
 const PaletteResource = @import("../resources/palette_resource.zig").PaletteResource;
 
-const PackedBuffer = @import("../rendering/buffers/packed_buffer.zig");
+const PackedBuffer = @import("../rendering/buffers/packed_buffer.zig").PackedBuffer;
 const drawPolygonImpl = @import("../rendering/operations/draw_polygon.zig").drawPolygon;
 const drawStringImpl = @import("../rendering/operations/draw_string.zig").drawString;
 
@@ -25,7 +25,7 @@ const mem = @import("std").mem;
 /// The video subsystem responsible for handling draw calls and sending frames to the host screen.
 pub const Video = struct {
     /// The type used for the video buffers.
-    const Buffer = PackedBuffer.Instance(static_limits.virtual_screen_width, static_limits.virtual_screen_height);
+    const Buffer = PackedBuffer(static_limits.virtual_screen_width, static_limits.virtual_screen_height);
 
     /// The resource from which part-specific polygon data will be read.
     polygons: PolygonResource,

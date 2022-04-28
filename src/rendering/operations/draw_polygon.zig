@@ -385,13 +385,13 @@ fn runTests(comptime BufferFn: anytype) void {
     };
 }
 
-const AlignedBuffer = @import("../buffers/aligned_buffer.zig");
-const PackedBuffer = @import("../buffers/packed_buffer.zig");
+const AlignedBuffer = @import("../buffers/aligned_buffer.zig").AlignedBuffer;
+const PackedBuffer = @import("../buffers/packed_buffer.zig").PackedBuffer;
 
 test "Run tests with aligned buffer" {
-    runTests(AlignedBuffer.Instance);
+    runTests(AlignedBuffer);
 }
 
 test "Run tests with packed buffer" {
-    runTests(PackedBuffer.Instance);
+    runTests(PackedBuffer);
 }
