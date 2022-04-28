@@ -2,7 +2,7 @@ const Opcode = @import("../values/opcode.zig").Opcode;
 const Program = @import("../machine/program.zig").Program;
 const Machine = @import("../machine/machine.zig").Machine;
 const ResourceID = @import("../values/resource_id.zig");
-const GamePart = @import("../values/game_part.zig");
+const GamePart = @import("../values/game_part.zig").GamePart;
 
 /// Loads individual resources or entire game parts into memory.
 pub const ControlResources = union(enum) {
@@ -10,7 +10,7 @@ pub const ControlResources = union(enum) {
     unload_all,
 
     /// Load all resources for the specified game part and begin executing its program.
-    start_game_part: GamePart.Enum,
+    start_game_part: GamePart,
 
     /// Load the specified resource individually.
     load_resource: ResourceID.Raw,
@@ -61,7 +61,7 @@ pub const ControlResources = union(enum) {
         pub const valid = start_game_part;
 
         const unload_all = [3]u8{ raw_opcode, 0x0, 0x0 };
-        const start_game_part = [3]u8{ raw_opcode, 0x3E, 0x85 }; // GamePart.Enum.arena_cinematic
+        const start_game_part = [3]u8{ raw_opcode, 0x3E, 0x85 }; // GamePart.arena_cinematic
         const load_resource = [3]u8{ raw_opcode, 0xDE, 0xAD };
     };
 };
@@ -94,7 +94,7 @@ test "execute with unload_all instruction calls unloadAllResources with correct 
     const instruction: ControlResources = .unload_all;
 
     var machine = mockMachine(struct {
-        pub fn scheduleGamePart(_: GamePart.Enum) void {
+        pub fn scheduleGamePart(_: GamePart) void {
             unreachable;
         }
 
@@ -113,7 +113,7 @@ test "execute with start_game_part instruction calls scheduleGamePart with corre
     const instruction = ControlResources{ .start_game_part = .arena_cinematic };
 
     var machine = mockMachine(struct {
-        pub fn scheduleGamePart(game_part: GamePart.Enum) void {
+        pub fn scheduleGamePart(game_part: GamePart) void {
             testing.expectEqual(.arena_cinematic, game_part) catch unreachable;
         }
 
@@ -134,7 +134,7 @@ test "execute with load_resource instruction calls loadResource with correct par
     const instruction = ControlResources{ .load_resource = 0xBEEF };
 
     var machine = mockMachine(struct {
-        pub fn scheduleGamePart(_: GamePart.Enum) void {
+        pub fn scheduleGamePart(_: GamePart) void {
             unreachable;
         }
 

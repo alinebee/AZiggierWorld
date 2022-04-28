@@ -9,7 +9,7 @@ const Polygon = @import("../rendering/polygon.zig").Polygon;
 const PolygonScale = @import("../values/polygon_scale.zig");
 const Point = @import("../values/point.zig").Point;
 const ResourceDirectory = @import("../resources/resource_directory.zig").ResourceDirectory;
-const GamePart = @import("../values/game_part.zig");
+const GamePart = @import("../values/game_part.zig").GamePart;
 const DrawBackgroundPolygon = @import("../instructions/draw_background_polygon.zig").DrawBackgroundPolygon;
 const DrawSpritePolygon = @import("../instructions/draw_sprite_polygon.zig").DrawSpritePolygon;
 
@@ -49,7 +49,7 @@ fn findPolygonDrawInstructions(allocator: std.mem.Allocator, bytecode: []const u
 /// Parses all polygon draw instructions from the bytecode for a given game part,
 /// then parses the polygons themselves from the respective polygon or animation resource for that game part.
 /// Returns the total number of polygons parsed, or an error if parsing or memory allocation failed.
-fn parsePolygonInstructionsForGamePart(allocator: std.mem.Allocator, resource_directory: *ResourceDirectory, game_part: GamePart.Enum) !usize {
+fn parsePolygonInstructionsForGamePart(allocator: std.mem.Allocator, resource_directory: *ResourceDirectory, game_part: GamePart) !usize {
     const resource_ids = game_part.resourceIDs();
     const reader = resource_directory.reader();
 
@@ -123,7 +123,7 @@ test "Parse polygon instructions for every game part" {
     var resource_directory = try ResourceDirectory.init(&game_dir);
 
     var count: usize = 0;
-    for (GamePart.Enum.all) |game_part| {
+    for (GamePart.all) |game_part| {
         count += try parsePolygonInstructionsForGamePart(testing.allocator, &resource_directory, game_part);
     }
 

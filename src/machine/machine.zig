@@ -39,7 +39,7 @@ const Point = @import("../values/point.zig").Point;
 const PolygonScale = @import("../values/polygon_scale.zig");
 const RegisterID = @import("../values/register_id.zig");
 const Register = @import("../values/register.zig");
-const GamePart = @import("../values/game_part.zig");
+const GamePart = @import("../values/game_part.zig").GamePart;
 
 const Thread = @import("thread.zig").Thread;
 const Stack = @import("stack.zig").Stack;
@@ -87,11 +87,11 @@ pub const Machine = struct {
     host: Host,
 
     /// The currently-active game part.
-    current_game_part: GamePart.Enum,
+    current_game_part: GamePart,
 
     /// The game part that has been scheduled to start on the next game tic.
     /// Null if no game part is scheduled.
-    scheduled_game_part: ?GamePart.Enum = null,
+    scheduled_game_part: ?GamePart = null,
 
     const Self = @This();
 
@@ -181,7 +181,7 @@ pub const Machine = struct {
     // -- Resource subsystem interface --
 
     /// Schedule the specified game part to begin on the next run loop.
-    pub fn scheduleGamePart(self: *Self, game_part: GamePart.Enum) void {
+    pub fn scheduleGamePart(self: *Self, game_part: GamePart) void {
         self.scheduled_game_part = game_part;
     }
 
@@ -320,7 +320,7 @@ pub const Machine = struct {
     /// Not intended to be called during thread execution: instead call `scheduleGamePart`,
     /// which will let the current game tic finish executing all threads before beginning
     /// the new game part on the next run loop.
-    fn startGamePart(self: *Self, game_part: GamePart.Enum) !void {
+    fn startGamePart(self: *Self, game_part: GamePart) !void {
         const resource_locations = try self.memory.loadGamePart(game_part);
         self.program = Program.init(resource_locations.bytecode);
 
@@ -346,7 +346,7 @@ pub const Machine = struct {
     pub const Options = struct {
         /// Which game part to start up with.
         /// TODO: default this to .intro_cinematic once the copy protection bypass is working fully.
-        initial_game_part: GamePart.Enum = .copy_protection,
+        initial_game_part: GamePart = .copy_protection,
 
         /// The seed to use for the game's random number generator.
         /// If null, a random seed will be chosen based on the system clock.
@@ -463,7 +463,7 @@ test "startGamePart resets previous thread state, loads resources for new game p
         register.* = 0xBEEF;
     }
 
-    const next_game_part = GamePart.Enum.arena_cinematic;
+    const next_game_part = GamePart.arena_cinematic;
     try testing.expect(machine.current_game_part != next_game_part);
 
     const current_resource_ids = machine.current_game_part.resourceIDs();
@@ -514,7 +514,7 @@ test "scheduleGamePart schedules a new game part without loading it" {
     try testing.expectEqual(null, machine.scheduled_game_part);
 
     const current_game_part = machine.current_game_part;
-    const next_game_part = GamePart.Enum.arena_cinematic;
+    const next_game_part = GamePart.arena_cinematic;
     try testing.expect(current_game_part != next_game_part);
 
     const resource_ids = next_game_part.resourceIDs();

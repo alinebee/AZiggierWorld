@@ -3,7 +3,7 @@
 
 const ResourceDirectory = @import("../resources/resource_directory.zig").ResourceDirectory;
 const ResourceDescriptor = @import("../resources/resource_descriptor.zig");
-const GamePart = @import("../values/game_part.zig");
+const GamePart = @import("../values/game_part.zig").GamePart;
 
 const ensureValidFixtureDir = @import("helpers.zig").ensureValidFixtureDir;
 const log = @import("../utils/logging.zig").log;
@@ -28,7 +28,7 @@ test "Report sizes for each game part" {
     // Uncomment to print out statistics
     // std.testing.log_level = .info;
 
-    for (GamePart.Enum.all) |part| {
+    for (GamePart.all) |part| {
         const resource_ids = part.resourceIDs();
 
         log.info("\nPart: {s}\n----\n", .{@tagName(part)});

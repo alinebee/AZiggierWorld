@@ -2,10 +2,13 @@ const ResourceID = @import("resource_id.zig");
 
 const intToEnum = @import("../utils/introspection.zig").intToEnum;
 
+/// A raw game part identifier as represented in Another World's bytecode.
+const Raw = u16;
+
 /// Defines the parts in an Another World game, which can represent either chapters of gameplay,
 /// cinematics, or menu screens. The VM can have a single game part loaded and running at a time.
-// zig fmt: off
-pub const Enum = enum(Raw) {
+pub const GamePart = enum(Raw) {
+    // zig fmt: off
     copy_protection     = 0x3E80,
     intro_cinematic     = 0x3E81,
     /// Starting in tentacle pool, escaping from beast
@@ -25,11 +28,18 @@ pub const Enum = enum(Raw) {
 
     const Self = @This();
 
+    /// Given a raw value parsed from Another World bytecode, returns the appropriate game part.
+    /// Returns error.invalidGamePart if the raw value was out of range.
+    pub fn parse(raw: Raw) Error!Self {
+        return intToEnum(Self, raw) catch error.InvalidGamePart;
+    }
+
     /// The IDs of the resources to load for this game part.
     // Copypasta from reference implementation:
     // https://github.com/fabiensanglard/Another-World-Bytecode-Interpreter/blob/master/src/parts.cpp#L14-L27
     pub fn resourceIDs(self: Self) ResourceIDs {
         return switch (self) {
+            // zig fmt: off
             .copy_protection    => .{ .palettes = 0x14, .bytecode = 0x15, .polygons = 0x16 },
             .intro_cinematic    => .{ .palettes = 0x17, .bytecode = 0x18, .polygons = 0x19 },
             .gameplay1          => .{ .palettes = 0x1A, .bytecode = 0x1B, .polygons = 0x1C, .animations = 0x11 },
@@ -39,9 +49,9 @@ pub const Enum = enum(Raw) {
             .gameplay4          => .{ .palettes = 0x26, .bytecode = 0x27, .polygons = 0x28, .animations = 0x11 },
             .ending_cinematic   => .{ .palettes = 0x29, .bytecode = 0x2A, .polygons = 0x2B, .animations = 0x11 },
             .password_entry     => .{ .palettes = 0x7D, .bytecode = 0x7E, .polygons = 0x7F },
+            // zig fmt: on
         };
     }
-    // zig fmt: on
 
     /// Whether this game part should allow switching to the password entry screeen.
     pub fn allowsPasswordEntry(self: Self) bool {
@@ -53,6 +63,8 @@ pub const Enum = enum(Raw) {
             else => true,
         };
     }
+
+    // - Exported constants -
 
     /// All game parts in order of occurrence
     pub const all = [@typeInfo(Self).Enum.fields.len]Self{
@@ -66,10 +78,15 @@ pub const Enum = enum(Raw) {
         .ending_cinematic,
         .password_entry,
     };
+
+    pub const Error = error{
+        /// The bytecode specified an unknown game part.
+        InvalidGamePart,
+    };
 };
 
 /// Defines the resources needed for a specific part of the game.
-pub const ResourceIDs = struct {
+const ResourceIDs = struct {
     /// The set of palettes used by the game part.
     palettes: ResourceID.Raw,
     /// The program to execute for the game part.
@@ -83,53 +100,39 @@ pub const ResourceIDs = struct {
     animations: ?ResourceID.Raw = null,
 };
 
-/// A raw game part identifier as represented in Another World's bytecode.
-pub const Raw = u16;
-
-/// Given a raw value parsed from Another World bytecode, returns the appropriate game part.
-/// Returns error.invalidGamePart if the raw value was out of range.
-pub fn parse(raw: Raw) Error!Enum {
-    return intToEnum(Enum, raw) catch error.InvalidGamePart;
-}
-
-pub const Error = error{
-    /// The bytecode specified an unknown game part.
-    InvalidGamePart,
-};
-
 // -- Tests --
 
 const testing = @import("../utils/testing.zig");
 
 test "ensure everything compiles" {
-    testing.refAllDecls(Enum);
+    testing.refAllDecls(GamePart);
 }
 
 test "parse returns expected enum cases" {
-    try testing.expectEqual(.copy_protection, parse(0x3E80));
-    try testing.expectEqual(.intro_cinematic, parse(0x3E81));
-    try testing.expectEqual(.gameplay1, parse(0x3E82));
-    try testing.expectEqual(.gameplay2, parse(0x3E83));
-    try testing.expectEqual(.gameplay3, parse(0x3E84));
-    try testing.expectEqual(.arena_cinematic, parse(0x3E85));
-    try testing.expectEqual(.gameplay4, parse(0x3E86));
-    try testing.expectEqual(.ending_cinematic, parse(0x3E87));
-    try testing.expectEqual(.password_entry, parse(0x3E88));
+    try testing.expectEqual(.copy_protection, GamePart.parse(0x3E80));
+    try testing.expectEqual(.intro_cinematic, GamePart.parse(0x3E81));
+    try testing.expectEqual(.gameplay1, GamePart.parse(0x3E82));
+    try testing.expectEqual(.gameplay2, GamePart.parse(0x3E83));
+    try testing.expectEqual(.gameplay3, GamePart.parse(0x3E84));
+    try testing.expectEqual(.arena_cinematic, GamePart.parse(0x3E85));
+    try testing.expectEqual(.gameplay4, GamePart.parse(0x3E86));
+    try testing.expectEqual(.ending_cinematic, GamePart.parse(0x3E87));
+    try testing.expectEqual(.password_entry, GamePart.parse(0x3E88));
 
-    try testing.expectError(error.InvalidGamePart, parse(0x0000));
-    try testing.expectError(error.InvalidGamePart, parse(0x3E79));
-    try testing.expectError(error.InvalidGamePart, parse(0x3E89));
-    try testing.expectError(error.InvalidGamePart, parse(0xFFFF));
+    try testing.expectError(error.InvalidGamePart, GamePart.parse(0x0000));
+    try testing.expectError(error.InvalidGamePart, GamePart.parse(0x3E79));
+    try testing.expectError(error.InvalidGamePart, GamePart.parse(0x3E89));
+    try testing.expectError(error.InvalidGamePart, GamePart.parse(0xFFFF));
 }
 
 test "allowsPasswordEntry returns expected values" {
-    try testing.expectEqual(false, Enum.copy_protection.allowsPasswordEntry());
-    try testing.expectEqual(true, Enum.intro_cinematic.allowsPasswordEntry());
-    try testing.expectEqual(true, Enum.gameplay1.allowsPasswordEntry());
-    try testing.expectEqual(true, Enum.gameplay2.allowsPasswordEntry());
-    try testing.expectEqual(true, Enum.gameplay3.allowsPasswordEntry());
-    try testing.expectEqual(true, Enum.arena_cinematic.allowsPasswordEntry());
-    try testing.expectEqual(true, Enum.gameplay4.allowsPasswordEntry());
-    try testing.expectEqual(true, Enum.ending_cinematic.allowsPasswordEntry());
-    try testing.expectEqual(false, Enum.password_entry.allowsPasswordEntry());
+    try testing.expectEqual(false, GamePart.copy_protection.allowsPasswordEntry());
+    try testing.expectEqual(true, GamePart.intro_cinematic.allowsPasswordEntry());
+    try testing.expectEqual(true, GamePart.gameplay1.allowsPasswordEntry());
+    try testing.expectEqual(true, GamePart.gameplay2.allowsPasswordEntry());
+    try testing.expectEqual(true, GamePart.gameplay3.allowsPasswordEntry());
+    try testing.expectEqual(true, GamePart.arena_cinematic.allowsPasswordEntry());
+    try testing.expectEqual(true, GamePart.gameplay4.allowsPasswordEntry());
+    try testing.expectEqual(true, GamePart.ending_cinematic.allowsPasswordEntry());
+    try testing.expectEqual(false, GamePart.password_entry.allowsPasswordEntry());
 }

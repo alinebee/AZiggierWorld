@@ -232,47 +232,47 @@ const TestFixtures = struct {
 
         // Part-specific data: see game_part.zig
 
-        // GamePart.Enum.copy_protection
+        // GamePart.copy_protection
         d[0x14] = palettes_descriptor;
         d[0x15] = bytecode_descriptor;
         d[0x16] = polygons_descriptor;
 
-        // GamePart.Enum.intro_cinematic
+        // GamePart.intro_cinematic
         d[0x17] = palettes_descriptor;
         d[0x18] = bytecode_descriptor;
         d[0x19] = polygons_descriptor;
 
-        // GamePart.Enum.gameplay1
+        // GamePart.gameplay1
         d[0x1A] = palettes_descriptor;
         d[0x1B] = bytecode_descriptor;
         d[0x1C] = polygons_descriptor;
 
-        // GamePart.Enum.gameplay2
+        // GamePart.gameplay2
         d[0x1D] = palettes_descriptor;
         d[0x1E] = bytecode_descriptor;
         d[0x1F] = polygons_descriptor;
 
-        // GamePart.Enum.gameplay3
+        // GamePart.gameplay3
         d[0x20] = palettes_descriptor;
         d[0x21] = bytecode_descriptor;
         d[0x22] = polygons_descriptor;
 
-        // GamePart.Enum.arena_cinematic
+        // GamePart.arena_cinematic
         d[0x23] = palettes_descriptor;
         d[0x24] = bytecode_descriptor;
         d[0x25] = polygons_descriptor;
 
-        // GamePart.Enum.gameplay4
+        // GamePart.gameplay4
         d[0x26] = palettes_descriptor;
         d[0x27] = bytecode_descriptor;
         d[0x28] = polygons_descriptor;
 
-        // GamePart.Enum.ending_cinematic
+        // GamePart.ending_cinematic
         d[0x29] = palettes_descriptor;
         d[0x2A] = bytecode_descriptor;
         d[0x2B] = polygons_descriptor;
 
-        // GamePart.Enum.password_entry
+        // GamePart.password_entry
         d[0x7D] = palettes_descriptor;
         d[0x7E] = bytecode_descriptor;
         d[0x7F] = polygons_descriptor;

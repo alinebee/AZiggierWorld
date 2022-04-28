@@ -4,7 +4,7 @@ const Audio = @import("../audio.zig").Audio;
 const Registers = @import("../registers.zig").Registers;
 
 const Point = @import("../../values/point.zig").Point;
-const GamePart = @import("../../values/game_part.zig");
+const GamePart = @import("../../values/game_part.zig").GamePart;
 const Channel = @import("../../values/channel.zig");
 const ResourceID = @import("../../values/resource_id.zig");
 const ColorID = @import("../../values/color_id.zig");
@@ -80,7 +80,7 @@ pub fn MockMachine(comptime Implementation: type) type {
             Implementation.renderVideoBuffer(buffer_id, delay);
         }
 
-        pub fn scheduleGamePart(self: *Self, game_part: GamePart.Enum) void {
+        pub fn scheduleGamePart(self: *Self, game_part: GamePart) void {
             self.call_counts.scheduleGamePart += 1;
             Implementation.scheduleGamePart(game_part);
         }
@@ -230,7 +230,7 @@ test "MockMachine calls renderVideoBuffer correctly on stub implementation" {
 
 test "MockMachine calls scheduleGamePart correctly on stub implementation" {
     var mock = mockMachine(struct {
-        fn scheduleGamePart(game_part: GamePart.Enum) void {
+        fn scheduleGamePart(game_part: GamePart) void {
             testing.expectEqual(.copy_protection, game_part) catch unreachable;
         }
     });
