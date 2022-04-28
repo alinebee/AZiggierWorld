@@ -2,7 +2,7 @@ const Opcode = @import("../values/opcode.zig").Opcode;
 const Program = @import("../machine/program.zig").Program;
 const Machine = @import("../machine/machine.zig").Machine;
 
-const Point = @import("../values/point.zig");
+const Point = @import("../values/point.zig").Point;
 const StringID = @import("../values/string_id.zig");
 const ColorID = @import("../values/color_id.zig");
 
@@ -15,7 +15,7 @@ pub const DrawString = struct {
     /// The color to draw the string in.
     color_id: ColorID.Trusted,
     /// The point in screen space at which to draw the string, relative to the top left corner of the screen.
-    point: Point.Instance,
+    point: Point,
 
     const Self = @This();
 
@@ -104,7 +104,7 @@ test "execute calls drawString with correct parameters" {
     };
 
     var machine = mockMachine(struct {
-        pub fn drawString(string_id: StringID.Raw, color_id: ColorID.Trusted, point: Point.Instance) !void {
+        pub fn drawString(string_id: StringID.Raw, color_id: ColorID.Trusted, point: Point) !void {
             try testing.expectEqual(0xDEAD, string_id);
             try testing.expectEqual(15, color_id);
             try testing.expectEqual(160, point.x);
@@ -127,7 +127,7 @@ test "execute passes along error.InvalidStringID if machine cannot find appropri
     };
 
     var machine = mockMachine(struct {
-        pub fn drawString(_: StringID.Raw, _: ColorID.Trusted, _: Point.Instance) !void {
+        pub fn drawString(_: StringID.Raw, _: ColorID.Trusted, _: Point) !void {
             return error.InvalidStringID;
         }
     });

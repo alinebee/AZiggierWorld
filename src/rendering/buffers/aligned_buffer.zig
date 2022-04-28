@@ -7,10 +7,10 @@
 
 const ColorID = @import("../../values/color_id.zig");
 const Palette = @import("../../values/palette.zig");
-const Point = @import("../../values/point.zig");
-const Range = @import("../../values/range.zig");
 const DrawMode = @import("../../values/draw_mode.zig");
-const BoundingBox = @import("../../values/bounding_box.zig");
+const Point = @import("../../values/point.zig").Point;
+const Range = @import("../../values/range.zig").Range;
+const BoundingBox = @import("../../values/bounding_box.zig").BoundingBox;
 
 const Surface = @import("../surface.zig");
 const IndexedBitmap = @import("../test_helpers/indexed_bitmap.zig");
@@ -35,7 +35,7 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
         data: Data = undefined,
 
         /// The bounding box that encompasses all legal points within this buffer.
-        pub const bounds = BoundingBox.new(0, 0, width - 1, height - 1);
+        pub const bounds = BoundingBox.init(0, 0, width - 1, height - 1);
 
         const Self = @This();
 
@@ -192,7 +192,7 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
         /// Fill a horizontal line with colors using the specified draw mode.
         /// This is not bounds-checked: specifying a span outside the buffer, or with a negative length,
         /// results in undefined behaviour.
-        pub fn uncheckedDrawSpan(self: *Self, x_span: Range.Instance(Point.Coordinate), y: Point.Coordinate, operation: DrawOperation) void {
+        pub fn uncheckedDrawSpan(self: *Self, x_span: Range(Point.Coordinate), y: Point.Coordinate, operation: DrawOperation) void {
             const row = @intCast(usize, y);
             const start_column = @intCast(usize, x_span.min);
 
@@ -205,7 +205,7 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
 
         /// Draw a single pixel using the specified draw operation.
         /// This is not bounds-checked: specifying a point outside the buffer results in undefined behaviour.
-        pub fn uncheckedDrawDot(self: *Self, point: Point.Instance, operation: DrawOperation) void {
+        pub fn uncheckedDrawDot(self: *Self, point: Point, operation: DrawOperation) void {
             // TODO: add optimized functions to DrawOperation that avoid loops?
             const row = @intCast(usize, point.y);
             const column = @intCast(usize, point.x);

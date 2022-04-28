@@ -35,7 +35,7 @@ const StringID = @import("../values/string_id.zig");
 const PaletteID = @import("../values/palette_id.zig");
 const ColorID = @import("../values/color_id.zig");
 const Channel = @import("../values/channel.zig");
-const Point = @import("../values/point.zig");
+const Point = @import("../values/point.zig").Point;
 const PolygonScale = @import("../values/polygon_scale.zig");
 const RegisterID = @import("../values/register_id.zig");
 const Register = @import("../values/register.zig");
@@ -209,13 +209,13 @@ pub const Machine = struct {
 
     /// Render a polygon from the specified source and address at the specified screen position and scale.
     /// Returns an error if the specified polygon address was invalid.
-    pub fn drawPolygon(self: *Self, source: Video.PolygonSource, address: Video.PolygonAddress, point: Point.Instance, scale: PolygonScale.Raw) !void {
+    pub fn drawPolygon(self: *Self, source: Video.PolygonSource, address: Video.PolygonAddress, point: Point, scale: PolygonScale.Raw) !void {
         try self.video.drawPolygon(source, address, point, scale);
     }
 
     /// Render a string from the current string table at the specified screen position in the specified color.
     /// Returns an error if the string could not be found.
-    pub fn drawString(self: *Self, string_id: StringID.Raw, color_id: ColorID.Trusted, point: Point.Instance) !void {
+    pub fn drawString(self: *Self, string_id: StringID.Raw, color_id: ColorID.Trusted, point: Point) !void {
         try self.video.drawString(string_id, color_id, point);
     }
 

@@ -12,10 +12,10 @@
 
 const ColorID = @import("../../values/color_id.zig");
 const Palette = @import("../../values/palette.zig");
-const Point = @import("../../values/point.zig");
-const Range = @import("../../values/range.zig");
 const DrawMode = @import("../../values/draw_mode.zig");
-const BoundingBox = @import("../../values/bounding_box.zig");
+const Point = @import("../../values/point.zig").Point;
+const Range = @import("../../values/range.zig").Range;
+const BoundingBox = @import("../../values/bounding_box.zig").BoundingBox;
 
 const Surface = @import("../surface.zig");
 const IndexedBitmap = @import("../test_helpers/indexed_bitmap.zig");
@@ -36,7 +36,7 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
         data: Data = undefined,
 
         /// The bounding box that encompasses all legal points within this buffer.
-        pub const bounds = BoundingBox.new(0, 0, width - 1, height - 1);
+        pub const bounds = BoundingBox.init(0, 0, width - 1, height - 1);
 
         const Self = @This();
 
@@ -44,7 +44,7 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
         /// using one of three draw operations: solid color, highlight or mask.
         pub const DrawOperation = struct {
             draw_index_fn: fn (self: DrawOperation, buffer: *Self, index: Index) void,
-            draw_range_fn: fn (self: DrawOperation, buffer: *Self, range: Range.Instance(usize)) void,
+            draw_range_fn: fn (self: DrawOperation, buffer: *Self, range: Range(usize)) void,
             context: union {
                 solid_color: NativeColor,
                 highlight: void,
@@ -100,7 +100,7 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
             /// using this draw operation to determine the appropriate color(s).
             /// `range` is not bounds-checked: specifying a range outside the buffer, or with a negative length,
             /// results in undefined behaviour.
-            fn drawRange(self: DrawOperation, buffer: *Self, range: Range.Instance(usize)) void {
+            fn drawRange(self: DrawOperation, buffer: *Self, range: Range(usize)) void {
                 self.draw_range_fn(self, buffer, range);
             }
 
@@ -128,13 +128,13 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
                 fillPixel(buffer, index, mask_color);
             }
 
-            fn drawSolidColorRange(operation: DrawOperation, buffer: *Self, range: Range.Instance(usize)) void {
+            fn drawSolidColorRange(operation: DrawOperation, buffer: *Self, range: Range(usize)) void {
                 const destination_slice = buffer.data[range.min..range.max];
 
                 mem.set(NativeColor, destination_slice, operation.context.solid_color);
             }
 
-            fn drawHighlightRange(_: DrawOperation, buffer: *Self, range: Range.Instance(usize)) void {
+            fn drawHighlightRange(_: DrawOperation, buffer: *Self, range: Range(usize)) void {
                 const destination_slice = buffer.data[range.min..range.max];
 
                 for (destination_slice) |*byte| {
@@ -142,7 +142,7 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
                 }
             }
 
-            fn drawMaskRange(operation: DrawOperation, buffer: *Self, range: Range.Instance(usize)) void {
+            fn drawMaskRange(operation: DrawOperation, buffer: *Self, range: Range(usize)) void {
                 const destination_slice = buffer.data[range.min..range.max];
                 const mask_slice = operation.context.mask.data[range.min..range.max];
 
@@ -154,7 +154,7 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
 
         /// Given an X,Y point, returns the index of the byte within `data` containing that point's pixel.
         /// This is not bounds-checked: specifying a point outside the buffer results in undefined behaviour.
-        fn uncheckedIndexOf(point: Point.Instance) Index {
+        fn uncheckedIndexOf(point: Point) Index {
             const unsigned_x = @intCast(usize, point.x);
             const unsigned_y = @intCast(usize, point.y);
             const offset_of_row = unsigned_y * bytes_per_row;
@@ -244,7 +244,7 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
         /// Fill a horizontal line using the specified draw operation.
         /// This is not bounds-checked: specifying a span outside the buffer, or with a negative length,
         /// results in undefined behaviour.
-        pub fn uncheckedDrawSpan(self: *Self, x_span: Range.Instance(Point.Coordinate), y: Point.Coordinate, operation: DrawOperation) void {
+        pub fn uncheckedDrawSpan(self: *Self, x_span: Range(Point.Coordinate), y: Point.Coordinate, operation: DrawOperation) void {
             var start_index = uncheckedIndexOf(.{ .x = x_span.min, .y = y });
 
             // Early-out for drawing single-pixel spans
@@ -283,7 +283,7 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
 
         /// Draw a single pixel using the specified draw operation.
         /// This is not bounds-checked: specifying a point outside the buffer results in undefined behaviour.
-        pub fn uncheckedDrawDot(self: *Self, point: Point.Instance, operation: DrawOperation) void {
+        pub fn uncheckedDrawDot(self: *Self, point: Point, operation: DrawOperation) void {
             var index = uncheckedIndexOf(point);
             operation.drawPixel(self, index);
         }
@@ -298,7 +298,7 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
             // instead of the bitmap's. But, this function is only used in tests right now.
             for (bitmap.data) |*row, y| {
                 for (row) |*column, x| {
-                    const point = Point.Instance{
+                    const point = Point{
                         .x = @intCast(Point.Coordinate, x),
                         .y = @intCast(Point.Coordinate, y),
                     };
@@ -320,7 +320,7 @@ pub fn Instance(comptime width: usize, comptime height: usize) type {
 
             for (bitmap.data) |row, y| {
                 for (row) |column, x| {
-                    const point = Point.Instance{
+                    const point = Point{
                         .x = @intCast(Point.Coordinate, x),
                         .y = @intCast(Point.Coordinate, y),
                     };

@@ -19,7 +19,7 @@
 
 const Polygon = @import("../rendering/polygon.zig");
 const PolygonScale = @import("../values/polygon_scale.zig");
-const Point = @import("../values/point.zig");
+const Point = @import("../values/point.zig").Point;
 const DrawMode = @import("../values/draw_mode.zig");
 
 const introspection = @import("../utils/introspection.zig");
@@ -56,11 +56,11 @@ pub const PolygonResource = struct {
     /// Address must be known in advance to point to the start of a polygon or group definition within the data.
     /// Addresses cannot be validated, so it is possible to start parsing from e.g. the middle of a polygon or group.
     /// At best this will result in an error; at worst, silently succeeding but producing garbage polygon data.
-    pub fn iteratePolygons(self: Self, address: Address, origin: Point.Instance, scale: PolygonScale.Raw, visitor: anytype) Error(@TypeOf(visitor))!void {
+    pub fn iteratePolygons(self: Self, address: Address, origin: Point, scale: PolygonScale.Raw, visitor: anytype) Error(@TypeOf(visitor))!void {
         try self.recursivelyParseEntry(address, origin, scale, null, 0, visitor);
     }
 
-    fn recursivelyParseEntry(self: Self, address: Address, origin: Point.Instance, scale: PolygonScale.Raw, draw_mode: ?DrawMode.Enum, recursion_depth: usize, visitor: anytype) Error(@TypeOf(visitor))!void {
+    fn recursivelyParseEntry(self: Self, address: Address, origin: Point, scale: PolygonScale.Raw, draw_mode: ?DrawMode.Enum, recursion_depth: usize, visitor: anytype) Error(@TypeOf(visitor))!void {
         if (address >= self.data.len) {
             return error.InvalidAddress;
         }
@@ -291,7 +291,7 @@ const EntryHeader = union(enum) {
 const GroupHeader = struct {
     /// The scaled x,y distance to offset this group's polygons and subgroups from the parent origin.
     /// Should be subtracted from - not added to - the parent origin.
-    offset: Point.Instance,
+    offset: Point,
     /// The number of entries within this group, from 1-256.
     count: usize,
 
@@ -318,7 +318,7 @@ const EntryPointer = struct {
     address: PolygonResource.Address,
     /// The x,y distance to offset the entry's polygon or subgroup from the parent origin.
     /// Unlike the group offset, this should be added to - not subtracted from - the parent origin.
-    offset: Point.Instance,
+    offset: Point,
     /// An optional overridden draw mode for this entry's polygon.
     /// Unused if the entry is a subgroup rather than a single polygon.
     draw_mode: ?DrawMode.Enum,
@@ -399,10 +399,10 @@ const EntryPointer = struct {
 
 // Parse the polygon offset for a group header or entry pointer.
 // Consumes 2 bytes from the reader.
-fn parseOffset(reader: anytype, scale: PolygonScale.Raw) !Point.Instance {
+fn parseOffset(reader: anytype, scale: PolygonScale.Raw) !Point {
     const raw_x = try reader.readByte();
     const raw_y = try reader.readByte();
-    return Point.Instance{
+    return Point{
         .x = PolygonScale.apply(i16, raw_x, scale),
         .y = PolygonScale.apply(i16, raw_y, scale),
     };

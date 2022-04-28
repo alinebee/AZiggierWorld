@@ -1,28 +1,20 @@
 const math = @import("std").math;
 
-/// Defines a closed range of integers from a minimum up to *and including* a maximum value.
-/// `min` and `max will be flipped if necessary to enforce that `min` <= `max`.
-pub fn new(comptime Integer: type, min: anytype, max: Integer) Instance(Integer) {
-    if (min <= max) {
-        return .{ .min = min, .max = max };
-    } else {
-        return .{ .min = max, .max = min };
-    }
-}
-
-/// Defines a closed range of integers from a minimum up to *and including* a maximum value.
-/// Unlike `new`, this does not enforce that `min <= max`.
-pub fn unchecked(comptime Integer: type, min: Integer, max: Integer) Instance(Integer) {
-    return .{ .min = min, .max = max };
-}
-
 /// Defines the type for a range of integers from a minimum up to and including a maximum value.
-pub fn Instance(comptime Integer: type) type {
+pub fn Range(comptime Integer: type) type {
     return struct {
         min: Integer,
         max: Integer,
 
         const Self = @This();
+
+        pub fn init(min: anytype, max: Integer) Self {
+            if (min <= max) {
+                return .{ .min = min, .max = max };
+            } else {
+                return .{ .min = max, .max = min };
+            }
+        }
 
         /// Whether this range contains the specified value.
         pub fn contains(self: Self, value: Integer) bool {
@@ -55,23 +47,23 @@ pub fn Instance(comptime Integer: type) type {
 // -- Tests --
 
 const Examples = struct {
-    const reference = new(isize, -10, 10);
+    const reference = Range(isize).init(-10, 10);
 
-    const enclosed = new(isize, -5, 5);
-    const enclosing = new(isize, -15, 15);
+    const enclosed = Range(isize).init(-5, 5);
+    const enclosing = Range(isize).init(-15, 15);
 
-    const overlapping_start = new(isize, -15, -5);
-    const overlapping_end = new(isize, 5, 15);
+    const overlapping_start = Range(isize).init(-15, -5);
+    const overlapping_end = Range(isize).init(5, 15);
 
-    const touching_start = new(isize, -15, -10);
-    const touching_end = new(isize, 10, 15);
+    const touching_start = Range(isize).init(-15, -10);
+    const touching_end = Range(isize).init(10, 15);
 
-    const disjoint = new(isize, -20, -11);
+    const disjoint = Range(isize).init(-20, -11);
 };
 
 const testing = @import("../utils/testing.zig");
 
-test "new returns range of expected type with expected values" {
+test "init returns range of expected type with expected values" {
     const range = Examples.reference;
 
     try testing.expectEqual(-10, range.min);
@@ -80,16 +72,10 @@ test "new returns range of expected type with expected values" {
     try testing.expectEqual(isize, @TypeOf(range.max));
 }
 
-test "new reverses order of operands to ensure min < max" {
-    const range = new(isize, 10, -10);
+test "init reverses order of operands to ensure min < max" {
+    const range = Range(isize).init(10, -10);
     try testing.expectEqual(-10, range.min);
     try testing.expectEqual(10, range.max);
-}
-
-test "unchecked leaves order of operands alone" {
-    const range = unchecked(isize, 10, -10);
-    try testing.expectEqual(10, range.min);
-    try testing.expectEqual(-10, range.max);
 }
 
 test "contains returns true for values within range and false for values outside it" {

@@ -1,4 +1,4 @@
-const Point = @import("../values/point.zig");
+const Point = @import("../values/point.zig").Point;
 const PolygonScale = @import("../values/polygon_scale.zig");
 const ColorID = @import("../values/color_id.zig");
 const StringID = @import("../values/string_id.zig");
@@ -120,7 +120,7 @@ pub const Video = struct {
     /// Render a polygon from the specified source and address into the current target buffer,
     /// at the specified screen position and scale.
     /// Returns an error if the specified polygon address was invalid or if polygon data was malformed.
-    pub fn drawPolygon(self: *Self, source: PolygonSource, address: PolygonResource.Address, point: Point.Instance, scale: PolygonScale.Raw) !void {
+    pub fn drawPolygon(self: *Self, source: PolygonSource, address: PolygonResource.Address, point: Point, scale: PolygonScale.Raw) !void {
         const visitor = PolygonVisitor{
             .target_buffer = &self.buffers[self.target_buffer_id],
             .mask_buffer = &self.buffers[mask_buffer_id],
@@ -133,7 +133,7 @@ pub const Video = struct {
     /// Render a string from the English string table at the specified screen position
     /// in the specified color into the current target buffer.
     /// Returns an error if the string ID was not found or the string contained unsupported characters.
-    pub fn drawString(self: *Self, string_id: StringID.Raw, color_id: ColorID.Trusted, point: Point.Instance) !void {
+    pub fn drawString(self: *Self, string_id: StringID.Raw, color_id: ColorID.Trusted, point: Point) !void {
         // TODO: allow different localizations at runtime.
         const string = try english.find(string_id);
 

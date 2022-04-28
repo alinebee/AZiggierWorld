@@ -1,8 +1,7 @@
 const Polygon = @import("../polygon.zig");
-const Point = @import("../../values/point.zig");
-const Range = @import("../../values/range.zig");
 const DrawMode = @import("../../values/draw_mode.zig");
-const BoundingBox = @import("../../values/bounding_box.zig");
+const Point = @import("../../values/point.zig").Point;
+const Range = @import("../../values/range.zig").Range;
 const FixedPrecision = @import("../../values/fixed_precision.zig");
 
 const static_limits = @import("../../static_limits.zig");
@@ -90,7 +89,7 @@ pub fn drawPolygon(comptime Buffer: type, buffer: *Buffer, mask_buffer: *const B
                 // Don't draw parts of the polygon that are outside the buffer,
                 // but still accumulate their changes to x.
                 if (Buffer.bounds.y.contains(y)) {
-                    const x_range = Range.new(Point.Coordinate, x1.whole(), x2.whole());
+                    const x_range = Range(Point.Coordinate).init(x1.whole(), x2.whole());
 
                     // Only draw the row if the resulting span is within the buffer's bounds.
                     if (Buffer.bounds.x.intersection(x_range)) |clamped_range| {

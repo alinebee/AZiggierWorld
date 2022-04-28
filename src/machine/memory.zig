@@ -208,16 +208,16 @@ pub const Memory = struct {
 
     // -- Exported error sets --
 
-    /// The errors that can be returned by attempting to create a memory instance with `Memory.Instance.init` or `Memory.new`.
+    /// The errors that can be returned by attempting to create a memory instance with `Memory.init` or `Memory.new`.
     pub const InitError = mem.Allocator.Error;
 
-    /// The errors that can be returned by a call to `Memory.Instance.resourceLocation`.
+    /// The errors that can be returned by a call to `Memory.resourceLocation`.
     pub const ResourceLocationError = ResourceReader.ValidationError;
 
-    /// The errors that can be returned by a call to `Memory.Instance.loadGamePart`.
+    /// The errors that can be returned by a call to `Memory.loadGamePart`.
     pub const LoadGamePartError = ResourceReader.AllocReadResourceByIDError;
 
-    /// The errors that can be returned by a call to `Memory.Instance.loadIndividualResource`.
+    /// The errors that can be returned by a call to `Memory.loadIndividualResource`.
     pub const LoadIndividualResourceError = ResourceReader.AllocReadResourceByIDError || error{
         /// `loadIndividualResource` attempted to load a resource that can only be loaded by `loadGamePart`.
         GamePartOnlyResourceType,

@@ -7,7 +7,7 @@ const Program = @import("../machine/program.zig").Program;
 const PolygonResource = @import("../resources/polygon_resource.zig").PolygonResource;
 const Polygon = @import("../rendering/polygon.zig");
 const PolygonScale = @import("../values/polygon_scale.zig");
-const Point = @import("../values/point.zig");
+const Point = @import("../values/point.zig").Point;
 const ResourceDirectory = @import("../resources/resource_directory.zig").ResourceDirectory;
 const GamePart = @import("../values/game_part.zig");
 const DrawBackgroundPolygon = @import("../instructions/draw_background_polygon.zig").DrawBackgroundPolygon;
@@ -79,8 +79,7 @@ fn parsePolygonInstructionsForGamePart(allocator: std.mem.Allocator, resource_di
 
     var visitor = PolygonVisitor{};
 
-    // TODO: once the draw instructions have been refactored to use Video.Instance,
-    // execute them directly on a virtual machine to trigger real polygon parsing and drawing.
+    // TODO: execute draw instructions directly on a virtual machine to trigger real polygon parsing and drawing.
     for (instructions) |background_or_sprite| {
         switch (background_or_sprite) {
             .background => |instruction| {
@@ -92,7 +91,7 @@ fn parsePolygonInstructionsForGamePart(allocator: std.mem.Allocator, resource_di
                     .animations => maybe_animations orelse return error.MissingAnimationsBlock,
                 };
                 // Don't bother parsing the scale or origin from the original sprite instruction.
-                const origin = Point.Instance{ .x = 160, .y = 100 };
+                const origin = Point{ .x = 160, .y = 100 };
 
                 try resource.iteratePolygons(instruction.address, origin, PolygonScale.default, &visitor);
             },

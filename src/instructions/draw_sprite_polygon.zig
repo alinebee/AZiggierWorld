@@ -2,7 +2,7 @@ const Opcode = @import("../values/opcode.zig").Opcode;
 const Program = @import("../machine/program.zig").Program;
 const Machine = @import("../machine/machine.zig").Machine;
 const Video = @import("../machine/video.zig").Video;
-const Point = @import("../values/point.zig");
+const Point = @import("../values/point.zig").Point;
 const RegisterID = @import("../values/register_id.zig");
 const PolygonScale = @import("../values/polygon_scale.zig");
 
@@ -270,7 +270,7 @@ test "execute with constants calls drawPolygon with correct parameters" {
     };
 
     var machine = mockMachine(struct {
-        pub fn drawPolygon(source: Video.PolygonSource, address: Video.PolygonAddress, point: Point.Instance, scale: PolygonScale.Raw) !void {
+        pub fn drawPolygon(source: Video.PolygonSource, address: Video.PolygonAddress, point: Point, scale: PolygonScale.Raw) !void {
             try testing.expectEqual(.animations, source);
             try testing.expectEqual(0xDEAD, address);
             try testing.expectEqual(320, point.x);
@@ -298,7 +298,7 @@ test "execute with registers calls drawPolygon with correct parameters" {
     };
 
     var machine = mockMachine(struct {
-        pub fn drawPolygon(source: Video.PolygonSource, address: Video.PolygonAddress, point: Point.Instance, scale: PolygonScale.Raw) !void {
+        pub fn drawPolygon(source: Video.PolygonSource, address: Video.PolygonAddress, point: Point, scale: PolygonScale.Raw) !void {
             try testing.expectEqual(.polygons, source);
             try testing.expectEqual(0xDEAD, address);
             try testing.expectEqual(-1234, point.x);
@@ -328,7 +328,7 @@ test "execute with register scale value interprets value as unsigned" {
     };
 
     var machine = mockMachine(struct {
-        pub fn drawPolygon(_: Video.PolygonSource, _: Video.PolygonAddress, _: Point.Instance, scale: PolygonScale.Raw) !void {
+        pub fn drawPolygon(_: Video.PolygonSource, _: Video.PolygonAddress, _: Point, scale: PolygonScale.Raw) !void {
             try testing.expectEqual(46635, scale);
         }
     });

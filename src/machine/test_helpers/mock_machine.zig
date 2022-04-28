@@ -3,7 +3,7 @@ const Video = @import("../video.zig").Video;
 const Audio = @import("../audio.zig").Audio;
 const Registers = @import("../registers.zig").Registers;
 
-const Point = @import("../../values/point.zig");
+const Point = @import("../../values/point.zig").Point;
 const GamePart = @import("../../values/game_part.zig");
 const Channel = @import("../../values/channel.zig");
 const ResourceID = @import("../../values/resource_id.zig");
@@ -45,12 +45,12 @@ pub fn MockMachine(comptime Implementation: type) type {
 
         const Self = @This();
 
-        pub fn drawPolygon(self: *Self, source: Video.PolygonSource, address: Video.PolygonAddress, point: Point.Instance, scale: PolygonScale.Raw) !void {
+        pub fn drawPolygon(self: *Self, source: Video.PolygonSource, address: Video.PolygonAddress, point: Point, scale: PolygonScale.Raw) !void {
             self.call_counts.drawPolygon += 1;
             try Implementation.drawPolygon(source, address, point, scale);
         }
 
-        pub fn drawString(self: *Self, string_id: StringID.Raw, color_id: ColorID.Trusted, point: Point.Instance) !void {
+        pub fn drawString(self: *Self, string_id: StringID.Raw, color_id: ColorID.Trusted, point: Point) !void {
             self.call_counts.drawString += 1;
             try Implementation.drawString(string_id, color_id, point);
         }
@@ -128,7 +128,7 @@ const testing = @import("../../utils/testing.zig");
 
 test "MockMachine calls drawPolygon correctly on stub implementation" {
     var mock = mockMachine(struct {
-        fn drawPolygon(source: Video.PolygonSource, address: Video.PolygonAddress, point: Point.Instance, scale: PolygonScale.Raw) !void {
+        fn drawPolygon(source: Video.PolygonSource, address: Video.PolygonAddress, point: Point, scale: PolygonScale.Raw) !void {
             try testing.expectEqual(.animations, source);
             try testing.expectEqual(0xBEEF, address);
             try testing.expectEqual(320, point.x);
@@ -143,7 +143,7 @@ test "MockMachine calls drawPolygon correctly on stub implementation" {
 
 test "MockMachine calls drawString correctly on stub implementation" {
     var mock = mockMachine(struct {
-        fn drawString(string_id: StringID.Raw, color_id: ColorID.Trusted, point: Point.Instance) !void {
+        fn drawString(string_id: StringID.Raw, color_id: ColorID.Trusted, point: Point) !void {
             try testing.expectEqual(0xBEEF, string_id);
             try testing.expectEqual(2, color_id);
             try testing.expectEqual(320, point.x);

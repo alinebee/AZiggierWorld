@@ -1,12 +1,12 @@
 const ColorID = @import("../../values/color_id.zig");
-const BoundingBox = @import("../../values/bounding_box.zig");
-const Point = @import("../../values/point.zig");
+const Point = @import("../../values/point.zig").Point;
+const BoundingBox = @import("../../values/bounding_box.zig").BoundingBox;
 const Font = @import("../../assets/font.zig");
 
 /// Draw a single or multiline string in the specified color,
 /// positioning the top left corner of the text at the specified origin point.
 /// Returns an error if the string contains unsupported characters.
-pub fn drawString(comptime Buffer: type, buffer: anytype, string: []const u8, color: ColorID.Trusted, origin: Point.Instance) !void {
+pub fn drawString(comptime Buffer: type, buffer: anytype, string: []const u8, color: ColorID.Trusted, origin: Point) !void {
     const operation = Buffer.DrawOperation.solidColor(color);
 
     var cursor = origin;
@@ -28,8 +28,13 @@ pub fn drawString(comptime Buffer: type, buffer: anytype, string: []const u8, co
 /// Draws the specified 8x8 glyph in a solid color into the specified buffer,
 /// positioning the top left corner of the glyph at the specified point.
 /// Does not draw the glyph if any part of the glyph would be outside the buffer.
-fn drawGlyph(comptime Buffer: type, buffer: *Buffer, glyph: Font.Glyph, origin: Point.Instance, operation: Buffer.DrawOperation) void {
-    const glyph_bounds = BoundingBox.new(origin.x, origin.y, origin.x + Font.glyph_width - 1, origin.y + Font.glyph_height - 1);
+fn drawGlyph(comptime Buffer: type, buffer: *Buffer, glyph: Font.Glyph, origin: Point, operation: Buffer.DrawOperation) void {
+    const glyph_bounds = BoundingBox.init(
+        origin.x,
+        origin.y,
+        origin.x + Font.glyph_width - 1,
+        origin.y + Font.glyph_height - 1,
+    );
 
     // Skip characters that are fully or partially outside the buffer.
     if (Buffer.bounds.encloses(glyph_bounds) == false) {

@@ -19,10 +19,10 @@
 //!
 //! (See draw_polygon.zig for the draw algorithm.)
 
-const Point = @import("../values/point.zig");
+const Point = @import("../values/point.zig").Point;
+const BoundingBox = @import("../values/bounding_box.zig").BoundingBox;
 const DrawMode = @import("../values/draw_mode.zig");
 const PolygonScale = @import("../values/polygon_scale.zig");
-const BoundingBox = @import("../values/bounding_box.zig");
 
 const introspection = @import("../utils/introspection.zig");
 
@@ -30,7 +30,7 @@ const static_limits = @import("../static_limits.zig");
 const math = @import("std").math;
 const BoundedArray = @import("std").BoundedArray;
 
-const VertexStorage = BoundedArray(Point.Instance, max_vertices);
+const VertexStorage = BoundedArray(Point, max_vertices);
 
 /// Defines a scaled polygon in screen space, with between 4 and 50 vertices.
 pub const Instance = struct {
@@ -38,14 +38,14 @@ pub const Instance = struct {
     draw_mode: DrawMode.Enum,
 
     /// The scaled bounding box of this polygon in screen coordinates.
-    bounds: BoundingBox.Instance,
+    bounds: BoundingBox,
 
     /// The vertices making up this polygon in screen coordinates.
     /// Access via `vertices` instead of directly.
     _raw_vertices: VertexStorage,
 
     /// Returns a bounds-checked slice of the vertices in this polygon.
-    pub fn vertices(self: Instance) []const Point.Instance {
+    pub fn vertices(self: Instance) []const Point {
         return self._raw_vertices.constSlice();
     }
 
@@ -103,7 +103,7 @@ pub const Instance = struct {
 /// Construct a valid polygon instance with the specified vertices.
 /// Intended for testing purposes and does not make use of actual game data.
 /// Precondition: vertices must have > 0 and <= 50 entries.
-pub fn new(draw_mode: DrawMode.Enum, vertices: []const Point.Instance) Instance {
+pub fn new(draw_mode: DrawMode.Enum, vertices: []const Point) Instance {
     var self = Instance{
         .draw_mode = draw_mode,
         ._raw_vertices = VertexStorage.init(vertices.len) catch unreachable,
@@ -123,13 +123,13 @@ pub fn new(draw_mode: DrawMode.Enum, vertices: []const Point.Instance) Instance 
         max_y = if (max_y) |current| math.max(current, vertex.y) else vertex.y;
     }
 
-    self.bounds = BoundingBox.new(min_x.?, min_y.?, max_x.?, max_y.?);
+    self.bounds = BoundingBox.init(min_x.?, min_y.?, max_x.?, max_y.?);
     return self;
 }
 
 /// Parse a stream of bytes from an Another World polygon resource into a polygon instance,
 /// scaling and positioning it according to the specified center and scale factor.
-pub fn parse(reader: anytype, center: Point.Instance, scale: PolygonScale.Raw, draw_mode: DrawMode.Enum) ParseError(@TypeOf(reader))!Instance {
+pub fn parse(reader: anytype, center: Point, scale: PolygonScale.Raw, draw_mode: DrawMode.Enum) ParseError(@TypeOf(reader))!Instance {
     const raw_width = try reader.readByte();
     const raw_height = try reader.readByte();
     const count = try reader.readByte();
@@ -277,7 +277,7 @@ const fixedBufferStream = @import("std").io.fixedBufferStream;
 test "parse correctly parses 4-vertex dot polygon" {
     const reader = fixedBufferStream(&Fixtures.valid_dot).reader();
 
-    const center = Point.Instance{ .x = 320, .y = 200 };
+    const center = Point{ .x = 320, .y = 200 };
     const polygon = try parse(reader, center, PolygonScale.default, .highlight);
 
     try testing.expectEqual(320, polygon.bounds.x.min);
@@ -356,7 +356,7 @@ test "validate returns error.VerticesTooFarApart when a clockwise vertex is more
 }
 
 test "new creates polygon with expected bounding box and vertices" {
-    const vertices = [_]Point.Instance{
+    const vertices = [_]Point{
         .{ .x = 1, .y = 1 },
         .{ .x = 1, .y = 2 },
         .{ .x = 1, .y = 2 },
@@ -367,7 +367,7 @@ test "new creates polygon with expected bounding box and vertices" {
 
     try testing.expectEqual(.mask, polygon.draw_mode);
     try testing.expectEqual(4, polygon.vertices().len);
-    try testing.expectEqualSlices(Point.Instance, &vertices, polygon.vertices());
+    try testing.expectEqualSlices(Point, &vertices, polygon.vertices());
 
     try testing.expectEqual(1, polygon.bounds.x.min);
     try testing.expectEqual(1, polygon.bounds.x.max);

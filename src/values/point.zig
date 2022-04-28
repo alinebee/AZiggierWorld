@@ -1,44 +1,48 @@
-pub const Coordinate = i16;
-
 /// Defines an X,Y point in screen space.
-pub const Instance = struct {
+pub const Point = struct {
     /// The X position in virtual 320x200 pixels, starting from the left edge of the screen.
     x: Coordinate,
 
     /// The Y position in virtual 320x200 pixels, starting from the top edge of the screen.
     y: Coordinate,
 
+    const Self = @This();
+
     /// Add two points together, wrapping on overflow.
-    pub fn adding(self: Instance, other: Instance) Instance {
+    pub fn adding(self: Self, other: Self) Self {
         return .{
             .x = self.x +% other.x,
             .y = self.y +% other.y,
         };
     }
 
-    pub fn subtracting(self: Instance, other: Instance) Instance {
+    pub fn subtracting(self: Self, other: Self) Self {
         return .{
             .x = self.x -% other.x,
             .y = self.y -% other.y,
         };
     }
-};
 
-pub const zero = Instance{ .x = 0, .y = 0 };
+    // - Exported constants -
+
+    pub const Coordinate = i16;
+
+    pub const zero = Self{ .x = 0, .y = 0 };
+};
 
 // -- Tests --
 
 const testing = @import("../utils/testing.zig");
 const math = @import("std").math;
 
-const max_coord = math.maxInt(Coordinate);
-const min_coord = math.minInt(Coordinate);
+const max_coord = math.maxInt(Point.Coordinate);
+const min_coord = math.minInt(Point.Coordinate);
 
-const base = zero;
-const positive = Instance{ .x = 10, .y = 10 };
-const negative = Instance{ .x = -10, .y = -10 };
-const max = Instance{ .x = max_coord, .y = max_coord };
-const min = Instance{ .x = min_coord, .y = min_coord };
+const base = Point.zero;
+const positive = Point{ .x = 10, .y = 10 };
+const negative = Point{ .x = -10, .y = -10 };
+const max = Point{ .x = max_coord, .y = max_coord };
+const min = Point{ .x = min_coord, .y = min_coord };
 
 test "adding adds points A and B together, wrapping on overflow" {
     try testing.expectEqual(.{ .x = 10, .y = 10 }, base.adding(positive));

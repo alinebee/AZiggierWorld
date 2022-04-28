@@ -2,7 +2,7 @@ const Opcode = @import("../values/opcode.zig").Opcode;
 const Program = @import("../machine/program.zig").Program;
 const Machine = @import("../machine/machine.zig").Machine;
 const Video = @import("../machine/video.zig").Video;
-const Point = @import("../values/point.zig");
+const Point = @import("../values/point.zig").Point;
 const PolygonScale = @import("../values/polygon_scale.zig");
 
 /// Draw a polygon at the default zoom level and a constant position hardcoded in the bytecode.
@@ -12,7 +12,7 @@ pub const DrawBackgroundPolygon = struct {
     /// The address within the currently-loaded polygon resource from which to read polygon data.
     address: Video.PolygonAddress,
     /// The X and Y position in screen space at which to draw the polygon.
-    point: Point.Instance,
+    point: Point,
 
     const Self = @This();
 
@@ -112,7 +112,7 @@ test "execute calls drawPolygon with correct parameters" {
     };
 
     var machine = mockMachine(struct {
-        pub fn drawPolygon(source: Video.PolygonSource, address: Video.PolygonAddress, point: Point.Instance, scale: PolygonScale.Raw) !void {
+        pub fn drawPolygon(source: Video.PolygonSource, address: Video.PolygonAddress, point: Point, scale: PolygonScale.Raw) !void {
             try testing.expectEqual(.polygons, source);
             try testing.expectEqual(0xDEAD, address);
             try testing.expectEqual(320, point.x);
