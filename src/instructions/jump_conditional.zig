@@ -4,18 +4,18 @@ const Program = @import("../machine/program.zig").Program;
 const Machine = @import("../machine/machine.zig").Machine;
 const Comparison = @import("comparison.zig").Comparison;
 const Address = @import("../values/address.zig");
-const RegisterID = @import("../values/register_id.zig");
+const RegisterID = @import("../values/register_id.zig").RegisterID;
 
 /// Compares the value in a register against another register or constant
 /// and jumps to a new address in the program if the comparison succeeds.
 pub const JumpConditional = struct {
     /// The register to use for the left-hand side of the condition.
-    lhs: RegisterID.Enum,
+    lhs: RegisterID,
 
     /// The register or constant to use for the right-hand side of the condition.
     rhs: union(enum) {
         constant: Register.Signed,
-        register: RegisterID.Enum,
+        register: RegisterID,
     },
 
     /// How to compare the two sides of the condition.

@@ -1,15 +1,15 @@
 const Opcode = @import("../values/opcode.zig").Opcode;
 const Program = @import("../machine/program.zig").Program;
 const Machine = @import("../machine/machine.zig").Machine;
-const RegisterID = @import("../values/register_id.zig");
+const RegisterID = @import("../values/register_id.zig").RegisterID;
 
 /// Add the value from one register to another, wrapping on overflow.
 pub const RegisterAdd = struct {
     /// The ID of the register to add to.
-    destination: RegisterID.Enum,
+    destination: RegisterID,
 
     /// The ID of the register containing the value to add.
-    source: RegisterID.Enum,
+    source: RegisterID,
 
     const Self = @This();
 

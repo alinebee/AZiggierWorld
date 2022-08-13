@@ -1,15 +1,15 @@
 const Opcode = @import("../values/opcode.zig").Opcode;
 const Program = @import("../machine/program.zig").Program;
 const Machine = @import("../machine/machine.zig").Machine;
-const RegisterID = @import("../values/register_id.zig");
+const RegisterID = @import("../values/register_id.zig").RegisterID;
 
 /// Subtract the value in one register from another, wrapping on overflow.
 pub const RegisterSubtract = struct {
     /// The ID of the register to subtract from.
-    destination: RegisterID.Enum,
+    destination: RegisterID,
 
     /// The ID of the register containing the value to subtract.
-    source: RegisterID.Enum,
+    source: RegisterID,
 
     const Self = @This();
 

@@ -1,5 +1,5 @@
 const Register = @import("../values/register.zig");
-const RegisterID = @import("../values/register_id.zig");
+const RegisterID = @import("../values/register_id.zig").RegisterID;
 
 const static_limits = @import("../static_limits.zig");
 
@@ -16,32 +16,32 @@ pub const Registers = struct {
     const Self = @This();
 
     /// Get the value of the specified register as an unsigned value.
-    pub fn unsigned(self: Self, id: RegisterID.Enum) Register.Unsigned {
+    pub fn unsigned(self: Self, id: RegisterID) Register.Unsigned {
         return @bitCast(Register.Unsigned, self.values[@enumToInt(id)]);
     }
 
     /// Set the value of the specified register to the specified unsigned value.
-    pub fn setUnsigned(self: *Self, id: RegisterID.Enum, value: Register.Unsigned) void {
+    pub fn setUnsigned(self: *Self, id: RegisterID, value: Register.Unsigned) void {
         self.values[@enumToInt(id)] = @bitCast(Register.Unsigned, value);
     }
 
     /// Get the value of the specified register as a signed value.
-    pub fn signed(self: Self, id: RegisterID.Enum) Register.Signed {
+    pub fn signed(self: Self, id: RegisterID) Register.Signed {
         return @bitCast(Register.Signed, self.values[@enumToInt(id)]);
     }
 
     /// Set the value of the specified register to the specified signed value.
-    pub fn setSigned(self: *Self, id: RegisterID.Enum, value: Register.Signed) void {
+    pub fn setSigned(self: *Self, id: RegisterID, value: Register.Signed) void {
         self.values[@enumToInt(id)] = @bitCast(Register.Unsigned, value);
     }
 
     /// Get the value of the specified register as a signed value.
-    pub fn bitPattern(self: Self, id: RegisterID.Enum) Register.BitPattern {
+    pub fn bitPattern(self: Self, id: RegisterID) Register.BitPattern {
         return @bitCast(Register.BitPattern, self.values[@enumToInt(id)]);
     }
 
     /// Set the value of the specified register to the specified value.
-    pub fn setBitPattern(self: *Self, id: RegisterID.Enum, value: Register.BitPattern) void {
+    pub fn setBitPattern(self: *Self, id: RegisterID, value: Register.BitPattern) void {
         self.values[@enumToInt(id)] = @bitCast(Register.Unsigned, value);
     }
 

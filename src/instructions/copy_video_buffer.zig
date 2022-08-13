@@ -3,7 +3,6 @@ const Program = @import("../machine/program.zig").Program;
 const Machine = @import("../machine/machine.zig").Machine;
 const Point = @import("../values/point.zig").Point;
 const BufferID = @import("../values/buffer_id.zig");
-const RegisterID = @import("../values/register_id.zig");
 
 /// Copies the contents of one video buffer into another.
 pub const CopyVideoBuffer = struct {

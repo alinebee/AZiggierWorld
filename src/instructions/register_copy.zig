@@ -1,15 +1,15 @@
 const Opcode = @import("../values/opcode.zig").Opcode;
 const Program = @import("../machine/program.zig").Program;
 const Machine = @import("../machine/machine.zig").Machine;
-const RegisterID = @import("../values/register_id.zig");
+const RegisterID = @import("../values/register_id.zig").RegisterID;
 
 /// Copy the value of one register to another.
 pub const RegisterCopy = struct {
     /// The ID of the register to copy into.
-    destination: RegisterID.Enum,
+    destination: RegisterID,
 
     /// The ID of the register to copy from.
-    source: RegisterID.Enum,
+    source: RegisterID,
 
     const Self = @This();
 

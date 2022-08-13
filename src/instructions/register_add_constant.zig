@@ -2,12 +2,12 @@ const Opcode = @import("../values/opcode.zig").Opcode;
 const Register = @import("../values/register.zig");
 const Program = @import("../machine/program.zig").Program;
 const Machine = @import("../machine/machine.zig").Machine;
-const RegisterID = @import("../values/register_id.zig");
+const RegisterID = @import("../values/register_id.zig").RegisterID;
 
 /// Adds a signed constant value to a specific register, wrapping on overflow.
 pub const RegisterAddConstant = struct {
     /// The ID of the register to add to.
-    destination: RegisterID.Enum,
+    destination: RegisterID,
 
     /// The constant value to add to the register.
     value: Register.Signed,

@@ -226,7 +226,7 @@ fn expectParse(bytecode: []const u8) !Wrapped {
 // -- Tests --
 
 const testing = @import("../utils/testing.zig");
-const RegisterID = @import("../values/register_id.zig");
+const RegisterID = @import("../values/register_id.zig").RegisterID;
 
 // - parseNextInstruction tests --
 

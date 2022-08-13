@@ -37,7 +37,7 @@ const ColorID = @import("../values/color_id.zig");
 const Channel = @import("../values/channel.zig");
 const Point = @import("../values/point.zig").Point;
 const PolygonScale = @import("../values/polygon_scale.zig");
-const RegisterID = @import("../values/register_id.zig");
+const RegisterID = @import("../values/register_id.zig").RegisterID;
 const Register = @import("../values/register.zig");
 const GamePart = @import("../values/game_part.zig").GamePart;
 
@@ -408,7 +408,7 @@ test "new creates virtual machine instance with expected initial state" {
     }
 
     for (machine.registers.unsignedSlice()) |register, id| {
-        const expected_value: Register.Unsigned = switch (@intToEnum(RegisterID.Enum, id)) {
+        const expected_value: Register.Unsigned = switch (@intToEnum(RegisterID, id)) {
             .virtual_machine_startup_UNKNOWN => 0x81,
             .copy_protection_bypass_1 => 0b0001_0000,
             .copy_protection_bypass_2 => 0x0080,

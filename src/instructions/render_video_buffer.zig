@@ -3,7 +3,6 @@ const Program = @import("../machine/program.zig").Program;
 const Machine = @import("../machine/machine.zig").Machine;
 const Video = @import("../machine/video.zig").Video;
 const BufferID = @import("../values/buffer_id.zig");
-const RegisterID = @import("../values/register_id.zig");
 
 /// This instruction reads a variable from a specific register to decide how long to leave
 /// the previous frame on screen before displaying the next one.

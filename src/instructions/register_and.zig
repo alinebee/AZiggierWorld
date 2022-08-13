@@ -1,13 +1,13 @@
 const Opcode = @import("../values/opcode.zig").Opcode;
 const Register = @import("../values/register.zig");
-const RegisterID = @import("../values/register_id.zig");
+const RegisterID = @import("../values/register_id.zig").RegisterID;
 const Program = @import("../machine/program.zig").Program;
 const Machine = @import("../machine/machine.zig").Machine;
 
 /// Applies a bitwise-AND mask to the value in a register.
 pub const RegisterAnd = struct {
     /// The ID of the register to apply the mask to.
-    destination: RegisterID.Enum,
+    destination: RegisterID,
 
     /// The bitmask to apply to the value in the register.
     value: Register.BitPattern,

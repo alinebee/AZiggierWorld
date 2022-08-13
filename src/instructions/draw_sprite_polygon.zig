@@ -3,7 +3,7 @@ const Program = @import("../machine/program.zig").Program;
 const Machine = @import("../machine/machine.zig").Machine;
 const Video = @import("../machine/video.zig").Video;
 const Point = @import("../values/point.zig").Point;
-const RegisterID = @import("../values/register_id.zig");
+const RegisterID = @import("../values/register_id.zig").RegisterID;
 const PolygonScale = @import("../values/polygon_scale.zig");
 
 /// Draw a polygon at a location and zoom level that are either hardcoded constants
@@ -18,20 +18,20 @@ pub const DrawSpritePolygon = struct {
     /// The source for the X offset at which to draw the polygon.
     x: union(enum) {
         constant: Point.Coordinate,
-        register: RegisterID.Enum,
+        register: RegisterID,
     },
 
     /// The source for the Y offset at which to draw the polygon.
     y: union(enum) {
         constant: Point.Coordinate,
-        register: RegisterID.Enum,
+        register: RegisterID,
     },
 
     /// The source for the scale at which to draw the polygon.
     scale: union(enum) {
         default,
         constant: PolygonScale.Raw,
-        register: RegisterID.Enum,
+        register: RegisterID,
     },
 
     const Self = @This();

@@ -2,10 +2,10 @@ const fmt = @import("std").fmt;
 
 /// A raw register identifier as represented in Another World's bytecode.
 /// Guaranteed at compile-time to be valid, as the VM has exactly 256 registers.
-pub const Raw = u8;
+const _Raw = u8;
 
 /// A non-exhaustive enumeration of known register IDs used in Another World's bytecode.
-pub const Enum = enum(Raw) {
+pub const RegisterID = enum(_Raw) {
     /// UNKNOWN: Set to 129 (0x81) at VM startup in reference implementation:
     /// https://github.com/fabiensanglard/Another-World-Bytecode-Interpreter/blob/master/src/vm.cpp#L37
     virtual_machine_startup_UNKNOWN = 0x54,
@@ -66,18 +66,20 @@ pub const Enum = enum(Raw) {
 
     // Make this a non-exhaustive enum: allows any arbitrary 8-bit integer to be safely cast to this enum type.
     _,
-};
 
-/// Parse an arbitrary 8-bit unsigned integer into a RegisterID enum.
-/// This parsing is always successful, even if the integer does not match a known ID.
-pub fn parse(raw: Raw) Enum {
-    return @intToEnum(Enum, raw);
-}
+    pub const Raw = _Raw;
+
+    /// Parse an arbitrary 8-bit unsigned integer into a RegisterID enum.
+    /// This parsing is always successful, even if the integer does not match a known ID.
+    pub fn parse(raw: Raw) RegisterID {
+        return @intToEnum(RegisterID, raw);
+    }
+};
 
 // -- Tests --
 
 const static_limits = @import("../static_limits.zig");
 
 test "Raw type matches range of legal register IDs" {
-    try static_limits.validateTrustedType(Raw, static_limits.register_count);
+    try static_limits.validateTrustedType(_Raw, static_limits.register_count);
 }

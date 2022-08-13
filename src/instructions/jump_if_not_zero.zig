@@ -2,13 +2,13 @@ const Opcode = @import("../values/opcode.zig").Opcode;
 const Program = @import("../machine/program.zig").Program;
 const Machine = @import("../machine/machine.zig").Machine;
 const Address = @import("../values/address.zig");
-const RegisterID = @import("../values/register_id.zig");
+const RegisterID = @import("../values/register_id.zig").RegisterID;
 
 /// Decrement the value in a specific register and move the program counter to a specific address
 /// if the value in that register is not yet zero. Likely used for loop counters.
 pub const JumpIfNotZero = struct {
     /// The register storing the counter to decrement.
-    register_id: RegisterID.Enum,
+    register_id: RegisterID,
     /// The address to jump to if the register value is non-zero.
     address: Address.Raw,
 

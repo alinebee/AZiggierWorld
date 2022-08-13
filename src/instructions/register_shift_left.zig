@@ -2,14 +2,14 @@ const Opcode = @import("../values/opcode.zig").Opcode;
 const Register = @import("../values/register.zig");
 const Program = @import("../machine/program.zig").Program;
 const Machine = @import("../machine/machine.zig").Machine;
-const RegisterID = @import("../values/register_id.zig");
+const RegisterID = @import("../values/register_id.zig").RegisterID;
 
 const introspection = @import("../utils/introspection.zig");
 
 /// Left-shift (<<) the bits in a register's value by a specified distance.
 pub const RegisterShiftLeft = struct {
     /// The ID of the register to add to.
-    destination: RegisterID.Enum,
+    destination: RegisterID,
 
     /// The distance to shift the value by.
     shift: Register.Shift,
