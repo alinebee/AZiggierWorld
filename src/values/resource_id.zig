@@ -12,7 +12,7 @@ pub const ResourceID = enum(_Raw) {
     }
 
     /// Returns the ResourceID converted to an array index.
-    pub fn index(id: ResourceID) Raw {
+    pub fn index(id: ResourceID) usize {
         return @enumToInt(id);
     }
 

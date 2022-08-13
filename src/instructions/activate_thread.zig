@@ -1,5 +1,5 @@
 const Opcode = @import("../values/opcode.zig").Opcode;
-const ThreadID = @import("../values/thread_id.zig");
+const ThreadID = @import("../values/thread_id.zig").ThreadID;
 const Program = @import("../machine/program.zig").Program;
 const Machine = @import("../machine/machine.zig").Machine;
 const Address = @import("../values/address.zig");
@@ -8,7 +8,7 @@ const Address = @import("../values/address.zig");
 /// Takes effect on the next iteration of the run loop.
 pub const ActivateThread = struct {
     /// The thread to activate.
-    thread_id: ThreadID.Trusted,
+    thread_id: ThreadID,
 
     /// The program address that the thread should jump to when activated.
     address: Address.Raw,
@@ -31,7 +31,7 @@ pub const ActivateThread = struct {
     }
 
     pub fn execute(self: Self, machine: *Machine) ExecutionError!void {
-        machine.threads[self.thread_id].scheduleJump(self.address);
+        machine.threads[self.thread_id.index()].scheduleJump(self.address);
     }
 
     // - Exported constants -
@@ -61,7 +61,7 @@ const expectParse = @import("test_helpers/parse.zig").expectParse;
 test "parse parses instruction from valid bytecode and consumes 4 bytes" {
     const instruction = try expectParse(ActivateThread.parse, &ActivateThread.Fixtures.valid, 4);
 
-    try testing.expectEqual(63, instruction.thread_id);
+    try testing.expectEqual(ThreadID.cast(63), instruction.thread_id);
     try testing.expectEqual(0xDEAD, instruction.address);
 }
 
@@ -74,7 +74,7 @@ test "parse returns error.InvalidThreadID and consumes 4 bytes when thread ID is
 
 test "execute schedules specified thread to jump to specified address" {
     const instruction = ActivateThread{
-        .thread_id = 63,
+        .thread_id = ThreadID.cast(63),
         .address = 0xDEAD,
     };
 

@@ -2,9 +2,6 @@
 
 const std = @import("std");
 
-/// A version of @intToEnum that returns error.IntToEnumError on failure.
-pub const intToEnum = std.meta.intToEnum;
-
 /// Given an integer type, returns the number of bits in that integer.
 pub const bitCount = std.meta.bitCount;
 
@@ -13,6 +10,32 @@ pub const intCast = std.math.cast;
 
 /// Given an integer type, returns the type used for legal left/right-shift operations.
 pub const ShiftType = std.math.Log2Int;
+
+/// The version of intToEnum in the Zig 0.9.1 Standard Library doesn't correctly handle
+/// non-exhaustive enums.
+pub fn intToEnum(comptime EnumTag: type, tag_int: anytype) std.meta.IntToEnumError!EnumTag {
+    const enum_info = @typeInfo(EnumTag).Enum;
+
+    if (enum_info.is_exhaustive) {
+        inline for (enum_info.fields) |f| {
+            const this_tag_value = @field(EnumTag, f.name);
+            if (tag_int == @enumToInt(this_tag_value)) {
+                return this_tag_value;
+            }
+        }
+
+        return error.InvalidEnumTag;
+    } else {
+        const max = std.math.maxInt(enum_info.tag_type);
+        const min = std.math.minInt(enum_info.tag_type);
+
+        if (tag_int >= min and tag_int <= max) {
+            return @intToEnum(EnumTag, tag_int);
+        } else {
+            return error.InvalidEnumTag;
+        }
+    }
+}
 
 /// If given a pointer type, returns the type that the pointer points to;
 /// if given any other type, returns the base type.
@@ -164,4 +187,63 @@ test "BaseType returns struct type when given a struct type" {
     const value_of_struct: MyStruct = undefined;
 
     try testing.expectEqual(MyStruct, BaseType(@TypeOf(value_of_struct)));
+}
+
+// -- intToEnum tests
+
+const ExhaustiveEnumWithInferredTag = enum {
+    first,
+    second,
+};
+
+const ExhaustiveEnumWithExplicitTag = enum(i8) {
+    first = 0,
+    second = 1,
+};
+
+const NonExhaustiveEnum = enum(i8) {
+    first = 0,
+    second = 1,
+    _,
+};
+
+const standardLibraryIntToEnum = std.meta.intToEnum;
+
+test "intToEnum with non-exhaustive enum" {
+    _ = try intToEnum(NonExhaustiveEnum, 0);
+    _ = try intToEnum(NonExhaustiveEnum, 1);
+    _ = try intToEnum(NonExhaustiveEnum, 127);
+    _ = try intToEnum(NonExhaustiveEnum, -128);
+    try testing.expectError(error.InvalidEnumTag, intToEnum(NonExhaustiveEnum, 256));
+    try testing.expectError(error.InvalidEnumTag, intToEnum(NonExhaustiveEnum, -256));
+}
+
+test "intToEnum with exhaustive enum" {
+    _ = try intToEnum(ExhaustiveEnumWithExplicitTag, 0);
+    _ = try intToEnum(ExhaustiveEnumWithExplicitTag, 1);
+    try testing.expectError(error.InvalidEnumTag, intToEnum(ExhaustiveEnumWithExplicitTag, 127));
+    try testing.expectError(error.InvalidEnumTag, intToEnum(ExhaustiveEnumWithExplicitTag, -128));
+    try testing.expectError(error.InvalidEnumTag, intToEnum(ExhaustiveEnumWithExplicitTag, 256));
+    try testing.expectError(error.InvalidEnumTag, intToEnum(ExhaustiveEnumWithExplicitTag, -256));
+}
+
+test "intToEnum with exhaustive enum with inferred tag" {
+    _ = try intToEnum(ExhaustiveEnumWithInferredTag, 0);
+    _ = try intToEnum(ExhaustiveEnumWithInferredTag, 1);
+    try testing.expectError(error.InvalidEnumTag, intToEnum(ExhaustiveEnumWithInferredTag, 127));
+    try testing.expectError(error.InvalidEnumTag, intToEnum(ExhaustiveEnumWithInferredTag, -128));
+    try testing.expectError(error.InvalidEnumTag, intToEnum(ExhaustiveEnumWithInferredTag, 256));
+    try testing.expectError(error.InvalidEnumTag, intToEnum(ExhaustiveEnumWithInferredTag, -256));
+}
+
+test "Standard Library intToEnum has buggy handling of non-exhaustive enums" {
+    _ = try standardLibraryIntToEnum(NonExhaustiveEnum, 0);
+    _ = try standardLibraryIntToEnum(NonExhaustiveEnum, 1);
+    try testing.expectError(error.InvalidEnumTag, standardLibraryIntToEnum(NonExhaustiveEnum, 256));
+    try testing.expectError(error.InvalidEnumTag, standardLibraryIntToEnum(NonExhaustiveEnum, -256));
+
+    // These two expectations will start failing once the bug is fixed upstream,
+    // at which point we can get rid of our overridden implementation.
+    try testing.expectError(error.InvalidEnumTag, standardLibraryIntToEnum(NonExhaustiveEnum, 127));
+    try testing.expectError(error.InvalidEnumTag, standardLibraryIntToEnum(NonExhaustiveEnum, -128));
 }

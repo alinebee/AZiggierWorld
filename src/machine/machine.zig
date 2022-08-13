@@ -28,7 +28,7 @@
 //! the host is expected to sleep for that long before allowing execution to continue, which indirectly
 //! decides the framerate of the game.
 
-const ThreadID = @import("../values/thread_id.zig");
+const ThreadID = @import("../values/thread_id.zig").ThreadID;
 const BufferID = @import("../values/buffer_id.zig").BufferID;
 const ResourceID = @import("../values/resource_id.zig").ResourceID;
 const StringID = @import("../values/string_id.zig");
@@ -332,7 +332,7 @@ pub const Machine = struct {
         }
 
         // Reset the main thread to begin execution at the start of the current program.
-        self.threads[ThreadID.main].start();
+        self.threads[ThreadID.main.index()].start();
 
         self.current_game_part = game_part;
         self.scheduled_game_part = null;
@@ -398,8 +398,8 @@ test "new creates virtual machine instance with expected initial state" {
     var machine = try Machine.init(testing.allocator, MockRepository.test_reader, mock_host.test_host, options);
     defer machine.deinit();
 
-    for (machine.threads) |thread, id| {
-        if (id == ThreadID.main) {
+    for (machine.threads) |thread, index| {
+        if (index == ThreadID.main.index()) {
             try testing.expectEqual(.{ .active = 0 }, thread.execution_state);
         } else {
             try testing.expectEqual(.inactive, thread.execution_state);
@@ -479,8 +479,8 @@ test "startGamePart resets previous thread state, loads resources for new game p
 
     try machine.startGamePart(next_game_part);
 
-    for (machine.threads) |thread, id| {
-        if (id == ThreadID.main) {
+    for (machine.threads) |thread, index| {
+        if (index == ThreadID.main.index()) {
             try testing.expectEqual(.{ .active = 0 }, thread.execution_state);
         } else {
             try testing.expectEqual(.inactive, thread.execution_state);

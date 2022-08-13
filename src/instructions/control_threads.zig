@@ -1,5 +1,5 @@
 const Opcode = @import("../values/opcode.zig").Opcode;
-const ThreadID = @import("../values/thread_id.zig");
+const ThreadID = @import("../values/thread_id.zig").ThreadID;
 const Program = @import("../machine/program.zig").Program;
 const Machine = @import("../machine/machine.zig").Machine;
 const ThreadOperation = @import("thread_operation.zig").ThreadOperation;
@@ -10,11 +10,11 @@ const ThreadOperation = @import("thread_operation.zig").ThreadOperation;
 pub const ControlThreads = struct {
     /// The ID of the minimum thread to operate upon.
     /// The operation will affect each thread from start_thread_id up to and including end_thread_id.
-    start_thread_id: ThreadID.Trusted,
+    start_thread_id: ThreadID,
 
     /// The ID of the maximum thread to operate upon.
     /// The operation will affect each thread from start_thread_id up to and including end_thread_id.
-    end_thread_id: ThreadID.Trusted,
+    end_thread_id: ThreadID,
 
     /// The operation to perform on the threads in the range.
     operation: ThreadOperation,
@@ -35,7 +35,7 @@ pub const ControlThreads = struct {
             .operation = try ThreadOperation.parse(raw_operation),
         };
 
-        if (instruction.start_thread_id > instruction.end_thread_id) {
+        if (instruction.start_thread_id.index() > instruction.end_thread_id.index()) {
             return error.InvalidThreadRange;
         }
 
@@ -43,8 +43,8 @@ pub const ControlThreads = struct {
     }
 
     pub fn execute(self: Self, machine: *Machine) void {
-        const start = self.start_thread_id;
-        const end = @as(usize, self.end_thread_id) + 1;
+        const start = self.start_thread_id.index();
+        const end = self.end_thread_id.index() + 1;
         const affected_threads = machine.threads[start..end];
 
         for (affected_threads) |*thread| {
@@ -90,14 +90,15 @@ pub const ControlThreads = struct {
 
 const testing = @import("../utils/testing.zig");
 const expectParse = @import("test_helpers/parse.zig").expectParse;
+const static_limits = @import("../static_limits.zig");
 
 // - parse tests -
 
 test "parse parses valid bytecode and consumes 4 bytes" {
     const instruction = try expectParse(ControlThreads.parse, &ControlThreads.Fixtures.valid, 4);
 
-    try testing.expectEqual(62, instruction.start_thread_id);
-    try testing.expectEqual(63, instruction.end_thread_id);
+    try testing.expectEqual(ThreadID.cast(62), instruction.start_thread_id);
+    try testing.expectEqual(ThreadID.cast(63), instruction.end_thread_id);
     try testing.expectEqual(.deactivate, instruction.operation);
 }
 
@@ -133,8 +134,8 @@ test "parse returns error.InvalidThreadRange and consumes 4 bytes when thread ra
 
 test "execute with resume operation schedules specified threads to resume" {
     const instruction = ControlThreads{
-        .start_thread_id = 1,
-        .end_thread_id = 3,
+        .start_thread_id = ThreadID.cast(1),
+        .end_thread_id = ThreadID.cast(3),
         .operation = .@"resume",
     };
 
@@ -156,8 +157,8 @@ test "execute with resume operation schedules specified threads to resume" {
 
 test "execute with pause operation schedules specified threads to pause" {
     const instruction = ControlThreads{
-        .start_thread_id = 1,
-        .end_thread_id = 3,
+        .start_thread_id = ThreadID.cast(1),
+        .end_thread_id = ThreadID.cast(3),
         .operation = .pause,
     };
 
@@ -179,8 +180,8 @@ test "execute with pause operation schedules specified threads to pause" {
 
 test "execute with deactivate operation schedules specified threads to deactivate" {
     const instruction = ControlThreads{
-        .start_thread_id = 1,
-        .end_thread_id = 3,
+        .start_thread_id = ThreadID.cast(1),
+        .end_thread_id = ThreadID.cast(3),
         .operation = .deactivate,
     };
 
@@ -204,8 +205,8 @@ const math = @import("std").math;
 
 test "execute safely iterates full range of threads" {
     const instruction = ControlThreads{
-        .start_thread_id = math.minInt(ThreadID.Trusted),
-        .end_thread_id = math.maxInt(ThreadID.Trusted),
+        .start_thread_id = ThreadID.cast(0),
+        .end_thread_id = ThreadID.cast(static_limits.thread_count - 1),
         .operation = .@"resume",
     };
 

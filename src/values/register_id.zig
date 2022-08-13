@@ -75,7 +75,7 @@ pub const RegisterID = enum(_Raw) {
     }
 
     /// Returns the RegisterID converted to an array index.
-    pub fn index(id: RegisterID) Raw {
+    pub fn index(id: RegisterID) usize {
         return @enumToInt(id);
     }
 
