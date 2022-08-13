@@ -34,7 +34,7 @@
 //! but we don't need to support that anyway, and future Zig versions may allow us to mark
 //! the entire type as move-only.
 const ResourceReader = @import("../resources/resource_reader.zig").ResourceReader;
-const ResourceID = @import("../values/resource_id.zig");
+const ResourceID = @import("../values/resource_id.zig").ResourceID;
 const planar_bitmap = @import("../resources/planar_bitmap.zig");
 const GamePart = @import("../values/game_part.zig").GamePart;
 
@@ -117,9 +117,9 @@ pub const Memory = struct {
 
     /// The memory location of the resource with the specified ID, or `null` if the resource is not loaded.
     /// Returns an error if the location is out of range.
-    pub fn resourceLocation(self: Self, id: ResourceID.Raw) ResourceLocationError!PossibleResourceLocation {
+    pub fn resourceLocation(self: Self, id: ResourceID) ResourceLocationError!PossibleResourceLocation {
         try self.reader.validateResourceID(id);
-        return self.resource_locations[id];
+        return self.resource_locations[id.index()];
     }
 
     /// Flush all loaded resources from memory, then load the resources for the specified game part.
@@ -152,7 +152,7 @@ pub const Memory = struct {
     /// Returns an error if the specified resource ID is invalid, the resource at that ID
     /// could not be read from disk, or the resource is of a type that can only be loaded
     /// by `loadGamePart` (not individually).
-    pub fn loadIndividualResource(self: *Self, id: ResourceID.Raw) LoadIndividualResourceError!IndividualResourceLocation {
+    pub fn loadIndividualResource(self: *Self, id: ResourceID) LoadIndividualResourceError!IndividualResourceLocation {
         const descriptor = try self.reader.resourceDescriptor(id);
 
         return switch (descriptor.type) {
@@ -170,10 +170,10 @@ pub const Memory = struct {
     /// invalidating any pointers to the memory locations of those resources.
     /// Any resources that are intrinsic to the current game part will remain loaded.
     pub fn unloadAllIndividualResources(self: *Self) void {
-        for (self.reader.resourceDescriptors()) |descriptor, id| {
+        for (self.reader.resourceDescriptors()) |descriptor, index| {
             switch (descriptor.type) {
                 // These resource types can only be loaded by loadIndividualResource(id).
-                .sound_or_empty, .music, .bitmap => self.unload(&self.resource_locations[id]),
+                .sound_or_empty, .music, .bitmap => self.unload(&self.resource_locations[index]),
                 // These resource types can only be loaded by loadGamePart(game_part) and should be left alone.
                 .bytecode, .palettes, .polygons, .sprite_polygons => continue,
             }
@@ -185,14 +185,15 @@ pub const Memory = struct {
     /// Loads a resource into memory if it is not already loaded, and returns its location.
     /// Returns an error if the specified resource ID is invalid or the resource with that ID
     /// could not be read from disk.
-    fn loadIfNeeded(self: *Self, id: ResourceID.Raw) ![]const u8 {
+    fn loadIfNeeded(self: *Self, id: ResourceID) ![]const u8 {
         try self.reader.validateResourceID(id);
 
-        if (self.resource_locations[id]) |location| {
+        const index = id.index();
+        if (self.resource_locations[index]) |location| {
             return location;
         } else {
             const location = try self.reader.allocReadResourceByID(self.allocator, id);
-            self.resource_locations[id] = location;
+            self.resource_locations[index] = location;
             return location;
         }
     }

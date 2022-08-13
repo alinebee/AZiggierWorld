@@ -16,7 +16,7 @@
 
 const ResourceReader = @import("resource_reader.zig").ResourceReader;
 const ResourceDescriptor = @import("resource_descriptor.zig").ResourceDescriptor;
-const ResourceID = @import("../values/resource_id.zig");
+const ResourceID = @import("../values/resource_id.zig").ResourceID;
 const Filename = @import("filename.zig").Filename;
 const decode = @import("../run_length_decoder/decode.zig").decode;
 

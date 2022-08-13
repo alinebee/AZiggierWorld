@@ -2,7 +2,7 @@
 //! Requires that the `fixtures/dos` folder contains Another World DOS game files.
 
 const ResourceDirectory = @import("../resources/resource_directory.zig").ResourceDirectory;
-const ResourceID = @import("../values/resource_id.zig");
+const ResourceID = @import("../values/resource_id.zig").ResourceID;
 
 const testing = @import("../utils/testing.zig");
 const ensureValidFixtureDir = @import("helpers.zig").ensureValidFixtureDir;
@@ -57,7 +57,7 @@ test "Instance.allocReadResourceByID returns error.InvalidResourceID when given 
     var resource_directory = try ResourceDirectory.init(&game_dir);
     const reader = resource_directory.reader();
 
-    const invalid_id = @intCast(ResourceID.Raw, reader.resourceDescriptors().len);
+    const invalid_id = ResourceID.cast(@intCast(ResourceID.Raw, reader.resourceDescriptors().len));
     try testing.expectError(
         error.InvalidResourceID,
         reader.allocReadResourceByID(testing.allocator, invalid_id),

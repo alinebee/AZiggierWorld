@@ -1,4 +1,4 @@
-const ResourceID = @import("resource_id.zig");
+const ResourceID = @import("resource_id.zig").ResourceID;
 
 const intToEnum = @import("../utils/introspection.zig").intToEnum;
 
@@ -40,15 +40,15 @@ pub const GamePart = enum(Raw) {
     pub fn resourceIDs(self: Self) ResourceIDs {
         return switch (self) {
             // zig fmt: off
-            .copy_protection    => .{ .palettes = 0x14, .bytecode = 0x15, .polygons = 0x16 },
-            .intro_cinematic    => .{ .palettes = 0x17, .bytecode = 0x18, .polygons = 0x19 },
-            .gameplay1          => .{ .palettes = 0x1A, .bytecode = 0x1B, .polygons = 0x1C, .animations = 0x11 },
-            .gameplay2          => .{ .palettes = 0x1D, .bytecode = 0x1E, .polygons = 0x1F, .animations = 0x11 },
-            .gameplay3          => .{ .palettes = 0x20, .bytecode = 0x21, .polygons = 0x22, .animations = 0x11 },
-            .arena_cinematic    => .{ .palettes = 0x23, .bytecode = 0x24, .polygons = 0x25 },
-            .gameplay4          => .{ .palettes = 0x26, .bytecode = 0x27, .polygons = 0x28, .animations = 0x11 },
-            .ending_cinematic   => .{ .palettes = 0x29, .bytecode = 0x2A, .polygons = 0x2B, .animations = 0x11 },
-            .password_entry     => .{ .palettes = 0x7D, .bytecode = 0x7E, .polygons = 0x7F },
+            .copy_protection    => ResourceIDs.init(0x14, 0x15, 0x16, null),
+            .intro_cinematic    => ResourceIDs.init(0x17, 0x18, 0x19, null),
+            .gameplay1          => ResourceIDs.init(0x1A, 0x1B, 0x1C, 0x11),
+            .gameplay2          => ResourceIDs.init(0x1D, 0x1E, 0x1F, 0x11),
+            .gameplay3          => ResourceIDs.init(0x20, 0x21, 0x22, 0x11),
+            .arena_cinematic    => ResourceIDs.init(0x23, 0x24, 0x25, null),
+            .gameplay4          => ResourceIDs.init(0x26, 0x27, 0x28, 0x11),
+            .ending_cinematic   => ResourceIDs.init(0x29, 0x2A, 0x2B, 0x11),
+            .password_entry     => ResourceIDs.init(0x7D, 0x7E, 0x7F, null),
             // zig fmt: on
         };
     }
@@ -88,16 +88,28 @@ pub const GamePart = enum(Raw) {
 /// Defines the resources needed for a specific part of the game.
 const ResourceIDs = struct {
     /// The set of palettes used by the game part.
-    palettes: ResourceID.Raw,
+    palettes: ResourceID,
     /// The program to execute for the game part.
-    bytecode: ResourceID.Raw,
+    bytecode: ResourceID,
     /// The resource that stores art specific to the game part,
     /// such as scene backgrounds and cinematic animations.
-    polygons: ResourceID.Raw,
+    polygons: ResourceID,
     /// The resource that stores gameplay art like player and enemy animations.
     /// Gameplay parts all use the same animation resource (0x11);
     /// non-interactive parts (e.g. cinematics and menu screens) leave this `null`.
-    animations: ?ResourceID.Raw = null,
+    animations: ?ResourceID = null,
+
+    fn init(raw_palettes_id: ResourceID.Raw, raw_bytecode_id: ResourceID.Raw, raw_polygons_id: ResourceID.Raw, possible_raw_animations_id: ?ResourceID.Raw) ResourceIDs {
+        return .{
+            .palettes = ResourceID.cast(raw_palettes_id),
+            .bytecode = ResourceID.cast(raw_bytecode_id),
+            .polygons = ResourceID.cast(raw_polygons_id),
+            .animations = if (possible_raw_animations_id) |raw_animations_id|
+                ResourceID.cast(raw_animations_id)
+            else
+                null,
+        };
+    }
 };
 
 // -- Tests --

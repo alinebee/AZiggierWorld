@@ -6,7 +6,7 @@ const Registers = @import("../registers.zig").Registers;
 const Point = @import("../../values/point.zig").Point;
 const GamePart = @import("../../values/game_part.zig").GamePart;
 const Channel = @import("../../values/channel.zig");
-const ResourceID = @import("../../values/resource_id.zig");
+const ResourceID = @import("../../values/resource_id.zig").ResourceID;
 const ColorID = @import("../../values/color_id.zig");
 const PaletteID = @import("../../values/palette_id.zig");
 const StringID = @import("../../values/string_id.zig");
@@ -85,7 +85,7 @@ pub fn MockMachine(comptime Implementation: type) type {
             Implementation.scheduleGamePart(game_part);
         }
 
-        pub fn loadResource(self: *Self, resource_id: ResourceID.Raw) !void {
+        pub fn loadResource(self: *Self, resource_id: ResourceID) !void {
             self.call_counts.loadResource += 1;
             try Implementation.loadResource(resource_id);
         }
@@ -95,7 +95,7 @@ pub fn MockMachine(comptime Implementation: type) type {
             Implementation.unloadAllResources();
         }
 
-        pub fn playMusic(self: *Self, resource_id: ResourceID.Raw, offset: Audio.Offset, delay: Audio.Delay) !void {
+        pub fn playMusic(self: *Self, resource_id: ResourceID, offset: Audio.Offset, delay: Audio.Delay) !void {
             self.call_counts.playMusic += 1;
             try Implementation.playMusic(resource_id, offset, delay);
         }
@@ -110,7 +110,7 @@ pub fn MockMachine(comptime Implementation: type) type {
             Implementation.stopMusic();
         }
 
-        pub fn playSound(self: *Self, resource_id: ResourceID.Raw, channel: Channel.Trusted, volume: Audio.Volume, frequency: Audio.Frequency) !void {
+        pub fn playSound(self: *Self, resource_id: ResourceID, channel: Channel.Trusted, volume: Audio.Volume, frequency: Audio.Frequency) !void {
             self.call_counts.playSound += 1;
             try Implementation.playSound(resource_id, channel, volume, frequency);
         }
@@ -241,12 +241,12 @@ test "MockMachine calls scheduleGamePart correctly on stub implementation" {
 
 test "MockMachine calls loadResource correctly on stub implementation" {
     var mock = mockMachine(struct {
-        fn loadResource(resource_id: ResourceID.Raw) !void {
-            try testing.expectEqual(0x8BAD, resource_id);
+        fn loadResource(resource_id: ResourceID) !void {
+            try testing.expectEqual(ResourceID.cast(0x8BAD), resource_id);
         }
     });
 
-    try mock.loadResource(0x8BAD);
+    try mock.loadResource(ResourceID.cast(0x8BAD));
     try testing.expectEqual(1, mock.call_counts.loadResource);
 }
 
@@ -261,14 +261,14 @@ test "MockMachine calls unloadAllResources correctly on stub implementation" {
 
 test "MockMachine calls playMusic correctly on stub implementation" {
     var mock = mockMachine(struct {
-        fn playMusic(resource_id: ResourceID.Raw, offset: Audio.Offset, delay: Audio.Delay) !void {
-            try testing.expectEqual(0xBEEF, resource_id);
+        fn playMusic(resource_id: ResourceID, offset: Audio.Offset, delay: Audio.Delay) !void {
+            try testing.expectEqual(ResourceID.cast(0xBEEF), resource_id);
             try testing.expectEqual(128, offset);
             try testing.expectEqual(1234, delay);
         }
     });
 
-    try mock.playMusic(0xBEEF, 128, 1234);
+    try mock.playMusic(ResourceID.cast(0xBEEF), 128, 1234);
     try testing.expectEqual(1, mock.call_counts.playMusic);
 }
 
@@ -296,15 +296,15 @@ test "MockMachine calls stopMusic correctly on stub implementation" {
 
 test "MockMachine calls playSound correctly on stub implementation" {
     var mock = mockMachine(struct {
-        fn playSound(resource_id: ResourceID.Raw, channel: Channel.Trusted, volume: Audio.Volume, frequency: Audio.Frequency) !void {
-            try testing.expectEqual(0xBEEF, resource_id);
+        fn playSound(resource_id: ResourceID, channel: Channel.Trusted, volume: Audio.Volume, frequency: Audio.Frequency) !void {
+            try testing.expectEqual(ResourceID.cast(0xBEEF), resource_id);
             try testing.expectEqual(2, channel);
             try testing.expectEqual(64, volume);
             try testing.expectEqual(128, frequency);
         }
     });
 
-    try mock.playSound(0xBEEF, 2, 64, 128);
+    try mock.playSound(ResourceID.cast(0xBEEF), 2, 64, 128);
     try testing.expectEqual(1, mock.call_counts.playSound);
 }
 

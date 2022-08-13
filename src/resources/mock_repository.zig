@@ -22,7 +22,7 @@
 
 const ResourceReader = @import("resource_reader.zig").ResourceReader;
 const ResourceDescriptor = @import("resource_descriptor.zig").ResourceDescriptor;
-const ResourceID = @import("../values/resource_id.zig");
+const ResourceID = @import("../values/resource_id.zig").ResourceID;
 const Opcode = @import("../values/opcode.zig").Opcode;
 
 const static_limits = @import("../static_limits.zig");
@@ -210,22 +210,22 @@ const TestFixtures = struct {
         .uncompressed_size = 2000,
     };
 
-    pub const sfx_resource_id = 0x01;
-    pub const music_resource_id = 0x02;
-    pub const bitmap_resource_id = 0x03;
-    pub const bitmap_resource_id_2 = 0x04;
-    pub const max_resource_id = 0x7F;
-    pub const invalid_resource_id = max_resource_id + 1;
+    pub const sfx_resource_id = ResourceID.cast(0x01);
+    pub const music_resource_id = ResourceID.cast(0x02);
+    pub const bitmap_resource_id = ResourceID.cast(0x03);
+    pub const bitmap_resource_id_2 = ResourceID.cast(0x04);
+    pub const max_resource_id = ResourceID.cast(0x7F);
+    pub const invalid_resource_id = ResourceID.cast(0x80);
 
     /// A list of fake descriptors with realistic values for resources that are referenced in game parts.
     pub const descriptors = block: {
-        var d = [_]ResourceDescriptor{empty_descriptor} ** (invalid_resource_id);
+        var d = [_]ResourceDescriptor{empty_descriptor} ** (invalid_resource_id.index());
 
         // Drop in individually loadable resources at known offsets
-        d[sfx_resource_id] = sfx_descriptor;
-        d[music_resource_id] = music_descriptor;
-        d[bitmap_resource_id] = bitmap_descriptor;
-        d[bitmap_resource_id_2] = bitmap_descriptor;
+        d[sfx_resource_id.index()] = sfx_descriptor;
+        d[music_resource_id.index()] = music_descriptor;
+        d[bitmap_resource_id.index()] = bitmap_descriptor;
+        d[bitmap_resource_id_2.index()] = bitmap_descriptor;
 
         // Animation data shared by all game parts
         d[0x11] = sprite_polygons_descriptor;

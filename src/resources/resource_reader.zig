@@ -2,7 +2,7 @@
 //! e.g. a directory on the local filesystem.
 
 const ResourceDescriptor = @import("resource_descriptor.zig").ResourceDescriptor;
-const ResourceID = @import("../values/resource_id.zig");
+const ResourceID = @import("../values/resource_id.zig").ResourceID;
 
 const std = @import("std");
 const mem = std.mem;
@@ -84,7 +84,7 @@ pub const ResourceReader = struct {
     /// Caller owns the returned slice and must free it with `allocator.free`.
     /// Returns an error if the resource ID was invalid, the allocator failed
     /// to allocate memory, or the data could not be read or decompressed.
-    pub fn allocReadResourceByID(self: Self, allocator: mem.Allocator, id: ResourceID.Raw) AllocReadResourceByIDError![]const u8 {
+    pub fn allocReadResourceByID(self: Self, allocator: mem.Allocator, id: ResourceID) AllocReadResourceByIDError![]const u8 {
         return self.allocReadResource(allocator, try self.resourceDescriptor(id));
     }
 
@@ -96,15 +96,15 @@ pub const ResourceReader = struct {
 
     /// Returns the descriptor matching the specified ID.
     /// Returns an InvalidResourceID error if the ID was out of range.
-    pub fn resourceDescriptor(self: Self, id: ResourceID.Raw) ValidationError!ResourceDescriptor {
+    pub fn resourceDescriptor(self: Self, id: ResourceID) ValidationError!ResourceDescriptor {
         try self.validateResourceID(id);
-        return self.resourceDescriptors()[id];
+        return self.resourceDescriptors()[id.index()];
     }
 
     /// Returns an error if the specified resource ID is out of range for the underlying repository.
-    pub fn validateResourceID(self: Self, id: ResourceID.Raw) ValidationError!void {
+    pub fn validateResourceID(self: Self, id: ResourceID) ValidationError!void {
         const descriptors = self.resourceDescriptors();
-        if (id >= descriptors.len) {
+        if (id.index() >= descriptors.len) {
             return error.InvalidResourceID;
         }
     }
@@ -194,6 +194,9 @@ const CountedRepository = struct {
 
 const testing = @import("../utils/testing.zig");
 
+const valid_resource_id = ResourceID.cast(0);
+const invalid_resource_id = ResourceID.cast(1);
+
 test "Ensure everything compiles" {
     testing.refAllDecls(ResourceReader);
 }
@@ -234,7 +237,7 @@ test "allocReadResource returns error when memory cannot be allocated" {
 
 test "allocReadResourceByID calls bufReadResource with suitably sized buffer for id" {
     var repository = CountedRepository{};
-    const data = try repository.reader().allocReadResourceByID(testing.allocator, 0);
+    const data = try repository.reader().allocReadResourceByID(testing.allocator, valid_resource_id);
     defer testing.allocator.free(data);
 
     try testing.expectEqual(example_descriptor.uncompressed_size, data.len);
@@ -243,29 +246,29 @@ test "allocReadResourceByID calls bufReadResource with suitably sized buffer for
 
 test "allocReadResourceByID returns error on out of range ID" {
     var repository = CountedRepository{};
-    try testing.expectError(error.InvalidResourceID, repository.reader().allocReadResourceByID(testing.allocator, 1));
+    try testing.expectError(error.InvalidResourceID, repository.reader().allocReadResourceByID(testing.allocator, invalid_resource_id));
 }
 
 test "resourceDescriptor returns expected descriptor" {
     var repository = CountedRepository{};
 
-    try testing.expectEqual(example_descriptor, repository.reader().resourceDescriptor(0));
+    try testing.expectEqual(example_descriptor, repository.reader().resourceDescriptor(valid_resource_id));
     try testing.expectEqual(2, repository.call_counts.resourceDescriptors);
 }
 
 test "resourceDescriptor returns error on out of range ID" {
     var repository = CountedRepository{};
-    try testing.expectError(error.InvalidResourceID, repository.reader().resourceDescriptor(1));
+    try testing.expectError(error.InvalidResourceID, repository.reader().resourceDescriptor(invalid_resource_id));
 }
 
 test "validateResourceID returns no error for valid ID" {
     var repository = CountedRepository{};
-    try repository.reader().validateResourceID(0);
+    try repository.reader().validateResourceID(valid_resource_id);
     try testing.expectEqual(1, repository.call_counts.resourceDescriptors);
 }
 
 test "validateResourceID returns error for invalid ID" {
     var repository = CountedRepository{};
-    try testing.expectError(error.InvalidResourceID, repository.reader().validateResourceID(1));
+    try testing.expectError(error.InvalidResourceID, repository.reader().validateResourceID(invalid_resource_id));
     try testing.expectEqual(1, repository.call_counts.resourceDescriptors);
 }

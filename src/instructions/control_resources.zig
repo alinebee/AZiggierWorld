@@ -1,7 +1,7 @@
 const Opcode = @import("../values/opcode.zig").Opcode;
 const Program = @import("../machine/program.zig").Program;
 const Machine = @import("../machine/machine.zig").Machine;
-const ResourceID = @import("../values/resource_id.zig");
+const ResourceID = @import("../values/resource_id.zig").ResourceID;
 const GamePart = @import("../values/game_part.zig").GamePart;
 
 /// Loads individual resources or entire game parts into memory.
@@ -13,7 +13,7 @@ pub const ControlResources = union(enum) {
     start_game_part: GamePart,
 
     /// Load the specified resource individually.
-    load_resource: ResourceID.Raw,
+    load_resource: ResourceID,
 
     const Self = @This();
 
@@ -29,7 +29,7 @@ pub const ControlResources = union(enum) {
             return Self{ .start_game_part = game_part };
         } else |_| {
             // If the value doesn't match any game part, assume it's a resource ID
-            return Self{ .load_resource = resource_id_or_game_part };
+            return Self{ .load_resource = ResourceID.cast(resource_id_or_game_part) };
         }
     }
 
@@ -87,7 +87,7 @@ test "parse parses start_game_part instruction and consumes 3 bytes" {
 test "parse parses load_resource instruction and consumes 3 bytes" {
     const instruction = try expectParse(ControlResources.parse, &ControlResources.Fixtures.load_resource, 3);
 
-    try testing.expectEqual(.{ .load_resource = 0xDEAD }, instruction);
+    try testing.expectEqual(.{ .load_resource = ResourceID.cast(0xDEAD) }, instruction);
 }
 
 test "execute with unload_all instruction calls unloadAllResources with correct parameters" {
@@ -98,7 +98,7 @@ test "execute with unload_all instruction calls unloadAllResources with correct 
             unreachable;
         }
 
-        pub fn loadResource(_: ResourceID.Raw) !void {
+        pub fn loadResource(_: ResourceID) !void {
             unreachable;
         }
 
@@ -117,7 +117,7 @@ test "execute with start_game_part instruction calls scheduleGamePart with corre
             testing.expectEqual(.arena_cinematic, game_part) catch unreachable;
         }
 
-        pub fn loadResource(_: ResourceID.Raw) !void {
+        pub fn loadResource(_: ResourceID) !void {
             unreachable;
         }
 
@@ -131,15 +131,15 @@ test "execute with start_game_part instruction calls scheduleGamePart with corre
 }
 
 test "execute with load_resource instruction calls loadResource with correct parameters" {
-    const instruction = ControlResources{ .load_resource = 0xBEEF };
+    const instruction = ControlResources{ .load_resource = ResourceID.cast(0xBEEF) };
 
     var machine = mockMachine(struct {
         pub fn scheduleGamePart(_: GamePart) void {
             unreachable;
         }
 
-        pub fn loadResource(resource_id: ResourceID.Raw) !void {
-            try testing.expectEqual(0xBEEF, resource_id);
+        pub fn loadResource(resource_id: ResourceID) !void {
+            try testing.expectEqual(ResourceID.cast(0xBEEF), resource_id);
         }
 
         pub fn unloadAllResources() void {

@@ -30,7 +30,7 @@
 
 const ThreadID = @import("../values/thread_id.zig");
 const BufferID = @import("../values/buffer_id.zig").BufferID;
-const ResourceID = @import("../values/resource_id.zig");
+const ResourceID = @import("../values/resource_id.zig").ResourceID;
 const StringID = @import("../values/string_id.zig");
 const PaletteID = @import("../values/palette_id.zig");
 const ColorID = @import("../values/color_id.zig");
@@ -187,7 +187,7 @@ pub const Machine = struct {
 
     /// Load the specified resource if it is not already loaded.
     /// Returns an error if the specified resource ID does not exist or could not be loaded.
-    pub fn loadResource(self: *Self, resource_id: ResourceID.Raw) !void {
+    pub fn loadResource(self: *Self, resource_id: ResourceID) !void {
         const location = try self.memory.loadIndividualResource(resource_id);
 
         switch (location) {
@@ -254,7 +254,7 @@ pub const Machine = struct {
 
     /// Start playing a music track from a specified resource.
     /// Returns an error if the resource does not exist or could not be loaded.
-    pub fn playMusic(_: *Self, resource_id: ResourceID.Raw, offset: Audio.Offset, delay: Audio.Delay) !void {
+    pub fn playMusic(_: *Self, resource_id: ResourceID, offset: Audio.Offset, delay: Audio.Delay) !void {
         log.debug("Audio.playMusic: play #{X} at offset {} after delay {}", .{
             resource_id,
             offset,
@@ -274,7 +274,7 @@ pub const Machine = struct {
 
     /// Play a sound effect from the specified resource on the specified channel.
     /// Returns an error if the resource does not exist or could not be loaded.
-    pub fn playSound(_: *Self, resource_id: ResourceID.Raw, channel: Channel.Trusted, volume: Audio.Volume, frequency: Audio.Frequency) !void {
+    pub fn playSound(_: *Self, resource_id: ResourceID, channel: Channel.Trusted, volume: Audio.Volume, frequency: Audio.Frequency) !void {
         log.debug("Audio.playSound: play #{X} on channel {} at volume {}, frequency {}", .{
             resource_id,
             channel,
