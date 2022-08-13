@@ -6,7 +6,7 @@
 //! to parse them from a MEMLIST.BIN file.
 
 const ResourceType = @import("../values/resource_type.zig");
-const Filename = @import("filename.zig");
+const Filename = @import("filename.zig").Filename;
 
 const introspection = @import("../utils/introspection.zig");
 

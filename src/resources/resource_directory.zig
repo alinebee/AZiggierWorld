@@ -17,7 +17,7 @@
 const ResourceReader = @import("resource_reader.zig").ResourceReader;
 const ResourceDescriptor = @import("resource_descriptor.zig");
 const ResourceID = @import("../values/resource_id.zig");
-const Filename = @import("filename.zig");
+const Filename = @import("filename.zig").Filename;
 const decode = @import("../run_length_decoder/decode.zig").decode;
 
 const introspection = @import("../utils/introspection.zig");
@@ -110,7 +110,7 @@ pub const ResourceDirectory = struct {
     /// Given the filename of an Another World data file, opens the corresponding file
     /// in the game directory for reading.
     /// Returns an open file handle, or an error if the file could not be opened.
-    fn openFile(self: Self, filename: Filename.Instance) !fs.File {
+    fn openFile(self: Self, filename: Filename) !fs.File {
         var buffer: Filename.Buffer = undefined;
         const dos_name = filename.dosName(&buffer);
         return try self.dir.openFile(dos_name, .{});
