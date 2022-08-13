@@ -1,7 +1,7 @@
 //! Provides a standard interface for accessing Another World resource data from a repository,
 //! e.g. a directory on the local filesystem.
 
-const ResourceDescriptor = @import("resource_descriptor.zig");
+const ResourceDescriptor = @import("resource_descriptor.zig").ResourceDescriptor;
 const ResourceID = @import("../values/resource_id.zig");
 
 const std = @import("std");
@@ -15,15 +15,15 @@ pub const ResourceReader = struct {
     vtable: *const TypeErasedVTable,
 
     const TypeErasedVTable = struct {
-        bufReadResource: fn (self: *anyopaque, buffer: []u8, descriptor: ResourceDescriptor.Instance) BufReadResourceError![]const u8,
-        resourceDescriptors: fn (self: *anyopaque) []const ResourceDescriptor.Instance,
+        bufReadResource: fn (self: *anyopaque, buffer: []u8, descriptor: ResourceDescriptor) BufReadResourceError![]const u8,
+        resourceDescriptors: fn (self: *anyopaque) []const ResourceDescriptor,
     };
 
     const Self = @This();
 
     /// Create a new type-erased "fat pointer" that reads from a repository of Another World game data.
     /// Intended to be called by repositories to create a reader interface; should not be used directly.
-    pub fn init(implementation_ptr: anytype, comptime bufReadResourceFn: fn (self: @TypeOf(implementation_ptr), buffer: []u8, descriptor: ResourceDescriptor.Instance) BufReadResourceError![]const u8, comptime resourceDescriptorsFn: fn (self: @TypeOf(implementation_ptr)) []const ResourceDescriptor.Instance) Self {
+    pub fn init(implementation_ptr: anytype, comptime bufReadResourceFn: fn (self: @TypeOf(implementation_ptr), buffer: []u8, descriptor: ResourceDescriptor) BufReadResourceError![]const u8, comptime resourceDescriptorsFn: fn (self: @TypeOf(implementation_ptr)) []const ResourceDescriptor) Self {
         const Implementation = @TypeOf(implementation_ptr);
         const ptr_info = @typeInfo(Implementation);
 
@@ -33,12 +33,12 @@ pub const ResourceReader = struct {
         const alignment = ptr_info.Pointer.alignment;
 
         const TypeUnerasedVTable = struct {
-            fn bufReadResourceImpl(type_erased_self: *anyopaque, buffer: []u8, descriptor: ResourceDescriptor.Instance) BufReadResourceError![]const u8 {
+            fn bufReadResourceImpl(type_erased_self: *anyopaque, buffer: []u8, descriptor: ResourceDescriptor) BufReadResourceError![]const u8 {
                 const self = @ptrCast(Implementation, @alignCast(alignment, type_erased_self));
                 return @call(.{ .modifier = .always_inline }, bufReadResourceFn, .{ self, buffer, descriptor });
             }
 
-            fn resourceDescriptorsImpl(type_erased_self: *anyopaque) []const ResourceDescriptor.Instance {
+            fn resourceDescriptorsImpl(type_erased_self: *anyopaque) []const ResourceDescriptor {
                 const self = @ptrCast(Implementation, @alignCast(alignment, type_erased_self));
                 return @call(.{ .modifier = .always_inline }, resourceDescriptorsFn, .{self});
             }
@@ -60,7 +60,7 @@ pub const ResourceReader = struct {
     /// Returns an error if `buffer` was not large enough to hold the data or if the data
     /// could not be read or decompressed.
     /// In the event of an error, `buffer` may contain partially-loaded game data.
-    pub fn bufReadResource(self: Self, buffer: []u8, descriptor: ResourceDescriptor.Instance) BufReadResourceError![]const u8 {
+    pub fn bufReadResource(self: Self, buffer: []u8, descriptor: ResourceDescriptor) BufReadResourceError![]const u8 {
         return self.vtable.bufReadResource(self.implementation, buffer, descriptor);
     }
 
@@ -70,7 +70,7 @@ pub const ResourceReader = struct {
     /// Caller owns the returned slice and must free it with `allocator.free`.
     /// Returns an error if the allocator failed to allocate memory or if the data
     /// could not be read or decompressed.
-    pub fn allocReadResource(self: Self, allocator: mem.Allocator, descriptor: ResourceDescriptor.Instance) AllocReadResourceError![]const u8 {
+    pub fn allocReadResource(self: Self, allocator: mem.Allocator, descriptor: ResourceDescriptor) AllocReadResourceError![]const u8 {
         // Create a buffer just large enough to decompress the resource into.
         const destination = try allocator.alloc(u8, descriptor.uncompressed_size);
         errdefer allocator.free(destination);
@@ -90,13 +90,13 @@ pub const ResourceReader = struct {
 
     /// Returns a list of all valid resource descriptors,
     /// loaded from the MEMLIST.BIN file in the game directory.
-    pub fn resourceDescriptors(self: Self) []const ResourceDescriptor.Instance {
+    pub fn resourceDescriptors(self: Self) []const ResourceDescriptor {
         return self.vtable.resourceDescriptors(self.implementation);
     }
 
     /// Returns the descriptor matching the specified ID.
     /// Returns an InvalidResourceID error if the ID was out of range.
-    pub fn resourceDescriptor(self: Self, id: ResourceID.Raw) ValidationError!ResourceDescriptor.Instance {
+    pub fn resourceDescriptor(self: Self, id: ResourceID.Raw) ValidationError!ResourceDescriptor {
         try self.validateResourceID(id);
         return self.resourceDescriptors()[id];
     }
@@ -149,7 +149,7 @@ pub const ResourceReader = struct {
 
 // -- Test data --
 
-const example_descriptor = ResourceDescriptor.Instance{
+const example_descriptor = ResourceDescriptor{
     .type = .music,
     .bank_id = 0,
     .bank_offset = 0,
@@ -157,7 +157,7 @@ const example_descriptor = ResourceDescriptor.Instance{
     .uncompressed_size = 16,
 };
 
-const example_descriptors = [_]ResourceDescriptor.Instance{example_descriptor};
+const example_descriptors = [_]ResourceDescriptor{example_descriptor};
 
 /// Fake repository used solely for testing the interface's dynamic dispatch.
 /// Not intended for use outside this file: instead see mock_repository.zig,
@@ -177,14 +177,14 @@ const CountedRepository = struct {
         return ResourceReader.init(self, bufReadResource, resourceDescriptors);
     }
 
-    fn bufReadResource(self: *Self, buffer: []u8, descriptor: ResourceDescriptor.Instance) ![]const u8 {
+    fn bufReadResource(self: *Self, buffer: []u8, descriptor: ResourceDescriptor) ![]const u8 {
         self.call_counts.bufReadResource += 1;
 
         testing.expectEqual(example_descriptor, descriptor) catch unreachable;
         return buffer;
     }
 
-    fn resourceDescriptors(self: *Self) []const ResourceDescriptor.Instance {
+    fn resourceDescriptors(self: *Self) []const ResourceDescriptor {
         self.call_counts.resourceDescriptors += 1;
         return &example_descriptors;
     }

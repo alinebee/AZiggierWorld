@@ -15,7 +15,7 @@
 //! const game_data = try reader.allocReadResource(my_allocator, first_resource_descriptor);
 
 const ResourceReader = @import("resource_reader.zig").ResourceReader;
-const ResourceDescriptor = @import("resource_descriptor.zig");
+const ResourceDescriptor = @import("resource_descriptor.zig").ResourceDescriptor;
 const ResourceID = @import("../values/resource_id.zig");
 const Filename = @import("filename.zig").Filename;
 const decode = @import("../run_length_decoder/decode.zig").decode;
@@ -31,7 +31,7 @@ const fs = std.fs;
 const io = std.io;
 
 const max_resource_descriptors = static_limits.max_resource_descriptors;
-const DescriptorStorage = std.BoundedArray(ResourceDescriptor.Instance, max_resource_descriptors);
+const DescriptorStorage = std.BoundedArray(ResourceDescriptor, max_resource_descriptors);
 
 pub const ResourceDirectory = struct {
     const Self = @This();
@@ -76,7 +76,7 @@ pub const ResourceDirectory = struct {
     /// Returns an error if `buffer` was not large enough to hold the data or if the data
     /// could not be read or decompressed.
     /// In the event of an error, `buffer` may contain partially-loaded game data.
-    fn bufReadResource(self: *const Self, buffer: []u8, descriptor: ResourceDescriptor.Instance) ResourceReader.BufReadResourceError![]const u8 {
+    fn bufReadResource(self: *const Self, buffer: []u8, descriptor: ResourceDescriptor) ResourceReader.BufReadResourceError![]const u8 {
         if (buffer.len < descriptor.uncompressed_size) {
             return error.BufferTooSmall;
         }
@@ -103,7 +103,7 @@ pub const ResourceDirectory = struct {
 
     /// Returns a list of all valid resource descriptors,
     /// loaded from the MEMLIST.BIN file in the game directory.
-    fn resourceDescriptors(self: *const Self) []const ResourceDescriptor.Instance {
+    fn resourceDescriptors(self: *const Self) []const ResourceDescriptor {
         return self._raw_descriptors.constSlice();
     }
 
@@ -124,7 +124,7 @@ pub const ResourceDirectory = struct {
 /// Returns the number of descriptors that were parsed into the buffer.
 /// Returns an error if the stream was too long, contained invalid descriptor data,
 /// or ran out of space in the buffer before parsing completed.
-fn readResourceList(buffer: []ResourceDescriptor.Instance, io_reader: anytype) ResourceListError(@TypeOf(io_reader))!usize {
+fn readResourceList(buffer: []ResourceDescriptor, io_reader: anytype) ResourceListError(@TypeOf(io_reader))!usize {
     var iterator = ResourceDescriptor.iterator(io_reader);
 
     var count: usize = 0;
@@ -180,9 +180,12 @@ fn readAndDecompress(reader: anytype, buffer: []u8, compressed_size: usize) Reso
 
 // -- Test helpers --
 
+const ResourceFileExamples = @import("resource_descriptor.zig").FileExamples;
+const ResourceDescriptorExamples = @import("resource_descriptor.zig").DescriptorExamples;
+
 const ResourceListExamples = struct {
-    const valid = ResourceDescriptor.FileExamples.valid;
-    const too_many_descriptors = ResourceDescriptor.DescriptorExamples.valid_data ** (max_resource_descriptors + 1);
+    const valid = ResourceFileExamples.valid;
+    const too_many_descriptors = ResourceDescriptorExamples.valid_data ** (max_resource_descriptors + 1);
 };
 
 // -- Tests --
@@ -250,7 +253,7 @@ test "readAndDecompress returns error.RepositorySpecificFailure when reader prod
 test "readResourceList parses all descriptors from a stream" {
     const reader = io.fixedBufferStream(&ResourceListExamples.valid).reader();
 
-    var buffer: [max_resource_descriptors]ResourceDescriptor.Instance = undefined;
+    var buffer: [max_resource_descriptors]ResourceDescriptor = undefined;
     const count = try readResourceList(&buffer, reader);
 
     try testing.expectEqual(3, count);
@@ -259,7 +262,7 @@ test "readResourceList parses all descriptors from a stream" {
 test "readResourceList returns error.BufferTooSmall when stream contains too many descriptors for the buffer" {
     const reader = io.fixedBufferStream(&ResourceListExamples.too_many_descriptors).reader();
 
-    var buffer: [max_resource_descriptors]ResourceDescriptor.Instance = undefined;
+    var buffer: [max_resource_descriptors]ResourceDescriptor = undefined;
     try testing.expectError(error.BufferTooSmall, readResourceList(&buffer, reader));
 }
 

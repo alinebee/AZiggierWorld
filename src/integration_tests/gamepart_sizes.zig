@@ -2,7 +2,6 @@
 //! It does not test functionality, and so is kept out of the main suite of integration tests.
 
 const ResourceDirectory = @import("../resources/resource_directory.zig").ResourceDirectory;
-const ResourceDescriptor = @import("../resources/resource_descriptor.zig");
 const GamePart = @import("../values/game_part.zig").GamePart;
 
 const ensureValidFixtureDir = @import("helpers.zig").ensureValidFixtureDir;

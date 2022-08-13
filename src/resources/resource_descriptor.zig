@@ -5,16 +5,16 @@
 //! This file defines the structure of these resource descriptors, along with methods
 //! to parse them from a MEMLIST.BIN file.
 
-const ResourceType = @import("../values/resource_type.zig");
+const ResourceType = @import("../values/resource_type.zig").ResourceType;
 const Filename = @import("filename.zig").Filename;
 
 const introspection = @import("../utils/introspection.zig");
 
 /// Describes an individual resource in Another World's data files:
 /// its length, type and the bank file in which it is located.
-pub const Instance = struct {
+pub const ResourceDescriptor = struct {
     /// The type of content stored in this resource.
-    type: ResourceType.Enum,
+    type: ResourceType,
     /// The bank file to look for the resource in: in the MS-DOS version these are numbered from 01 to 0D.
     bank_id: Filename.BankID,
     /// The byte offset (within the packed data of the bank file) at which the resource is located.
@@ -26,25 +26,26 @@ pub const Instance = struct {
     /// with run-length encoding (RLE).
     uncompressed_size: usize,
 
-    pub fn isCompressed(self: Instance) bool {
+    pub fn isCompressed(self: ResourceDescriptor) bool {
         return self.uncompressed_size != self.compressed_size;
     }
+
+    /// An iterator that parses resource descriptors from a `Reader` instance until it reaches
+    /// an end-of-file marker.
+    /// Intended for parsing the MEMLIST.BIN file in an Another World game directory.
+    pub fn iterator(reader: anytype) Iterator(@TypeOf(reader)) {
+        return Iterator(@TypeOf(reader)){ .reader = reader };
+    }
+
+    pub fn Error(comptime Reader: type) type {
+        const ReaderError = introspection.ErrorType(Reader.readNoEof);
+
+        return ReaderError || ResourceType.Error || error{
+            /// A resource defined a compressed size that was larger than its uncompressed size.
+            InvalidResourceSize,
+        };
+    }
 };
-
-pub fn Error(comptime Reader: type) type {
-    const ReaderError = introspection.ErrorType(Reader.readNoEof);
-
-    return ReaderError || ResourceType.Error || error{
-        /// A resource defined a compressed size that was larger than its uncompressed size.
-        InvalidResourceSize,
-    };
-}
-
-/// An iterator that parses resource descriptors from a `Reader` instance until it reaches an end-of-file marker.
-/// Intended for use when parsing the MEMLIST.BIN file in an Another World game directory.
-pub fn iterator(reader: anytype) Iterator(@TypeOf(reader)) {
-    return Iterator(@TypeOf(reader)){ .reader = reader };
-}
 
 fn Iterator(comptime Reader: type) type {
     return struct {
@@ -55,7 +56,7 @@ fn Iterator(comptime Reader: type) type {
 
         /// Returns the next resource descriptor from the reader.
         /// Returns null if it hits an end-of-file marker, or an error if it cannot parse more descriptor data.
-        pub fn next(self: *Self) Error(Reader)!?Instance {
+        pub fn next(self: *Self) ResourceDescriptor.Error(Reader)!?ResourceDescriptor {
             // The layout of each entry in the MEMLIST.BIN file matches the layout of an in-memory data structure
             // which the original Another World executable used for tracking whether a given resource was currently
             // loaded. The contents of the file were poured directly into a contiguous memory block and used as-is
@@ -73,7 +74,7 @@ fn Iterator(comptime Reader: type) type {
             // 								0: "not needed, can be cleaned up"
             // 								1: "loaded"
             // 								2: "needs to be loaded"
-            // 1	u8	resource type	The type of data in this resource: values correspond to `ResourceType.Enum`s.
+            // 1	u8	resource type	The type of data in this resource: values correspond to `ResourceType`s.
             // 2	u16	buffer pointer 	In MEMLIST.BIN: Unused.
             // 							In original runtime: a 16-bit pointer to the location in memory
             //                          at which the resource is loaded.
@@ -108,7 +109,7 @@ fn Iterator(comptime Reader: type) type {
                 return error.InvalidResourceSize;
             }
 
-            return Instance{
+            return ResourceDescriptor{
                 .type = try ResourceType.parse(raw_type),
                 .bank_id = bank_id,
                 .bank_offset = bank_offset,
@@ -131,7 +132,7 @@ pub const DescriptorExamples = struct {
     pub const valid_data = [_]u8{
         // See documentation in `parse` for the expected byte layout.
         0x00,                   // loading state/end-of-file marker
-        0x04,                   // resource type (4 == ResourceType.Enum.bytecode)
+        0x04,                   // resource type (4 == ResourceType.bytecode)
         0x00, 0x00,             // buffer pointer: unused
         0x00, 0x00,             // unknown: unused
         0x00,                   // priority: unused
@@ -145,7 +146,7 @@ pub const DescriptorExamples = struct {
 
     const invalid_resource_type = block: {
         var invalid_data = valid_data;
-        invalid_data[1] = 0xFF; // Does not map to any ResourceType.Enum value
+        invalid_data[1] = 0xFF; // Does not map to any ResourceType value
         break :block invalid_data;
     };
 
@@ -159,7 +160,7 @@ pub const DescriptorExamples = struct {
 
     const valid_end_of_file = [_]u8{end_of_file_marker};
 
-    const valid_descriptor = Instance{
+    const valid_descriptor = ResourceDescriptor{
         .type = .bytecode,
         .bank_id = 5,
         .bank_offset = 0xDEADBEEF,
@@ -186,42 +187,42 @@ const fixedBufferStream = @import("std").io.fixedBufferStream;
 
 test "iterator.next() correctly parses file descriptor" {
     const reader = fixedBufferStream(&DescriptorExamples.valid_data).reader();
-    var descriptors = iterator(reader);
+    var descriptors = ResourceDescriptor.iterator(reader);
 
     try testing.expectEqual(DescriptorExamples.valid_descriptor, descriptors.next());
 }
 
 test "iterator.next() stops parsing at end-of-file marker" {
     const reader = fixedBufferStream(&DescriptorExamples.valid_end_of_file).reader();
-    var descriptors = iterator(reader);
+    var descriptors = ResourceDescriptor.iterator(reader);
 
     try testing.expectEqual(null, descriptors.next());
 }
 
 test "iterator.next() returns error.InvalidResourceType when resource type byte is not recognized" {
     const reader = fixedBufferStream(&DescriptorExamples.invalid_resource_type).reader();
-    var descriptors = iterator(reader);
+    var descriptors = ResourceDescriptor.iterator(reader);
 
     try testing.expectError(error.InvalidResourceType, descriptors.next());
 }
 
 test "iterator.next() returns error.InvalidResourceSize when compressed size is larger than uncompressed size" {
     const reader = fixedBufferStream(&DescriptorExamples.invalid_resource_size).reader();
-    var descriptors = iterator(reader);
+    var descriptors = ResourceDescriptor.iterator(reader);
 
     try testing.expectError(error.InvalidResourceSize, descriptors.next());
 }
 
 test "iterator.next() returns error.EndOfStream on incomplete data" {
     const reader = fixedBufferStream(DescriptorExamples.valid_data[0..4]).reader();
-    var descriptors = iterator(reader);
+    var descriptors = ResourceDescriptor.iterator(reader);
 
     try testing.expectError(error.EndOfStream, descriptors.next());
 }
 
 test "iterator parses all expected descriptors until it reaches end-of-file marker" {
     const reader = fixedBufferStream(&FileExamples.valid).reader();
-    var descriptors = iterator(reader);
+    var descriptors = ResourceDescriptor.iterator(reader);
 
     while (try descriptors.next()) |descriptor| {
         try testing.expectEqual(DescriptorExamples.valid_descriptor, descriptor);
@@ -233,7 +234,7 @@ test "iterator parses all expected descriptors until it reaches end-of-file mark
 
 test "iterator returns error.EndOfStream when it runs out of data before encountering end-of-file marker" {
     const reader = fixedBufferStream(&FileExamples.truncated).reader();
-    var descriptors = iterator(reader);
+    var descriptors = ResourceDescriptor.iterator(reader);
 
     try testing.expectEqual(DescriptorExamples.valid_descriptor, descriptors.next());
     try testing.expectEqual(DescriptorExamples.valid_descriptor, descriptors.next());
@@ -242,7 +243,7 @@ test "iterator returns error.EndOfStream when it runs out of data before encount
 
 test "iterator returns error when it reaches invalid data in the middle of stream" {
     const reader = fixedBufferStream(&FileExamples.invalid_resource_type).reader();
-    var descriptors = iterator(reader);
+    var descriptors = ResourceDescriptor.iterator(reader);
 
     try testing.expectEqual(DescriptorExamples.valid_descriptor, descriptors.next());
     try testing.expectError(error.InvalidResourceType, descriptors.next());

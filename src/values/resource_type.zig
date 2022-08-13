@@ -1,7 +1,9 @@
 const intToEnum = @import("../utils/introspection.zig").intToEnum;
 
+const _Raw = u8;
+
 /// The possible types for an Another World resource.
-pub const Enum = enum(u8) {
+pub const ResourceType = enum(_Raw) {
     /// The resource contains sound effect data.
     /// Descriptors for 0-byte resources also have this type.
     /// Those may be be a file marker of some kind and not intended to be "played"?
@@ -29,35 +31,35 @@ pub const Enum = enum(u8) {
     /// In the original release of Another World, there is only one resource with this type,
     /// which is shared across all parts of the game.
     sprite_polygons = 6,
+
+    /// Parse a valid resource type from a raw bytecode value
+    pub fn parse(raw: Raw) Error!ResourceType {
+        return intToEnum(ResourceType, raw) catch error.InvalidResourceType;
+    }
+
+    pub const Error = error{
+        /// An Another World resource list specified an unknown resource type.
+        InvalidResourceType,
+    };
+
+    /// A raw ResourceType enum as it is represented in bytecode as a single byte.
+    pub const Raw = _Raw;
 };
-
-pub const Error = error{
-    /// An Another World resource list specified an unknown resource type.
-    InvalidResourceType,
-};
-
-/// A raw ResourceType enum as it is represented in bytecode as a single byte.
-pub const Raw = u8;
-
-/// Parse a valid resource type from a raw bytecode value
-pub fn parse(raw: Raw) Error!Enum {
-    return intToEnum(Enum, raw) catch error.InvalidResourceType;
-}
 
 // -- Tests --
 
 const testing = @import("../utils/testing.zig");
 
 test "parse parses raw operation types correctly" {
-    try testing.expectEqual(.sound_or_empty, parse(0));
-    try testing.expectEqual(.music, parse(1));
-    try testing.expectEqual(.bitmap, parse(2));
-    try testing.expectEqual(.palettes, parse(3));
-    try testing.expectEqual(.bytecode, parse(4));
-    try testing.expectEqual(.polygons, parse(5));
-    try testing.expectEqual(.sprite_polygons, parse(6));
+    try testing.expectEqual(.sound_or_empty, ResourceType.parse(0));
+    try testing.expectEqual(.music, ResourceType.parse(1));
+    try testing.expectEqual(.bitmap, ResourceType.parse(2));
+    try testing.expectEqual(.palettes, ResourceType.parse(3));
+    try testing.expectEqual(.bytecode, ResourceType.parse(4));
+    try testing.expectEqual(.polygons, ResourceType.parse(5));
+    try testing.expectEqual(.sprite_polygons, ResourceType.parse(6));
     try testing.expectError(
         error.InvalidResourceType,
-        parse(7),
+        ResourceType.parse(7),
     );
 }

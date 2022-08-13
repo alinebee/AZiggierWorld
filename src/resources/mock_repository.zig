@@ -11,7 +11,7 @@
 //!
 //! Usage:
 //! ------
-//! const resource_descriptors = []ResourceDescriptor.Instance { descriptor1, descriptor2...descriptorN };
+//! const resource_descriptors = []ResourceDescriptor { descriptor1, descriptor2...descriptorN };
 //! var repository = MockRepository.init(resource_descriptors, null);
 //! const reader = repository.reader();
 //!
@@ -21,7 +21,7 @@
 //! try testing.expectEqual(1, repository.read_count);
 
 const ResourceReader = @import("resource_reader.zig").ResourceReader;
-const ResourceDescriptor = @import("resource_descriptor.zig");
+const ResourceDescriptor = @import("resource_descriptor.zig").ResourceDescriptor;
 const ResourceID = @import("../values/resource_id.zig");
 const Opcode = @import("../values/opcode.zig").Opcode;
 
@@ -30,7 +30,7 @@ const static_limits = @import("../static_limits.zig");
 const mem = @import("std").mem;
 const BoundedArray = @import("std").BoundedArray;
 
-const DescriptorStorage = BoundedArray(ResourceDescriptor.Instance, static_limits.max_resource_descriptors);
+const DescriptorStorage = BoundedArray(ResourceDescriptor, static_limits.max_resource_descriptors);
 
 pub const MockRepository = struct {
     /// The list of resources vended by this mock repository.
@@ -51,7 +51,7 @@ pub const MockRepository = struct {
     /// Create a new mock repository that exposes the specified resource descriptors,
     /// and produces either an error or an appropriately-sized buffer when
     /// a resource load method is called.
-    pub fn init(descriptors: []const ResourceDescriptor.Instance, read_should_fail: bool) Self {
+    pub fn init(descriptors: []const ResourceDescriptor, read_should_fail: bool) Self {
         return Self{
             ._raw_descriptors = DescriptorStorage.fromSlice(descriptors) catch unreachable,
             .read_should_fail = read_should_fail,
@@ -74,7 +74,7 @@ pub const MockRepository = struct {
     ///
     /// Returns error.BufferTooSmall and leaves the buffer unchanged if the supplied buffer
     /// is not large enough to hold the descriptor's uncompressed size in bytes.
-    fn bufReadResource(self: *Self, buffer: []u8, descriptor: ResourceDescriptor.Instance) ResourceReader.BufReadResourceError![]const u8 {
+    fn bufReadResource(self: *Self, buffer: []u8, descriptor: ResourceDescriptor) ResourceReader.BufReadResourceError![]const u8 {
         self.read_count += 1;
 
         if (buffer.len < descriptor.uncompressed_size) {
@@ -100,7 +100,7 @@ pub const MockRepository = struct {
     }
 
     /// Returns a list of all resource descriptors provided to the mock repository instance.
-    fn resourceDescriptors(self: *const Self) []const ResourceDescriptor.Instance {
+    fn resourceDescriptors(self: *const Self) []const ResourceDescriptor {
         return self._raw_descriptors.constSlice();
     }
 
@@ -146,7 +146,7 @@ const minimum_looped_program_length = loop_instruction.len + 1;
 // -- Resource descriptor fixture data --
 
 const TestFixtures = struct {
-    const empty_descriptor = ResourceDescriptor.Instance{
+    const empty_descriptor = ResourceDescriptor{
         .type = .sound_or_empty,
         .bank_id = 0,
         .bank_offset = 0,
@@ -154,7 +154,7 @@ const TestFixtures = struct {
         .uncompressed_size = 0,
     };
 
-    const sfx_descriptor = ResourceDescriptor.Instance{
+    const sfx_descriptor = ResourceDescriptor{
         .type = .sound_or_empty,
         .bank_id = 0,
         .bank_offset = 0,
@@ -162,7 +162,7 @@ const TestFixtures = struct {
         .uncompressed_size = 100,
     };
 
-    const music_descriptor = ResourceDescriptor.Instance{
+    const music_descriptor = ResourceDescriptor{
         .type = .music,
         .bank_id = 0,
         .bank_offset = 0,
@@ -170,7 +170,7 @@ const TestFixtures = struct {
         .uncompressed_size = 100,
     };
 
-    const bitmap_descriptor = ResourceDescriptor.Instance{
+    const bitmap_descriptor = ResourceDescriptor{
         .type = .bitmap,
         .bank_id = 0,
         .bank_offset = 0,
@@ -178,7 +178,7 @@ const TestFixtures = struct {
         .uncompressed_size = 32_000,
     };
 
-    const palettes_descriptor = ResourceDescriptor.Instance{
+    const palettes_descriptor = ResourceDescriptor{
         .type = .palettes,
         .bank_id = 0,
         .bank_offset = 0,
@@ -186,7 +186,7 @@ const TestFixtures = struct {
         .uncompressed_size = 1024,
     };
 
-    const bytecode_descriptor = ResourceDescriptor.Instance{
+    const bytecode_descriptor = ResourceDescriptor{
         .type = .bytecode,
         .bank_id = 0,
         .bank_offset = 0,
@@ -194,7 +194,7 @@ const TestFixtures = struct {
         .uncompressed_size = minimum_looped_program_length,
     };
 
-    const polygons_descriptor = ResourceDescriptor.Instance{
+    const polygons_descriptor = ResourceDescriptor{
         .type = .polygons,
         .bank_id = 0,
         .bank_offset = 0,
@@ -202,7 +202,7 @@ const TestFixtures = struct {
         .uncompressed_size = 2000,
     };
 
-    const sprite_polygons_descriptor = ResourceDescriptor.Instance{
+    const sprite_polygons_descriptor = ResourceDescriptor{
         .type = .sprite_polygons,
         .bank_id = 0,
         .bank_offset = 0,
@@ -219,7 +219,7 @@ const TestFixtures = struct {
 
     /// A list of fake descriptors with realistic values for resources that are referenced in game parts.
     pub const descriptors = block: {
-        var d = [_]ResourceDescriptor.Instance{empty_descriptor} ** (invalid_resource_id);
+        var d = [_]ResourceDescriptor{empty_descriptor} ** (invalid_resource_id);
 
         // Drop in individually loadable resources at known offsets
         d[sfx_resource_id] = sfx_descriptor;
@@ -285,7 +285,7 @@ const TestFixtures = struct {
 
 const testing = @import("../utils/testing.zig");
 
-const example_descriptor = ResourceDescriptor.Instance{
+const example_descriptor = ResourceDescriptor{
     .type = .music,
     .bank_id = 0,
     .bank_offset = 0,
@@ -317,7 +317,7 @@ test "bufReadResource with bytecode descriptor returns slice of original buffer 
         0x0,
     };
 
-    const example_bytecode_descriptor = ResourceDescriptor.Instance{
+    const example_bytecode_descriptor = ResourceDescriptor{
         .type = .bytecode,
         .bank_id = 0,
         .bank_offset = 0,
@@ -336,7 +336,7 @@ test "bufReadResource with bytecode descriptor returns slice of original buffer 
 test "bufReadResource with bytecode descriptor omits loop instruction when buffer is too short" {
     const expected_program = [_]u8{@enumToInt(Opcode.Yield)} ** 3;
 
-    const example_bytecode_descriptor = ResourceDescriptor.Instance{
+    const example_bytecode_descriptor = ResourceDescriptor{
         .type = .bytecode,
         .bank_id = 0,
         .bank_offset = 0,
@@ -379,7 +379,7 @@ test "bufReadResource returns error.BufferTooSmall if buffer is too small for re
 test "resourceDescriptors returns expected descriptors" {
     var repository = MockRepository.init(&TestFixtures.descriptors, false);
 
-    try testing.expectEqualSlices(ResourceDescriptor.Instance, repository.reader().resourceDescriptors(), &TestFixtures.descriptors);
+    try testing.expectEqualSlices(ResourceDescriptor, repository.reader().resourceDescriptors(), &TestFixtures.descriptors);
 }
 
 test "Ensure everything compiles" {
