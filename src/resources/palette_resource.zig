@@ -13,7 +13,7 @@
 //! http://fabiensanglard.net/another_world_polygons_amiga500/index.html
 
 const Color = @import("../values/color.zig").Color;
-const Palette = @import("../values/palette.zig");
+const Palette = @import("../values/palette.zig").Palette;
 const PaletteID = @import("../values/palette_id.zig");
 
 const static_limits = @import("../static_limits.zig");
@@ -42,7 +42,7 @@ pub const PaletteResource = struct {
 
     /// Returns the palette at the specified ID.
     /// Returns error.EndOfStream if the palette resource data was truncated.
-    pub fn palette(self: Self, palette_id: PaletteID.Trusted) !Palette.Instance {
+    pub fn palette(self: Self, palette_id: PaletteID.Trusted) !Palette {
         const start = @as(usize, palette_id) * raw_palette_size;
         const end = start + raw_palette_size;
 
@@ -53,7 +53,7 @@ pub const PaletteResource = struct {
         // but I second-guessed the efficiency of the standard library's implementation of them.
         const raw_palette = @bitCast([]const [2]u8, self.data[start..end]);
 
-        var pal: Palette.Instance = undefined;
+        var pal: Palette = undefined;
         for (pal) |*color, index| {
             const raw_color = mem.readIntBig(Color.Raw, &raw_palette[index]);
             color.* = Color.parse(raw_color);
@@ -101,9 +101,9 @@ const testing = @import("../utils/testing.zig");
 const fixedBufferStream = @import("std").io.fixedBufferStream;
 const countingReader = @import("std").io.countingReader;
 
-test "Instance.at returns expected palettes from resource" {
+test "PaletteResource.palette returns expected palettes from resource" {
     // zig fmt: off
-    const expected_palette = Palette.Instance {
+    const expected_palette = Palette {
         .{ .r = 0,      .g = 0,     .b = 0, .a = 255 },    // color 0
         .{ .r = 16,     .g = 16,    .b = 16, .a = 255 },   // color 1
         .{ .r = 32,     .g = 32,    .b = 32, .a = 255 },   // color 2
@@ -135,7 +135,7 @@ test "Instance.at returns expected palettes from resource" {
     }
 }
 
-test "Instance.palette returns error.EndOfStream on truncated data" {
+test "PaletteResource.palette returns error.EndOfStream on truncated data" {
     const data = PaletteResource.Fixtures.resource[0..1023];
     const palettes = PaletteResource.init(data);
 

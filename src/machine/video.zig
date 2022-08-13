@@ -4,7 +4,7 @@ const ColorID = @import("../values/color_id.zig");
 const StringID = @import("../values/string_id.zig");
 const BufferID = @import("../values/buffer_id.zig");
 const PaletteID = @import("../values/palette_id.zig");
-const Palette = @import("../values/palette.zig");
+const Palette = @import("../values/palette.zig").Palette;
 const Polygon = @import("../rendering/polygon.zig").Polygon;
 const PolygonResource = @import("../resources/polygon_resource.zig").PolygonResource;
 const PaletteResource = @import("../resources/palette_resource.zig").PaletteResource;
@@ -40,7 +40,7 @@ pub const Video = struct {
     /// Frames will be rendered to the host screen using this palette.
     /// This will be null when first created and after `setResourceLocations` has been called;
     /// The owning context must call `selectPalette` before attempting to call `renderBufferToSurface`.
-    current_palette: ?Palette.Instance = null,
+    current_palette: ?Palette = null,
 
     /// The set of 4 buffers used for rendering.
     /// These will be filled with garbage data when the instance is first created;

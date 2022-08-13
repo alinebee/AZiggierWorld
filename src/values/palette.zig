@@ -5,13 +5,13 @@ const static_limits = @import("../static_limits.zig");
 const color_count = static_limits.color_count;
 
 /// A 16-color palette of 24-bit colors.
-pub const Instance = [color_count]Color;
+pub const Palette = [color_count]Color;
 
 pub const Fixtures = struct {
     // zig fmt: off
 
     /// A sample 16-color palette of 24-bit colors.
-    pub const palette = Instance {
+    pub const palette = Palette {
         .{ .r = 0,      .g = 0,     .b = 0, .a = 255 },    // color 0
         .{ .r = 16,     .g = 16,    .b = 16, .a = 255 },   // color 1
         .{ .r = 32,     .g = 32,    .b = 32, .a = 255 },   // color 2

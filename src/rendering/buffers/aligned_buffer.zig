@@ -6,7 +6,7 @@
 //! versus 32,000 for the packed buffer implementation.
 
 const ColorID = @import("../../values/color_id.zig");
-const Palette = @import("../../values/palette.zig");
+const Palette = @import("../../values/palette.zig").Palette;
 const DrawMode = @import("../../values/draw_mode.zig").DrawMode;
 const Point = @import("../../values/point.zig").Point;
 const Range = @import("../../values/range.zig").Range;
@@ -117,7 +117,7 @@ pub fn AlignedBuffer(comptime width: usize, comptime height: usize) type {
         // -- Public instance methods --
 
         /// Render the contents of the buffer into a 24-bit host surface.
-        pub fn renderToSurface(self: Self, surface: *Surface(width, height), palette: Palette.Instance) void {
+        pub fn renderToSurface(self: Self, surface: *Surface(width, height), palette: Palette) void {
             var outputIndex: usize = 0;
             for (self.data) |row| {
                 for (row) |color| {
