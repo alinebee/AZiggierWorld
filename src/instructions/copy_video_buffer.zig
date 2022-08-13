@@ -2,14 +2,14 @@ const Opcode = @import("../values/opcode.zig").Opcode;
 const Program = @import("../machine/program.zig").Program;
 const Machine = @import("../machine/machine.zig").Machine;
 const Point = @import("../values/point.zig").Point;
-const BufferID = @import("../values/buffer_id.zig");
+const BufferID = @import("../values/buffer_id.zig").BufferID;
 
 /// Copies the contents of one video buffer into another.
 pub const CopyVideoBuffer = struct {
     /// The buffer to copy from.
-    source: BufferID.Enum,
+    source: BufferID,
     /// The buffer to copy into.
-    destination: BufferID.Enum,
+    destination: BufferID,
     /// If true, the source buffer will be copied into the destination buffer
     /// at the current value of the scroll_y_position register, to simulate vertical scrolling.
     /// If false, the source buffer will replace the entire destination buffer at 0 offset.
@@ -150,7 +150,7 @@ test "execute calls copyVideoBuffer with offset when use_vertical_offset = true"
     };
 
     var machine = mockMachine(struct {
-        pub fn copyVideoBuffer(source: BufferID.Enum, destination: BufferID.Enum, vertical_offset: Point.Coordinate) void {
+        pub fn copyVideoBuffer(source: BufferID, destination: BufferID, vertical_offset: Point.Coordinate) void {
             testing.expectEqual(.front_buffer, source) catch {
                 unreachable;
             };
@@ -176,7 +176,7 @@ test "execute ignores vertical offset when use_vertical_offset = false" {
     };
 
     var machine = mockMachine(struct {
-        pub fn copyVideoBuffer(source: BufferID.Enum, destination: BufferID.Enum, vertical_offset: Point.Coordinate) void {
+        pub fn copyVideoBuffer(source: BufferID, destination: BufferID, vertical_offset: Point.Coordinate) void {
             testing.expectEqual(.front_buffer, source) catch {
                 unreachable;
             };

@@ -4,7 +4,7 @@
 
 const Host = @import("../host.zig").Host;
 const Machine = @import("../machine.zig").Machine;
-const BufferID = @import("../../values/buffer_id.zig");
+const BufferID = @import("../../values/buffer_id.zig").BufferID;
 
 // - Exported constants -
 

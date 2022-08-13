@@ -4,7 +4,7 @@
 const std = @import("std");
 const assert = std.debug.assert;
 
-const BufferID = @import("../values/buffer_id.zig");
+const BufferID = @import("../values/buffer_id.zig").BufferID;
 const Machine = @import("machine.zig").Machine;
 const Video = @import("video.zig").Video;
 

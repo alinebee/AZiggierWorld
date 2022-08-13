@@ -2,13 +2,13 @@ const Opcode = @import("../values/opcode.zig").Opcode;
 const Program = @import("../machine/program.zig").Program;
 const Machine = @import("../machine/machine.zig").Machine;
 const Video = @import("../machine/video.zig").Video;
-const BufferID = @import("../values/buffer_id.zig");
+const BufferID = @import("../values/buffer_id.zig").BufferID;
 const ColorID = @import("../values/color_id.zig");
 
 /// Fill a specified video buffer with a single color.
 pub const FillVideoBuffer = struct {
     /// The buffer to fill.
-    buffer_id: BufferID.Enum,
+    buffer_id: BufferID,
     /// The color to fill with.
     color_id: ColorID.Trusted,
 
@@ -88,7 +88,7 @@ test "execute calls fillVideoBuffer with correct parameters" {
     };
 
     var machine = mockMachine(struct {
-        pub fn fillVideoBuffer(buffer_id: BufferID.Enum, color_id: ColorID.Trusted) void {
+        pub fn fillVideoBuffer(buffer_id: BufferID, color_id: ColorID.Trusted) void {
             testing.expectEqual(.back_buffer, buffer_id) catch {
                 unreachable;
             };

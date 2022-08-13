@@ -2,7 +2,7 @@ const Opcode = @import("../values/opcode.zig").Opcode;
 const Program = @import("../machine/program.zig").Program;
 const Machine = @import("../machine/machine.zig").Machine;
 const Video = @import("../machine/video.zig").Video;
-const BufferID = @import("../values/buffer_id.zig");
+const BufferID = @import("../values/buffer_id.zig").BufferID;
 
 /// This instruction reads a variable from a specific register to decide how long to leave
 /// the previous frame on screen before displaying the next one.
@@ -13,7 +13,7 @@ const milliseconds_per_frame_unit: Video.Milliseconds = 20;
 /// Renders the contents of a video buffer to the host screen.
 pub const RenderVideoBuffer = struct {
     /// The buffer to render.
-    buffer_id: BufferID.Enum,
+    buffer_id: BufferID,
 
     const Self = @This();
 
@@ -93,7 +93,7 @@ test "execute calls renderVideoBuffer with correct parameters" {
     const expected_milliseconds = raw_frame_duration * milliseconds_per_frame_unit;
 
     var machine = mockMachine(struct {
-        pub fn renderVideoBuffer(buffer_id: BufferID.Enum, delay: Video.Milliseconds) void {
+        pub fn renderVideoBuffer(buffer_id: BufferID, delay: Video.Milliseconds) void {
             testing.expectEqual(.back_buffer, buffer_id) catch unreachable;
             testing.expectEqual(expected_milliseconds, delay) catch unreachable;
         }

@@ -2,7 +2,7 @@ const Point = @import("../values/point.zig").Point;
 const PolygonScale = @import("../values/polygon_scale.zig");
 const ColorID = @import("../values/color_id.zig");
 const StringID = @import("../values/string_id.zig");
-const BufferID = @import("../values/buffer_id.zig");
+const BufferID = @import("../values/buffer_id.zig").BufferID;
 const PaletteID = @import("../values/palette_id.zig");
 const Palette = @import("../values/palette.zig").Palette;
 const Polygon = @import("../rendering/polygon.zig").Polygon;
@@ -93,19 +93,19 @@ pub const Video = struct {
     }
 
     /// Select the buffer that subsequent polygon and string draw operations will draw into.
-    pub fn selectBuffer(self: *Self, buffer_id: BufferID.Enum) void {
+    pub fn selectBuffer(self: *Self, buffer_id: BufferID) void {
         self.target_buffer_id = self.resolvedBufferID(buffer_id);
     }
 
     /// Fill a video buffer with a solid color.
-    pub fn fillBuffer(self: *Self, buffer_id: BufferID.Enum, color: ColorID.Trusted) void {
+    pub fn fillBuffer(self: *Self, buffer_id: BufferID, color: ColorID.Trusted) void {
         const buffer = self.resolvedBuffer(buffer_id);
         buffer.fill(color);
     }
 
     /// Copy the contents of one buffer into another at the specified vertical offset.
     /// Does nothing if the vertical offset is out of bounds.
-    pub fn copyBuffer(self: *Self, source_id: BufferID.Enum, destination_id: BufferID.Enum, y: Point.Coordinate) void {
+    pub fn copyBuffer(self: *Self, source_id: BufferID, destination_id: BufferID, y: Point.Coordinate) void {
         const source = self.resolvedBuffer(source_id);
         const destination = self.resolvedBuffer(destination_id);
 
@@ -146,7 +146,7 @@ pub const Video = struct {
     /// Set the specified buffer as the front buffer, marking that it is ready to draw to the host screen.
     /// If `.back_buffer` is specified, this will swap the front and back buffers.
     /// Returns the resolved ID of the buffer that should be drawn to the host screen using `renderBufferToSurface`.
-    pub fn markBufferAsReady(self: *Self, buffer_id: BufferID.Enum) BufferID.Specific {
+    pub fn markBufferAsReady(self: *Self, buffer_id: BufferID) BufferID.Specific {
         switch (buffer_id) {
             // When re-rendering the front buffer, leave the current front and back buffers as they were.
             .front_buffer => {},
@@ -175,7 +175,7 @@ pub const Video = struct {
 
     // - Private helpers -
 
-    fn resolvedBufferID(self: Self, buffer_id: BufferID.Enum) BufferID.Specific {
+    fn resolvedBufferID(self: Self, buffer_id: BufferID) BufferID.Specific {
         return switch (buffer_id) {
             .front_buffer => self.front_buffer_id,
             .back_buffer => self.back_buffer_id,
@@ -183,7 +183,7 @@ pub const Video = struct {
         };
     }
 
-    fn resolvedBuffer(self: *Self, buffer_id: BufferID.Enum) *Buffer {
+    fn resolvedBuffer(self: *Self, buffer_id: BufferID) *Buffer {
         return &self.buffers[self.resolvedBufferID(buffer_id)];
     }
 
@@ -317,7 +317,7 @@ test "markBufferAsReady with specific buffer sets front buffer while leaving bac
     const expected_buffer_id = 3;
 
     var instance = testInstance();
-    const resolved_buffer_id = instance.markBufferAsReady(BufferID.Enum{ .specific = expected_buffer_id });
+    const resolved_buffer_id = instance.markBufferAsReady(BufferID{ .specific = expected_buffer_id });
 
     try testing.expectEqual(instance.front_buffer_id, resolved_buffer_id);
     try testing.expectEqual(expected_buffer_id, instance.front_buffer_id);

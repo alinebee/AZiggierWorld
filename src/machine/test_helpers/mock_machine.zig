@@ -10,7 +10,7 @@ const ResourceID = @import("../../values/resource_id.zig");
 const ColorID = @import("../../values/color_id.zig");
 const PaletteID = @import("../../values/palette_id.zig");
 const StringID = @import("../../values/string_id.zig");
-const BufferID = @import("../../values/buffer_id.zig");
+const BufferID = @import("../../values/buffer_id.zig").BufferID;
 const PolygonScale = @import("../../values/polygon_scale.zig");
 
 const zeroes = @import("std").mem.zeroes;
@@ -60,22 +60,22 @@ pub fn MockMachine(comptime Implementation: type) type {
             try Implementation.selectPalette(palette_id);
         }
 
-        pub fn selectVideoBuffer(self: *Self, buffer_id: BufferID.Enum) void {
+        pub fn selectVideoBuffer(self: *Self, buffer_id: BufferID) void {
             self.call_counts.selectVideoBuffer += 1;
             Implementation.selectVideoBuffer(buffer_id);
         }
 
-        pub fn fillVideoBuffer(self: *Self, buffer_id: BufferID.Enum, color_id: ColorID.Trusted) void {
+        pub fn fillVideoBuffer(self: *Self, buffer_id: BufferID, color_id: ColorID.Trusted) void {
             self.call_counts.fillVideoBuffer += 1;
             Implementation.fillVideoBuffer(buffer_id, color_id);
         }
 
-        pub fn copyVideoBuffer(self: *Self, source: BufferID.Enum, destination: BufferID.Enum, vertical_offset: Point.Coordinate) void {
+        pub fn copyVideoBuffer(self: *Self, source: BufferID, destination: BufferID, vertical_offset: Point.Coordinate) void {
             self.call_counts.copyVideoBuffer += 1;
             Implementation.copyVideoBuffer(source, destination, vertical_offset);
         }
 
-        pub fn renderVideoBuffer(self: *Self, buffer_id: BufferID.Enum, delay: Video.Milliseconds) void {
+        pub fn renderVideoBuffer(self: *Self, buffer_id: BufferID, delay: Video.Milliseconds) void {
             self.call_counts.renderVideoBuffer += 1;
             Implementation.renderVideoBuffer(buffer_id, delay);
         }
@@ -170,7 +170,7 @@ test "MockMachine calls selectPalette correctly on stub implementation" {
 
 test "MockMachine calls selectVideoBuffer correctly on stub implementation" {
     var mock = mockMachine(struct {
-        fn selectVideoBuffer(buffer_id: BufferID.Enum) void {
+        fn selectVideoBuffer(buffer_id: BufferID) void {
             testing.expectEqual(.front_buffer, buffer_id) catch {
                 unreachable;
             };
@@ -183,7 +183,7 @@ test "MockMachine calls selectVideoBuffer correctly on stub implementation" {
 
 test "MockMachine calls fillVideoBuffer correctly on stub implementation" {
     var mock = mockMachine(struct {
-        fn fillVideoBuffer(buffer_id: BufferID.Enum, color_id: ColorID.Trusted) void {
+        fn fillVideoBuffer(buffer_id: BufferID, color_id: ColorID.Trusted) void {
             testing.expectEqual(.front_buffer, buffer_id) catch {
                 unreachable;
             };
@@ -199,7 +199,7 @@ test "MockMachine calls fillVideoBuffer correctly on stub implementation" {
 
 test "MockMachine calls copyVideoBuffer correctly on stub implementation" {
     var mock = mockMachine(struct {
-        fn copyVideoBuffer(source: BufferID.Enum, destination: BufferID.Enum, vertical_offset: Point.Coordinate) void {
+        fn copyVideoBuffer(source: BufferID, destination: BufferID, vertical_offset: Point.Coordinate) void {
             testing.expectEqual(.{ .specific = 1 }, source) catch {
                 unreachable;
             };
@@ -218,7 +218,7 @@ test "MockMachine calls copyVideoBuffer correctly on stub implementation" {
 
 test "MockMachine calls renderVideoBuffer correctly on stub implementation" {
     var mock = mockMachine(struct {
-        fn renderVideoBuffer(buffer_id: BufferID.Enum, delay: Video.Milliseconds) void {
+        fn renderVideoBuffer(buffer_id: BufferID, delay: Video.Milliseconds) void {
             testing.expectEqual(.back_buffer, buffer_id) catch unreachable;
             testing.expectEqual(5, delay) catch unreachable;
         }

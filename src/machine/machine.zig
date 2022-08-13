@@ -29,7 +29,7 @@
 //! decides the framerate of the game.
 
 const ThreadID = @import("../values/thread_id.zig");
-const BufferID = @import("../values/buffer_id.zig");
+const BufferID = @import("../values/buffer_id.zig").BufferID;
 const ResourceID = @import("../values/resource_id.zig");
 const StringID = @import("../values/string_id.zig");
 const PaletteID = @import("../values/palette_id.zig");
@@ -225,22 +225,22 @@ pub const Machine = struct {
     }
 
     /// Select the video buffer that subsequent drawPolygon and drawString operations will draw into.
-    pub fn selectVideoBuffer(self: *Self, buffer_id: BufferID.Enum) void {
+    pub fn selectVideoBuffer(self: *Self, buffer_id: BufferID) void {
         self.video.selectBuffer(buffer_id);
     }
 
     /// Fill a specified video buffer with a single color.
-    pub fn fillVideoBuffer(self: *Self, buffer_id: BufferID.Enum, color_id: ColorID.Trusted) void {
+    pub fn fillVideoBuffer(self: *Self, buffer_id: BufferID, color_id: ColorID.Trusted) void {
         self.video.fillBuffer(buffer_id, color_id);
     }
 
     /// Copy the contents of one video buffer into another at the specified vertical offset.
-    pub fn copyVideoBuffer(self: *Self, source: BufferID.Enum, destination: BufferID.Enum, vertical_offset: Point.Coordinate) void {
+    pub fn copyVideoBuffer(self: *Self, source: BufferID, destination: BufferID, vertical_offset: Point.Coordinate) void {
         self.video.copyBuffer(source, destination, vertical_offset);
     }
 
     /// Render the contents of the specified buffer to the host screen after the specified delay.
-    pub fn renderVideoBuffer(self: *Self, buffer_id: BufferID.Enum, delay: Video.Milliseconds) void {
+    pub fn renderVideoBuffer(self: *Self, buffer_id: BufferID, delay: Video.Milliseconds) void {
         const buffer_to_draw = self.video.markBufferAsReady(buffer_id);
         self.host.bufferReady(self, buffer_to_draw, delay);
     }

@@ -1,7 +1,7 @@
 const Machine = @import("../machine/machine.zig").Machine;
 const Host = @import("../machine/host.zig").Host;
 const ResourceDirectory = @import("../resources/resource_directory.zig").ResourceDirectory;
-const BufferID = @import("../values/buffer_id.zig");
+const BufferID = @import("../values/buffer_id.zig").BufferID;
 const Video = @import("../machine/video.zig").Video;
 const GameInput = @import("../machine/user_input.zig").UserInput;
 

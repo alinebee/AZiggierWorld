@@ -1,13 +1,13 @@
 const Opcode = @import("../values/opcode.zig").Opcode;
 const Program = @import("../machine/program.zig").Program;
 const Machine = @import("../machine/machine.zig").Machine;
-const BufferID = @import("../values/buffer_id.zig");
+const BufferID = @import("../values/buffer_id.zig").BufferID;
 
 /// Select the video buffer all subsequent DrawBackgroundPolygon, DrawSpritePolygon
 /// and DrawString operations will draw into.
 pub const SelectVideoBuffer = struct {
     /// The buffer to select.
-    buffer_id: BufferID.Enum,
+    buffer_id: BufferID,
 
     const Self = @This();
 
@@ -74,7 +74,7 @@ test "execute calls selectVideoBuffer with correct parameters" {
     };
 
     var machine = mockMachine(struct {
-        pub fn selectVideoBuffer(buffer_id: BufferID.Enum) void {
+        pub fn selectVideoBuffer(buffer_id: BufferID) void {
             testing.expectEqual(.back_buffer, buffer_id) catch {
                 unreachable;
             };
