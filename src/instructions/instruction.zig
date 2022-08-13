@@ -8,7 +8,7 @@
 const Program = @import("../machine/program.zig").Program;
 const Opcode = @import("../values/opcode.zig").Opcode;
 const Machine = @import("../machine/machine.zig").Machine;
-const ExecutionResult = @import("execution_result.zig");
+const ExecutionResult = @import("execution_result.zig").ExecutionResult;
 
 const ActivateThread = @import("activate_thread.zig").ActivateThread;
 const Call = @import("call.zig").Call;
@@ -54,7 +54,7 @@ pub const ExecutionError = error{
 /// Returns `ExecutionResult` on success, reflecting whether the program yielded or killed the thread.
 /// Returns an instruction-specific error if an instruction failed, or `error.InstructionLimitExceeded`
 /// if the program exceeded `max_instructions` without reaching a `Yield` or `Kill` instruction.
-pub fn executeProgram(program: *Program, machine: *Machine, max_instructions: usize) !ExecutionResult.Enum {
+pub fn executeProgram(program: *Program, machine: *Machine, max_instructions: usize) !ExecutionResult {
     var instructions_remaining = max_instructions;
     while (instructions_remaining > 0) : (instructions_remaining -= 1) {
         const possible_result = try executeNextInstruction(program, machine);
@@ -68,7 +68,7 @@ pub fn executeProgram(program: *Program, machine: *Machine, max_instructions: us
 /// Parse and execute the next instruction from a bytecode program on the specified virtual machine.
 /// Returns an enum indicating whether execution should continue or stop as a result of that instruction.
 /// Returns an error if the bytecode could not be interpreted as an instruction.
-pub fn executeNextInstruction(program: *Program, machine: *Machine) !?ExecutionResult.Enum {
+pub fn executeNextInstruction(program: *Program, machine: *Machine) !?ExecutionResult {
     const raw_opcode = try program.read(Opcode.Raw);
     const opcode = try Opcode.parse(raw_opcode);
 
@@ -111,7 +111,7 @@ pub fn executeNextInstruction(program: *Program, machine: *Machine) !?ExecutionR
     };
 }
 
-fn execute(comptime Instruction: type, raw_opcode: Opcode.Raw, program: *Program, machine: *Machine) !?ExecutionResult.Enum {
+fn execute(comptime Instruction: type, raw_opcode: Opcode.Raw, program: *Program, machine: *Machine) !?ExecutionResult {
     const instruction = try Instruction.parse(raw_opcode, program);
 
     // Zig 0.9.0 does not have a way to express "try this function if it returns an error set,
@@ -124,7 +124,7 @@ fn execute(comptime Instruction: type, raw_opcode: Opcode.Raw, program: *Program
         instruction.execute(machine);
 
     // Check whether this instruction returned a specific execution result. Most instructions just return void.
-    const returns_action = @TypeOf(result) == ExecutionResult.Enum;
+    const returns_action = @TypeOf(result) == ExecutionResult;
     if (returns_action) {
         return result;
     } else {

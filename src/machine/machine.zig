@@ -675,7 +675,7 @@ test "applyUserInput does not open password screen when already in password scre
 // - runTic tests -
 
 const Opcode = @import("../values/opcode.zig").Opcode;
-const ThreadOperation = @import("../instructions/thread_operation.zig");
+const ThreadOperation = @import("../instructions/thread_operation.zig").ThreadOperation;
 
 test "runTic starts next game part if scheduled" {
     var machine = Machine.testInstance(.{});
@@ -715,7 +715,7 @@ test "runTic applies user input only after loading scheduled game part" {
 test "runTic updates each thread with its scheduled state before running each thread" {
     var bytecode = [_]u8{
         // Schedule threads 1-63 to unpause on the next tic
-        @enumToInt(Opcode.ControlThreads), 1, 63, @enumToInt(ThreadOperation.Enum.@"resume"),
+        @enumToInt(Opcode.ControlThreads), 1, 63, @enumToInt(ThreadOperation.@"resume"),
         // Deactivate the current thread (expected to be 0) immediately on this tic
         @enumToInt(Opcode.Kill),
     };

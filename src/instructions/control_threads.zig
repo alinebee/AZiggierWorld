@@ -2,7 +2,7 @@ const Opcode = @import("../values/opcode.zig").Opcode;
 const ThreadID = @import("../values/thread_id.zig");
 const Program = @import("../machine/program.zig").Program;
 const Machine = @import("../machine/machine.zig").Machine;
-const Operation = @import("thread_operation.zig");
+const ThreadOperation = @import("thread_operation.zig").ThreadOperation;
 
 /// Resumes, pauses or deactivates one or more threads on the next game tic.
 /// Note that any threads paused or deactivated by this instruction will still
@@ -17,7 +17,7 @@ pub const ControlThreads = struct {
     end_thread_id: ThreadID.Trusted,
 
     /// The operation to perform on the threads in the range.
-    operation: Operation.Enum,
+    operation: ThreadOperation,
 
     const Self = @This();
 
@@ -27,12 +27,12 @@ pub const ControlThreads = struct {
     pub fn parse(_: Opcode.Raw, program: *Program) ParseError!Self {
         const raw_start_thread = try program.read(ThreadID.Raw);
         const raw_end_thread = try program.read(ThreadID.Raw);
-        const raw_operation = try program.read(Operation.Raw);
+        const raw_operation = try program.read(ThreadOperation.Raw);
 
         const instruction = Self{
             .start_thread_id = try ThreadID.parse(raw_start_thread),
             .end_thread_id = try ThreadID.parse(raw_end_thread),
-            .operation = try Operation.parse(raw_operation),
+            .operation = try ThreadOperation.parse(raw_operation),
         };
 
         if (instruction.start_thread_id > instruction.end_thread_id) {
@@ -59,7 +59,7 @@ pub const ControlThreads = struct {
     // - Exported constants -
 
     pub const opcode = Opcode.ControlThreads;
-    pub const ParseError = Program.ReadError || ThreadID.Error || Operation.Error || error{
+    pub const ParseError = Program.ReadError || ThreadID.Error || ThreadOperation.Error || error{
         /// The end thread came before the start thread.
         InvalidThreadRange,
     };

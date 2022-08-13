@@ -1,7 +1,7 @@
 const Opcode = @import("../values/opcode.zig").Opcode;
 const Program = @import("../machine/program.zig").Program;
 const Machine = @import("../machine/machine.zig").Machine;
-const ExecutionResult = @import("execution_result.zig");
+const ExecutionResult = @import("execution_result.zig").ExecutionResult;
 
 /// Immediately moves execution to the next thread.
 pub const Yield = struct {
@@ -14,7 +14,7 @@ pub const Yield = struct {
         return Self{};
     }
 
-    pub fn execute(_: Self, machine: *Machine) ExecutionError!ExecutionResult.Enum {
+    pub fn execute(_: Self, machine: *Machine) ExecutionError!ExecutionResult {
         // The stack is cleared between each thread execution, so yielding
         // the thread with a non-empty stack (i.e. in the middle of a function)
         // would cause the return address for the current function to be lost

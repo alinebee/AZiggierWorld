@@ -1,7 +1,7 @@
 const Opcode = @import("../values/opcode.zig").Opcode;
 const Program = @import("../machine/program.zig").Program;
 const Machine = @import("../machine/machine.zig").Machine;
-const ExecutionResult = @import("execution_result.zig");
+const ExecutionResult = @import("execution_result.zig").ExecutionResult;
 
 /// Deactivates the current thread and immediately moves execution to the next thread.
 pub const Kill = struct {
@@ -13,7 +13,7 @@ pub const Kill = struct {
     pub fn parse(_: Opcode.Raw, _: *Program) ParseError!Self {
         return Self{};
     }
-    pub fn execute(_: Self, _: *Machine) ExecutionResult.Enum {
+    pub fn execute(_: Self, _: *Machine) ExecutionResult {
         return .deactivate;
     }
 
