@@ -3,7 +3,7 @@ const assert = std.debug.assert;
 const trait = std.meta.trait;
 const introspection = @import("../../utils/introspection.zig");
 
-const ReaderMethods = @import("../reader_methods.zig");
+const ReaderMethods = @import("../reader_methods.zig").ReaderMethods;
 
 /// Returns a mock reader that reads every bit from a specified integer value
 /// in order from left to right (highest to lowest).
@@ -15,11 +15,11 @@ const ReaderMethods = @import("../reader_methods.zig");
 /// If `Integer` is wider than is needed to store `bits`,
 /// the bits will be left-padded with zeroes out to the full width.
 /// e.g. `intReader(u5, 0b110)` would return 0, 0, 1, 1, 0.
-pub fn new(comptime Integer: type, bits: Integer) Instance(Integer) {
-    return Instance(Integer){ .bits = bits };
+pub fn mockReader(comptime Integer: type, bits: Integer) MockReader(Integer) {
+    return MockReader(Integer){ .bits = bits };
 }
 
-fn Instance(comptime Integer: type) type {
+fn MockReader(comptime Integer: type) type {
     comptime assert(trait.isUnsignedInt(Integer));
 
     const ShiftType = introspection.ShiftType(Integer);
@@ -55,25 +55,25 @@ fn Instance(comptime Integer: type) type {
         }
 
         // Add methods for reading bytes and whole integers
-        usingnamespace ReaderMethods.Mixin(Self);
+        usingnamespace ReaderMethods(Self);
+
+        /// All possible errors produced by the mock bitwise reader.
+        pub const Error = error{
+            /// The reader ran out of bits to consume before decoding was completed.
+            SourceExhausted,
+
+            /// Decoding completed before the reader had fully consumed all bits.
+            ChecksumNotReady,
+        };
     };
 }
-
-/// All possible errors produced by the mock bitwise reader.
-pub const Error = error{
-    /// The reader ran out of bits to consume before decoding was completed.
-    SourceExhausted,
-
-    /// Decoding completed before the reader had fully consumed all bits.
-    ChecksumNotReady,
-};
 
 // -- Tests --
 
 const testing = @import("../../utils/testing.zig");
 
 test "readBit reads all bits in order from highest to lowest" {
-    var reader = new(u8, 0b1001_0110);
+    var reader = mockReader(u8, 0b1001_0110);
     const expected = [_]u1{ 1, 0, 0, 1, 0, 1, 1, 0 };
 
     for (expected) |bit| {
@@ -83,7 +83,7 @@ test "readBit reads all bits in order from highest to lowest" {
 }
 
 test "readBit is left-padded" {
-    var reader = new(u5, 0b110);
+    var reader = mockReader(u5, 0b110);
     const expected = [_]u1{ 0, 0, 1, 1, 0 };
 
     for (expected) |bit| {
@@ -93,14 +93,14 @@ test "readBit is left-padded" {
 }
 
 test "readBit returns error.SourceExhausted once it runs out of bits" {
-    var reader = new(u1, 0b1);
+    var reader = mockReader(u1, 0b1);
     try testing.expectEqual(1, reader.readBit());
     try testing.expectError(error.SourceExhausted, reader.readBit());
     try testing.expectEqual(true, reader.isAtEnd());
 }
 
 test "validateChecksum returns error.ChecksumNotReady if reader hasn't consumed all bits" {
-    var reader = new(u1, 0b1);
+    var reader = mockReader(u1, 0b1);
     try testing.expectError(error.ChecksumNotReady, reader.validateChecksum());
     try testing.expectEqual(false, reader.isAtEnd());
 }

@@ -1,29 +1,21 @@
-pub const Instruction = union(enum) {
-    /// Read n bytes of compressed data from the current source cursor,
-    /// and write them directly to the current destination cursor.
-    write_from_source: usize,
-
-    /// Read `count` bytes of uncompressed data from `offset` relative to the current destination cursor,
-    /// and write them to the current destination cursor.
-    copy_from_destination: struct { count: usize, offset: usize },
-};
-
-/// Returns a mock writer that does nothing but track the most recent RLE instruction it was asked to perform.
-/// Intended solely for testing RLE instruction parsing: in particular, it will not consume any bytes from
-/// a reader when receiving a `writeFromSource` command.
-pub fn new() Instance {
-    return Instance{ .last_instruction = null };
-}
-
-pub const Instance = struct {
+pub const MockWriter = struct {
     last_instruction: ?Instruction,
 
-    pub fn writeFromSource(self: *Instance, _: anytype, count: usize) !void {
+    const Self = @This();
+
+    /// Returns a mock writer that does nothing but track the most recent RLE instruction it was asked to perform.
+    /// Intended solely for testing RLE instruction parsing: in particular, it will not consume any bytes from
+    /// a reader when receiving a `writeFromSource` command.
+    pub fn init() Self {
+        return Self{ .last_instruction = null };
+    }
+
+    pub fn writeFromSource(self: *Self, _: anytype, count: usize) !void {
         // TODO: actually consume from the provided reader.
         self.last_instruction = .{ .write_from_source = count };
     }
 
-    pub fn copyFromDestination(self: *Instance, count: usize, offset: usize) !void {
+    pub fn copyFromDestination(self: *Self, count: usize, offset: usize) !void {
         self.last_instruction = .{
             .copy_from_destination = .{
                 .count = count,
@@ -31,6 +23,16 @@ pub const Instance = struct {
             },
         };
     }
+
+    pub const Instruction = union(enum) {
+        /// Read n bytes of compressed data from the current source cursor,
+        /// and write them directly to the current destination cursor.
+        write_from_source: usize,
+
+        /// Read `count` bytes of uncompressed data from `offset` relative to the current destination cursor,
+        /// and write them to the current destination cursor.
+        copy_from_destination: struct { count: usize, offset: usize },
+    };
 };
 
 // -- Testing --
@@ -44,7 +46,7 @@ const FakeReader = struct {
 };
 
 test "writeFromReader records correct instruction without consuming any bytes from reader" {
-    var writer = new();
+    var writer = MockWriter.init();
     var fakeReader = FakeReader{};
 
     try writer.writeFromSource(&fakeReader, 16);
@@ -55,7 +57,7 @@ test "writeFromReader records correct instruction without consuming any bytes fr
 }
 
 test "copyFromDestination records correct instruction" {
-    var writer = new();
+    var writer = MockWriter.init();
 
     try writer.copyFromDestination(16, 0xDEADBEEF);
     try testing.expectEqual(

@@ -20,8 +20,8 @@
 //!    - The read cursor and write cursors should both be at the start of the buffer.
 //!    - The checksum should be equal to 0.
 
-const Reader = @import("reader.zig");
-const Writer = @import("writer.zig");
+const Reader = @import("reader.zig").Reader;
+const Writer = @import("writer.zig").Writer;
 const decodeInstruction = @import("decode_instruction.zig").decodeInstruction;
 
 const Error = Reader.Error || Writer.Error || error{
@@ -42,13 +42,13 @@ const Error = Reader.Error || Writer.Error || error{
 ///   if they are, `source` must be located at the start of `destination`
 ///   to prevent the writer from overtaking the reader.
 pub fn decode(source: []const u8, destination: []u8) Error!void {
-    var reader = try Reader.new(source);
+    var reader = try Reader.init(source);
 
     if (reader.uncompressed_size != destination.len) {
         return error.UncompressedSizeMismatch;
     }
 
-    var writer = Writer.new(destination);
+    var writer = Writer.init(destination);
 
     while (reader.isAtEnd() == false and writer.isAtEnd() == false) {
         try decodeInstruction(&reader, &writer);
@@ -60,10 +60,10 @@ pub fn decode(source: []const u8, destination: []u8) Error!void {
 // -- Tests --
 
 const testing = @import("../utils/testing.zig");
-const Encoder = @import("test_helpers/mock_encoder.zig");
+const MockEncoder = @import("test_helpers/mock_encoder.zig").MockEncoder;
 
 test "decode decodes valid payload" {
-    var encoder = Encoder.new(testing.allocator);
+    var encoder = MockEncoder.init(testing.allocator);
     defer encoder.deinit();
 
     const payload = [_]u8{ 0x8B, 0xAD, 0xF0, 0x0D };
@@ -81,7 +81,7 @@ test "decode decodes valid payload" {
 }
 
 test "decode returns error.UncompressedSizeMismatch when passed a destination that doesn't match the reported uncompressed size" {
-    var encoder = Encoder.new(testing.allocator);
+    var encoder = MockEncoder.init(testing.allocator);
     defer encoder.deinit();
 
     try encoder.copyPrevious4Bytes();
@@ -96,7 +96,7 @@ test "decode returns error.UncompressedSizeMismatch when passed a destination th
 }
 
 test "decode returns error.CopyOutOfRange on payload with invalid copy pointer" {
-    var encoder = Encoder.new(testing.allocator);
+    var encoder = MockEncoder.init(testing.allocator);
     defer encoder.deinit();
 
     try encoder.copyPrevious4Bytes();
@@ -111,7 +111,7 @@ test "decode returns error.CopyOutOfRange on payload with invalid copy pointer" 
 }
 
 test "decode returns error.SourceExhausted on payload with too few bytes" {
-    var encoder = Encoder.new(testing.allocator);
+    var encoder = MockEncoder.init(testing.allocator);
     defer encoder.deinit();
 
     try encoder.invalidWrite();
@@ -126,7 +126,7 @@ test "decode returns error.SourceExhausted on payload with too few bytes" {
 }
 
 test "decode returns error.DestinationExhausted on payload with undercounted uncompressed size" {
-    var encoder = Encoder.new(testing.allocator);
+    var encoder = MockEncoder.init(testing.allocator);
     defer encoder.deinit();
 
     try encoder.write4Bytes(.{ 0x8B, 0xAD, 0xF0, 0x0D });
@@ -142,7 +142,7 @@ test "decode returns error.DestinationExhausted on payload with undercounted unc
 }
 
 test "decode returns error.InvalidChecksum on payload with corrupted byte" {
-    var encoder = Encoder.new(testing.allocator);
+    var encoder = MockEncoder.init(testing.allocator);
     defer encoder.deinit();
 
     try encoder.write4Bytes(.{ 0x8B, 0xAD, 0xF0, 0x0D });

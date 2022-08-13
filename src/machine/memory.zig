@@ -22,7 +22,7 @@
 //! allocator (`FixedBufferAllocator` in zig) to load resources. This made it trivial to free
 //! the memory for an entire game part at once by rewinding the stack allocation pointer.
 //!
-//! The type defined in this file currently relies an arbitrary allocator as input, which is
+//! The type defined in this file currently relies on an arbitrary allocator as input, which is
 //! standard practice in Zig and makes the memory instance (and its parent VM) relocatable:
 //! but it permits unbounded memory usage, makes freeing less efficient, and forces the upstream
 //! VM to care about allocators too.
@@ -208,7 +208,7 @@ pub const Memory = struct {
 
     // -- Exported error sets --
 
-    /// The errors that can be returned by attempting to create a memory instance with `Memory.init` or `Memory.new`.
+    /// The errors that can be returned by attempting to create a memory instance with `Memory.init`.
     pub const InitError = mem.Allocator.Error;
 
     /// The errors that can be returned by a call to `Memory.resourceLocation`.
@@ -242,16 +242,16 @@ test "Ensure everything compiles" {
     testing.refAllDecls(Memory);
 }
 
-// -- new tests --
+// -- init tests --
 
-test "new creates an instance with no resources loaded" {
+test "init creates an instance with no resources loaded" {
     var memory = try Memory.init(testing.allocator, test_reader);
     defer memory.deinit();
 
     try testing.expectEqualSlices(PossibleResourceLocation, &(.{null} ** memory.resource_locations.len), &memory.resource_locations);
 }
 
-test "new returns an error if the bitmap region could not be allocated" {
+test "init returns an error if the bitmap region could not be allocated" {
     try testing.expectError(error.OutOfMemory, Memory.init(testing.failing_allocator, test_reader));
 }
 

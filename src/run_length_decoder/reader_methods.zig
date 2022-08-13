@@ -10,13 +10,13 @@ const introspection = @import("../utils/introspection.zig");
 
 /// Returns a struct of methods that can be mixed into the specified type.
 /// Intended usage:
-///   const ReaderMethods = @import("reader_methods.zig");
+///   const ReaderMethods = @import("reader_methods.zig").ReaderMethods;
 ///
 ///   const ReaderType = struct {
-///       usingnamespace ReaderMethods.Mixin(@This());
+///       usingnamespace ReaderMethods(@This());
 ///   }
 ///
-pub fn Mixin(comptime Self: type) type {
+pub fn ReaderMethods(comptime Self: type) type {
     const ReadError = introspection.ErrorType(Self.readBit);
 
     return struct {
@@ -47,11 +47,11 @@ pub fn Mixin(comptime Self: type) type {
 // -- Tests --
 
 const testing = @import("../utils/testing.zig");
-const MockReader = @import("test_helpers/mock_reader.zig");
+const mockReader = @import("test_helpers/mock_reader.zig").mockReader;
 
 test "readInt reads integers of the specified width" {
-    // MockReader.new returns a bitwise reader that already includes `ReaderMethods`.
-    var parser = MockReader.new(u64, 0xDEAD_BEEF_8BAD_F00D);
+    // mockReader returns a bitwise reader that already includes `ReaderMethods`.
+    var parser = mockReader(u64, 0xDEAD_BEEF_8BAD_F00D);
 
     try testing.expectEqual(0xDE, parser.readInt(u8));
     try testing.expectEqual(0xAD, parser.readInt(u8));
@@ -61,7 +61,7 @@ test "readInt reads integers of the specified width" {
 }
 
 test "readInt returns error.SourceExhausted when source buffer is too short" {
-    var parser = MockReader.new(u8, 0xDE);
+    var parser = mockReader(u8, 0xDE);
 
     try testing.expectError(error.SourceExhausted, parser.readInt(u16));
     try testing.expectEqual(true, parser.isAtEnd());

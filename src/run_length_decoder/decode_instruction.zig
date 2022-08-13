@@ -71,14 +71,14 @@ pub fn decodeInstruction(reader: anytype, writer: anytype) !void {
 // -- Tests --
 
 const testing = @import("../utils/testing.zig");
-const MockReader = @import("test_helpers/mock_reader.zig");
-const MockWriter = @import("test_helpers/mock_writer.zig");
+const mockReader = @import("test_helpers/mock_reader.zig").mockReader;
+const MockWriter = @import("test_helpers/mock_writer.zig").MockWriter;
 
 test "decodeNextInstruction parses 111 instruction" {
     // 111|cccc_cccc: 11 bits total
     // next 8 bits are count: copy the next (count + 9) bytes of packed data immediately after this.
-    var reader = MockReader.new(u11, 0b111_0111_1101);
-    var writer = MockWriter.new();
+    var reader = mockReader(u11, 0b111_0111_1101);
+    var writer = MockWriter.init();
 
     try decodeInstruction(&reader, &writer);
 
@@ -90,8 +90,8 @@ test "decodeNextInstruction parses 111 instruction" {
 }
 
 test "decodeNextInstruction parses 111 instruction with max count without overflowing" {
-    var reader = MockReader.new(u11, 0b111_1111_1111);
-    var writer = MockWriter.new();
+    var reader = mockReader(u11, 0b111_1111_1111);
+    var writer = MockWriter.init();
 
     try decodeInstruction(&reader, &writer);
 
@@ -106,8 +106,8 @@ test "decodeNextInstruction parses 110 instruction" {
     // 110|cccc_cccc|oooo_oooo_oooo: 23 bits total
     // next 8 bits are count, next 12 bits are relative offset within uncompressed data:
     // copy (count + 1) bytes from the uncompressed data at that offset.
-    var reader = MockReader.new(u23, 0b110_0111_1101_1101_1001_1010);
-    var writer = MockWriter.new();
+    var reader = mockReader(u23, 0b110_0111_1101_1101_1001_1010);
+    var writer = MockWriter.init();
 
     try decodeInstruction(&reader, &writer);
 
@@ -126,8 +126,8 @@ test "decodeNextInstruction parses 110 instruction" {
 test "decodeNextInstruction parses 101 instruction" {
     // 101|oooo_oooo_oo: 13 bits total
     // next 10 bits are relative offset: copy 4 bytes from uncompressed data at offset.
-    var reader = MockReader.new(u13, 0b101_0111_1101_11);
-    var writer = MockWriter.new();
+    var reader = mockReader(u13, 0b101_0111_1101_11);
+    var writer = MockWriter.init();
 
     try decodeInstruction(&reader, &writer);
 
@@ -146,8 +146,8 @@ test "decodeNextInstruction parses 101 instruction" {
 test "decodeNextInstruction parses 100 instruction" {
     // 100|oooo_oooo_o: 12 bits total
     // next 9 bits are relative offset: copy 3 bytes from uncompressed data at offset.
-    var reader = MockReader.new(u12, 0b100_0111_1101_1);
-    var writer = MockWriter.new();
+    var reader = mockReader(u12, 0b100_0111_1101_1);
+    var writer = MockWriter.init();
 
     try decodeInstruction(&reader, &writer);
 
@@ -166,8 +166,8 @@ test "decodeNextInstruction parses 100 instruction" {
 test "decodeNextInstruction parses 01 instruction" {
     // 01|oooo_oooo: 10 bits total
     // next 8 bits are relative offset: copy 2 bytes from uncompressed data at offset.
-    var reader = MockReader.new(u10, 0b01_0111_1101);
-    var writer = MockWriter.new();
+    var reader = mockReader(u10, 0b01_0111_1101);
+    var writer = MockWriter.init();
 
     try decodeInstruction(&reader, &writer);
 
@@ -186,8 +186,8 @@ test "decodeNextInstruction parses 01 instruction" {
 test "decodeNextInstruction parses 00 instruction" {
     // 00|ccc: 5 bits total
     // next 3 bits are count: copy the next (count + 1) bytes immediately after the instruction.
-    var reader = MockReader.new(u5, 0b00_110);
-    var writer = MockWriter.new();
+    var reader = mockReader(u5, 0b00_110);
+    var writer = MockWriter.init();
 
     try decodeInstruction(&reader, &writer);
 

@@ -7,20 +7,18 @@ const assert = std.debug.assert;
 const trait = std.meta.trait;
 const introspection = @import("../../utils/introspection.zig");
 
-pub fn new(allocator: mem.Allocator) Instance {
-    return Instance.init(allocator);
-}
-
 /// Builds an RLE-encoded payload that can be decompressed by a call to decode.
 /// Only intended to be used for creating test fixtures.
-const Instance = struct {
+pub const MockEncoder = struct {
     payload: ArrayList(u8),
     bits_written: usize,
     uncompressed_size: u32,
 
+    const Self = @This();
+
     /// Create a new empty encoder.
     /// Caller owns the returned encoder and must free it by calling `deinit`.
-    fn init(allocator: mem.Allocator) Instance {
+    pub fn init(allocator: mem.Allocator) Self {
         return .{
             .payload = ArrayList(u8).init(allocator),
             .bits_written = 0,
@@ -31,13 +29,13 @@ const Instance = struct {
     /// Free the memory used by the encoder itself.
     /// Any data that was returned by `finalize` is not owned and must be freed separately.
     /// After calling this function, the encoder can no longer be used.
-    pub fn deinit(self: *Instance) void {
+    pub fn deinit(self: *Self) void {
         self.payload.deinit();
         self.* = undefined;
     }
 
     /// Add an instruction that writes a raw 4-byte sequence to the end of the destination.
-    pub fn write4Bytes(self: *Instance, bytes: [4]u8) !void {
+    pub fn write4Bytes(self: *Self, bytes: [4]u8) !void {
         const instruction: u5 = 0b00_011; // Read 4 bytes
         try self.writeBits(instruction);
 
@@ -53,7 +51,7 @@ const Instance = struct {
     }
 
     /// Encode an invalid instruction to write more bytes than exist in the payload.
-    pub fn invalidWrite(self: *Instance) !void {
+    pub fn invalidWrite(self: *Self) !void {
         const instruction: u5 = 0b00_011; // Read 4 bytes
         try self.writeBits(instruction);
 
@@ -61,7 +59,7 @@ const Instance = struct {
     }
 
     /// Add an instruction that copies the previous 4 bytes that were written to the destination.
-    pub fn copyPrevious4Bytes(self: *Instance) !void {
+    pub fn copyPrevious4Bytes(self: *Self) !void {
         const instruction: u13 = 0b101_0000_0001_00;
         try self.writeBits(instruction);
 
@@ -70,7 +68,7 @@ const Instance = struct {
 
     /// Add the specified bit to the end of the payload,
     /// starting from the most significant bit of the first byte.
-    fn writeBit(self: *Instance, bit: u1) !void {
+    fn writeBit(self: *Self, bit: u1) !void {
         const byte_index = self.bits_written / 8;
         const shift = @intCast(u3, 7 - (self.bits_written % 8));
         const mask = @as(u8, bit) << shift;
@@ -85,7 +83,7 @@ const Instance = struct {
     }
 
     /// Add the specified bits to the end of the payload, starting from the most significant bit of the first byte.
-    fn writeBits(self: *Instance, bits: anytype) !void {
+    fn writeBits(self: *Self, bits: anytype) !void {
         const Integer = @TypeOf(bits);
         comptime assert(trait.isUnsignedInt(Integer));
         const bit_count = introspection.bitCount(Integer);
@@ -100,7 +98,7 @@ const Instance = struct {
     }
 
     /// The expected compressed size of the data returned by `finalize`, in bytes.
-    pub fn compressedSize(self: Instance) usize {
+    pub fn compressedSize(self: Self) usize {
         // Filled payload chunks + final partial chunk +  32-bit CRC + 32-bit uncompressed byte count
         var chunk_count = (self.bits_written / 32) + 1 + 1 + 1;
         return chunk_count * 4;
@@ -108,7 +106,7 @@ const Instance = struct {
 
     /// Convert the encoded instructions into valid compressed data with the proper CRC and uncompressed size chunks.
     /// Caller owns the returned slice and must deallocate it using `allocator`.
-    pub fn finalize(self: *Instance, allocator: mem.Allocator) ![]u8 {
+    pub fn finalize(self: *Self, allocator: mem.Allocator) ![]u8 {
         var output = ArrayList(u8).init(allocator);
         errdefer output.deinit();
 
@@ -168,7 +166,7 @@ const testing = @import("../../utils/testing.zig");
 const decode = @import("../decode.zig").decode;
 
 test "write4Bytes generates expected payload" {
-    var encoder = Instance.init(testing.allocator);
+    var encoder = MockEncoder.init(testing.allocator);
     defer encoder.deinit();
 
     try encoder.write4Bytes(.{ 0xDE, 0xAD, 0xBE, 0xEF });
@@ -184,7 +182,7 @@ test "write4Bytes generates expected payload" {
 }
 
 test "copyPrevious4Bytes generates expected payload" {
-    var encoder = Instance.init(testing.allocator);
+    var encoder = MockEncoder.init(testing.allocator);
     defer encoder.deinit();
 
     try encoder.copyPrevious4Bytes();
@@ -198,7 +196,7 @@ test "copyPrevious4Bytes generates expected payload" {
 }
 
 test "finalize produces valid decodable data" {
-    var encoder = Instance.init(testing.allocator);
+    var encoder = MockEncoder.init(testing.allocator);
     defer encoder.deinit();
 
     try encoder.write4Bytes(.{ 0xDE, 0xAD, 0xBE, 0xEF });

@@ -8,17 +8,9 @@
 //!
 //! See decode.zig for details of the overall algorithm, and decode_instruction.zig for details of the encoding syntax.
 
-/// Create a new writer that will begin writing uncompressed data to the end of the specified destination buffer.
-pub fn new(destination: []u8) Instance {
-    return Instance{
-        .destination = destination,
-        .cursor = destination.len,
-    };
-}
-
 /// The byte-wise writer for the run-length decoder. This writing decompressed bytes
 /// to a destination buffer, starting from the end of the buffer and working its way forward.
-const Instance = struct {
+pub const Writer = struct {
     /// The destination buffer to write to.
     destination: []u8,
 
@@ -28,13 +20,23 @@ const Instance = struct {
     /// destination[3] is the next byte to be written.
     cursor: usize,
 
+    const Self = @This();
+
+    /// Create a writer that will begin writing uncompressed data to the end of the specified destination buffer.
+    pub fn init(destination: []u8) Self {
+        return .{
+            .destination = destination,
+            .cursor = destination.len,
+        };
+    }
+
     /// Consume `count` bytes from the specified source reader (which must implement a `readByte() !u8` method)
     /// and write them to the destination starting at the current cursor.
     /// The copied bytes will be in the reverse order they are returned by the reader:
     /// so { 0xEF, 0xCD, 0xAB } from the source will end up as 0xABCDEF in the destination.
     /// Returns error.DestinationExhausted and does not write any data if there is not enough
     /// space remaining in the destination buffer.
-    pub fn writeFromSource(self: *Instance, reader: anytype, count: usize) !void {
+    pub fn writeFromSource(self: *Self, reader: anytype, count: usize) !void {
         if (self.cursor < count) {
             return error.DestinationExhausted;
         }
@@ -53,7 +55,7 @@ const Instance = struct {
     /// in the destination.
     /// Returns error.DestinationExhausted and does not write any data if there is not enough
     /// space remaining in the destination buffer.
-    pub fn copyFromDestination(self: *Instance, count: usize, offset: usize) Error!void {
+    pub fn copyFromDestination(self: *Self, count: usize, offset: usize) Error!void {
         if (offset == 0 or offset > (self.destination.len - self.cursor)) {
             return error.CopyOutOfRange;
         }
@@ -77,23 +79,23 @@ const Instance = struct {
 
     /// Write a single byte to the cursor at the current offset.
     /// The caller must guarantee that self.cursor > 0.
-    fn uncheckedWriteByte(self: *Instance, byte: u8) void {
+    fn uncheckedWriteByte(self: *Self, byte: u8) void {
         self.cursor -= 1;
         self.destination[self.cursor] = byte;
     }
 
-    pub fn isAtEnd(self: Instance) bool {
+    pub fn isAtEnd(self: Self) bool {
         return self.cursor == 0;
     }
-};
 
-/// The possible errors from a writer instance.
-pub const Error = error{
-    /// The writer ran out of room in its destination buffer before decoding was completed.
-    DestinationExhausted,
+    /// The possible errors from a writer instance.
+    pub const Error = error{
+        /// The writer ran out of room in its destination buffer before decoding was completed.
+        DestinationExhausted,
 
-    /// The writer attempted to copy bytes from outside the destination buffer.
-    CopyOutOfRange,
+        /// The writer attempted to copy bytes from outside the destination buffer.
+        CopyOutOfRange,
+    };
 };
 
 // -- Tests --
@@ -108,7 +110,7 @@ test "writeFromSource writes bytes in reverse order starting at the end of the d
     const reader = fixedBufferStream(&source).reader();
 
     var destination: [4]u8 = undefined;
-    var writer = new(&destination);
+    var writer = Writer.init(&destination);
 
     try writer.writeFromSource(&reader, 4);
     try testing.expect(writer.isAtEnd());
@@ -122,7 +124,7 @@ test "writeFromSource returns error.DestinationExhausted if destination does not
     const reader = fixedBufferStream(&source).reader();
 
     var destination: [2]u8 = undefined;
-    var writer = new(&destination);
+    var writer = Writer.init(&destination);
 
     try testing.expectError(error.DestinationExhausted, writer.writeFromSource(&reader, 4));
 }
@@ -132,7 +134,7 @@ test "writeFromSource does not trap on egregiously large count" {
     const reader = fixedBufferStream(&source).reader();
 
     var destination: [2]u8 = undefined;
-    var writer = new(&destination);
+    var writer = Writer.init(&destination);
 
     try testing.expectError(error.DestinationExhausted, writer.writeFromSource(&reader, max_usize));
 }
@@ -144,7 +146,7 @@ test "copyFromDestination copies bytes from location in destination relative to 
         0xEF, 0xBE, 0xAD, 0xDE,
     };
 
-    var writer = new(&destination);
+    var writer = Writer.init(&destination);
     writer.cursor = 4;
 
     // Copy the last byte (4 bytes ahead of the write cursor)
@@ -181,7 +183,7 @@ test "copyFromDestination returns error.DestinationExhausted when writing too ma
         0x00, 0xEF, 0xBE, 0xAD, 0xDE,
     };
 
-    var writer = new(&destination);
+    var writer = Writer.init(&destination);
     writer.cursor = 1;
 
     try testing.expectError(error.DestinationExhausted, writer.copyFromDestination(2, 2));
@@ -192,7 +194,7 @@ test "copyFromDestination does not trap on egregiously large count" {
         0x00, 0xEF, 0xBE, 0xAD, 0xDE,
     };
 
-    var writer = new(&destination);
+    var writer = Writer.init(&destination);
     writer.cursor = 1;
 
     try testing.expectError(error.DestinationExhausted, writer.copyFromDestination(max_usize, 2));
@@ -201,20 +203,20 @@ test "copyFromDestination does not trap on egregiously large count" {
 test "copyFromDestination returns error.CopyOutOfRange when offset is too small" {
     var destination: [8]u8 = undefined;
 
-    var writer = new(&destination);
+    var writer = Writer.init(&destination);
     try testing.expectError(error.CopyOutOfRange, writer.copyFromDestination(0, 1));
 }
 
 test "copyFromDestination returns error.CopyOutOfRange when offset is beyond the end of the buffer" {
     var destination: [8]u8 = undefined;
 
-    var writer = new(&destination);
+    var writer = Writer.init(&destination);
     try testing.expectError(error.CopyOutOfRange, writer.copyFromDestination(1, 1));
 }
 
 test "copyFromDestination does not trap on egregiously large offset" {
     var destination: [8]u8 = undefined;
 
-    var writer = new(&destination);
+    var writer = Writer.init(&destination);
     try testing.expectError(error.CopyOutOfRange, writer.copyFromDestination(1, max_usize));
 }
