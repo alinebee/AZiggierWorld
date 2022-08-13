@@ -17,32 +17,32 @@ pub const Registers = struct {
 
     /// Get the value of the specified register as an unsigned value.
     pub fn unsigned(self: Self, id: RegisterID) Register.Unsigned {
-        return @bitCast(Register.Unsigned, self.values[@enumToInt(id)]);
+        return @bitCast(Register.Unsigned, self.values[id.index()]);
     }
 
     /// Set the value of the specified register to the specified unsigned value.
     pub fn setUnsigned(self: *Self, id: RegisterID, value: Register.Unsigned) void {
-        self.values[@enumToInt(id)] = @bitCast(Register.Unsigned, value);
+        self.values[id.index()] = @bitCast(Register.Unsigned, value);
     }
 
     /// Get the value of the specified register as a signed value.
     pub fn signed(self: Self, id: RegisterID) Register.Signed {
-        return @bitCast(Register.Signed, self.values[@enumToInt(id)]);
+        return @bitCast(Register.Signed, self.values[id.index()]);
     }
 
     /// Set the value of the specified register to the specified signed value.
     pub fn setSigned(self: *Self, id: RegisterID, value: Register.Signed) void {
-        self.values[@enumToInt(id)] = @bitCast(Register.Unsigned, value);
+        self.values[id.index()] = @bitCast(Register.Unsigned, value);
     }
 
     /// Get the value of the specified register as a signed value.
     pub fn bitPattern(self: Self, id: RegisterID) Register.BitPattern {
-        return @bitCast(Register.BitPattern, self.values[@enumToInt(id)]);
+        return @bitCast(Register.BitPattern, self.values[id.index()]);
     }
 
     /// Set the value of the specified register to the specified value.
     pub fn setBitPattern(self: *Self, id: RegisterID, value: Register.BitPattern) void {
-        self.values[@enumToInt(id)] = @bitCast(Register.Unsigned, value);
+        self.values[id.index()] = @bitCast(Register.Unsigned, value);
     }
 
     /// A mutable view of the contents of all registers as unsigned values.

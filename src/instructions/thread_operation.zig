@@ -19,6 +19,11 @@ pub const ThreadOperation = enum(Raw) {
         return intToEnum(ThreadOperation, raw) catch error.InvalidThreadOperation;
     }
 
+    /// Convert an operation type into its raw bytecode representation.
+    pub fn encode(operation: ThreadOperation) Raw {
+        return @enumToInt(operation);
+    }
+
     /// A raw ControlThreads operation as it is represented in bytecode.
     pub const Raw = _Raw;
 

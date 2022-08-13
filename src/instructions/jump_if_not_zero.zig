@@ -19,7 +19,7 @@ pub const JumpIfNotZero = struct {
     /// Returns an error if the bytecode could not be read or contained an invalid instruction.
     pub fn parse(_: Opcode.Raw, program: *Program) ParseError!Self {
         return Self{
-            .register_id = RegisterID.parse(try program.read(RegisterID.Raw)),
+            .register_id = RegisterID.cast(try program.read(RegisterID.Raw)),
             .address = try program.read(Address.Raw),
         };
     }
@@ -48,7 +48,7 @@ pub const JumpIfNotZero = struct {
     // -- Bytecode examples --
 
     pub const Fixtures = struct {
-        const raw_opcode = @enumToInt(opcode);
+        const raw_opcode = opcode.encode();
 
         /// Example bytecode that should produce a valid instruction.
         pub const valid = [4]u8{ raw_opcode, 0x01, 0xDE, 0xAD };
@@ -62,13 +62,13 @@ const expectParse = @import("test_helpers/parse.zig").expectParse;
 
 test "parse parses instruction from valid bytecode and consumes 4 bytes" {
     const instruction = try expectParse(JumpIfNotZero.parse, &JumpIfNotZero.Fixtures.valid, 4);
-    try testing.expectEqual(RegisterID.parse(1), instruction.register_id);
+    try testing.expectEqual(RegisterID.cast(1), instruction.register_id);
     try testing.expectEqual(0xDEAD, instruction.address);
 }
 
 test "execute decrements register and jumps to new address if register is still non-zero" {
     const instruction = JumpIfNotZero{
-        .register_id = RegisterID.parse(255),
+        .register_id = RegisterID.cast(255),
         .address = 9,
     };
 
@@ -89,7 +89,7 @@ test "execute decrements register and jumps to new address if register is still 
 
 test "execute decrements register but does not jump if register reaches zero" {
     const instruction = JumpIfNotZero{
-        .register_id = RegisterID.parse(255),
+        .register_id = RegisterID.cast(255),
         .address = 9,
     };
 
@@ -110,7 +110,7 @@ test "execute decrements register but does not jump if register reaches zero" {
 
 test "execute decrement drops below 0 and jumps if register is already 0" {
     const instruction = JumpIfNotZero{
-        .register_id = RegisterID.parse(255),
+        .register_id = RegisterID.cast(255),
         .address = 9,
     };
 
@@ -127,7 +127,7 @@ test "execute decrement drops below 0 and jumps if register is already 0" {
 
 test "execute decrement wraps around on underflow" {
     const instruction = JumpIfNotZero{
-        .register_id = RegisterID.parse(255),
+        .register_id = RegisterID.cast(255),
         .address = 9,
     };
 
@@ -146,7 +146,7 @@ test "execute decrement wraps around on underflow" {
 
 test "execute returns error.InvalidAddress on jump when address is out of range" {
     const instruction = JumpIfNotZero{
-        .register_id = RegisterID.parse(255),
+        .register_id = RegisterID.cast(255),
         .address = 1000,
     };
 

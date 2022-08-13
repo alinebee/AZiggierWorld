@@ -55,6 +55,8 @@ pub const Opcode = enum {
     DrawSpritePolygon,
     DrawBackgroundPolygon,
 
+    /// Convert a raw opcode from Another World bytecode into the corresponding opcode case.
+    /// Returns error.InvalidOpcode if the opcode was not recognized.
     pub fn parse(raw_opcode: Raw) Error!Self {
         if (raw_opcode & draw_background_polygon_mask != 0) {
             return .DrawBackgroundPolygon;
@@ -70,6 +72,17 @@ pub const Opcode = enum {
             }
 
             return opcode;
+        }
+    }
+
+    /// Converts an opcode case into its raw bytecode representation.
+    /// Intended for fixture generation in tests.
+    /// This method panics if given DrawSpritePolygon or DrawBackgroundPolygon,
+    /// which do not have a single bytecode representation.
+    pub fn encode(opcode: Self) Raw {
+        switch (opcode) {
+            .DrawSpritePolygon, .DrawBackgroundPolygon => @panic("Polygon opcodes cannot be converted to bytecode directly"),
+            else => return @enumToInt(opcode),
         }
     }
 

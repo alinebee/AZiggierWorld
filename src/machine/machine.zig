@@ -715,9 +715,9 @@ test "runTic applies user input only after loading scheduled game part" {
 test "runTic updates each thread with its scheduled state before running each thread" {
     var bytecode = [_]u8{
         // Schedule threads 1-63 to unpause on the next tic
-        @enumToInt(Opcode.ControlThreads), 1, 63, @enumToInt(ThreadOperation.@"resume"),
+        Opcode.ControlThreads.encode(), 1, 63, ThreadOperation.@"resume".encode(),
         // Deactivate the current thread (expected to be 0) immediately on this tic
-        @enumToInt(Opcode.Kill),
+        Opcode.Kill.encode(),
     };
 
     var machine = Machine.testInstance(.{ .bytecode = &bytecode });

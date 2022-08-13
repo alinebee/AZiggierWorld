@@ -1,7 +1,5 @@
 const fmt = @import("std").fmt;
 
-/// A raw register identifier as represented in Another World's bytecode.
-/// Guaranteed at compile-time to be valid, as the VM has exactly 256 registers.
 const _Raw = u8;
 
 /// A non-exhaustive enumeration of known register IDs used in Another World's bytecode.
@@ -67,12 +65,23 @@ pub const RegisterID = enum(_Raw) {
     // Make this a non-exhaustive enum: allows any arbitrary 8-bit integer to be safely cast to this enum type.
     _,
 
+    /// A raw register identifier as represented in Another World's bytecode.
+    /// Guaranteed at compile-time to be valid, as the VM has exactly 256 registers.
     pub const Raw = _Raw;
 
-    /// Parse an arbitrary 8-bit unsigned integer into a RegisterID enum.
-    /// This parsing is always successful, even if the integer does not match a known ID.
-    pub fn parse(raw: Raw) RegisterID {
+    /// Cast an arbitrary 8-bit unsigned integer into a RegisterID enum.
+    pub fn cast(raw: Raw) RegisterID {
         return @intToEnum(RegisterID, raw);
+    }
+
+    /// Returns the RegisterID converted to an array index.
+    pub fn index(id: RegisterID) Raw {
+        return @enumToInt(id);
+    }
+
+    /// Returns the RegisterID converted to its raw bytecode representation.
+    pub fn encode(id: RegisterID) Raw {
+        return @enumToInt(id);
     }
 };
 

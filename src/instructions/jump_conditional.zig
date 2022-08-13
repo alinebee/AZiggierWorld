@@ -53,12 +53,12 @@ pub const JumpConditional = struct {
         const raw_source = @truncate(u2, control_code >> 6);
         const raw_comparison = @truncate(Comparison.Raw, control_code);
 
-        self.lhs = RegisterID.parse(try program.read(RegisterID.Raw));
+        self.lhs = RegisterID.cast(try program.read(RegisterID.Raw));
         self.rhs = switch (raw_source) {
             // Even though 16-bit registers are signed, the reference implementation treats 8-bit constants as unsigned.
             0b00 => .{ .constant = try program.read(u8) },
             0b01 => .{ .constant = try program.read(Register.Signed) },
-            0b10, 0b11 => .{ .register = RegisterID.parse(try program.read(RegisterID.Raw)) },
+            0b10, 0b11 => .{ .register = RegisterID.cast(try program.read(RegisterID.Raw)) },
         };
 
         self.address = try program.read(Address.Raw);
@@ -91,7 +91,7 @@ pub const JumpConditional = struct {
 
     // zig fmt: off
     pub const Fixtures = struct {
-        const raw_opcode = @enumToInt(opcode);
+        const raw_opcode = opcode.encode();
 
         /// Example bytecode that should produce a valid instruction.
         pub const valid = equal_to_const16;
@@ -118,8 +118,8 @@ const expectParse = @import("test_helpers/parse.zig").expectParse;
 test "parse parses equal_to_register instruction and consumes 6 bytes" {
     const instruction = try expectParse(JumpConditional.parse, &JumpConditional.Fixtures.equal_to_register, 6);
     const expected = JumpConditional{
-        .lhs = RegisterID.parse(0xFF),
-        .rhs = .{ .register = RegisterID.parse(0) },
+        .lhs = RegisterID.cast(0xFF),
+        .rhs = .{ .register = RegisterID.cast(0) },
         .comparison = .equal,
         .address = 0xDEAD,
     };
@@ -129,7 +129,7 @@ test "parse parses equal_to_register instruction and consumes 6 bytes" {
 test "parse parses equal_to_const16 instruction and consumes 7 bytes" {
     const instruction = try expectParse(JumpConditional.parse, &JumpConditional.Fixtures.equal_to_const16, 7);
     const expected = JumpConditional{
-        .lhs = RegisterID.parse(0xFF),
+        .lhs = RegisterID.cast(0xFF),
         .rhs = .{ .constant = 0x4B1D },
         .comparison = .equal,
         .address = 0xDEAD,
@@ -140,7 +140,7 @@ test "parse parses equal_to_const16 instruction and consumes 7 bytes" {
 test "parse parses equal_to_const8 instruction and consumes 6 bytes" {
     const instruction = try expectParse(JumpConditional.parse, &JumpConditional.Fixtures.equal_to_const8, 6);
     const expected = JumpConditional{
-        .lhs = RegisterID.parse(0xFF),
+        .lhs = RegisterID.cast(0xFF),
         .rhs = .{ .constant = 0xBE },
         .comparison = .equal,
         .address = 0xDEAD,
@@ -151,8 +151,8 @@ test "parse parses equal_to_const8 instruction and consumes 6 bytes" {
 test "parse parses not_equal instruction and consumes 6 bytes" {
     const instruction = try expectParse(JumpConditional.parse, &JumpConditional.Fixtures.not_equal, 6);
     const expected = JumpConditional{
-        .lhs = RegisterID.parse(0xFF),
-        .rhs = .{ .register = RegisterID.parse(0) },
+        .lhs = RegisterID.cast(0xFF),
+        .rhs = .{ .register = RegisterID.cast(0) },
         .comparison = .not_equal,
         .address = 0xDEAD,
     };
@@ -162,8 +162,8 @@ test "parse parses not_equal instruction and consumes 6 bytes" {
 test "parse parses greater_than instruction and consumes 6 bytes" {
     const instruction = try expectParse(JumpConditional.parse, &JumpConditional.Fixtures.greater_than, 6);
     const expected = JumpConditional{
-        .lhs = RegisterID.parse(0xFF),
-        .rhs = .{ .register = RegisterID.parse(0) },
+        .lhs = RegisterID.cast(0xFF),
+        .rhs = .{ .register = RegisterID.cast(0) },
         .comparison = .greater_than,
         .address = 0xDEAD,
     };
@@ -173,8 +173,8 @@ test "parse parses greater_than instruction and consumes 6 bytes" {
 test "parse parses greater_than_or_equal_to instruction and consumes 6 bytes" {
     const instruction = try expectParse(JumpConditional.parse, &JumpConditional.Fixtures.greater_than_or_equal_to, 6);
     const expected = JumpConditional{
-        .lhs = RegisterID.parse(0xFF),
-        .rhs = .{ .register = RegisterID.parse(0) },
+        .lhs = RegisterID.cast(0xFF),
+        .rhs = .{ .register = RegisterID.cast(0) },
         .comparison = .greater_than_or_equal_to,
         .address = 0xDEAD,
     };
@@ -184,8 +184,8 @@ test "parse parses greater_than_or_equal_to instruction and consumes 6 bytes" {
 test "parse parses less_than instruction and consumes 6 bytes" {
     const instruction = try expectParse(JumpConditional.parse, &JumpConditional.Fixtures.less_than, 6);
     const expected = JumpConditional{
-        .lhs = RegisterID.parse(0xFF),
-        .rhs = .{ .register = RegisterID.parse(0) },
+        .lhs = RegisterID.cast(0xFF),
+        .rhs = .{ .register = RegisterID.cast(0) },
         .comparison = .less_than,
         .address = 0xDEAD,
     };
@@ -195,8 +195,8 @@ test "parse parses less_than instruction and consumes 6 bytes" {
 test "parse parses less_than_or_equal_to instruction and consumes 6 bytes" {
     const instruction = try expectParse(JumpConditional.parse, &JumpConditional.Fixtures.less_than_or_equal_to, 6);
     const expected = JumpConditional{
-        .lhs = RegisterID.parse(0xFF),
-        .rhs = .{ .register = RegisterID.parse(0) },
+        .lhs = RegisterID.cast(0xFF),
+        .rhs = .{ .register = RegisterID.cast(0) },
         .comparison = .less_than_or_equal_to,
         .address = 0xDEAD,
     };
@@ -212,8 +212,8 @@ test "parse returns error.InvalidJumpComparison for instruction with invalid com
 
 test "execute compares expected registers and jumps to expected address when condition succeeds" {
     const bytecode = [_]u8{0} ** 10;
-    const lhs_register = RegisterID.parse(1);
-    const rhs_register = RegisterID.parse(2);
+    const lhs_register = RegisterID.cast(1);
+    const rhs_register = RegisterID.cast(2);
 
     var machine = Machine.testInstance(.{ .bytecode = &bytecode });
     defer machine.deinit();
@@ -237,7 +237,7 @@ test "execute compares expected registers and jumps to expected address when con
 
 test "execute compares expected register to constant and jumps to expected address when condition succeeds" {
     const bytecode = [_]u8{0} ** 10;
-    const lhs_register = RegisterID.parse(1);
+    const lhs_register = RegisterID.cast(1);
 
     var machine = Machine.testInstance(.{ .bytecode = &bytecode });
     defer machine.deinit();
@@ -258,8 +258,8 @@ test "execute compares expected register to constant and jumps to expected addre
 
 test "execute does not jump when condition fails" {
     const bytecode = [_]u8{0} ** 10;
-    const lhs_register = RegisterID.parse(1);
-    const rhs_register = RegisterID.parse(2);
+    const lhs_register = RegisterID.cast(1);
+    const rhs_register = RegisterID.cast(2);
 
     var machine = Machine.testInstance(.{ .bytecode = &bytecode });
     defer machine.deinit();
@@ -283,8 +283,8 @@ test "execute does not jump when condition fails" {
 
 test "execute returns error.InvalidAddress when address is out of range" {
     const bytecode = [_]u8{0} ** 10;
-    const lhs_register = RegisterID.parse(1);
-    const rhs_register = RegisterID.parse(2);
+    const lhs_register = RegisterID.cast(1);
+    const rhs_register = RegisterID.cast(2);
 
     var machine = Machine.testInstance(.{ .bytecode = &bytecode });
     defer machine.deinit();

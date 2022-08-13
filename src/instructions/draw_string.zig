@@ -62,7 +62,7 @@ pub const DrawString = struct {
     // -- Bytecode examples --
 
     pub const Fixtures = struct {
-        const raw_opcode = @enumToInt(opcode);
+        const raw_opcode = opcode.encode();
 
         /// Example bytecode that should produce a valid instruction.
         pub const valid = [6]u8{ raw_opcode, 0xDE, 0xAD, 20, 100, 15 };

@@ -19,7 +19,7 @@ pub const RegisterAnd = struct {
     /// Returns an error if the bytecode could not be read or contained an invalid instruction.
     pub fn parse(_: Opcode.Raw, program: *Program) ParseError!Self {
         return Self{
-            .destination = RegisterID.parse(try program.read(RegisterID.Raw)),
+            .destination = RegisterID.cast(try program.read(RegisterID.Raw)),
             .value = try program.read(Register.BitPattern),
         };
     }
@@ -38,7 +38,7 @@ pub const RegisterAnd = struct {
     // -- Bytecode examples --
 
     pub const Fixtures = struct {
-        const raw_opcode = @enumToInt(opcode);
+        const raw_opcode = opcode.encode();
 
         /// Example bytecode that should produce a valid instruction.
         pub const valid = [4]u8{ raw_opcode, 16, 0b1100_0011, 0b1111_0000 };
@@ -53,7 +53,7 @@ const expectParse = @import("test_helpers/parse.zig").expectParse;
 test "parse parses valid bytecode and consumes 3 bytes" {
     const instruction = try expectParse(RegisterAnd.parse, &RegisterAnd.Fixtures.valid, 4);
 
-    try testing.expectEqual(RegisterID.parse(16), instruction.destination);
+    try testing.expectEqual(RegisterID.cast(16), instruction.destination);
     try testing.expectEqual(0b1100_0011_1111_0000, instruction.value);
 }
 
@@ -65,7 +65,7 @@ test "execute masks destination register" {
     // zig fmt: on
 
     const instruction = RegisterAnd{
-        .destination = RegisterID.parse(16),
+        .destination = RegisterID.cast(16),
         .value = mask,
     };
 

@@ -44,7 +44,7 @@ pub const FillVideoBuffer = struct {
     // -- Bytecode examples --
 
     pub const Fixtures = struct {
-        const raw_opcode = @enumToInt(opcode);
+        const raw_opcode = opcode.encode();
 
         /// Example bytecode that should produce a valid instruction.
         pub const valid = [3]u8{ raw_opcode, 0x00, 0x01 };

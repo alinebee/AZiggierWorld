@@ -81,14 +81,14 @@ pub const DrawSpritePolygon = struct {
 
         self.x = switch (raw_x) {
             0b00 => .{ .constant = try program.read(Point.Coordinate) },
-            0b01 => .{ .register = RegisterID.parse(try program.read(RegisterID.Raw)) },
+            0b01 => .{ .register = RegisterID.cast(try program.read(RegisterID.Raw)) },
             0b10 => .{ .constant = @as(Point.Coordinate, try program.read(u8)) },
             0b11 => .{ .constant = @as(Point.Coordinate, try program.read(u8)) + 256 },
         };
 
         self.y = switch (raw_y) {
             0b00 => .{ .constant = try program.read(Point.Coordinate) },
-            0b01 => .{ .register = RegisterID.parse(try program.read(RegisterID.Raw)) },
+            0b01 => .{ .register = RegisterID.cast(try program.read(RegisterID.Raw)) },
             0b10, 0b11 => .{ .constant = @as(Point.Coordinate, try program.read(u8)) },
         };
 
@@ -99,7 +99,7 @@ pub const DrawSpritePolygon = struct {
             },
             0b01 => {
                 self.source = .polygons;
-                self.scale = .{ .register = RegisterID.parse(try program.read(RegisterID.Raw)) };
+                self.scale = .{ .register = RegisterID.cast(try program.read(RegisterID.Raw)) };
             },
             0b10 => {
                 self.source = .polygons;
@@ -205,9 +205,9 @@ test "parse parses all-registers instruction and consumes 6 bytes" {
     try testing.expectEqual(.polygons, instruction.source);
     // Address is right-shifted by 1
     try testing.expectEqual(0b0001_1110_0001_1110, instruction.address);
-    try testing.expectEqual(.{ .register = RegisterID.parse(1) }, instruction.x);
-    try testing.expectEqual(.{ .register = RegisterID.parse(2) }, instruction.y);
-    try testing.expectEqual(.{ .register = RegisterID.parse(3) }, instruction.scale);
+    try testing.expectEqual(.{ .register = RegisterID.cast(1) }, instruction.x);
+    try testing.expectEqual(.{ .register = RegisterID.cast(2) }, instruction.y);
+    try testing.expectEqual(.{ .register = RegisterID.cast(3) }, instruction.scale);
 }
 
 test "parse parses instruction with full-width constants and consumes 8 bytes" {
@@ -285,9 +285,9 @@ test "execute with constants calls drawPolygon with correct parameters" {
 }
 
 test "execute with registers calls drawPolygon with correct parameters" {
-    const x_register = RegisterID.parse(1);
-    const y_register = RegisterID.parse(2);
-    const scale_register = RegisterID.parse(3);
+    const x_register = RegisterID.cast(1);
+    const y_register = RegisterID.cast(2);
+    const scale_register = RegisterID.cast(3);
 
     const instruction = DrawSpritePolygon{
         .source = .polygons,
@@ -317,7 +317,7 @@ test "execute with registers calls drawPolygon with correct parameters" {
 }
 
 test "execute with register scale value interprets value as unsigned" {
-    const scale_register = RegisterID.parse(1);
+    const scale_register = RegisterID.cast(1);
 
     const instruction = DrawSpritePolygon{
         .source = .polygons,

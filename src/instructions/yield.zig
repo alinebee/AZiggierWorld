@@ -44,7 +44,7 @@ pub const Yield = struct {
     // -- Bytecode examples --
 
     pub const Fixtures = struct {
-        const raw_opcode = @enumToInt(opcode);
+        const raw_opcode = opcode.encode();
 
         /// Example bytecode that should produce a valid instruction.
         pub const valid = [1]u8{raw_opcode};

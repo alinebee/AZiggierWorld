@@ -18,8 +18,8 @@ pub const RegisterCopy = struct {
     /// Returns an error if the bytecode could not be read or contained an invalid instruction.
     pub fn parse(_: Opcode.Raw, program: *Program) ParseError!Self {
         return Self{
-            .destination = RegisterID.parse(try program.read(RegisterID.Raw)),
-            .source = RegisterID.parse(try program.read(RegisterID.Raw)),
+            .destination = RegisterID.cast(try program.read(RegisterID.Raw)),
+            .source = RegisterID.cast(try program.read(RegisterID.Raw)),
         };
     }
 
@@ -36,7 +36,7 @@ pub const RegisterCopy = struct {
     // -- Bytecode examples --
 
     pub const Fixtures = struct {
-        const raw_opcode = @enumToInt(opcode);
+        const raw_opcode = opcode.encode();
 
         /// Example bytecode that should produce a valid instruction.
         pub const valid = [3]u8{ raw_opcode, 16, 17 };
@@ -51,14 +51,14 @@ const expectParse = @import("test_helpers/parse.zig").expectParse;
 test "parse parses valid bytecode and consumes 3 bytes" {
     const instruction = try expectParse(RegisterCopy.parse, &RegisterCopy.Fixtures.valid, 3);
 
-    try testing.expectEqual(RegisterID.parse(16), instruction.destination);
-    try testing.expectEqual(RegisterID.parse(17), instruction.source);
+    try testing.expectEqual(RegisterID.cast(16), instruction.destination);
+    try testing.expectEqual(RegisterID.cast(17), instruction.source);
 }
 
 test "execute updates specified register with value" {
     const instruction = RegisterCopy{
-        .destination = RegisterID.parse(16),
-        .source = RegisterID.parse(17),
+        .destination = RegisterID.cast(16),
+        .source = RegisterID.cast(17),
     };
 
     var machine = Machine.testInstance(.{});

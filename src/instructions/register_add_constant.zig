@@ -19,7 +19,7 @@ pub const RegisterAddConstant = struct {
     /// Returns an error if the bytecode could not be read or contained an invalid instruction.
     pub fn parse(_: Opcode.Raw, program: *Program) ParseError!Self {
         return Self{
-            .destination = RegisterID.parse(try program.read(RegisterID.Raw)),
+            .destination = RegisterID.cast(try program.read(RegisterID.Raw)),
             .value = try program.read(Register.Signed),
         };
     }
@@ -39,7 +39,7 @@ pub const RegisterAddConstant = struct {
     // -- Bytecode examples --
 
     pub const Fixtures = struct {
-        const raw_opcode = @enumToInt(opcode);
+        const raw_opcode = opcode.encode();
 
         /// Example bytecode that should produce a valid instruction.
         pub const valid = [4]u8{ raw_opcode, 16, 0b1011_0110, 0b0010_1011 }; // -18901 in two's complement
@@ -54,13 +54,13 @@ const expectParse = @import("test_helpers/parse.zig").expectParse;
 test "parse parses valid bytecode and consumes 4 bytes" {
     const instruction = try expectParse(RegisterAddConstant.parse, &RegisterAddConstant.Fixtures.valid, 4);
 
-    try testing.expectEqual(RegisterID.parse(16), instruction.destination);
+    try testing.expectEqual(RegisterID.cast(16), instruction.destination);
     try testing.expectEqual(-18901, instruction.value);
 }
 
 test "execute adds to destination register" {
     const instruction = RegisterAddConstant{
-        .destination = RegisterID.parse(16),
+        .destination = RegisterID.cast(16),
         .value = -1000,
     };
 
@@ -76,7 +76,7 @@ test "execute adds to destination register" {
 
 test "execute wraps on overflow" {
     const instruction = RegisterAddConstant{
-        .destination = RegisterID.parse(16),
+        .destination = RegisterID.cast(16),
         .value = 32767,
     };
 
@@ -92,7 +92,7 @@ test "execute wraps on overflow" {
 
 test "execute wraps on underflow" {
     const instruction = RegisterAddConstant{
-        .destination = RegisterID.parse(16),
+        .destination = RegisterID.cast(16),
         .value = -32768,
     };
 

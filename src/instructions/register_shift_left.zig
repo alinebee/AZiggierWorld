@@ -20,7 +20,7 @@ pub const RegisterShiftLeft = struct {
     /// Consumes 3 bytes from the bytecode on success, including the opcode.
     /// Returns an error if the bytecode could not be read or contained an invalid instruction.
     pub fn parse(_: Opcode.Raw, program: *Program) ParseError!Self {
-        const destination = RegisterID.parse(try program.read(RegisterID.Raw));
+        const destination = RegisterID.cast(try program.read(RegisterID.Raw));
 
         // Bytecode stored the shift distance as an unsigned 16-bit integer,
         // even though the legal range is 0...15.
@@ -59,7 +59,7 @@ pub const RegisterShiftLeft = struct {
     // -- Bytecode examples --
 
     pub const Fixtures = struct {
-        const raw_opcode = @enumToInt(opcode);
+        const raw_opcode = opcode.encode();
 
         /// Example bytecode that should produce a valid instruction.
         pub const valid = [4]u8{ raw_opcode, 16, 0, 8 };
@@ -76,7 +76,7 @@ const expectParse = @import("test_helpers/parse.zig").expectParse;
 test "parse parses valid bytecode and consumes 4 bytes" {
     const instruction = try expectParse(RegisterShiftLeft.parse, &RegisterShiftLeft.Fixtures.valid, 4);
 
-    try testing.expectEqual(RegisterID.parse(16), instruction.destination);
+    try testing.expectEqual(RegisterID.cast(16), instruction.destination);
     try testing.expectEqual(8, instruction.shift);
 }
 
@@ -95,7 +95,7 @@ test "execute shifts destination register" {
     // zig fmt: on
 
     const instruction = RegisterShiftLeft{
-        .destination = RegisterID.parse(16),
+        .destination = RegisterID.cast(16),
         .shift = shift,
     };
 
