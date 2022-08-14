@@ -14,7 +14,7 @@
 
 const Color = @import("../values/color.zig").Color;
 const Palette = @import("../values/palette.zig").Palette;
-const PaletteID = @import("../values/palette_id.zig");
+const PaletteID = @import("../values/palette_id.zig").PaletteID;
 
 const static_limits = @import("../static_limits.zig");
 const mem = @import("std").mem;
@@ -42,8 +42,8 @@ pub const PaletteResource = struct {
 
     /// Returns the palette at the specified ID.
     /// Returns error.EndOfStream if the palette resource data was truncated.
-    pub fn palette(self: Self, palette_id: PaletteID.Trusted) !Palette {
-        const start = @as(usize, palette_id) * raw_palette_size;
+    pub fn palette(self: Self, palette_id: PaletteID) !Palette {
+        const start = palette_id.index() * raw_palette_size;
         const end = start + raw_palette_size;
 
         if (end > self.data.len) return error.EndOfStream;
@@ -128,7 +128,7 @@ test "PaletteResource.palette returns expected palettes from resource" {
 
     var idx: usize = 0;
     while (idx < palette_count) : (idx += 1) {
-        const palette_id = @intCast(PaletteID.Trusted, idx);
+        const palette_id = PaletteID.cast(idx);
         const palette = try palettes.palette(palette_id);
 
         try testing.expectEqualSlices(Color, &expected_palette, &palette);
@@ -138,6 +138,7 @@ test "PaletteResource.palette returns expected palettes from resource" {
 test "PaletteResource.palette returns error.EndOfStream on truncated data" {
     const data = PaletteResource.Fixtures.resource[0..1023];
     const palettes = PaletteResource.init(data);
+    const last_palette_id = PaletteID.cast(31);
 
-    try testing.expectError(error.EndOfStream, palettes.palette(31));
+    try testing.expectError(error.EndOfStream, palettes.palette(last_palette_id));
 }

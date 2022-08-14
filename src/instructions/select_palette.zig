@@ -1,12 +1,12 @@
 const Opcode = @import("../values/opcode.zig").Opcode;
 const Program = @import("../machine/program.zig").Program;
 const Machine = @import("../machine/machine.zig").Machine;
-const PaletteID = @import("../values/palette_id.zig");
+const PaletteID = @import("../values/palette_id.zig").PaletteID;
 
 /// Select the active palette to render the video buffer in.
 pub const SelectPalette = struct {
     /// The palette to select.
-    palette_id: PaletteID.Trusted,
+    palette_id: PaletteID,
 
     const Self = @This();
 
@@ -61,7 +61,7 @@ const mockMachine = @import("../machine/test_helpers/mock_machine.zig").mockMach
 test "parse parses valid bytecode and consumes 2 bytes" {
     const instruction = try expectParse(SelectPalette.parse, &SelectPalette.Fixtures.valid, 3);
 
-    try testing.expectEqual(31, instruction.palette_id);
+    try testing.expectEqual(PaletteID.cast(31), instruction.palette_id);
 }
 
 test "parse returns error.InvalidPaletteID on unknown palette identifier and consumes 2 bytes" {
@@ -73,12 +73,12 @@ test "parse returns error.InvalidPaletteID on unknown palette identifier and con
 
 test "execute calls selectPalette with correct parameters" {
     const instruction = SelectPalette{
-        .palette_id = 16,
+        .palette_id = PaletteID.cast(16),
     };
 
     var machine = mockMachine(struct {
-        pub fn selectPalette(palette_id: PaletteID.Trusted) !void {
-            try testing.expectEqual(16, palette_id);
+        pub fn selectPalette(palette_id: PaletteID) !void {
+            try testing.expectEqual(PaletteID.cast(16), palette_id);
         }
     });
 

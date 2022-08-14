@@ -32,7 +32,7 @@ const ThreadID = @import("../values/thread_id.zig").ThreadID;
 const BufferID = @import("../values/buffer_id.zig").BufferID;
 const ResourceID = @import("../values/resource_id.zig").ResourceID;
 const StringID = @import("../values/string_id.zig");
-const PaletteID = @import("../values/palette_id.zig");
+const PaletteID = @import("../values/palette_id.zig").PaletteID;
 const ColorID = @import("../values/color_id.zig").ColorID;
 const Channel = @import("../values/channel.zig");
 const Point = @import("../values/point.zig").Point;
@@ -220,7 +220,7 @@ pub const Machine = struct {
     }
 
     /// Select the active palette to render the video buffer in.
-    pub fn selectPalette(self: *Self, palette_id: PaletteID.Trusted) !void {
+    pub fn selectPalette(self: *Self, palette_id: PaletteID) !void {
         try self.video.selectPalette(palette_id);
     }
 

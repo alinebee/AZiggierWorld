@@ -8,7 +8,7 @@ const GamePart = @import("../../values/game_part.zig").GamePart;
 const Channel = @import("../../values/channel.zig");
 const ResourceID = @import("../../values/resource_id.zig").ResourceID;
 const ColorID = @import("../../values/color_id.zig").ColorID;
-const PaletteID = @import("../../values/palette_id.zig");
+const PaletteID = @import("../../values/palette_id.zig").PaletteID;
 const StringID = @import("../../values/string_id.zig");
 const BufferID = @import("../../values/buffer_id.zig").BufferID;
 const PolygonScale = @import("../../values/polygon_scale.zig");
@@ -55,7 +55,7 @@ pub fn MockMachine(comptime Implementation: type) type {
             try Implementation.drawString(string_id, color_id, point);
         }
 
-        pub fn selectPalette(self: *Self, palette_id: PaletteID.Trusted) !void {
+        pub fn selectPalette(self: *Self, palette_id: PaletteID) !void {
             self.call_counts.selectPalette += 1;
             try Implementation.selectPalette(palette_id);
         }
@@ -157,14 +157,14 @@ test "MockMachine calls drawString correctly on stub implementation" {
 
 test "MockMachine calls selectPalette correctly on stub implementation" {
     var mock = mockMachine(struct {
-        fn selectPalette(palette_id: PaletteID.Trusted) !void {
-            testing.expectEqual(16, palette_id) catch {
+        fn selectPalette(palette_id: PaletteID) !void {
+            testing.expectEqual(PaletteID.cast(16), palette_id) catch {
                 unreachable;
             };
         }
     });
 
-    try mock.selectPalette(16);
+    try mock.selectPalette(PaletteID.cast(16));
     try testing.expectEqual(1, mock.call_counts.selectPalette);
 }
 

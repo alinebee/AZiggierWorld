@@ -3,7 +3,7 @@ const PolygonScale = @import("../values/polygon_scale.zig");
 const ColorID = @import("../values/color_id.zig").ColorID;
 const StringID = @import("../values/string_id.zig");
 const BufferID = @import("../values/buffer_id.zig").BufferID;
-const PaletteID = @import("../values/palette_id.zig");
+const PaletteID = @import("../values/palette_id.zig").PaletteID;
 const Palette = @import("../values/palette.zig").Palette;
 const Polygon = @import("../rendering/polygon.zig").Polygon;
 const PolygonResource = @import("../resources/polygon_resource.zig").PolygonResource;
@@ -88,7 +88,7 @@ pub const Video = struct {
     }
 
     /// Select the palette used to render the next frame to the host screen.
-    pub fn selectPalette(self: *Self, palette_id: PaletteID.Trusted) !void {
+    pub fn selectPalette(self: *Self, palette_id: PaletteID) !void {
         self.current_palette = try self.palettes.palette(palette_id);
     }
 
@@ -269,7 +269,7 @@ fn testInstance() Video {
 
 test "setResourceLocations sets resource data pointers and resets current palette" {
     var instance = testInstance();
-    try instance.selectPalette(0);
+    try instance.selectPalette(PaletteID.cast(0));
 
     const new_palette_data = [0]u8{};
     const new_polygon_data = [0]u8{};
@@ -369,7 +369,7 @@ test "loadBitmapResource loads bitmap data into expected buffer" {
 test "selectPalette loads specified palette" {
     var instance = testInstance();
 
-    const palette_id = 15;
+    const palette_id = PaletteID.cast(15);
     const expected_palette = try instance.palettes.palette(palette_id);
 
     try testing.expectEqual(null, instance.current_palette);
@@ -384,7 +384,7 @@ test "selectPalette returns error and leaves current palette unchanged when pale
     instance.palettes = PaletteResource.init(&empty_palette_data);
 
     try testing.expectEqual(null, instance.current_palette);
-    try testing.expectError(error.EndOfStream, instance.selectPalette(0));
+    try testing.expectError(error.EndOfStream, instance.selectPalette(PaletteID.cast(0)));
     try testing.expectEqual(null, instance.current_palette);
 }
 
@@ -400,7 +400,7 @@ test "renderBufferToSurface renders colors from current palette into surface" {
     const color_id = ColorID.cast(15);
 
     var instance = testInstance();
-    try instance.selectPalette(0);
+    try instance.selectPalette(PaletteID.cast(0));
 
     instance.buffers[buffer_id].fill(color_id);
 

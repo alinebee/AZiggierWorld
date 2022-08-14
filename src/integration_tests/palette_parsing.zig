@@ -3,7 +3,7 @@
 
 const PaletteResource = @import("../resources/palette_resource.zig").PaletteResource;
 const ResourceDirectory = @import("../resources/resource_directory.zig").ResourceDirectory;
-const PaletteID = @import("../values/palette_id.zig");
+const PaletteID = @import("../values/palette_id.zig").PaletteID;
 const static_limits = @import("../static_limits.zig");
 
 const ensureValidFixtureDir = @import("helpers.zig").ensureValidFixtureDir;
@@ -27,7 +27,7 @@ test "Parse all palettes in original game files" {
 
         var idx: usize = 0;
         while (idx < static_limits.palette_count) : (idx += 1) {
-            const palette_id = @intCast(PaletteID.Trusted, idx);
+            const palette_id = PaletteID.cast(idx);
             _ = try palettes.palette(palette_id);
         }
     }
