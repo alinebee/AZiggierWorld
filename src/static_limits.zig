@@ -67,6 +67,9 @@ pub const virtual_screen_width = 320;
 /// See video_buffer.zig and planar_bitmap.zig.
 pub const virtual_screen_height = 200;
 
+/// The maximum size in bytes of an Another World game program.
+pub const max_program_size = 65_536;
+
 /// The maximum number of subroutines that can be on the stack.
 /// Can be safely modified without changing types.
 ///

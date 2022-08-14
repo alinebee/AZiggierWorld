@@ -11,14 +11,13 @@
 //! different entities within the game (enemies, projectiles etc.) as well as input-handling
 //! and overall housekeeping for the current section of the game.
 
-const Address = @import("../values/address.zig");
 const Machine = @import("machine.zig").Machine;
 const Program = @import("program.zig").Program;
 const executeProgram = @import("../instructions/instruction.zig").executeProgram;
 
 const ExecutionState = union(enum) {
     /// The thread is active and will continue execution from the specified address when it is next run.
-    active: Address.Native,
+    active: Program.Address,
 
     /// The thread is inactive and will not run, regardless of whether it is running or paused.
     inactive,
@@ -68,7 +67,7 @@ pub const Thread = struct {
 
     /// On the next game tic, activate this thread and jump to the specified address.
     /// If the thread is currently inactive, then it will remain so for the rest of the current tic.
-    pub fn scheduleJump(self: *Self, address: Address.Native) void {
+    pub fn scheduleJump(self: *Self, address: Program.Address) void {
         self.scheduled_execution_state = .{ .active = address };
     }
 

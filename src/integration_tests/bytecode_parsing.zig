@@ -69,7 +69,7 @@ test "parseNextInstruction parses all programs in fixture bytecode" {
         const data = try reader.allocReadResource(testing.allocator, descriptor);
         defer testing.allocator.free(data);
 
-        var program = Program.init(data);
+        var program = try Program.init(data);
 
         while (program.isAtEnd() == false) {
             const last_valid_address = program.counter;

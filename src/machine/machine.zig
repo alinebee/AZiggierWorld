@@ -322,7 +322,7 @@ pub const Machine = struct {
     /// the new game part on the next run loop.
     fn startGamePart(self: *Self, game_part: GamePart) !void {
         const resource_locations = try self.memory.loadGamePart(game_part);
-        self.program = Program.init(resource_locations.bytecode);
+        self.program = try Program.init(resource_locations.bytecode);
 
         self.video.setResourceLocations(resource_locations.palettes, resource_locations.polygons, resource_locations.animations);
 
@@ -376,7 +376,7 @@ pub const Machine = struct {
 
         var machine = Self.init(testing.allocator, MockRepository.test_reader, host, options) catch unreachable;
         if (config.bytecode) |bytecode| {
-            machine.program = Program.init(bytecode);
+            machine.program = Program.init(bytecode) catch unreachable;
         }
         return machine;
     }

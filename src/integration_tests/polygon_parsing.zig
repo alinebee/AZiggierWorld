@@ -30,7 +30,7 @@ fn findPolygonDrawInstructions(allocator: std.mem.Allocator, bytecode: []const u
     var instructions = std.ArrayList(PolygonDrawInstruction).init(allocator);
     errdefer instructions.deinit();
 
-    var program = Program.init(bytecode);
+    var program = try Program.init(bytecode);
     while (program.isAtEnd() == false) {
         switch (try Instruction.parseNextInstruction(&program)) {
             .DrawBackgroundPolygon => |instruction| {

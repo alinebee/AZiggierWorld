@@ -2,7 +2,6 @@ const Opcode = @import("../values/opcode.zig").Opcode;
 const ThreadID = @import("../values/thread_id.zig").ThreadID;
 const Program = @import("../machine/program.zig").Program;
 const Machine = @import("../machine/machine.zig").Machine;
-const Address = @import("../values/address.zig");
 
 /// Activate a specific thread and move its program counter to the specified address.
 /// Takes effect on the next iteration of the run loop.
@@ -11,7 +10,7 @@ pub const ActivateThread = struct {
     thread_id: ThreadID,
 
     /// The program address that the thread should jump to when activated.
-    address: Address.Raw,
+    address: Program.Address,
 
     const Self = @This();
 
@@ -20,7 +19,7 @@ pub const ActivateThread = struct {
     /// Returns an error if the bytecode could not be read or contained an invalid instruction.
     pub fn parse(_: Opcode.Raw, program: *Program) ParseError!Self {
         const raw_thread_id = try program.read(ThreadID.Raw);
-        const address = try program.read(Address.Raw);
+        const address = try program.read(Program.Address);
 
         // Do failable parsing *after* loading all the bytes that this instruction would normally consume;
         // This way, tests that recover from failed parsing will parse the rest of the bytecode correctly.

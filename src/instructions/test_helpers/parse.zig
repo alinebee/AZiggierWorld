@@ -10,7 +10,7 @@ const introspection = @import("../../utils/introspection.zig");
 /// Try to parse a literal sequence of bytecode into a specific instruction;
 /// on success or failure, check that the expected number of bytes were consumed.
 pub fn expectParse(comptime parseFn: anytype, bytecode: []const u8, expected_bytes_consumed: usize) ReturnType(parseFn) {
-    var program = Program.init(bytecode);
+    var program = Program.init(bytecode) catch unreachable;
     const raw_opcode = try program.read(Opcode.Raw);
 
     const instruction = parseFn(raw_opcode, &program);

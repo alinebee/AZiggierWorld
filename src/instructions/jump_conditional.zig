@@ -3,7 +3,6 @@ const Register = @import("../values/register.zig");
 const Program = @import("../machine/program.zig").Program;
 const Machine = @import("../machine/machine.zig").Machine;
 const Comparison = @import("comparison.zig").Comparison;
-const Address = @import("../values/address.zig");
 const RegisterID = @import("../values/register_id.zig").RegisterID;
 
 /// Compares the value in a register against another register or constant
@@ -22,7 +21,7 @@ pub const JumpConditional = struct {
     comparison: Comparison,
 
     /// The program address to jump to if the condition succeeds.
-    address: Address.Raw,
+    address: Program.Address,
 
     const Self = @This();
 
@@ -61,7 +60,7 @@ pub const JumpConditional = struct {
             0b10, 0b11 => .{ .register = RegisterID.cast(try program.read(RegisterID.Raw)) },
         };
 
-        self.address = try program.read(Address.Raw);
+        self.address = try program.read(Program.Address);
 
         // Do failable parsing *after* loading all the bytes that this instruction would normally consume;
         // This way, tests that recover from failed parsing can parse the rest of the program correctly.

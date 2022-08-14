@@ -2,12 +2,11 @@ const Opcode = @import("../values/opcode.zig").Opcode;
 const Program = @import("../machine/program.zig").Program;
 const Machine = @import("../machine/machine.zig").Machine;
 const Stack = @import("../machine/stack.zig").Stack;
-const Address = @import("../values/address.zig");
 
 /// Call into a subroutine and increment the program execution stack.
 pub const Call = struct {
     /// The address of the subroutine to call.
-    address: Address.Raw,
+    address: Program.Address,
 
     const Self = @This();
 
@@ -16,7 +15,7 @@ pub const Call = struct {
     /// Returns an error if the bytecode could not be read or contained an invalid instruction.
     pub fn parse(_: Opcode.Raw, program: *Program) ParseError!Self {
         return Self{
-            .address = try program.read(Address.Raw),
+            .address = try program.read(Program.Address),
         };
     }
 

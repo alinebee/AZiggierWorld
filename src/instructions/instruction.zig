@@ -219,7 +219,7 @@ fn parse(comptime Instruction: type, raw_opcode: Opcode.Raw, program: *Program) 
 
 /// Try to parse a literal sequence of bytecode into an Instruction union value.
 fn expectParse(bytecode: []const u8) !Wrapped {
-    var program = Program.init(bytecode);
+    var program = try Program.init(bytecode);
     return try parseNextInstruction(&program);
 }
 

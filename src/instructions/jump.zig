@@ -1,13 +1,12 @@
 const Opcode = @import("../values/opcode.zig").Opcode;
 const Program = @import("../machine/program.zig").Program;
 const Machine = @import("../machine/machine.zig").Machine;
-const Address = @import("../values/address.zig");
 
 /// Unconditionally jump to a new address.
 /// Unlike Call, this does not increment the stack with a return address.
 pub const Jump = struct {
-    /// The address to jump to.
-    address: Address.Raw,
+    /// The address to jump to in the current program.
+    address: Program.Address,
 
     const Self = @This();
 
@@ -16,7 +15,7 @@ pub const Jump = struct {
     /// Returns an error if the bytecode could not be read or contained an invalid instruction.
     pub fn parse(_: Opcode.Raw, program: *Program) ParseError!Self {
         return Self{
-            .address = try program.read(Address.Raw),
+            .address = try program.read(Program.Address),
         };
     }
 

@@ -1,7 +1,6 @@
 const Opcode = @import("../values/opcode.zig").Opcode;
 const Program = @import("../machine/program.zig").Program;
 const Machine = @import("../machine/machine.zig").Machine;
-const Address = @import("../values/address.zig");
 const RegisterID = @import("../values/register_id.zig").RegisterID;
 
 /// Decrement the value in a specific register and move the program counter to a specific address
@@ -10,7 +9,7 @@ pub const JumpIfNotZero = struct {
     /// The register storing the counter to decrement.
     register_id: RegisterID,
     /// The address to jump to if the register value is non-zero.
-    address: Address.Raw,
+    address: Program.Address,
 
     const Self = @This();
 
@@ -20,7 +19,7 @@ pub const JumpIfNotZero = struct {
     pub fn parse(_: Opcode.Raw, program: *Program) ParseError!Self {
         return Self{
             .register_id = RegisterID.cast(try program.read(RegisterID.Raw)),
-            .address = try program.read(Address.Raw),
+            .address = try program.read(Program.Address),
         };
     }
 

@@ -10,20 +10,20 @@
 //! However, it's not clear that the stack depth will ever exceed 1 in the original DOS bytecode
 //! (i.e. the game may never use nested subroutines).
 
-const Address = @import("../values/address.zig");
 const static_limits = @import("../static_limits.zig");
+const Program = @import("program.zig").Program;
 
 /// Represents the state of the program execution stack.
 pub const Stack = struct {
     /// The addresses currently on the stack.
-    return_addresses: [max_depth]Address.Native = undefined,
+    return_addresses: [max_depth]Program.Address = undefined,
     /// The current depth on the stack, between 0 and 63.
     depth: usize = 0,
 
     const Self = @This();
 
     /// Add a new return address onto the stack.
-    pub fn push(self: *Self, address: Address.Native) Error!void {
+    pub fn push(self: *Self, address: Program.Address) Error!void {
         if (self.depth >= self.return_addresses.len) {
             return error.StackOverflow;
         }
@@ -32,7 +32,7 @@ pub const Stack = struct {
     }
 
     /// Decrement the stack and return the last return address that was on the stack.
-    pub fn pop(self: *Self) Error!Address.Native {
+    pub fn pop(self: *Self) Error!Program.Address {
         if (self.depth == 0) {
             return error.StackUnderflow;
         }
