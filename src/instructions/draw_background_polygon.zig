@@ -3,7 +3,7 @@ const Program = @import("../machine/program.zig").Program;
 const Machine = @import("../machine/machine.zig").Machine;
 const Video = @import("../machine/video.zig").Video;
 const Point = @import("../values/point.zig").Point;
-const PolygonScale = @import("../values/polygon_scale.zig");
+const PolygonScale = @import("../values/polygon_scale.zig").PolygonScale;
 
 /// Draw a polygon at the default zoom level and a constant position hardcoded in the bytecode.
 /// Unlike DrawSpritePolygon this is likely intended for drawing backgrounds,
@@ -63,7 +63,7 @@ pub const DrawBackgroundPolygon = struct {
 
     // Private implementation is generic to allow tests to use mocks.
     fn _execute(self: Self, machine: anytype) !void {
-        try machine.drawPolygon(.polygons, self.address, self.point, PolygonScale.default);
+        try machine.drawPolygon(.polygons, self.address, self.point, .default);
     }
 
     // - Exported constants -
@@ -112,12 +112,12 @@ test "execute calls drawPolygon with correct parameters" {
     };
 
     var machine = mockMachine(struct {
-        pub fn drawPolygon(source: Video.PolygonSource, address: Video.PolygonAddress, point: Point, scale: PolygonScale.Raw) !void {
+        pub fn drawPolygon(source: Video.PolygonSource, address: Video.PolygonAddress, point: Point, scale: PolygonScale) !void {
             try testing.expectEqual(.polygons, source);
             try testing.expectEqual(0xDEAD, address);
             try testing.expectEqual(320, point.x);
             try testing.expectEqual(200, point.y);
-            try testing.expectEqual(PolygonScale.default, scale);
+            try testing.expectEqual(.default, scale);
         }
     });
 

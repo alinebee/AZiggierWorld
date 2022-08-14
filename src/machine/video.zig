@@ -1,5 +1,5 @@
 const Point = @import("../values/point.zig").Point;
-const PolygonScale = @import("../values/polygon_scale.zig");
+const PolygonScale = @import("../values/polygon_scale.zig").PolygonScale;
 const ColorID = @import("../values/color_id.zig").ColorID;
 const StringID = @import("../values/string_id.zig").StringID;
 const BufferID = @import("../values/buffer_id.zig").BufferID;
@@ -122,7 +122,7 @@ pub const Video = struct {
     /// Render a polygon from the specified source and address into the current target buffer,
     /// at the specified screen position and scale.
     /// Returns an error if the specified polygon address was invalid or if polygon data was malformed.
-    pub fn drawPolygon(self: *Self, source: PolygonSource, address: PolygonResource.Address, point: Point, scale: PolygonScale.Raw) !void {
+    pub fn drawPolygon(self: *Self, source: PolygonSource, address: PolygonResource.Address, point: Point, scale: PolygonScale) !void {
         const visitor = PolygonVisitor{
             .target_buffer = &self.buffers[self.target_buffer_id],
             .mask_buffer = &self.buffers[mask_buffer_id],

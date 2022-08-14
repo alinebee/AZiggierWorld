@@ -18,7 +18,7 @@
 //! (It also allows potential recursion cycles, which this parser manually guards against.)
 
 const Polygon = @import("../rendering/polygon.zig").Polygon;
-const PolygonScale = @import("../values/polygon_scale.zig");
+const PolygonScale = @import("../values/polygon_scale.zig").PolygonScale;
 const Point = @import("../values/point.zig").Point;
 const DrawMode = @import("../values/draw_mode.zig").DrawMode;
 const ColorID = @import("../values/color_id.zig").ColorID;
@@ -57,11 +57,11 @@ pub const PolygonResource = struct {
     /// Address must be known in advance to point to the start of a polygon or group definition within the data.
     /// Addresses cannot be validated, so it is possible to start parsing from e.g. the middle of a polygon or group.
     /// At best this will result in an error; at worst, silently succeeding but producing garbage polygon data.
-    pub fn iteratePolygons(self: Self, address: Address, origin: Point, scale: PolygonScale.Raw, visitor: anytype) Error(@TypeOf(visitor))!void {
+    pub fn iteratePolygons(self: Self, address: Address, origin: Point, scale: PolygonScale, visitor: anytype) Error(@TypeOf(visitor))!void {
         try self.recursivelyParseEntry(address, origin, scale, null, 0, visitor);
     }
 
-    fn recursivelyParseEntry(self: Self, address: Address, origin: Point, scale: PolygonScale.Raw, draw_mode: ?DrawMode, recursion_depth: usize, visitor: anytype) Error(@TypeOf(visitor))!void {
+    fn recursivelyParseEntry(self: Self, address: Address, origin: Point, scale: PolygonScale, draw_mode: ?DrawMode, recursion_depth: usize, visitor: anytype) Error(@TypeOf(visitor))!void {
         if (address >= self.data.len) {
             return error.InvalidAddress;
         }
@@ -299,7 +299,7 @@ const GroupHeader = struct {
     /// Parses a group header from a byte stream containing polygon resource data.
     /// Consumes 3 bytes from the stream.
     /// Fails with an error if there are not enough bytes in the stream.
-    fn parse(reader: anytype, scale: PolygonScale.Raw) !GroupHeader {
+    fn parse(reader: anytype, scale: PolygonScale) !GroupHeader {
         // Each polygon group is stored as the following bytes:
         // 0: Unscaled X offset at which to draw the group: multiplied by `scale` to get the final offset.
         // 1: Unscaled Y offset at which to draw the group: multiplied by `scale` to get the final offset.
@@ -327,7 +327,7 @@ const EntryPointer = struct {
     /// Parses a single entry pointer from a byte stream containing polygon resource data.
     /// Consumes either 4 or 6 bytes from the stream, depending on the contents of the pointer record.
     /// Fails with an error if there are not enough bytes in the stream.
-    fn parse(reader: anytype, scale: PolygonScale.Raw) !EntryPointer {
+    fn parse(reader: anytype, scale: PolygonScale) !EntryPointer {
         // Each pointer is stored as the following bytes:
         // 0...1: A 16-bit control code with the layout `maaa_aaaa_aaaa_aaaa`, where:
         //        - `m` is a 1-bit flag determining whether to read extra bytes for the override draw mode.
@@ -400,12 +400,12 @@ const EntryPointer = struct {
 
 // Parse the polygon offset for a group header or entry pointer.
 // Consumes 2 bytes from the reader.
-fn parseOffset(reader: anytype, scale: PolygonScale.Raw) !Point {
+fn parseOffset(reader: anytype, scale: PolygonScale) !Point {
     const raw_x = try reader.readByte();
     const raw_y = try reader.readByte();
     return Point{
-        .x = PolygonScale.apply(i16, raw_x, scale),
-        .y = PolygonScale.apply(i16, raw_y, scale),
+        .x = scale.apply(i16, raw_x),
+        .y = scale.apply(i16, raw_y),
     };
 }
 
@@ -465,7 +465,7 @@ test "GroupHeader.parse correctly parses group header with scaled offset and con
 
     var stream = countingReader(fixedBufferStream(data).reader());
 
-    const actual = try GroupHeader.parse(stream.reader(), PolygonScale.default * 2);
+    const actual = try GroupHeader.parse(stream.reader(), .double);
     const expected = GroupHeader{
         .offset = .{
             .x = 50,
@@ -483,7 +483,7 @@ test "GroupHeader.parse fails with error.EndOfStream and consumes all remaining 
 
     var stream = countingReader(fixedBufferStream(data).reader());
 
-    try testing.expectError(error.EndOfStream, GroupHeader.parse(stream.reader(), PolygonScale.default * 2));
+    try testing.expectError(error.EndOfStream, GroupHeader.parse(stream.reader(), .double));
     try testing.expectEqual(2, stream.bytes_read);
 }
 
@@ -494,7 +494,7 @@ test "EntryPointer.parse correctly parses pointer without custom draw mode and c
 
     var stream = countingReader(fixedBufferStream(data).reader());
 
-    const actual = try EntryPointer.parse(stream.reader(), PolygonScale.default * 2);
+    const actual = try EntryPointer.parse(stream.reader(), .double);
     const expected = EntryPointer{
         .address = 12,
         .offset = .{
@@ -513,7 +513,7 @@ test "EntryPointer.parse correctly parses pointer with custom draw mode and cons
 
     var stream = countingReader(fixedBufferStream(data).reader());
 
-    const actual = try EntryPointer.parse(stream.reader(), PolygonScale.default * 2);
+    const actual = try EntryPointer.parse(stream.reader(), .double);
     const expected = EntryPointer{
         .address = 0,
         .offset = .{
@@ -532,7 +532,7 @@ test "EntryPointer.parse fails with error.EndOfStream and consumes all remaining
 
     var stream = countingReader(fixedBufferStream(data).reader());
 
-    try testing.expectError(error.EndOfStream, EntryPointer.parse(stream.reader(), PolygonScale.default * 2));
+    try testing.expectError(error.EndOfStream, EntryPointer.parse(stream.reader(), .double));
     try testing.expectEqual(3, stream.bytes_read);
 }
 
@@ -541,7 +541,7 @@ test "EntryPointer.parse fails with error.EndOfStream and consumes all remaining
 
     var stream = countingReader(fixedBufferStream(data).reader());
 
-    try testing.expectError(error.EndOfStream, EntryPointer.parse(stream.reader(), PolygonScale.default * 2));
+    try testing.expectError(error.EndOfStream, EntryPointer.parse(stream.reader(), .double));
     try testing.expectEqual(4, stream.bytes_read);
 }
 
@@ -577,7 +577,7 @@ test "iteratePolygons correctly visits all polygons in group" {
     const origin = .{ .x = 1000, .y = 2000 };
     const address = 24; // First group in resource data
 
-    try resource.iteratePolygons(address, origin, PolygonScale.default, &visitor);
+    try resource.iteratePolygons(address, origin, .default, &visitor);
 
     try testing.expectEqual(3, visitor.polygons.items.len);
 
@@ -612,7 +612,7 @@ test "iteratePolygons fails with error.PolygonRecursionDepthExceeded on circular
     const origin = .{ .x = 0, .y = 0 };
     const address = 0; // First group in resource data
 
-    try testing.expectError(error.PolygonRecursionDepthExceeded, resource.iteratePolygons(address, origin, PolygonScale.default, &visitor));
+    try testing.expectError(error.PolygonRecursionDepthExceeded, resource.iteratePolygons(address, origin, .default, &visitor));
     try testing.expectEqual(0, visitor.polygons.items.len);
 }
 
@@ -625,7 +625,7 @@ test "iteratePolygons fails with error.InvalidAddress if requested address does 
     const origin = .{ .x = 0, .y = 0 };
     const address = 1024; // Does not exist
 
-    try testing.expectError(error.InvalidAddress, resource.iteratePolygons(address, origin, PolygonScale.default, &visitor));
+    try testing.expectError(error.InvalidAddress, resource.iteratePolygons(address, origin, .default, &visitor));
     try testing.expectEqual(0, visitor.polygons.items.len);
 }
 
@@ -638,7 +638,7 @@ test "iteratePolygons fails with error.InvalidAddress if entry pointer within da
     const origin = .{ .x = 0, .y = 0 };
     const address = 0; // First group in resource data
 
-    try testing.expectError(error.InvalidAddress, resource.iteratePolygons(address, origin, PolygonScale.default, &visitor));
+    try testing.expectError(error.InvalidAddress, resource.iteratePolygons(address, origin, .default, &visitor));
     try testing.expectEqual(0, visitor.polygons.items.len);
 }
 
@@ -652,6 +652,6 @@ test "iteratePolygons fails with error.EndOfStream on truncated polygon data" {
     const origin = .{ .x = 0, .y = 0 };
     const address = 24; // First group in resource data
 
-    try testing.expectError(error.EndOfStream, resource.iteratePolygons(address, origin, PolygonScale.default, &visitor));
+    try testing.expectError(error.EndOfStream, resource.iteratePolygons(address, origin, .default, &visitor));
     try testing.expectEqual(1, visitor.polygons.items.len);
 }

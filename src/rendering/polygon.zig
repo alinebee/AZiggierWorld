@@ -22,7 +22,7 @@
 const Point = @import("../values/point.zig").Point;
 const BoundingBox = @import("../values/bounding_box.zig").BoundingBox;
 const DrawMode = @import("../values/draw_mode.zig").DrawMode;
-const PolygonScale = @import("../values/polygon_scale.zig");
+const PolygonScale = @import("../values/polygon_scale.zig").PolygonScale;
 
 const introspection = @import("../utils/introspection.zig");
 
@@ -75,7 +75,7 @@ pub const Polygon = struct {
 
     /// Parse a stream of bytes from an Another World polygon resource into a polygon instance,
     /// scaling and positioning it according to the specified center and scale factor.
-    pub fn parse(reader: anytype, center: Point, scale: PolygonScale.Raw, draw_mode: DrawMode) ParseError(@TypeOf(reader))!Self {
+    pub fn parse(reader: anytype, center: Point, scale: PolygonScale, draw_mode: DrawMode) ParseError(@TypeOf(reader))!Self {
         const raw_width = try reader.readByte();
         const raw_height = try reader.readByte();
         const count = try reader.readByte();
@@ -84,8 +84,8 @@ pub const Polygon = struct {
             return error.VertexCountTooHigh;
         }
 
-        const scaled_width = PolygonScale.apply(BoundingBox.Dimension, raw_width, scale);
-        const scaled_height = PolygonScale.apply(BoundingBox.Dimension, raw_height, scale);
+        const scaled_width = scale.apply(BoundingBox.Dimension, raw_width);
+        const scaled_height = scale.apply(BoundingBox.Dimension, raw_height);
         const bounds = BoundingBox.centeredOn(center, scaled_width, scaled_height);
 
         var self = Self{
@@ -101,8 +101,8 @@ pub const Polygon = struct {
             const raw_y = try reader.readByte();
 
             self._raw_vertices.set(index, origin.adding(.{
-                .x = PolygonScale.apply(Point.Coordinate, raw_x, scale),
-                .y = PolygonScale.apply(Point.Coordinate, raw_y, scale),
+                .x = scale.apply(Point.Coordinate, raw_x),
+                .y = scale.apply(Point.Coordinate, raw_y),
             }));
         }
 
@@ -281,7 +281,7 @@ test "parse correctly parses 4-vertex dot polygon" {
     const reader = fixedBufferStream(&Polygon.Fixtures.valid_dot).reader();
 
     const center = Point{ .x = 320, .y = 200 };
-    const polygon = try Polygon.parse(reader, center, PolygonScale.default, .highlight);
+    const polygon = try Polygon.parse(reader, center, .default, .highlight);
 
     try testing.expectEqual(320, polygon.bounds.x.min);
     try testing.expectEqual(200, polygon.bounds.y.min);
@@ -303,7 +303,7 @@ test "parse correctly parses and scales pentagon" {
     const reader = fixedBufferStream(&Polygon.Fixtures.valid_pentagon).reader();
 
     const center = Point.zero;
-    const polygon = try Polygon.parse(reader, center, PolygonScale.default * 2, .highlight);
+    const polygon = try Polygon.parse(reader, center, .double, .highlight);
 
     try testing.expectEqual(-10, polygon.bounds.x.min);
     try testing.expectEqual(-10, polygon.bounds.y.min);
@@ -325,36 +325,36 @@ test "parse correctly parses and scales pentagon" {
 
 test "parse returns error.VertexCountTooHigh when count is too high" {
     const reader = fixedBufferStream(&Polygon.Fixtures.vertex_count_too_high).reader();
-    try testing.expectError(error.VertexCountTooHigh, Polygon.parse(reader, Point.zero, PolygonScale.default, .highlight));
+    try testing.expectError(error.VertexCountTooHigh, Polygon.parse(reader, Point.zero, .default, .highlight));
 }
 
 test "validate returns error.VertexCountTooLow when count is too low" {
     const reader = fixedBufferStream(&Polygon.Fixtures.vertex_count_too_low).reader();
-    const polygon = try Polygon.parse(reader, Point.zero, PolygonScale.default, .highlight);
+    const polygon = try Polygon.parse(reader, Point.zero, .default, .highlight);
     try testing.expectError(error.VertexCountTooLow, polygon.validate());
 }
 
 test "validate returns error.VertexCountUneven when count is uneven" {
     const reader = fixedBufferStream(&Polygon.Fixtures.vertex_count_uneven).reader();
-    const polygon = try Polygon.parse(reader, Point.zero, PolygonScale.default, .highlight);
+    const polygon = try Polygon.parse(reader, Point.zero, .default, .highlight);
     try testing.expectError(error.VertexCountUneven, polygon.validate());
 }
 
 test "validate returns error.VerticesMisaligned when vertex pairs are not aligned horizontally" {
     const reader = fixedBufferStream(&Polygon.Fixtures.vertices_misaligned).reader();
-    const polygon = try Polygon.parse(reader, Point.zero, PolygonScale.default, .highlight);
+    const polygon = try Polygon.parse(reader, Point.zero, .default, .highlight);
     try testing.expectError(error.VerticesMisaligned, polygon.validate());
 }
 
 test "validate returns error.VerticesBacktracked when a clockwise vertex is above the one before it" {
     const reader = fixedBufferStream(&Polygon.Fixtures.vertices_backtracked).reader();
-    const polygon = try Polygon.parse(reader, Point.zero, PolygonScale.default, .highlight);
+    const polygon = try Polygon.parse(reader, Point.zero, .default, .highlight);
     try testing.expectError(error.VerticesBacktracked, polygon.validate());
 }
 
 test "validate returns error.VerticesTooFarApart when a clockwise vertex is more than 1023 units below the one before it" {
     const reader = fixedBufferStream(&Polygon.Fixtures.vertices_too_far_apart).reader();
-    const polygon = try Polygon.parse(reader, Point.zero, 258, .highlight);
+    const polygon = try Polygon.parse(reader, Point.zero, PolygonScale.cast(258), .highlight);
     try testing.expectError(error.VerticesTooFarApart, polygon.validate());
 }
 

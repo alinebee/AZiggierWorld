@@ -6,7 +6,7 @@ const Instruction = @import("../instructions/instruction.zig");
 const Program = @import("../machine/program.zig").Program;
 const PolygonResource = @import("../resources/polygon_resource.zig").PolygonResource;
 const Polygon = @import("../rendering/polygon.zig").Polygon;
-const PolygonScale = @import("../values/polygon_scale.zig");
+const PolygonScale = @import("../values/polygon_scale.zig").PolygonScale;
 const Point = @import("../values/point.zig").Point;
 const ResourceDirectory = @import("../resources/resource_directory.zig").ResourceDirectory;
 const GamePart = @import("../values/game_part.zig").GamePart;
@@ -83,7 +83,7 @@ fn parsePolygonInstructionsForGamePart(allocator: std.mem.Allocator, resource_di
     for (instructions) |background_or_sprite| {
         switch (background_or_sprite) {
             .background => |instruction| {
-                try polygons.iteratePolygons(instruction.address, instruction.point, PolygonScale.default, &visitor);
+                try polygons.iteratePolygons(instruction.address, instruction.point, .default, &visitor);
             },
             .sprite => |instruction| {
                 const resource = switch (instruction.source) {
@@ -93,7 +93,7 @@ fn parsePolygonInstructionsForGamePart(allocator: std.mem.Allocator, resource_di
                 // Don't bother parsing the scale or origin from the original sprite instruction.
                 const origin = Point{ .x = 160, .y = 100 };
 
-                try resource.iteratePolygons(instruction.address, origin, PolygonScale.default, &visitor);
+                try resource.iteratePolygons(instruction.address, origin, .default, &visitor);
             },
         }
     }

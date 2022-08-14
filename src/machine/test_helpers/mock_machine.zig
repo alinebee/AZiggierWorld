@@ -11,7 +11,7 @@ const ColorID = @import("../../values/color_id.zig").ColorID;
 const PaletteID = @import("../../values/palette_id.zig").PaletteID;
 const StringID = @import("../../values/string_id.zig").StringID;
 const BufferID = @import("../../values/buffer_id.zig").BufferID;
-const PolygonScale = @import("../../values/polygon_scale.zig");
+const PolygonScale = @import("../../values/polygon_scale.zig").PolygonScale;
 
 const zeroes = @import("std").mem.zeroes;
 
@@ -45,7 +45,7 @@ pub fn MockMachine(comptime Implementation: type) type {
 
         const Self = @This();
 
-        pub fn drawPolygon(self: *Self, source: Video.PolygonSource, address: Video.PolygonAddress, point: Point, scale: PolygonScale.Raw) !void {
+        pub fn drawPolygon(self: *Self, source: Video.PolygonSource, address: Video.PolygonAddress, point: Point, scale: PolygonScale) !void {
             self.call_counts.drawPolygon += 1;
             try Implementation.drawPolygon(source, address, point, scale);
         }
@@ -128,16 +128,16 @@ const testing = @import("../../utils/testing.zig");
 
 test "MockMachine calls drawPolygon correctly on stub implementation" {
     var mock = mockMachine(struct {
-        fn drawPolygon(source: Video.PolygonSource, address: Video.PolygonAddress, point: Point, scale: PolygonScale.Raw) !void {
+        fn drawPolygon(source: Video.PolygonSource, address: Video.PolygonAddress, point: Point, scale: PolygonScale) !void {
             try testing.expectEqual(.animations, source);
             try testing.expectEqual(0xBEEF, address);
             try testing.expectEqual(320, point.x);
             try testing.expectEqual(200, point.y);
-            try testing.expectEqual(128, scale);
+            try testing.expectEqual(.double, scale);
         }
     });
 
-    try mock.drawPolygon(.animations, 0xBEEF, .{ .x = 320, .y = 200 }, 128);
+    try mock.drawPolygon(.animations, 0xBEEF, .{ .x = 320, .y = 200 }, .double);
     try testing.expectEqual(1, mock.call_counts.drawPolygon);
 }
 
