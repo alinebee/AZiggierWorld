@@ -34,7 +34,7 @@ const ResourceID = @import("../values/resource_id.zig").ResourceID;
 const StringID = @import("../values/string_id.zig").StringID;
 const PaletteID = @import("../values/palette_id.zig").PaletteID;
 const ColorID = @import("../values/color_id.zig").ColorID;
-const Channel = @import("../values/channel.zig");
+const ChannelID = @import("../values/channel_id.zig").ChannelID;
 const Point = @import("../values/point.zig").Point;
 const PolygonScale = @import("../values/polygon_scale.zig");
 const RegisterID = @import("../values/register_id.zig").RegisterID;
@@ -274,18 +274,18 @@ pub const Machine = struct {
 
     /// Play a sound effect from the specified resource on the specified channel.
     /// Returns an error if the resource does not exist or could not be loaded.
-    pub fn playSound(_: *Self, resource_id: ResourceID, channel: Channel.Trusted, volume: Audio.Volume, frequency: Audio.Frequency) !void {
+    pub fn playSound(_: *Self, resource_id: ResourceID, channel_id: ChannelID, volume: Audio.Volume, frequency: Audio.Frequency) !void {
         log.debug("Audio.playSound: play #{X} on channel {} at volume {}, frequency {}", .{
             resource_id,
-            channel,
+            channel_id,
             volume,
             frequency,
         });
     }
 
     /// Stop any sound effect playing on the specified channel.
-    pub fn stopChannel(_: *Self, channel: Channel.Trusted) void {
-        log.debug("Audio.stopChannel: stop playing on channel {}", .{channel});
+    pub fn stopChannel(_: *Self, channel_id: ChannelID) void {
+        log.debug("Audio.stopChannel: stop playing on channel {}", .{channel_id});
     }
 
     // - Private methods -

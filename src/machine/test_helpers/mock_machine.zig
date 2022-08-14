@@ -5,7 +5,7 @@ const Registers = @import("../registers.zig").Registers;
 
 const Point = @import("../../values/point.zig").Point;
 const GamePart = @import("../../values/game_part.zig").GamePart;
-const Channel = @import("../../values/channel.zig");
+const ChannelID = @import("../../values/channel_id.zig").ChannelID;
 const ResourceID = @import("../../values/resource_id.zig").ResourceID;
 const ColorID = @import("../../values/color_id.zig").ColorID;
 const PaletteID = @import("../../values/palette_id.zig").PaletteID;
@@ -110,14 +110,14 @@ pub fn MockMachine(comptime Implementation: type) type {
             Implementation.stopMusic();
         }
 
-        pub fn playSound(self: *Self, resource_id: ResourceID, channel: Channel.Trusted, volume: Audio.Volume, frequency: Audio.Frequency) !void {
+        pub fn playSound(self: *Self, resource_id: ResourceID, channel_id: ChannelID, volume: Audio.Volume, frequency: Audio.Frequency) !void {
             self.call_counts.playSound += 1;
-            try Implementation.playSound(resource_id, channel, volume, frequency);
+            try Implementation.playSound(resource_id, channel_id, volume, frequency);
         }
 
-        pub fn stopChannel(self: *Self, channel: Channel.Trusted) void {
+        pub fn stopChannel(self: *Self, channel_id: ChannelID) void {
             self.call_counts.stopChannel += 1;
-            Implementation.stopChannel(channel);
+            Implementation.stopChannel(channel_id);
         }
     };
 }
@@ -296,27 +296,27 @@ test "MockMachine calls stopMusic correctly on stub implementation" {
 
 test "MockMachine calls playSound correctly on stub implementation" {
     var mock = mockMachine(struct {
-        fn playSound(resource_id: ResourceID, channel: Channel.Trusted, volume: Audio.Volume, frequency: Audio.Frequency) !void {
+        fn playSound(resource_id: ResourceID, channel_id: ChannelID, volume: Audio.Volume, frequency: Audio.Frequency) !void {
             try testing.expectEqual(ResourceID.cast(0xBEEF), resource_id);
-            try testing.expectEqual(2, channel);
+            try testing.expectEqual(ChannelID.cast(2), channel_id);
             try testing.expectEqual(64, volume);
             try testing.expectEqual(128, frequency);
         }
     });
 
-    try mock.playSound(ResourceID.cast(0xBEEF), 2, 64, 128);
+    try mock.playSound(ResourceID.cast(0xBEEF), ChannelID.cast(2), 64, 128);
     try testing.expectEqual(1, mock.call_counts.playSound);
 }
 
 test "MockMachine calls stopChannel correctly on stub implementation" {
     var mock = mockMachine(struct {
-        fn stopChannel(channel: Channel.Trusted) void {
-            testing.expectEqual(2, channel) catch {
+        fn stopChannel(channel_id: ChannelID) void {
+            testing.expectEqual(ChannelID.cast(2), channel_id) catch {
                 unreachable;
             };
         }
     });
 
-    mock.stopChannel(2);
+    mock.stopChannel(ChannelID.cast(2));
     try testing.expectEqual(1, mock.call_counts.stopChannel);
 }
