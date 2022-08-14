@@ -3,7 +3,7 @@ const SDL = @import("sdl2");
 
 const testing = std.testing;
 const log = @import("utils/logging.zig").log;
-const SDLEngine = @import("engine/sdl.zig");
+const SDLEngine = @import("engines/sdl_engine.zig").SDLEngine;
 
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
@@ -25,7 +25,7 @@ pub fn main() !void {
     }
 
     const game_path = args[1];
-    var engine = try SDLEngine.Instance.init(allocator, game_path);
+    var engine = try SDLEngine.init(allocator, game_path);
     defer engine.deinit();
 
     // Run the main loop until the user quits the application or closes the window.
@@ -38,5 +38,4 @@ pub fn main() !void {
 test "Run all tests" {
     testing.refAllDecls(@import("integration_tests/all_tests.zig"));
     testing.refAllDecls(@import("machine/machine.zig"));
-    testing.refAllDecls(SDLEngine);
 }

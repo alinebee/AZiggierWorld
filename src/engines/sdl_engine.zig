@@ -70,7 +70,7 @@ const Input = struct {
     }
 };
 
-pub const Instance = struct {
+pub const SDLEngine = struct {
     allocator: std.mem.Allocator,
 
     game_dir: std.fs.Dir,
@@ -92,7 +92,7 @@ pub const Instance = struct {
     const Self = @This();
 
     /// Heap-allocate a new game engine that loads data from the specified path.
-    pub fn init(allocator: std.mem.Allocator, game_path: []const u8) !*Instance {
+    pub fn init(allocator: std.mem.Allocator, game_path: []const u8) !*Self {
         // FIXME: I needed to heap-allocate this instead of just returning the struct,
         // because it stores pointers to itself (the resource directory's reader interface
         // and the host interface) and for some reason the return from this function was
@@ -242,7 +242,7 @@ fn resolvedFrameDelay(requested_delay: u64, possible_last_frame_time: ?i64, curr
 const testing = @import("../utils/testing.zig");
 
 test "Ensure everything compiles" {
-    testing.refAllDecls(Instance);
+    testing.refAllDecls(SDLEngine);
 }
 
 test "resolvedFrameDelay returns requested delay minus elapsed time between frames" {
