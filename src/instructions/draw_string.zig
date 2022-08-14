@@ -3,7 +3,7 @@ const Program = @import("../machine/program.zig").Program;
 const Machine = @import("../machine/machine.zig").Machine;
 
 const Point = @import("../values/point.zig").Point;
-const StringID = @import("../values/string_id.zig");
+const StringID = @import("../values/string_id.zig").StringID;
 const ColorID = @import("../values/color_id.zig").ColorID;
 
 /// The width in pixels of each column of glyphs.
@@ -11,7 +11,7 @@ const column_width = 8;
 
 pub const DrawString = struct {
     /// The ID of the string to draw.
-    string_id: StringID.Raw,
+    string_id: StringID,
     /// The color to draw the string in.
     color_id: ColorID,
     /// The point in screen space at which to draw the string, relative to the top left corner of the screen.
@@ -23,7 +23,7 @@ pub const DrawString = struct {
     /// Consumes 6 bytes from the bytecode on success, including the opcode.
     /// Returns an error if the bytecode could not be read or contained an invalid instruction.
     pub fn parse(_: Opcode.Raw, program: *Program) ParseError!Self {
-        const string_id = try program.read(StringID.Raw);
+        const string_id = StringID.cast(try program.read(StringID.Raw));
 
         const raw_x = try program.read(u8);
         const raw_y = try program.read(u8);
@@ -80,7 +80,7 @@ const mockMachine = @import("../machine/test_helpers/mock_machine.zig").mockMach
 test "parse parses valid bytecode and consumes 6 bytes" {
     const instruction = try expectParse(DrawString.parse, &DrawString.Fixtures.valid, 6);
 
-    try testing.expectEqual(0xDEAD, instruction.string_id);
+    try testing.expectEqual(StringID.cast(0xDEAD), instruction.string_id);
     try testing.expectEqual(ColorID.cast(15), instruction.color_id);
     try testing.expectEqual(160, instruction.point.x);
     try testing.expectEqual(100, instruction.point.y);
@@ -95,7 +95,7 @@ test "parse returns error.InvalidColorID on out of range color and consumes 6 by
 
 test "execute calls drawString with correct parameters" {
     const instruction = DrawString{
-        .string_id = 0xDEAD,
+        .string_id = StringID.cast(0xDEAD),
         .color_id = ColorID.cast(15),
         .point = .{
             .x = 160,
@@ -104,8 +104,8 @@ test "execute calls drawString with correct parameters" {
     };
 
     var machine = mockMachine(struct {
-        pub fn drawString(string_id: StringID.Raw, color_id: ColorID, point: Point) !void {
-            try testing.expectEqual(0xDEAD, string_id);
+        pub fn drawString(string_id: StringID, color_id: ColorID, point: Point) !void {
+            try testing.expectEqual(StringID.cast(0xDEAD), string_id);
             try testing.expectEqual(ColorID.cast(15), color_id);
             try testing.expectEqual(160, point.x);
             try testing.expectEqual(100, point.y);
@@ -118,7 +118,7 @@ test "execute calls drawString with correct parameters" {
 
 test "execute passes along error.InvalidStringID if machine cannot find appropriate string" {
     const instruction = DrawString{
-        .string_id = 0xDEAD,
+        .string_id = StringID.cast(0xDEAD),
         .color_id = ColorID.cast(15),
         .point = .{
             .x = 160,
@@ -127,7 +127,7 @@ test "execute passes along error.InvalidStringID if machine cannot find appropri
     };
 
     var machine = mockMachine(struct {
-        pub fn drawString(_: StringID.Raw, _: ColorID, _: Point) !void {
+        pub fn drawString(_: StringID, _: ColorID, _: Point) !void {
             return error.InvalidStringID;
         }
     });

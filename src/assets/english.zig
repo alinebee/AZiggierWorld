@@ -1,13 +1,13 @@
 //! Defines the UI strings from the full DOS English release of the game.
 
-const StringID = @import("../values/string_id.zig");
+const StringID = @import("../values/string_id.zig").StringID;
 
 pub const Error = StringID.Error;
 
 /// Given a string identifier, returns the string corresponding to that identifier.
 /// Returns error.InvalidStringID if the string could not be found.
-pub fn find(id: StringID.Raw) Error![]const u8 {
-    return switch (id) {
+pub fn find(id: StringID) Error![]const u8 {
+    return switch (id.index()) {
         0x001 => "P E A N U T  3000",
         0x002 => "Copyright  } 1990 Peanut Computer, Inc.\nAll rights reserved.\n\nCDOS Version 5.01",
         0x003 => "2",
@@ -168,9 +168,11 @@ pub fn find(id: StringID.Raw) Error![]const u8 {
 const testing = @import("../utils/testing.zig");
 
 test "find returns string for valid identifier" {
-    try testing.expectEqual("L E T ' S   G O", find(0x02C));
+    const valid_id = StringID.cast(0x02C);
+    try testing.expectEqual("L E T ' S   G O", find(valid_id));
 }
 
 test "find returns error.InvalidStringID for unknown identifier" {
-    try testing.expectError(error.InvalidStringID, find(0x02F));
+    const invalid_id = StringID.cast(0x02F);
+    try testing.expectError(error.InvalidStringID, find(invalid_id));
 }

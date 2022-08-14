@@ -1,7 +1,7 @@
 const Point = @import("../values/point.zig").Point;
 const PolygonScale = @import("../values/polygon_scale.zig");
 const ColorID = @import("../values/color_id.zig").ColorID;
-const StringID = @import("../values/string_id.zig");
+const StringID = @import("../values/string_id.zig").StringID;
 const BufferID = @import("../values/buffer_id.zig").BufferID;
 const PaletteID = @import("../values/palette_id.zig").PaletteID;
 const Palette = @import("../values/palette.zig").Palette;
@@ -135,7 +135,7 @@ pub const Video = struct {
     /// Render a string from the English string table at the specified screen position
     /// in the specified color into the current target buffer.
     /// Returns an error if the string ID was not found or the string contained unsupported characters.
-    pub fn drawString(self: *Self, string_id: StringID.Raw, color_id: ColorID, point: Point) !void {
+    pub fn drawString(self: *Self, string_id: StringID, color_id: ColorID, point: Point) !void {
         // TODO: allow different localizations at runtime.
         const string = try english.find(string_id);
 

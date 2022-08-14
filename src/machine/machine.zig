@@ -31,7 +31,7 @@
 const ThreadID = @import("../values/thread_id.zig").ThreadID;
 const BufferID = @import("../values/buffer_id.zig").BufferID;
 const ResourceID = @import("../values/resource_id.zig").ResourceID;
-const StringID = @import("../values/string_id.zig");
+const StringID = @import("../values/string_id.zig").StringID;
 const PaletteID = @import("../values/palette_id.zig").PaletteID;
 const ColorID = @import("../values/color_id.zig").ColorID;
 const Channel = @import("../values/channel.zig");
@@ -215,7 +215,7 @@ pub const Machine = struct {
 
     /// Render a string from the current string table at the specified screen position in the specified color.
     /// Returns an error if the string could not be found.
-    pub fn drawString(self: *Self, string_id: StringID.Raw, color_id: ColorID, point: Point) !void {
+    pub fn drawString(self: *Self, string_id: StringID, color_id: ColorID, point: Point) !void {
         try self.video.drawString(string_id, color_id, point);
     }
 

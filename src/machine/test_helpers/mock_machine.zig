@@ -9,7 +9,7 @@ const Channel = @import("../../values/channel.zig");
 const ResourceID = @import("../../values/resource_id.zig").ResourceID;
 const ColorID = @import("../../values/color_id.zig").ColorID;
 const PaletteID = @import("../../values/palette_id.zig").PaletteID;
-const StringID = @import("../../values/string_id.zig");
+const StringID = @import("../../values/string_id.zig").StringID;
 const BufferID = @import("../../values/buffer_id.zig").BufferID;
 const PolygonScale = @import("../../values/polygon_scale.zig");
 
@@ -50,7 +50,7 @@ pub fn MockMachine(comptime Implementation: type) type {
             try Implementation.drawPolygon(source, address, point, scale);
         }
 
-        pub fn drawString(self: *Self, string_id: StringID.Raw, color_id: ColorID, point: Point) !void {
+        pub fn drawString(self: *Self, string_id: StringID, color_id: ColorID, point: Point) !void {
             self.call_counts.drawString += 1;
             try Implementation.drawString(string_id, color_id, point);
         }
@@ -143,15 +143,15 @@ test "MockMachine calls drawPolygon correctly on stub implementation" {
 
 test "MockMachine calls drawString correctly on stub implementation" {
     var mock = mockMachine(struct {
-        fn drawString(string_id: StringID.Raw, color_id: ColorID, point: Point) !void {
-            try testing.expectEqual(0xBEEF, string_id);
+        fn drawString(string_id: StringID, color_id: ColorID, point: Point) !void {
+            try testing.expectEqual(StringID.cast(0xBEEF), string_id);
             try testing.expectEqual(ColorID.cast(2), color_id);
             try testing.expectEqual(320, point.x);
             try testing.expectEqual(200, point.y);
         }
     });
 
-    try mock.drawString(0xBEEF, ColorID.cast(2), .{ .x = 320, .y = 200 });
+    try mock.drawString(StringID.cast(0xBEEF), ColorID.cast(2), .{ .x = 320, .y = 200 });
     try testing.expectEqual(1, mock.call_counts.drawString);
 }
 
