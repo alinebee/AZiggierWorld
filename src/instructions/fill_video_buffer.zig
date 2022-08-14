@@ -3,14 +3,14 @@ const Program = @import("../machine/program.zig").Program;
 const Machine = @import("../machine/machine.zig").Machine;
 const Video = @import("../machine/video.zig").Video;
 const BufferID = @import("../values/buffer_id.zig").BufferID;
-const ColorID = @import("../values/color_id.zig");
+const ColorID = @import("../values/color_id.zig").ColorID;
 
 /// Fill a specified video buffer with a single color.
 pub const FillVideoBuffer = struct {
     /// The buffer to fill.
     buffer_id: BufferID,
     /// The color to fill with.
-    color_id: ColorID.Trusted,
+    color_id: ColorID,
 
     const Self = @This();
 
@@ -64,7 +64,7 @@ test "parse parses valid bytecode and consumes 3 bytes" {
     const instruction = try expectParse(FillVideoBuffer.parse, &FillVideoBuffer.Fixtures.valid, 3);
 
     try testing.expectEqual(.{ .specific = 0 }, instruction.buffer_id);
-    try testing.expectEqual(1, instruction.color_id);
+    try testing.expectEqual(ColorID.cast(1), instruction.color_id);
 }
 
 test "parse returns error.InvalidBufferID on unknown buffer identifier and consumes 3 bytes" {
@@ -84,15 +84,15 @@ test "parse returns error.InvalidColorID on unknown color and consumes 3 bytes" 
 test "execute calls fillVideoBuffer with correct parameters" {
     const instruction = FillVideoBuffer{
         .buffer_id = .back_buffer,
-        .color_id = 12,
+        .color_id = ColorID.cast(12),
     };
 
     var machine = mockMachine(struct {
-        pub fn fillVideoBuffer(buffer_id: BufferID, color_id: ColorID.Trusted) void {
+        pub fn fillVideoBuffer(buffer_id: BufferID, color_id: ColorID) void {
             testing.expectEqual(.back_buffer, buffer_id) catch {
                 unreachable;
             };
-            testing.expectEqual(12, color_id) catch {
+            testing.expectEqual(ColorID.cast(12), color_id) catch {
                 unreachable;
             };
         }

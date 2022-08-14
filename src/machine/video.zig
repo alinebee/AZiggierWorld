@@ -1,6 +1,6 @@
 const Point = @import("../values/point.zig").Point;
 const PolygonScale = @import("../values/polygon_scale.zig");
-const ColorID = @import("../values/color_id.zig");
+const ColorID = @import("../values/color_id.zig").ColorID;
 const StringID = @import("../values/string_id.zig");
 const BufferID = @import("../values/buffer_id.zig").BufferID;
 const PaletteID = @import("../values/palette_id.zig");
@@ -98,7 +98,7 @@ pub const Video = struct {
     }
 
     /// Fill a video buffer with a solid color.
-    pub fn fillBuffer(self: *Self, buffer_id: BufferID, color: ColorID.Trusted) void {
+    pub fn fillBuffer(self: *Self, buffer_id: BufferID, color: ColorID) void {
         const buffer = self.resolvedBuffer(buffer_id);
         buffer.fill(color);
     }
@@ -135,7 +135,7 @@ pub const Video = struct {
     /// Render a string from the English string table at the specified screen position
     /// in the specified color into the current target buffer.
     /// Returns an error if the string ID was not found or the string contained unsupported characters.
-    pub fn drawString(self: *Self, string_id: StringID.Raw, color_id: ColorID.Trusted, point: Point) !void {
+    pub fn drawString(self: *Self, string_id: StringID.Raw, color_id: ColorID, point: Point) !void {
         // TODO: allow different localizations at runtime.
         const string = try english.find(string_id);
 
@@ -261,7 +261,7 @@ fn testInstance() Video {
     };
 
     for (instance.buffers) |*buffer| {
-        buffer.fill(0x0);
+        buffer.fill(ColorID.cast(0x0));
     }
 
     return instance;
@@ -351,8 +351,8 @@ test "loadBitmapResource loads bitmap data into expected buffer" {
     );
     const filled_bitmap_data = [_]u8{0xFF} ** bitmap_size;
 
-    const expected_bitmap_buffer_contents = Bitmap.filled(0xF);
-    const expected_untouched_buffer_contents = Bitmap.filled(0x0);
+    const expected_bitmap_buffer_contents = Bitmap.filled(ColorID.cast(0xF));
+    const expected_untouched_buffer_contents = Bitmap.filled(ColorID.cast(0x0));
 
     try instance.loadBitmapResource(&filled_bitmap_data);
 
@@ -397,7 +397,7 @@ test "loadBitmapResource returns error from buffer when data is malformed" {
 
 test "renderBufferToSurface renders colors from current palette into surface" {
     const buffer_id = 0;
-    const color_id = 15;
+    const color_id = ColorID.cast(15);
 
     var instance = testInstance();
     try instance.selectPalette(0);
@@ -405,7 +405,7 @@ test "renderBufferToSurface renders colors from current palette into surface" {
     instance.buffers[buffer_id].fill(color_id);
 
     var surface: Video.HostSurface = undefined;
-    const expected_color = instance.current_palette.?[color_id];
+    const expected_color = instance.current_palette.?[color_id.index()];
     const expected_surface = filledSurface(Video.HostSurface, expected_color);
 
     try instance.renderBufferToSurface(buffer_id, &surface);
@@ -418,7 +418,7 @@ test "renderBufferToSurface returns error.PaletteNotSelected and leaves surface 
     var instance = testInstance();
     try testing.expectEqual(null, instance.current_palette);
 
-    instance.buffers[buffer_id].fill(0);
+    instance.buffers[buffer_id].fill(ColorID.cast(0));
 
     // This color is not present in the palette and should never be rendered normally
     const untouched_color = .{ .r = 1, .g = 2, .b = 3, .a = 0 };

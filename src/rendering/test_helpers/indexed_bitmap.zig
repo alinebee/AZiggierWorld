@@ -1,4 +1,4 @@
-const ColorID = @import("../../values/color_id.zig");
+const ColorID = @import("../../values/color_id.zig").ColorID;
 
 const std = @import("std");
 const fmt = std.fmt;
@@ -9,12 +9,12 @@ const debug = std.debug;
 /// to and from a multiline string representation. Intended for unit-testing the contents of a draw buffer.
 pub fn IndexedBitmap(comptime width: usize, comptime height: usize) type {
     // Store pixel data in a two-dimensional array
-    const Row = [width]ColorID.Trusted;
+    const Row = [width]ColorID;
     const Data = [height]Row;
 
     // We sometimes also address pixels as a 1D array, e.g. for fills
     const bytes_required = width * height;
-    const RawData = [bytes_required]ColorID.Trusted;
+    const RawData = [bytes_required]ColorID;
     comptime debug.assert(@sizeOf(Data) == @sizeOf(RawData));
 
     return struct {
@@ -23,10 +23,10 @@ pub fn IndexedBitmap(comptime width: usize, comptime height: usize) type {
         const Self = @This();
 
         /// Return a fixed bitmap filled with the specified color.
-        pub fn filled(color_id: ColorID.Trusted) Self {
+        pub fn filled(color_id: ColorID) Self {
             var self = Self{};
             const raw_bytes = @ptrCast(*RawData, &self.data);
-            mem.set(ColorID.Trusted, raw_bytes, color_id);
+            mem.set(ColorID, raw_bytes, color_id);
             return self;
         }
 
@@ -52,22 +52,22 @@ pub fn IndexedBitmap(comptime width: usize, comptime height: usize) type {
                     const index = (y * line_width) + x;
 
                     color.* = switch (string[index]) {
-                        '0' => 0,
-                        '1' => 1,
-                        '2' => 2,
-                        '3' => 3,
-                        '4' => 4,
-                        '5' => 5,
-                        '6' => 6,
-                        '7' => 7,
-                        '8' => 8,
-                        '9' => 9,
-                        'A' => 10,
-                        'B' => 11,
-                        'C' => 12,
-                        'D' => 13,
-                        'E' => 14,
-                        'F' => 15,
+                        '0' => ColorID.cast(0),
+                        '1' => ColorID.cast(1),
+                        '2' => ColorID.cast(2),
+                        '3' => ColorID.cast(3),
+                        '4' => ColorID.cast(4),
+                        '5' => ColorID.cast(5),
+                        '6' => ColorID.cast(6),
+                        '7' => ColorID.cast(7),
+                        '8' => ColorID.cast(8),
+                        '9' => ColorID.cast(9),
+                        'A' => ColorID.cast(10),
+                        'B' => ColorID.cast(11),
+                        'C' => ColorID.cast(12),
+                        'D' => ColorID.cast(13),
+                        'E' => ColorID.cast(14),
+                        'F' => ColorID.cast(15),
                         else => |unknown_char| {
                             std.debug.panic("Only uppercase hexadecimal characters (0-F) are supported, got '{c}' at index #{}", .{ unknown_char, index });
                         },
@@ -82,7 +82,7 @@ pub fn IndexedBitmap(comptime width: usize, comptime height: usize) type {
         pub fn format(self: Self, comptime _: []const u8, options: fmt.FormatOptions, writer: anytype) !void {
             for (self.data) |row, index| {
                 for (row) |color| {
-                    try fmt.formatIntValue(color, "X", options, writer);
+                    try fmt.formatIntValue(color.index(), "X", options, writer);
                 }
                 if (index != height - 1) {
                     try writer.writeByte('\n');
@@ -142,37 +142,37 @@ test "fromString populates bitmap data correctly from multiline string" {
         \\CDEF
     );
 
-    const expected: @TypeOf(bitmap.data) = .{
+    const expected = @bitCast(@TypeOf(bitmap.data), [4][4]ColorID.Trusted{
         .{ 00, 01, 02, 03 },
         .{ 04, 05, 06, 07 },
         .{ 08, 09, 10, 11 },
         .{ 12, 13, 14, 15 },
-    };
+    });
 
     try testing.expectEqual(expected, bitmap.data);
 }
 
 test "fileld populates bitmap data correctly" {
-    const bitmap = IndexedBitmap(4, 4).filled(15);
+    const bitmap = IndexedBitmap(4, 4).filled(ColorID.cast(15));
 
-    const expected: @TypeOf(bitmap.data) = .{
+    const expected = @bitCast(@TypeOf(bitmap.data), [4][4]ColorID.Trusted{
         .{ 15, 15, 15, 15 },
         .{ 15, 15, 15, 15 },
         .{ 15, 15, 15, 15 },
         .{ 15, 15, 15, 15 },
-    };
+    });
 
     try testing.expectEqual(expected, bitmap.data);
 }
 
 test "format prints colors as lines of hex values" {
     const bitmap = IndexedBitmap(4, 4){
-        .data = .{
+        .data = @bitCast([4][4]ColorID, [4][4]ColorID.Trusted{
             .{ 00, 01, 02, 03 },
             .{ 04, 05, 06, 07 },
             .{ 08, 09, 10, 11 },
             .{ 12, 13, 14, 15 },
-        },
+        }),
     };
 
     const expected_output =
@@ -190,12 +190,12 @@ test "format prints colors as lines of hex values" {
 
 test "expectBitmap compares bitmap correctly against string" {
     const bitmap = IndexedBitmap(4, 4){
-        .data = .{
+        .data = @bitCast([4][4]ColorID, [4][4]ColorID.Trusted{
             .{ 00, 01, 02, 03 },
             .{ 04, 05, 06, 07 },
             .{ 08, 09, 10, 11 },
             .{ 12, 13, 14, 15 },
-        },
+        }),
     };
 
     const expected =
@@ -209,21 +209,21 @@ test "expectBitmap compares bitmap correctly against string" {
 
 test "expectedEqualBitmaps compares two bitmaps correctly" {
     const expected = IndexedBitmap(4, 4){
-        .data = .{
+        .data = @bitCast([4][4]ColorID, [4][4]ColorID.Trusted{
             .{ 00, 01, 02, 03 },
             .{ 04, 05, 06, 07 },
             .{ 08, 09, 10, 11 },
             .{ 12, 13, 14, 15 },
-        },
+        }),
     };
 
     const actual = IndexedBitmap(4, 4){
-        .data = .{
+        .data = @bitCast([4][4]ColorID, [4][4]ColorID.Trusted{
             .{ 00, 01, 02, 03 },
             .{ 04, 05, 06, 07 },
             .{ 08, 09, 10, 11 },
             .{ 12, 13, 14, 15 },
-        },
+        }),
     };
 
     try expectEqualBitmaps(expected, actual);

@@ -7,7 +7,7 @@ const Point = @import("../../values/point.zig").Point;
 const GamePart = @import("../../values/game_part.zig").GamePart;
 const Channel = @import("../../values/channel.zig");
 const ResourceID = @import("../../values/resource_id.zig").ResourceID;
-const ColorID = @import("../../values/color_id.zig");
+const ColorID = @import("../../values/color_id.zig").ColorID;
 const PaletteID = @import("../../values/palette_id.zig");
 const StringID = @import("../../values/string_id.zig");
 const BufferID = @import("../../values/buffer_id.zig").BufferID;
@@ -50,7 +50,7 @@ pub fn MockMachine(comptime Implementation: type) type {
             try Implementation.drawPolygon(source, address, point, scale);
         }
 
-        pub fn drawString(self: *Self, string_id: StringID.Raw, color_id: ColorID.Trusted, point: Point) !void {
+        pub fn drawString(self: *Self, string_id: StringID.Raw, color_id: ColorID, point: Point) !void {
             self.call_counts.drawString += 1;
             try Implementation.drawString(string_id, color_id, point);
         }
@@ -65,7 +65,7 @@ pub fn MockMachine(comptime Implementation: type) type {
             Implementation.selectVideoBuffer(buffer_id);
         }
 
-        pub fn fillVideoBuffer(self: *Self, buffer_id: BufferID, color_id: ColorID.Trusted) void {
+        pub fn fillVideoBuffer(self: *Self, buffer_id: BufferID, color_id: ColorID) void {
             self.call_counts.fillVideoBuffer += 1;
             Implementation.fillVideoBuffer(buffer_id, color_id);
         }
@@ -143,15 +143,15 @@ test "MockMachine calls drawPolygon correctly on stub implementation" {
 
 test "MockMachine calls drawString correctly on stub implementation" {
     var mock = mockMachine(struct {
-        fn drawString(string_id: StringID.Raw, color_id: ColorID.Trusted, point: Point) !void {
+        fn drawString(string_id: StringID.Raw, color_id: ColorID, point: Point) !void {
             try testing.expectEqual(0xBEEF, string_id);
-            try testing.expectEqual(2, color_id);
+            try testing.expectEqual(ColorID.cast(2), color_id);
             try testing.expectEqual(320, point.x);
             try testing.expectEqual(200, point.y);
         }
     });
 
-    try mock.drawString(0xBEEF, 2, .{ .x = 320, .y = 200 });
+    try mock.drawString(0xBEEF, ColorID.cast(2), .{ .x = 320, .y = 200 });
     try testing.expectEqual(1, mock.call_counts.drawString);
 }
 
@@ -183,17 +183,17 @@ test "MockMachine calls selectVideoBuffer correctly on stub implementation" {
 
 test "MockMachine calls fillVideoBuffer correctly on stub implementation" {
     var mock = mockMachine(struct {
-        fn fillVideoBuffer(buffer_id: BufferID, color_id: ColorID.Trusted) void {
+        fn fillVideoBuffer(buffer_id: BufferID, color_id: ColorID) void {
             testing.expectEqual(.front_buffer, buffer_id) catch {
                 unreachable;
             };
-            testing.expectEqual(15, color_id) catch {
+            testing.expectEqual(ColorID.cast(15), color_id) catch {
                 unreachable;
             };
         }
     });
 
-    mock.fillVideoBuffer(.front_buffer, 15);
+    mock.fillVideoBuffer(.front_buffer, ColorID.cast(15));
     try testing.expectEqual(1, mock.call_counts.fillVideoBuffer);
 }
 

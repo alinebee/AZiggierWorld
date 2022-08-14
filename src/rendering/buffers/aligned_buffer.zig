@@ -5,7 +5,7 @@
 //! As a tradeoff, buffer takes twice the bytes: a 320x200 buffer takes 64,000 bytes,
 //! versus 32,000 for the packed buffer implementation.
 
-const ColorID = @import("../../values/color_id.zig");
+const ColorID = @import("../../values/color_id.zig").ColorID;
 const Palette = @import("../../values/palette.zig").Palette;
 const DrawMode = @import("../../values/draw_mode.zig").DrawMode;
 const Point = @import("../../values/point.zig").Point;
@@ -23,12 +23,12 @@ const debug = @import("std").debug;
 /// Returns a video buffer that stores a single pixel per byte.
 pub fn AlignedBuffer(comptime width: usize, comptime height: usize) type {
     // Store pixel data in a two-dimensional array
-    const Row = [width]ColorID.Trusted;
+    const Row = [width]ColorID;
     const Data = [height]Row;
 
     // We sometimes also address pixels as a 1D array, e.g. for fills
     const bytes_required = width * height;
-    const RawData = [bytes_required]ColorID.Trusted;
+    const RawData = [bytes_required]ColorID;
     comptime debug.assert(@sizeOf(Data) == @sizeOf(RawData));
 
     return struct {
@@ -44,7 +44,7 @@ pub fn AlignedBuffer(comptime width: usize, comptime height: usize) type {
         pub const DrawOperation = struct {
             draw_fn: fn (self: DrawOperation, buffer: *Self, row: usize, start_column: usize, end_column: usize) void,
             context: union {
-                solid_color: ColorID.Trusted,
+                solid_color: ColorID,
                 highlight: void,
                 mask: *const Self,
             },
@@ -61,7 +61,7 @@ pub fn AlignedBuffer(comptime width: usize, comptime height: usize) type {
 
             /// Construct a new draw operation that replaces pixels in the destination buffer
             /// with a solid color.
-            pub fn solidColor(color: ColorID.Trusted) DrawOperation {
+            pub fn solidColor(color: ColorID) DrawOperation {
                 return .{
                     .context = .{ .solid_color = color },
                     .draw_fn = drawSolidColorRange,
@@ -121,16 +121,16 @@ pub fn AlignedBuffer(comptime width: usize, comptime height: usize) type {
             var outputIndex: usize = 0;
             for (self.data) |row| {
                 for (row) |color| {
-                    surface[outputIndex] = palette[color];
+                    surface[outputIndex] = palette[color.index()];
                     outputIndex += 1;
                 }
             }
         }
 
         /// Fill the entire buffer with the specified color.
-        pub fn fill(self: *Self, color: ColorID.Trusted) void {
+        pub fn fill(self: *Self, color: ColorID) void {
             const raw_bytes = @ptrCast(*RawData, &self.data);
-            mem.set(ColorID.Trusted, raw_bytes, color);
+            mem.set(ColorID, raw_bytes, color);
         }
 
         /// Copy the contents of the specified buffer into this one,
@@ -228,7 +228,7 @@ pub fn AlignedBuffer(comptime width: usize, comptime height: usize) type {
 }
 
 // The unit in which the buffer will read and write pixel color values.
-const NativeColor = ColorID.Trusted;
+const NativeColor = ColorID;
 
 // -- Tests --
 

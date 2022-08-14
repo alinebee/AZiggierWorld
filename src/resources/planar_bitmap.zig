@@ -15,7 +15,7 @@
 //! byte boundaries and need to be masked in awkward ways. Planes allow arbitrary index sizes
 //! to be stored efficiently.)
 
-const ColorID = @import("../values/color_id.zig");
+const ColorID = @import("../values/color_id.zig").ColorID;
 
 const math = @import("std").math;
 const debug = @import("std").debug;
@@ -74,24 +74,24 @@ pub fn PlanarBitmapReader(comptime width: usize, comptime height: usize) type {
 
         /// Read the next pixel from the source data.
         /// Returns error.EndOfStream if all pixels have been read.
-        pub fn readColor(self: *Self) Error!ColorID.Trusted {
+        pub fn readColor(self: *Self) Error!ColorID {
             if (self.bits_remaining == 0) try self.loadNextChunk();
 
-            var color: ColorID.Trusted = 0;
+            var color_bits: ColorID.Trusted = 0b0000;
 
             // Pop the highest bit from each of the 4 planar bytes and push them onto the color.
             for (self.current_chunk) |*byte| {
                 const bit = @truncate(u1, byte.* >> 7);
 
-                color <<= 1;
-                color |= bit;
+                color_bits <<= 1;
+                color_bits |= bit;
 
                 byte.* <<= 1;
             }
 
             self.bits_remaining -= 1;
 
-            return color;
+            return ColorID.cast(color_bits);
         }
 
         /// Whether the reader has read all pixels in the source bitmap data.
@@ -155,32 +155,32 @@ test "Parses planar data properly" {
     var reader = try planarBitmapReader(4, 4, data);
     try testing.expectEqual(false, reader.isAtEnd());
 
-    const expected = [16]ColorID.Trusted{
-        0b0001, // 0
-        0b1001, // 1
-        0b0001, // 2
-        0b1001, // 3
-        0b0101, // 4
-        0b1101, // 5
-        0b0101, // 6
-        0b1101, // 7
-        0b1110, // 8
-        0b0110, // 9
-        0b1110, // A
-        0b0110, // B
-        0b1010, // C
-        0b0010, // D
-        0b1010, // E
-        0b0010, // F
+    const expected = [16]ColorID{
+        ColorID.cast(0b0001), // 0
+        ColorID.cast(0b1001), // 1
+        ColorID.cast(0b0001), // 2
+        ColorID.cast(0b1001), // 3
+        ColorID.cast(0b0101), // 4
+        ColorID.cast(0b1101), // 5
+        ColorID.cast(0b0101), // 6
+        ColorID.cast(0b1101), // 7
+        ColorID.cast(0b1110), // 8
+        ColorID.cast(0b0110), // 9
+        ColorID.cast(0b1110), // A
+        ColorID.cast(0b0110), // B
+        ColorID.cast(0b1010), // C
+        ColorID.cast(0b0010), // D
+        ColorID.cast(0b1010), // E
+        ColorID.cast(0b0010), // F
     };
 
-    var actual: [16]ColorID.Trusted = undefined;
+    var actual: [16]ColorID = undefined;
     for (actual) |*color| {
         color.* = try reader.readColor();
     }
 
     try testing.expectEqual(true, reader.isAtEnd());
-    try testing.expectEqualSlices(ColorID.Trusted, &expected, &actual);
+    try testing.expectEqualSlices(ColorID, &expected, &actual);
 }
 
 test "new returns error.InvalidBitmapSize if source data is the wrong length for requested dimensions" {

@@ -33,7 +33,7 @@ const BufferID = @import("../values/buffer_id.zig").BufferID;
 const ResourceID = @import("../values/resource_id.zig").ResourceID;
 const StringID = @import("../values/string_id.zig");
 const PaletteID = @import("../values/palette_id.zig");
-const ColorID = @import("../values/color_id.zig");
+const ColorID = @import("../values/color_id.zig").ColorID;
 const Channel = @import("../values/channel.zig");
 const Point = @import("../values/point.zig").Point;
 const PolygonScale = @import("../values/polygon_scale.zig");
@@ -215,7 +215,7 @@ pub const Machine = struct {
 
     /// Render a string from the current string table at the specified screen position in the specified color.
     /// Returns an error if the string could not be found.
-    pub fn drawString(self: *Self, string_id: StringID.Raw, color_id: ColorID.Trusted, point: Point) !void {
+    pub fn drawString(self: *Self, string_id: StringID.Raw, color_id: ColorID, point: Point) !void {
         try self.video.drawString(string_id, color_id, point);
     }
 
@@ -230,7 +230,7 @@ pub const Machine = struct {
     }
 
     /// Fill a specified video buffer with a single color.
-    pub fn fillVideoBuffer(self: *Self, buffer_id: BufferID, color_id: ColorID.Trusted) void {
+    pub fn fillVideoBuffer(self: *Self, buffer_id: BufferID, color_id: ColorID) void {
         self.video.fillBuffer(buffer_id, color_id);
     }
 
@@ -550,7 +550,7 @@ test "loadResource copies bitmap resource directly into video buffer without per
     defer machine.deinit();
 
     const buffer = &machine.video.buffers[Video.bitmap_buffer_id];
-    buffer.fill(0x0);
+    buffer.fill(ColorID.cast(0x0));
     const original_buffer_contents = buffer.toBitmap();
 
     const bitmap_resource_id = MockRepository.Fixtures.bitmap_resource_id;

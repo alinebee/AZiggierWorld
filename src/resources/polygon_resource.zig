@@ -21,6 +21,7 @@ const Polygon = @import("../rendering/polygon.zig").Polygon;
 const PolygonScale = @import("../values/polygon_scale.zig");
 const Point = @import("../values/point.zig").Point;
 const DrawMode = @import("../values/draw_mode.zig").DrawMode;
+const ColorID = @import("../values/color_id.zig").ColorID;
 
 const introspection = @import("../utils/introspection.zig");
 const fixedBufferStream = @import("std").io.fixedBufferStream;
@@ -421,7 +422,7 @@ test "EntryHeader.parse parses single polygon entry header correctly and consume
     var stream = countingReader(fixedBufferStream(data).reader());
 
     const actual = try EntryHeader.parse(stream.reader());
-    const expected: EntryHeader = .{ .single_polygon = .{ .solid_color = 0xA } };
+    const expected: EntryHeader = .{ .single_polygon = .{ .solid_color = ColorID.cast(0xA) } };
 
     try testing.expectEqual(expected, actual);
     try testing.expectEqual(1, stream.bytes_read);
@@ -584,7 +585,7 @@ test "iteratePolygons correctly visits all polygons in group" {
     // [origin] - [group 1 offset] + [group 1 pointer 1 offset]
     try testing.expectEqual(1000 - 1 + 11, polygon_1.bounds.x.min);
     try testing.expectEqual(2000 - 1 + 11, polygon_1.bounds.y.min);
-    try testing.expectEqual(.{ .solid_color = 0xA }, polygon_1.draw_mode);
+    try testing.expectEqual(.{ .solid_color = ColorID.cast(0xA) }, polygon_1.draw_mode);
     try testing.expectEqual(4, polygon_1.vertices().len);
 
     const polygon_2 = visitor.polygons.items[1];

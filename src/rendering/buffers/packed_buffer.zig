@@ -10,7 +10,7 @@
 //! addressing both pixels of a byte using a byte-length struct containing two 4-bit fields.
 //! Behind the scenes Zig takes care of the masking for us.)
 
-const ColorID = @import("../../values/color_id.zig");
+const ColorID = @import("../../values/color_id.zig").ColorID;
 const Palette = @import("../../values/palette.zig").Palette;
 const DrawMode = @import("../../values/draw_mode.zig").DrawMode;
 const Point = @import("../../values/point.zig").Point;
@@ -63,7 +63,7 @@ pub fn PackedBuffer(comptime width: usize, comptime height: usize) type {
 
             /// Construct a new draw operation that replaces pixels in the destination buffer
             /// with a solid color.
-            pub fn solidColor(color: ColorID.Trusted) DrawOperation {
+            pub fn solidColor(color: ColorID) DrawOperation {
                 return .{
                     .context = .{ .solid_color = filledColor(color) },
                     .draw_index_fn = drawSolidColorPixel,
@@ -171,15 +171,15 @@ pub fn PackedBuffer(comptime width: usize, comptime height: usize) type {
         pub fn renderToSurface(self: Self, surface: *Surface(width, height), palette: Palette) void {
             var outputIndex: usize = 0;
             for (self.data) |native_color| {
-                surface[outputIndex] = palette[native_color.left];
+                surface[outputIndex] = palette[native_color.left.index()];
                 outputIndex += 1;
-                surface[outputIndex] = palette[native_color.right];
+                surface[outputIndex] = palette[native_color.right.index()];
                 outputIndex += 1;
             }
         }
 
         /// Fill the entire buffer with the specified color.
-        pub fn fill(self: *Self, color: ColorID.Trusted) void {
+        pub fn fill(self: *Self, color: ColorID) void {
             const native_color = filledColor(color);
             mem.set(NativeColor, &self.data, native_color);
         }
@@ -343,17 +343,17 @@ pub fn PackedBuffer(comptime width: usize, comptime height: usize) type {
 /// endianness-dependent field order so we must flip based on endianness.
 const NativeColor = switch (@import("builtin").target.cpu.arch.endian()) {
     .Big => packed struct {
-        left: ColorID.Trusted,
-        right: ColorID.Trusted,
+        left: ColorID,
+        right: ColorID,
     },
     .Little => packed struct {
-        right: ColorID.Trusted,
-        left: ColorID.Trusted,
+        right: ColorID,
+        left: ColorID,
     },
 };
 
 /// Given a single 4-bit color, returns a pair of pixels that are both that color.
-fn filledColor(color: ColorID.Trusted) NativeColor {
+fn filledColor(color: ColorID) NativeColor {
     return .{ .left = color, .right = color };
 }
 
@@ -382,7 +382,7 @@ test "PackedBuffer produces buffer of the expected size filled with zeroes." {
 
     try testing.expectEqual(32_000, buffer.data.len);
 
-    const expected_data = [_]NativeColor{filledColor(0)} ** buffer.data.len;
+    const expected_data = [_]NativeColor{filledColor(ColorID.cast(0))} ** buffer.data.len;
 
     try testing.expectEqual(expected_data, buffer.data);
 }

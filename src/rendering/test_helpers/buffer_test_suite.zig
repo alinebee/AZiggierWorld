@@ -1,5 +1,6 @@
 const planar_bitmap = @import("../../resources/planar_bitmap.zig");
 const Surface = @import("../surface.zig").Surface;
+const ColorID = @import("../../values/color_id.zig").ColorID;
 const Palette = @import("../../values/palette.zig");
 
 const testing = @import("../../utils/testing.zig");
@@ -30,7 +31,7 @@ pub fn runTests(comptime Instance: anytype) void {
     _ = struct {
         test "fill replaces all bytes in buffer with specified color" {
             var buffer = Instance(4, 4){};
-            buffer.fill(0xA);
+            buffer.fill(ColorID.cast(0xA));
 
             const expected =
                 \\AAAA
@@ -45,9 +46,9 @@ pub fn runTests(comptime Instance: anytype) void {
         test "uncheckedDrawSpan with byte-aligned span sets solid color in slice" {
             const Buffer = Instance(10, 3);
             var buffer = Buffer{};
-            buffer.fill(0x0);
+            buffer.fill(ColorID.cast(0x0));
 
-            const operation = Buffer.DrawOperation.solidColor(0xD);
+            const operation = Buffer.DrawOperation.solidColor(ColorID.cast(0xD));
 
             buffer.uncheckedDrawSpan(.{ .min = 2, .max = 7 }, 1, operation);
 
@@ -62,9 +63,9 @@ pub fn runTests(comptime Instance: anytype) void {
         test "uncheckedDrawSpan with non-byte-aligned start sets start pixel correctly" {
             const Buffer = Instance(10, 3);
             var buffer = Buffer{};
-            buffer.fill(0x0);
+            buffer.fill(ColorID.cast(0x0));
 
-            const operation = Buffer.DrawOperation.solidColor(0xC);
+            const operation = Buffer.DrawOperation.solidColor(ColorID.cast(0xC));
 
             buffer.uncheckedDrawSpan(.{ .min = 1, .max = 7 }, 1, operation);
 
@@ -79,9 +80,9 @@ pub fn runTests(comptime Instance: anytype) void {
         test "uncheckedDrawSpan with non-byte-aligned end sets end pixel correctly" {
             const Buffer = Instance(10, 3);
             var buffer = Buffer{};
-            buffer.fill(0x0);
+            buffer.fill(ColorID.cast(0x0));
 
-            const operation = Buffer.DrawOperation.solidColor(0x3);
+            const operation = Buffer.DrawOperation.solidColor(ColorID.cast(0x3));
 
             buffer.uncheckedDrawSpan(.{ .min = 2, .max = 8 }, 1, operation);
 
@@ -96,9 +97,9 @@ pub fn runTests(comptime Instance: anytype) void {
         test "uncheckedDrawSpan with non-byte-aligned start and end sets start and end pixels correctly" {
             const Buffer = Instance(10, 3);
             var buffer = Buffer{};
-            buffer.fill(0x0);
+            buffer.fill(ColorID.cast(0x0));
 
-            const operation = Buffer.DrawOperation.solidColor(0x7);
+            const operation = Buffer.DrawOperation.solidColor(ColorID.cast(0x7));
 
             buffer.uncheckedDrawSpan(.{ .min = 1, .max = 8 }, 1, operation);
 
@@ -136,7 +137,7 @@ pub fn runTests(comptime Instance: anytype) void {
         test "uncheckedDrawSpan replaces colors in slice with mask" {
             const Buffer = Instance(10, 3);
             var buffer = Buffer{};
-            buffer.fill(0x0);
+            buffer.fill(ColorID.cast(0x0));
 
             var mask_buffer = Buffer{};
             mask_buffer.fillFromString(
@@ -169,7 +170,7 @@ pub fn runTests(comptime Instance: anytype) void {
                 \\CDEF
             );
 
-            destination.fill(0x7);
+            destination.fill(ColorID.cast(0x7));
             destination.copy(&source, 0);
 
             const expected =
@@ -194,7 +195,7 @@ pub fn runTests(comptime Instance: anytype) void {
                 \\CDEF
             );
 
-            destination.fill(0x7);
+            destination.fill(ColorID.cast(0x7));
 
             destination.copy(&source, 3);
 
@@ -220,7 +221,7 @@ pub fn runTests(comptime Instance: anytype) void {
                 \\CDEF
             );
 
-            destination.fill(0x7);
+            destination.fill(ColorID.cast(0x7));
 
             destination.copy(&source, -3);
 
@@ -246,7 +247,7 @@ pub fn runTests(comptime Instance: anytype) void {
                 \\CDEF
             );
 
-            destination.fill(0x7);
+            destination.fill(ColorID.cast(0x7));
 
             destination.copy(&source, -4);
             const expected =
@@ -271,7 +272,7 @@ pub fn runTests(comptime Instance: anytype) void {
                 \\CDEF
             );
 
-            destination.fill(0x7);
+            destination.fill(ColorID.cast(0x7));
 
             destination.copy(&source, 4);
             const expected =

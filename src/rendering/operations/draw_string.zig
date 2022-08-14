@@ -1,4 +1,4 @@
-const ColorID = @import("../../values/color_id.zig");
+const ColorID = @import("../../values/color_id.zig").ColorID;
 const Point = @import("../../values/point.zig").Point;
 const BoundingBox = @import("../../values/bounding_box.zig").BoundingBox;
 const Font = @import("../../assets/font.zig");
@@ -6,7 +6,7 @@ const Font = @import("../../assets/font.zig");
 /// Draw a single or multiline string in the specified color,
 /// positioning the top left corner of the text at the specified origin point.
 /// Returns an error if the string contains unsupported characters.
-pub fn drawString(comptime Buffer: type, buffer: anytype, string: []const u8, color: ColorID.Trusted, origin: Point) !void {
+pub fn drawString(comptime Buffer: type, buffer: anytype, string: []const u8, color: ColorID, origin: Point) !void {
     const operation = Buffer.DrawOperation.solidColor(color);
 
     var cursor = origin;
@@ -92,10 +92,10 @@ fn runTests(comptime BufferFn: anytype) void {
             const Buffer = BufferFn(42, 18);
 
             var buffer = Buffer{};
-            buffer.fill(0x0);
+            buffer.fill(ColorID.cast(0x0));
 
             const string = "Hello\nWorld";
-            try drawString(Buffer, &buffer, string, 0x1, .{ .x = 1, .y = 1 });
+            try drawString(Buffer, &buffer, string, ColorID.cast(0x1), .{ .x = 1, .y = 1 });
 
             const expected =
                 \\000000000000000000000000000000000000000000
@@ -121,18 +121,18 @@ fn runTests(comptime BufferFn: anytype) void {
             try expectPixels(expected, buffer);
         }
 
-        test "drawString returns error.OutOfBounds for glyphs that are not fully inside the buffer" {
+        test "drawString does not draw glyphs that are not fully inside the buffer" {
             const Buffer = BufferFn(10, 10);
 
             var buffer = Buffer{};
-            buffer.fill(0x0);
+            buffer.fill(ColorID.cast(0x0));
 
             const expected = buffer;
 
-            try drawString(Buffer, &buffer, "a", 0xB, .{ .x = -1, .y = -2 });
+            try drawString(Buffer, &buffer, "a", ColorID.cast(0xB), .{ .x = -1, .y = -2 });
             try testing.expectEqual(expected, buffer);
 
-            try drawString(Buffer, &buffer, "a", 0xB, .{ .x = 312, .y = 192 });
+            try drawString(Buffer, &buffer, "a", ColorID.cast(0xB), .{ .x = 312, .y = 192 });
             try testing.expectEqual(expected, buffer);
         }
 
@@ -141,7 +141,7 @@ fn runTests(comptime BufferFn: anytype) void {
 
             var buffer = Buffer{};
 
-            try testing.expectError(error.InvalidCharacter, drawString(Buffer, &buffer, "\u{0}", 0xB, .{ .x = 1, .y = 1 }));
+            try testing.expectError(error.InvalidCharacter, drawString(Buffer, &buffer, "\u{0}", ColorID.cast(0xB), .{ .x = 1, .y = 1 }));
         }
     };
 }

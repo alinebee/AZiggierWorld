@@ -1,4 +1,5 @@
 const Polygon = @import("../polygon.zig").Polygon;
+const ColorID = @import("../../values/color_id.zig").ColorID;
 const Point = @import("../../values/point.zig").Point;
 const Range = @import("../../values/range.zig").Range;
 const FixedPrecision = @import("../../values/fixed_precision.zig").FixedPrecision;
@@ -172,7 +173,7 @@ fn runTests(comptime BufferFn: anytype) void {
     _ = struct {
         test "drawPolygon draws a single-unit square polygon as a dot" {
             const poly = Polygon.init(
-                .{ .solid_color = 0x1 },
+                .{ .solid_color = ColorID.cast(0x1) },
                 &.{
                     .{ .x = 1, .y = 1 },
                     .{ .x = 1, .y = 2 },
@@ -186,8 +187,8 @@ fn runTests(comptime BufferFn: anytype) void {
             var buffer = Buffer{};
             var mask_buffer = Buffer{};
 
-            buffer.fill(0x0);
-            mask_buffer.fill(0xF);
+            buffer.fill(ColorID.cast(0x0));
+            mask_buffer.fill(ColorID.cast(0xF));
 
             const expected =
                 \\0000
@@ -202,7 +203,7 @@ fn runTests(comptime BufferFn: anytype) void {
 
         test "drawPolygon draws a many-sided polygon" {
             const poly = Polygon.init(
-                .{ .solid_color = 0x1 },
+                .{ .solid_color = ColorID.cast(0x1) },
                 &.{
                     .{ .x = 3, .y = 1 },
                     .{ .x = 4, .y = 2 },
@@ -217,8 +218,8 @@ fn runTests(comptime BufferFn: anytype) void {
             var buffer = Buffer{};
             var mask_buffer = Buffer{};
 
-            buffer.fill(0x0);
-            mask_buffer.fill(0xF);
+            buffer.fill(ColorID.cast(0x0));
+            mask_buffer.fill(ColorID.cast(0xF));
 
             const expected =
                 \\000000
@@ -241,7 +242,7 @@ fn runTests(comptime BufferFn: anytype) void {
             // FIXME: this is a flaw in our bounds calculations, that should ideally
             // be corrected upstream in the polygon parsing code.
             const poly = Polygon.init(
-                .{ .solid_color = 0x1 },
+                .{ .solid_color = ColorID.cast(0x1) },
                 &.{
                     .{ .x = 1, .y = -1 },
                     .{ .x = 1, .y = 0 },
@@ -256,8 +257,8 @@ fn runTests(comptime BufferFn: anytype) void {
             var buffer = Buffer{};
             var mask_buffer = Buffer{};
 
-            buffer.fill(0x0);
-            mask_buffer.fill(0xF);
+            buffer.fill(ColorID.cast(0x0));
+            mask_buffer.fill(ColorID.cast(0xF));
 
             const expected =
                 \\0000
@@ -272,7 +273,7 @@ fn runTests(comptime BufferFn: anytype) void {
 
         test "drawPolygon crops partially-offscreen polygon" {
             const poly = Polygon.init(
-                .{ .solid_color = 0x1 },
+                .{ .solid_color = ColorID.cast(0x1) },
                 &.{
                     .{ .x = 6, .y = -1 },
                     .{ .x = 7, .y = 0 },
@@ -287,8 +288,8 @@ fn runTests(comptime BufferFn: anytype) void {
             var buffer = Buffer{};
             var mask_buffer = Buffer{};
 
-            buffer.fill(0x0);
-            mask_buffer.fill(0xF);
+            buffer.fill(ColorID.cast(0x0));
+            mask_buffer.fill(ColorID.cast(0xF));
 
             const expected =
                 \\000011
@@ -305,7 +306,7 @@ fn runTests(comptime BufferFn: anytype) void {
 
         test "drawPolygon with malformed bounds does not draw offscreen" {
             var poly = Polygon.init(
-                .{ .solid_color = 0x1 },
+                .{ .solid_color = ColorID.cast(0x1) },
                 &.{
                     .{ .x = 3, .y = 6 },
                     .{ .x = 4, .y = 7 },
@@ -323,8 +324,8 @@ fn runTests(comptime BufferFn: anytype) void {
             var buffer = Buffer{};
             var mask_buffer = Buffer{};
 
-            buffer.fill(0x0);
-            mask_buffer.fill(0xF);
+            buffer.fill(ColorID.cast(0x0));
+            mask_buffer.fill(ColorID.cast(0xF));
 
             const expected =
                 \\000000
