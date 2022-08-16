@@ -111,8 +111,8 @@ pub fn executeNextInstruction(program: *Program, machine: *Machine) !?ExecutionR
     };
 }
 
-fn execute(comptime Instruction: type, raw_opcode: Opcode.Raw, program: *Program, machine: *Machine) !?ExecutionResult {
-    const instruction = try Instruction.parse(raw_opcode, program);
+fn execute(comptime SpecificInstruction: type, raw_opcode: Opcode.Raw, program: *Program, machine: *Machine) !?ExecutionResult {
+    const instruction = try SpecificInstruction.parse(raw_opcode, program);
 
     // Zig 0.9.0 does not have a way to express "try this function if it returns an error set,
     // otherwise call it normally", hence we must check the return type at compile time and branch.
@@ -135,8 +135,8 @@ fn execute(comptime Instruction: type, raw_opcode: Opcode.Raw, program: *Program
 /// A union that represents the set of all possible bytecode instructions, indexed by opcode.
 /// This wrapped type is intended for introspection and reverse engineering of Another World
 /// bytecode programs, and is not used directly in the emulator; during normal emulator flow,
-/// individual instructions are executed immediately after being parsed.
-pub const Wrapped = union(Opcode) {
+/// individual instructions are executed immediately after being parsed to avoid switching twice.
+pub const Instruction = union(Opcode) {
     ActivateThread: ActivateThread,
     Call: Call,
     ControlMusic: ControlMusic,
@@ -166,61 +166,61 @@ pub const Wrapped = union(Opcode) {
     SelectPalette: SelectPalette,
     SelectVideoBuffer: SelectVideoBuffer,
     Yield: Yield,
+
+    /// Parse the next instruction from a bytecode program and wrap it in an Instruction union type.
+    /// Returns the instruction or an error if the program could not be read or the bytecode
+    /// could not be interpreted as an instruction.
+    pub fn parse(program: *Program) !Instruction {
+        const raw_opcode = try program.read(Opcode.Raw);
+        const opcode = try Opcode.parse(raw_opcode);
+
+        return switch (opcode) {
+            .ActivateThread => parseSpecific(ActivateThread, raw_opcode, program),
+            .Call => parseSpecific(Call, raw_opcode, program),
+            .ControlMusic => parseSpecific(ControlMusic, raw_opcode, program),
+            .ControlResources => parseSpecific(ControlResources, raw_opcode, program),
+            .ControlSound => parseSpecific(ControlSound, raw_opcode, program),
+            .ControlThreads => parseSpecific(ControlThreads, raw_opcode, program),
+            .CopyVideoBuffer => parseSpecific(CopyVideoBuffer, raw_opcode, program),
+            .DrawBackgroundPolygon => parseSpecific(DrawBackgroundPolygon, raw_opcode, program),
+            .DrawSpritePolygon => parseSpecific(DrawSpritePolygon, raw_opcode, program),
+            .DrawString => parseSpecific(DrawString, raw_opcode, program),
+            .FillVideoBuffer => parseSpecific(FillVideoBuffer, raw_opcode, program),
+            .Jump => parseSpecific(Jump, raw_opcode, program),
+            .JumpConditional => parseSpecific(JumpConditional, raw_opcode, program),
+            .JumpIfNotZero => parseSpecific(JumpIfNotZero, raw_opcode, program),
+            .Kill => parseSpecific(Kill, raw_opcode, program),
+            .RegisterAdd => parseSpecific(RegisterAdd, raw_opcode, program),
+            .RegisterAddConstant => parseSpecific(RegisterAddConstant, raw_opcode, program),
+            .RegisterAnd => parseSpecific(RegisterAnd, raw_opcode, program),
+            .RegisterCopy => parseSpecific(RegisterCopy, raw_opcode, program),
+            .RegisterOr => parseSpecific(RegisterOr, raw_opcode, program),
+            .RegisterSet => parseSpecific(RegisterSet, raw_opcode, program),
+            .RegisterShiftLeft => parseSpecific(RegisterShiftLeft, raw_opcode, program),
+            .RegisterShiftRight => parseSpecific(RegisterShiftRight, raw_opcode, program),
+            .RegisterSubtract => parseSpecific(RegisterSubtract, raw_opcode, program),
+            .RenderVideoBuffer => parseSpecific(RenderVideoBuffer, raw_opcode, program),
+            .Return => parseSpecific(Return, raw_opcode, program),
+            .SelectPalette => parseSpecific(SelectPalette, raw_opcode, program),
+            .SelectVideoBuffer => parseSpecific(SelectVideoBuffer, raw_opcode, program),
+            .Yield => parseSpecific(Yield, raw_opcode, program),
+        };
+    }
+
+    /// Parse an instruction of the specified type from the program,
+    /// and wrap it in an Instruction union type initialized to the appropriate field.
+    fn parseSpecific(comptime SpecificInstruction: type, raw_opcode: Opcode.Raw, program: *Program) !Instruction {
+        const field_name = @tagName(SpecificInstruction.opcode);
+        return @unionInit(Instruction, field_name, try SpecificInstruction.parse(raw_opcode, program));
+    }
 };
-
-/// Parse the next instruction from a bytecode program and wrap it in a Wrapped union type.
-/// Returns the wrapped instruction or an error if the program could not be read or the bytecode
-/// could not be interpreted as an instruction.
-pub fn parseNextInstruction(program: *Program) !Wrapped {
-    const raw_opcode = try program.read(Opcode.Raw);
-    const opcode = try Opcode.parse(raw_opcode);
-
-    return switch (opcode) {
-        .ActivateThread => parse(ActivateThread, raw_opcode, program),
-        .Call => parse(Call, raw_opcode, program),
-        .ControlMusic => parse(ControlMusic, raw_opcode, program),
-        .ControlResources => parse(ControlResources, raw_opcode, program),
-        .ControlSound => parse(ControlSound, raw_opcode, program),
-        .ControlThreads => parse(ControlThreads, raw_opcode, program),
-        .CopyVideoBuffer => parse(CopyVideoBuffer, raw_opcode, program),
-        .DrawBackgroundPolygon => parse(DrawBackgroundPolygon, raw_opcode, program),
-        .DrawSpritePolygon => parse(DrawSpritePolygon, raw_opcode, program),
-        .DrawString => parse(DrawString, raw_opcode, program),
-        .FillVideoBuffer => parse(FillVideoBuffer, raw_opcode, program),
-        .Jump => parse(Jump, raw_opcode, program),
-        .JumpConditional => parse(JumpConditional, raw_opcode, program),
-        .JumpIfNotZero => parse(JumpIfNotZero, raw_opcode, program),
-        .Kill => parse(Kill, raw_opcode, program),
-        .RegisterAdd => parse(RegisterAdd, raw_opcode, program),
-        .RegisterAddConstant => parse(RegisterAddConstant, raw_opcode, program),
-        .RegisterAnd => parse(RegisterAnd, raw_opcode, program),
-        .RegisterCopy => parse(RegisterCopy, raw_opcode, program),
-        .RegisterOr => parse(RegisterOr, raw_opcode, program),
-        .RegisterSet => parse(RegisterSet, raw_opcode, program),
-        .RegisterShiftLeft => parse(RegisterShiftLeft, raw_opcode, program),
-        .RegisterShiftRight => parse(RegisterShiftRight, raw_opcode, program),
-        .RegisterSubtract => parse(RegisterSubtract, raw_opcode, program),
-        .RenderVideoBuffer => parse(RenderVideoBuffer, raw_opcode, program),
-        .Return => parse(Return, raw_opcode, program),
-        .SelectPalette => parse(SelectPalette, raw_opcode, program),
-        .SelectVideoBuffer => parse(SelectVideoBuffer, raw_opcode, program),
-        .Yield => parse(Yield, raw_opcode, program),
-    };
-}
-
-/// Parse an instruction of the specified type from the program,
-/// and wrap it in a Wrapped union type initialized to the appropriate field.
-fn parse(comptime Instruction: type, raw_opcode: Opcode.Raw, program: *Program) !Wrapped {
-    const opcode_name = @tagName(Instruction.opcode);
-    return @unionInit(Wrapped, opcode_name, try Instruction.parse(raw_opcode, program));
-}
 
 // -- Test helpers --
 
 /// Try to parse a literal sequence of bytecode into an Instruction union value.
-fn expectParse(bytecode: []const u8) !Wrapped {
+fn expectParse(bytecode: []const u8) !Instruction {
     var program = try Program.init(bytecode);
-    return try parseNextInstruction(&program);
+    return try Instruction.parse(&program);
 }
 
 // -- Tests --
@@ -228,9 +228,9 @@ fn expectParse(bytecode: []const u8) !Wrapped {
 const testing = @import("../utils/testing.zig");
 const RegisterID = @import("../values/register_id.zig").RegisterID;
 
-// - parseNextInstruction tests --
+// - Instruction.parse tests --
 
-test "parseNextInstruction returns expected instruction type when given valid bytecode" {
+test "Instruction.parse returns expected instruction type when given valid bytecode" {
     try testing.expectEqualTags(.ActivateThread, try expectParse(&ActivateThread.Fixtures.valid));
     try testing.expectEqualTags(.Call, try expectParse(&Call.Fixtures.valid));
     try testing.expectEqualTags(.ControlMusic, try expectParse(&ControlMusic.Fixtures.valid));
@@ -260,7 +260,7 @@ test "parseNextInstruction returns expected instruction type when given valid by
     try testing.expectEqualTags(.Yield, try expectParse(&Yield.Fixtures.valid));
 }
 
-test "parseNextInstruction returns error.InvalidOpcode error when it encounters an unknown opcode" {
+test "Instruction.parse returns error.InvalidOpcode error when it encounters an unknown opcode" {
     const bytecode = [_]u8{63}; // Not a valid opcode
     try testing.expectError(error.InvalidOpcode, expectParse(&bytecode));
 }
