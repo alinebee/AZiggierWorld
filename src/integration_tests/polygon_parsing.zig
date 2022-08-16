@@ -2,7 +2,7 @@
 //! polygon addresses can be parsed from Another World's original resource data.
 //! Requires that the `fixtures/dos` folder contains Another World DOS game files.
 
-const Instruction = @import("../instructions/instruction.zig");
+const Instruction = @import("anotherworld").instructions.Instruction;
 const Program = @import("../machine/program.zig").Program;
 const PolygonResource = @import("../resources/polygon_resource.zig").PolygonResource;
 const Polygon = @import("../rendering/polygon.zig").Polygon;
@@ -10,8 +10,6 @@ const PolygonScale = @import("../values/polygon_scale.zig").PolygonScale;
 const Point = @import("../values/point.zig").Point;
 const ResourceDirectory = @import("../resources/resource_directory.zig").ResourceDirectory;
 const GamePart = @import("../values/game_part.zig").GamePart;
-const DrawBackgroundPolygon = @import("../instructions/draw_background_polygon.zig").DrawBackgroundPolygon;
-const DrawSpritePolygon = @import("../instructions/draw_sprite_polygon.zig").DrawSpritePolygon;
 
 const testing = @import("../utils/testing.zig");
 const log = @import("../utils/logging.zig").log;
@@ -19,31 +17,31 @@ const ensureValidFixtureDir = @import("helpers.zig").ensureValidFixtureDir;
 const std = @import("std");
 
 const PolygonDrawInstruction = union(enum) {
-    background: DrawBackgroundPolygon,
-    sprite: DrawSpritePolygon,
+    background: Instruction.DrawBackgroundPolygon,
+    sprite: Instruction.DrawSpritePolygon,
 };
 
 /// Parses an Another World bytecode program to find all the draw instructions in it.
 /// Returns an array of draw instructions which is owned by the caller.
 /// Returns an error if parsing or memory allocation failed.
 fn findPolygonDrawInstructions(allocator: std.mem.Allocator, bytecode: []const u8) ![]const PolygonDrawInstruction {
-    var instructions = std.ArrayList(PolygonDrawInstruction).init(allocator);
-    errdefer instructions.deinit();
+    var draw_instructions = std.ArrayList(PolygonDrawInstruction).init(allocator);
+    errdefer draw_instructions.deinit();
 
     var program = try Program.init(bytecode);
     while (program.isAtEnd() == false) {
-        switch (try Instruction.parseNextInstruction(&program)) {
+        switch (try Instruction.parse(&program)) {
             .DrawBackgroundPolygon => |instruction| {
-                try instructions.append(.{ .background = instruction });
+                try draw_instructions.append(.{ .background = instruction });
             },
             .DrawSpritePolygon => |instruction| {
-                try instructions.append(.{ .sprite = instruction });
+                try draw_instructions.append(.{ .sprite = instruction });
             },
             else => {},
         }
     }
 
-    return instructions.toOwnedSlice();
+    return draw_instructions.toOwnedSlice();
 }
 
 /// Parses all polygon draw instructions from the bytecode for a given game part,
@@ -56,8 +54,8 @@ fn parsePolygonInstructionsForGamePart(allocator: std.mem.Allocator, resource_di
     const bytecode = try reader.allocReadResourceByID(allocator, resource_ids.bytecode);
     defer allocator.free(bytecode);
 
-    const instructions = try findPolygonDrawInstructions(allocator, bytecode);
-    defer allocator.free(instructions);
+    const draw_instructions = try findPolygonDrawInstructions(allocator, bytecode);
+    defer allocator.free(draw_instructions);
 
     const polygons = PolygonResource.init(try reader.allocReadResourceByID(allocator, resource_ids.polygons));
     defer allocator.free(polygons.data);
@@ -80,7 +78,7 @@ fn parsePolygonInstructionsForGamePart(allocator: std.mem.Allocator, resource_di
     var visitor = PolygonVisitor{};
 
     // TODO: execute draw instructions directly on a virtual machine to trigger real polygon parsing and drawing.
-    for (instructions) |background_or_sprite| {
+    for (draw_instructions) |background_or_sprite| {
         switch (background_or_sprite) {
             .background => |instruction| {
                 try polygons.iteratePolygons(instruction.address, instruction.point, .default, &visitor);

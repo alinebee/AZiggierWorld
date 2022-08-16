@@ -1,8 +1,7 @@
-//! Tests that parseNextInstruction parses all bytecode programs from the original Another World.
+//! Tests that Instruction.parse parses all bytecode programs from the original Another World.
 //! Requires that the `fixtures/dos` folder contains Another World DOS game files.
 
-const Instruction = @import("../instructions/instruction.zig");
-const Opcode = @import("../values/opcode.zig").Opcode;
+const instructions = @import("anotherworld").instructions;
 const Program = @import("../machine/program.zig").Program;
 const ResourceDirectory = @import("../resources/resource_directory.zig").ResourceDirectory;
 
@@ -35,7 +34,7 @@ const ParseFailure = struct {
     }
 
     fn opcodeName(self: ParseFailure) []const u8 {
-        if (instrospection.intToEnum(Opcode, self.parsed_bytes[0])) |value| {
+        if (instrospection.intToEnum(instructions.Opcode, self.parsed_bytes[0])) |value| {
             return @tagName(value);
         } else |_| {
             return "Unknown";
@@ -53,7 +52,7 @@ const ParseFailure = struct {
     }
 };
 
-test "parseNextInstruction parses all programs in fixture bytecode" {
+test "Instruction.parse parses all programs in fixture bytecode" {
     var game_dir = try ensureValidFixtureDir();
     defer game_dir.close();
 
@@ -73,7 +72,7 @@ test "parseNextInstruction parses all programs in fixture bytecode" {
 
         while (program.isAtEnd() == false) {
             const last_valid_address = program.counter;
-            if (Instruction.parseNextInstruction(&program)) |instruction| {
+            if (instructions.Instruction.parse(&program)) |instruction| {
                 switch (instruction) {
                     // .ControlResources => |control_resources| {
                     //     switch (control_resources) {

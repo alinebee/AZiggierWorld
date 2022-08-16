@@ -13,7 +13,7 @@
 
 const Machine = @import("machine.zig").Machine;
 const Program = @import("program.zig").Program;
-const executeProgram = @import("../instructions/instruction.zig").executeProgram;
+const executeProgram = @import("../lib/anotherworld.zig").instructions.executeProgram;
 
 const ExecutionState = union(enum) {
     /// The thread is active and will continue execution from the specified address when it is next run.
@@ -229,11 +229,10 @@ test "applyScheduledStates applies scheduled pause state" {
 
 // - Run tests -
 
-const Yield = @import("../instructions/yield.zig").Yield;
-const Kill = @import("../instructions/kill.zig").Kill;
+const instructions = @import("../lib/anotherworld.zig").instructions;
 
 test "run stores program counter in thread state upon reaching yield instruction" {
-    const bytecode = Yield.Fixtures.valid;
+    const bytecode = instructions.Instruction.Yield.Fixtures.valid;
 
     var machine = Machine.testInstance(.{ .bytecode = &bytecode });
     defer machine.deinit();
@@ -244,7 +243,7 @@ test "run stores program counter in thread state upon reaching yield instruction
 }
 
 test "run deactivates thread upon reaching kill instruction" {
-    const bytecode = Kill.Fixtures.valid;
+    const bytecode = instructions.Instruction.Kill.Fixtures.valid;
 
     var machine = Machine.testInstance(.{ .bytecode = &bytecode });
     defer machine.deinit();

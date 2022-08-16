@@ -47,7 +47,7 @@
             "test",
             "${file}",
             "--main-pkg-path",
-            "${workspaceFolder}"
+            "${workspaceFolder}",
         ],
         "group": {
             "kind": "test",

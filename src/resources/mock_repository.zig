@@ -23,7 +23,7 @@
 const ResourceReader = @import("resource_reader.zig").ResourceReader;
 const ResourceDescriptor = @import("resource_descriptor.zig").ResourceDescriptor;
 const ResourceID = @import("../values/resource_id.zig").ResourceID;
-const Opcode = @import("../values/opcode.zig").Opcode;
+const instructions = @import("../lib/anotherworld.zig").instructions;
 
 const static_limits = @import("../static_limits.zig");
 
@@ -138,8 +138,8 @@ pub const MockRepository = struct {
 const resource_bit_pattern: u8 = 0b1010_1010;
 
 /// The program instructions to fill bytecode resource buffers with.
-const yield_instruction = Opcode.Yield.encode();
-const loop_instruction = [_]u8{ Opcode.Jump.encode(), 0x0, 0x0 };
+const yield_instruction = instructions.Opcode.Yield.encode();
+const loop_instruction = [_]u8{ instructions.Opcode.Jump.encode(), 0x0, 0x0 };
 
 const minimum_looped_program_length = loop_instruction.len + 1;
 
@@ -310,9 +310,9 @@ test "bufReadResource with music descriptor returns slice of original buffer fil
 
 test "bufReadResource with bytecode descriptor returns slice of original buffer filled with valid program" {
     const expected_program = [_]u8{
-        Opcode.Yield.encode(),
-        Opcode.Yield.encode(),
-        Opcode.Jump.encode(),
+        instructions.Opcode.Yield.encode(),
+        instructions.Opcode.Yield.encode(),
+        instructions.Opcode.Jump.encode(),
         0x0,
         0x0,
     };
@@ -334,7 +334,7 @@ test "bufReadResource with bytecode descriptor returns slice of original buffer 
 }
 
 test "bufReadResource with bytecode descriptor omits loop instruction when buffer is too short" {
-    const expected_program = [_]u8{Opcode.Yield.encode()} ** 3;
+    const expected_program = [_]u8{instructions.Opcode.Yield.encode()} ** 3;
 
     const example_bytecode_descriptor = ResourceDescriptor{
         .type = .bytecode,
