@@ -1,5 +1,7 @@
+const anotherworld = @import("../anotherworld.zig");
+const intToEnum = anotherworld.meta.intToEnum;
+
 const Register = @import("../../values/register.zig");
-const intToEnum = @import("../../utils/introspection.zig").intToEnum;
 
 /// The supported comparisons for a JumpConditional instruction.
 pub const Comparison = enum {
@@ -40,7 +42,7 @@ pub const Comparison = enum {
 
 // -- Tests --
 
-const testing = @import("../../utils/testing.zig");
+const testing = anotherworld.testing;
 
 test "parse parses raw comparison values correctly" {
     try testing.expectEqual(.equal, Comparison.parse(0b000));

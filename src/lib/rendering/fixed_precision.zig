@@ -1,3 +1,5 @@
+const anotherworld = @import("../anotherworld.zig");
+
 /// A signed fixed-point number with 16 bits of precision for the whole part
 /// and 16 bits of precision for the fraction. Used for rendering polygons
 /// without needing floating-point numbers.
@@ -34,7 +36,7 @@ pub const FixedPrecision = struct {
 
 // -- Testing --
 
-const testing = @import("../../utils/testing.zig");
+const testing = anotherworld.testing;
 
 fn raw(pattern: u32) i32 {
     return @bitCast(i32, pattern);

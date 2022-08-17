@@ -1,3 +1,5 @@
+const anotherworld = @import("../lib/anotherworld.zig");
+
 const std = @import("std");
 const fmt = std.fmt;
 const mem = std.mem;
@@ -36,7 +38,7 @@ pub const Filename = union(enum) {
 
 // -- Tests --
 
-const testing = @import("../utils/testing.zig");
+const testing = anotherworld.testing;
 
 test "dosName formats resource_list filename correctly" {
     const filename: Filename = .resource_list;

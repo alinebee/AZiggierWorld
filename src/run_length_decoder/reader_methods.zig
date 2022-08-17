@@ -6,7 +6,8 @@ const std = @import("std");
 const assert = std.debug.assert;
 const trait = std.meta.trait;
 
-const introspection = @import("../utils/introspection.zig");
+const anotherworld = @import("../lib/anotherworld.zig");
+const meta = anotherworld.meta;
 
 /// Returns a struct of methods that can be mixed into the specified type.
 /// Intended usage:
@@ -17,7 +18,7 @@ const introspection = @import("../utils/introspection.zig");
 ///   }
 ///
 pub fn ReaderMethods(comptime Self: type) type {
-    const ReadError = introspection.ErrorType(Self.readBit);
+    const ReadError = meta.ErrorType(Self.readBit);
 
     return struct {
         /// Returns a raw byte constructed by consuming 8 bits from the underlying reader.
@@ -34,7 +35,7 @@ pub fn ReaderMethods(comptime Self: type) type {
 
             var value: Integer = 0;
             // TODO: This could be an inline-while: benchmark this to see if that helps.
-            var bits_remaining: usize = introspection.bitCount(Integer);
+            var bits_remaining: usize = meta.bitCount(Integer);
             while (bits_remaining > 0) : (bits_remaining -= 1) {
                 value = @shlExact(value, 1);
                 value |= try self.readBit();
@@ -46,7 +47,7 @@ pub fn ReaderMethods(comptime Self: type) type {
 
 // -- Tests --
 
-const testing = @import("../utils/testing.zig");
+const testing = anotherworld.testing;
 const mockReader = @import("test_helpers/mock_reader.zig").mockReader;
 
 test "readInt reads integers of the specified width" {

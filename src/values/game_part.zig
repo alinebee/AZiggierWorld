@@ -1,6 +1,7 @@
-const ResourceID = @import("resource_id.zig").ResourceID;
+const anotherworld = @import("../lib/anotherworld.zig");
+const intToEnum = anotherworld.meta.intToEnum;
 
-const intToEnum = @import("../utils/introspection.zig").intToEnum;
+const ResourceID = @import("resource_id.zig").ResourceID;
 
 /// A raw game part identifier as represented in Another World's bytecode.
 const Raw = u16;
@@ -114,7 +115,7 @@ const ResourceIDs = struct {
 
 // -- Tests --
 
-const testing = @import("../utils/testing.zig");
+const testing = anotherworld.testing;
 
 test "ensure everything compiles" {
     testing.refAllDecls(GamePart);

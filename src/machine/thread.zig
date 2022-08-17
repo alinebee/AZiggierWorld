@@ -11,9 +11,11 @@
 //! different entities within the game (enemies, projectiles etc.) as well as input-handling
 //! and overall housekeeping for the current section of the game.
 
+const anotherworld = @import("../lib/anotherworld.zig");
+const executeProgram = anotherworld.instructions.executeProgram;
+
 const Machine = @import("machine.zig").Machine;
 const Program = @import("program.zig").Program;
-const executeProgram = @import("../lib/anotherworld.zig").instructions.executeProgram;
 
 const ExecutionState = union(enum) {
     /// The thread is active and will continue execution from the specified address when it is next run.
@@ -144,7 +146,7 @@ pub const Thread = struct {
 
 // -- Tests --
 
-const testing = @import("../utils/testing.zig");
+const testing = anotherworld.testing;
 
 // - Schedule tests -
 
@@ -229,7 +231,7 @@ test "applyScheduledStates applies scheduled pause state" {
 
 // - Run tests -
 
-const instructions = @import("../lib/anotherworld.zig").instructions;
+const instructions = anotherworld.instructions;
 
 test "run stores program counter in thread state upon reaching yield instruction" {
     const bytecode = instructions.Instruction.Yield.Fixtures.valid;

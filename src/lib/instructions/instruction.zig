@@ -5,12 +5,13 @@
 //! Right now this file feels like a mess; there is a lot of copypasta that could probably
 //! be cleaned up with some Zig compile-time code generation.
 
+const anotherworld = @import("../anotherworld.zig");
+const meta = anotherworld.meta;
+
 const Program = @import("../../machine/program.zig").Program;
 const Opcode = @import("opcode.zig").Opcode;
 const Machine = @import("../../machine/machine.zig").Machine;
 const ExecutionResult = @import("execution_result.zig").ExecutionResult;
-
-const introspection = @import("../../utils/introspection.zig");
 
 pub const ExecutionError = error{
     /// Program execution reached its instruction limit without yielding or deactivating.
@@ -86,7 +87,7 @@ fn execute(comptime SpecificInstruction: type, raw_opcode: Opcode.Raw, program: 
 
     // Zig 0.9.0 does not have a way to express "try this function if it returns an error set,
     // otherwise call it normally", hence we must check the return type at compile time and branch.
-    const ReturnType = introspection.ReturnType(instruction.execute);
+    const ReturnType = meta.ReturnType(instruction.execute);
     const returns_error = @typeInfo(ReturnType) == .ErrorUnion;
     const result = if (returns_error)
         try instruction.execute(machine)
@@ -225,7 +226,7 @@ fn expectParse(bytecode: []const u8) !Instruction {
 
 // -- Tests --
 
-const testing = @import("../../utils/testing.zig");
+const testing = anotherworld.testing;
 const RegisterID = @import("../../values/register_id.zig").RegisterID;
 
 // - Instruction.parse tests --

@@ -1,3 +1,6 @@
+const anotherworld = @import("../../lib/anotherworld.zig");
+const meta = anotherworld.meta;
+
 const std = @import("std");
 const mem = std.mem;
 const io = std.io;
@@ -5,7 +8,6 @@ const io = std.io;
 const ArrayList = std.ArrayList;
 const assert = std.debug.assert;
 const trait = std.meta.trait;
-const introspection = @import("../../utils/introspection.zig");
 
 /// Builds an RLE-encoded payload that can be decompressed by a call to decode.
 /// Only intended to be used for creating test fixtures.
@@ -86,8 +88,8 @@ pub const MockEncoder = struct {
     fn writeBits(self: *Self, bits: anytype) !void {
         const Integer = @TypeOf(bits);
         comptime assert(trait.isUnsignedInt(Integer));
-        const bit_count = introspection.bitCount(Integer);
-        const ShiftType = introspection.ShiftType(Integer);
+        const bit_count = meta.bitCount(Integer);
+        const ShiftType = meta.ShiftType(Integer);
 
         var bits_remaining: usize = bit_count;
         while (bits_remaining > 0) : (bits_remaining -= 1) {
@@ -162,7 +164,7 @@ pub const MockEncoder = struct {
 
 // -- Tests --
 
-const testing = @import("../../utils/testing.zig");
+const testing = anotherworld.testing;
 const decode = @import("../decode.zig").decode;
 
 test "write4Bytes generates expected payload" {

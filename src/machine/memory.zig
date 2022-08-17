@@ -33,12 +33,14 @@
 //! buffer for each loaded resource would break if the VM or memory instance is copied)
 //! but we don't need to support that anyway, and future Zig versions may allow us to mark
 //! the entire type as move-only.
+
+const anotherworld = @import("../lib/anotherworld.zig");
+const static_limits = anotherworld.static_limits;
+
 const ResourceReader = @import("../resources/resource_reader.zig").ResourceReader;
 const ResourceID = @import("../values/resource_id.zig").ResourceID;
 const planar_bitmap = @import("../resources/planar_bitmap.zig");
 const GamePart = @import("../values/game_part.zig").GamePart;
-
-const static_limits = @import("../static_limits.zig");
 
 const mem = @import("std").mem;
 
@@ -227,7 +229,7 @@ pub const Memory = struct {
 
 // -- Tests --
 
-const testing = @import("../utils/testing.zig");
+const testing = anotherworld.testing;
 const MockRepository = @import("../resources/mock_repository.zig").MockRepository;
 const FailingAllocator = @import("std").testing.FailingAllocator;
 

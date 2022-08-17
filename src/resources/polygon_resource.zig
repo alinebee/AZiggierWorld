@@ -19,8 +19,8 @@
 
 const anotherworld = @import("../lib/anotherworld.zig");
 const rendering = anotherworld.rendering;
+const meta = anotherworld.meta;
 
-const introspection = @import("../utils/introspection.zig");
 const fixedBufferStream = @import("std").io.fixedBufferStream;
 
 pub const PolygonResource = struct {
@@ -104,10 +104,10 @@ pub const PolygonResource = struct {
     /// on behalf of a visitor of the specified type.
     pub fn Error(comptime Visitor: type) type {
         // Note: Zig is unable to infer the error type because iteratePolygons calls itself recursively.
-        const VisitorError = introspection.ErrorType(introspection.BaseType(Visitor).visit);
+        const VisitorError = meta.ErrorType(meta.BaseType(Visitor).visit);
 
         const Reader = @import("std").io.FixedBufferStream([]const u8).Reader;
-        const ReaderError = introspection.ErrorType(Reader.readByte);
+        const ReaderError = meta.ErrorType(Reader.readByte);
 
         return VisitorError || ReaderError || rendering.Polygon.ParseError(Reader) || error{
             /// The requested polygon address was out of range, or one of the polygon subentries
@@ -408,7 +408,7 @@ fn parseOffset(reader: anytype, scale: rendering.PolygonScale) !rendering.Point 
 
 // -- Tests --
 
-const testing = @import("../utils/testing.zig");
+const testing = anotherworld.testing;
 const countingReader = @import("std").io.countingReader;
 
 // - EntryHeader tests -

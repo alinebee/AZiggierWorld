@@ -1,3 +1,5 @@
+const anotherworld = @import("../anotherworld.zig");
+
 const trait = @import("std").meta.trait;
 
 const _Raw = u16;
@@ -51,7 +53,7 @@ pub const PolygonScale = enum(_Raw) {
 
 // -- Tests --
 
-const testing = @import("../../utils/testing.zig");
+const testing = anotherworld.testing;
 const math = @import("std").math;
 
 const max_scale = PolygonScale.cast(math.maxInt(PolygonScale.Raw));

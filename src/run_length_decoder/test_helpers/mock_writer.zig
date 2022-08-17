@@ -1,3 +1,5 @@
+const anotherworld = @import("../../lib/anotherworld.zig");
+
 pub const MockWriter = struct {
     last_instruction: ?Instruction,
 
@@ -37,7 +39,7 @@ pub const MockWriter = struct {
 
 // -- Testing --
 
-const testing = @import("../../utils/testing.zig");
+const testing = anotherworld.testing;
 
 const FakeReader = struct {
     fn readByte() void {

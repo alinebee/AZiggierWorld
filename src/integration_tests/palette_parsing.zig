@@ -4,11 +4,12 @@
 const PaletteResource = @import("../resources/palette_resource.zig").PaletteResource;
 const ResourceDirectory = @import("../resources/resource_directory.zig").ResourceDirectory;
 const PaletteID = @import("../values/palette_id.zig").PaletteID;
-const static_limits = @import("../static_limits.zig");
 
 const ensureValidFixtureDir = @import("helpers.zig").ensureValidFixtureDir;
 
-const testing = @import("../utils/testing.zig");
+const anotherworld = @import("../lib/anotherworld.zig");
+const static_limits = anotherworld.static_limits;
+const testing = anotherworld.testing;
 
 test "Parse all palettes in original game files" {
     var game_dir = try ensureValidFixtureDir();

@@ -1,6 +1,8 @@
 //! Provides a standard interface for an Another World virtual machine to communicate
 //! with the host environment by sending it video and audio output.
 
+const anotherworld = @import("../lib/anotherworld.zig");
+
 const std = @import("std");
 const assert = std.debug.assert;
 
@@ -68,7 +70,7 @@ pub const Host = struct {
 
 // -- Tests --
 
-const testing = @import("../utils/testing.zig");
+const testing = anotherworld.testing;
 
 test "Ensure everything compiles" {
     testing.refAllDecls(Host);

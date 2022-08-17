@@ -8,9 +8,10 @@ const Video = @import("machine/video.zig").Video;
 const BufferID = @import("values/buffer_id.zig").BufferID;
 const UserInput = @import("machine/user_input.zig").UserInput;
 
+const anotherworld = @import("anotherworld");
 const ensureValidFixtureDir = @import("integration_tests/helpers.zig").ensureValidFixtureDir;
-const measure = @import("utils/measure.zig").measure;
-const log = @import("utils/logging.zig").log;
+const measure = anotherworld.benchmark.measure;
+const log = anotherworld.log;
 
 const std = @import("std");
 
@@ -100,7 +101,7 @@ pub fn main() !void {
     , .{result});
 }
 
-const testing = @import("utils/testing.zig");
+const testing = anotherworld.testing;
 
 test "Ensure everything compiles" {
     testing.refAllDecls(@This());

@@ -1,3 +1,6 @@
+const anotherworld = @import("../lib/anotherworld.zig");
+const log = anotherworld.log;
+
 const Machine = @import("../machine/machine.zig").Machine;
 const Host = @import("../machine/host.zig").Host;
 const ResourceDirectory = @import("../resources/resource_directory.zig").ResourceDirectory;
@@ -7,7 +10,6 @@ const GameInput = @import("../machine/user_input.zig").UserInput;
 
 const SDL = @import("sdl2");
 const std = @import("std");
-const log = @import("../utils/logging.zig").log;
 
 const Input = struct {
     game_input: GameInput = .{},
@@ -239,7 +241,7 @@ fn resolvedFrameDelay(requested_delay: u64, possible_last_frame_time: ?i64, curr
     }
 }
 
-const testing = @import("../utils/testing.zig");
+const testing = anotherworld.testing;
 
 test "Ensure everything compiles" {
     testing.refAllDecls(SDLEngine);

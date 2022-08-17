@@ -11,6 +11,8 @@
 //! 01|oooo_oooo: next 8 bits are relative offset: duplicate 2 bytes from uncompressed data at offset.
 //! 00|ccc: next 3 bits are count: write the next [count + 1] bytes following this instruction to the write cursor.
 
+const anotherworld = @import("../lib/anotherworld.zig");
+
 /// Reads the next RLE instruction from the specified reader, and executes the instruction on the specified writer.
 /// Returns an error if the reader could not read or the writer could not write.
 ///
@@ -70,7 +72,7 @@ pub fn decodeInstruction(reader: anytype, writer: anytype) !void {
 
 // -- Tests --
 
-const testing = @import("../utils/testing.zig");
+const testing = anotherworld.testing;
 const mockReader = @import("test_helpers/mock_reader.zig").mockReader;
 const MockWriter = @import("test_helpers/mock_writer.zig").MockWriter;
 

@@ -7,9 +7,9 @@
 //! limited and prescriptive API. The main difference between this and `fixedBufferStream.seekableStream`
 //! is that this does bounds-checking on seek (jump/skip) operations, not just on read.
 
+const anotherworld = @import("../lib/anotherworld.zig");
+const static_limits = anotherworld.static_limits;
 const readIntSliceBig = @import("std").mem.readIntSliceBig;
-const introspection = @import("../utils/introspection.zig");
-const static_limits = @import("../static_limits.zig");
 
 /// An Another World bytecode program, which maintains a counter to the next instruction to execute.
 pub const Program = struct {
@@ -39,7 +39,7 @@ pub const Program = struct {
     pub fn read(self: *Self, comptime Integer: type) ReadError!Integer {
         // readIntSliceBig uses this construction internally.
         // @sizeOf would be nicer, but may include padding bytes.
-        const byte_width = comptime @divExact(introspection.bitCount(Integer), 8);
+        const byte_width = comptime @divExact(anotherworld.meta.bitCount(Integer), 8);
 
         const lower_bound = @as(usize, self.counter);
         const upper_bound = lower_bound + byte_width;
@@ -111,7 +111,7 @@ pub const Program = struct {
 };
 
 /// -- Tests --
-const testing = @import("../utils/testing.zig");
+const testing = anotherworld.testing;
 
 test "Address type matches range of program counter values" {
     try static_limits.validateTrustedType(Program.Address, static_limits.max_program_size);

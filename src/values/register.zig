@@ -1,5 +1,6 @@
 //! Register values can interpreted as signed or unsigned 16-bit integers.
-const introspection = @import("../utils/introspection.zig");
+
+const anotherworld = @import("../lib/anotherworld.zig");
 
 /// A 16-bit register value interpreted as a signed integer.
 /// Intended for signed arithmetic.
@@ -16,4 +17,4 @@ pub const BitPattern = Unsigned;
 /// --------
 /// const shift: Shift = 6;
 /// const shifted_value = @as(BitPattern, 0b0000_0000_0000_1000) << 6
-pub const Shift = introspection.ShiftType(BitPattern);
+pub const Shift = anotherworld.meta.ShiftType(BitPattern);

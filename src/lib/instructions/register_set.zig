@@ -1,3 +1,5 @@
+const anotherworld = @import("../anotherworld.zig");
+
 const Opcode = @import("opcode.zig").Opcode;
 const Register = @import("../../values/register.zig");
 const RegisterID = @import("../../values/register_id.zig").RegisterID;
@@ -45,7 +47,7 @@ pub const RegisterSet = struct {
 
 // -- Tests --
 
-const testing = @import("../../utils/testing.zig");
+const testing = anotherworld.testing;
 const expectParse = @import("test_helpers/parse.zig").expectParse;
 
 test "parse parses valid bytecode and consumes 4 bytes" {

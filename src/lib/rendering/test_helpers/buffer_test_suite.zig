@@ -1,9 +1,11 @@
+const anotherworld = @import("../../anotherworld.zig");
+
 const planar_bitmap = @import("../../../resources/planar_bitmap.zig");
 const Surface = @import("../surface.zig").Surface;
 const ColorID = @import("../color_id.zig").ColorID;
 const PaletteFixtures = @import("../palette.zig").Fixtures;
 
-const testing = @import("../../../utils/testing.zig");
+const testing = anotherworld.testing;
 const expectBitmap = @import("indexed_bitmap.zig").expectBitmap;
 
 // -- Test helpers --

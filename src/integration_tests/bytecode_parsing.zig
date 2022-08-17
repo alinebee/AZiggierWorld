@@ -5,11 +5,13 @@ const instructions = @import("anotherworld").instructions;
 const Program = @import("../machine/program.zig").Program;
 const ResourceDirectory = @import("../resources/resource_directory.zig").ResourceDirectory;
 
-const testing = @import("../utils/testing.zig");
-const instrospection = @import("../utils/introspection.zig");
-const log = @import("../utils/logging.zig").log;
-const ensureValidFixtureDir = @import("helpers.zig").ensureValidFixtureDir;
 const std = @import("std");
+const anotherworld = @import("../lib/anotherworld.zig");
+
+const testing = anotherworld.testing;
+const meta = anotherworld.meta;
+const log = anotherworld.log;
+const ensureValidFixtureDir = @import("helpers.zig").ensureValidFixtureDir;
 
 /// Records and prints the details of a bytecode instruction that could not be parsed.
 const ParseFailure = struct {
@@ -34,7 +36,7 @@ const ParseFailure = struct {
     }
 
     fn opcodeName(self: ParseFailure) []const u8 {
-        if (instrospection.intToEnum(instructions.Opcode, self.parsed_bytes[0])) |value| {
+        if (meta.intToEnum(instructions.Opcode, self.parsed_bytes[0])) |value| {
             return @tagName(value);
         } else |_| {
             return "Unknown";

@@ -1,3 +1,5 @@
+const anotherworld = @import("../anotherworld.zig");
+
 const Opcode = @import("opcode.zig").Opcode;
 const ThreadID = @import("../../values/thread_id.zig").ThreadID;
 const Program = @import("../../machine/program.zig").Program;
@@ -88,9 +90,9 @@ pub const ControlThreads = struct {
 
 // -- Tests --
 
-const testing = @import("../../utils/testing.zig");
+const testing = anotherworld.testing;
 const expectParse = @import("test_helpers/parse.zig").expectParse;
-const static_limits = @import("../../static_limits.zig");
+const static_limits = anotherworld.static_limits;
 
 // - parse tests -
 

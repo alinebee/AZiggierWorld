@@ -124,7 +124,7 @@ pub fn MockMachine(comptime Implementation: type) type {
 
 // -- Tests --
 
-const testing = @import("../../utils/testing.zig");
+const testing = anotherworld.testing;
 
 test "MockMachine calls drawPolygon correctly on stub implementation" {
     var mock = mockMachine(struct {

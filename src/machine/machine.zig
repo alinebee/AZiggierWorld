@@ -30,6 +30,8 @@
 
 const anotherworld = @import("../lib/anotherworld.zig");
 const rendering = anotherworld.rendering;
+const static_limits = anotherworld.static_limits;
+const log = anotherworld.log;
 
 const BufferID = @import("../values/buffer_id.zig").BufferID;
 const PaletteID = @import("../values/palette_id.zig").PaletteID;
@@ -55,12 +57,8 @@ const ResourceReader = @import("../resources/resource_reader.zig").ResourceReade
 const MockRepository = @import("../resources/mock_repository.zig").MockRepository;
 const mock_host = @import("test_helpers/mock_host.zig");
 
-const static_limits = @import("../static_limits.zig");
-
 const std = @import("std");
 const mem = std.mem;
-
-const log = @import("../utils/logging.zig").log;
 
 const thread_count = static_limits.thread_count;
 
@@ -384,7 +382,7 @@ pub const Machine = struct {
 
 // -- Tests --
 
-const testing = @import("../utils/testing.zig");
+const testing = anotherworld.testing;
 const meta = @import("std").meta;
 
 // - Initialization tests -

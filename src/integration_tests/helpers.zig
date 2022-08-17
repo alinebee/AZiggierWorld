@@ -1,7 +1,8 @@
 const std = @import("std");
 const fs = std.fs;
 const mem = std.mem;
-const log = @import("../utils/logging.zig").log;
+const anotherworld = @import("../lib/anotherworld.zig");
+const log = anotherworld.log;
 
 /// The path to the location you should put Another World game files to enable integration tests.
 /// This is relative to the base project folder, not to the location of this source file.

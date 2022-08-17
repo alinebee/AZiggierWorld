@@ -1,8 +1,9 @@
 const std = @import("std");
 const SDL = @import("sdl2");
 
-const testing = std.testing;
-const log = @import("utils/logging.zig").log;
+const anotherworld = @import("lib/anotherworld.zig");
+const testing = anotherworld.testing;
+const log = anotherworld.log;
 const SDLEngine = @import("engines/sdl_engine.zig").SDLEngine;
 
 pub fn main() !void {

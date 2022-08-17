@@ -1,3 +1,5 @@
+const anotherworld = @import("../anotherworld.zig");
+
 const Color = @import("color.zig").Color;
 const mem = @import("std").mem;
 
@@ -15,7 +17,7 @@ pub fn filledSurface(comptime SurfaceType: type, color: Color) SurfaceType {
 
 // -- Tests --
 
-const testing = @import("../../utils/testing.zig");
+const testing = anotherworld.testing;
 
 test "Instance matches the size of a raw u8 buffer" {
     const width = 320;

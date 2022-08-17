@@ -5,10 +5,11 @@
 //! This file defines the structure of these resource descriptors, along with methods
 //! to parse them from a MEMLIST.BIN file.
 
+const anotherworld = @import("../lib/anotherworld.zig");
+const meta = anotherworld.meta;
+
 const ResourceType = @import("../values/resource_type.zig").ResourceType;
 const Filename = @import("filename.zig").Filename;
-
-const introspection = @import("../utils/introspection.zig");
 
 /// Describes an individual resource in Another World's data files:
 /// its length, type and the bank file in which it is located.
@@ -38,7 +39,7 @@ pub const ResourceDescriptor = struct {
     }
 
     pub fn Error(comptime Reader: type) type {
-        const ReaderError = introspection.ErrorType(Reader.readNoEof);
+        const ReaderError = meta.ErrorType(Reader.readNoEof);
 
         return ReaderError || ResourceType.Error || error{
             /// A resource defined a compressed size that was larger than its uncompressed size.
@@ -182,7 +183,7 @@ pub const FileExamples = struct {
 
 // -- Tests --
 
-const testing = @import("../utils/testing.zig");
+const testing = anotherworld.testing;
 const fixedBufferStream = @import("std").io.fixedBufferStream;
 
 test "iterator.next() correctly parses file descriptor" {

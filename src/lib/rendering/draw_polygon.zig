@@ -1,10 +1,12 @@
+const anotherworld = @import("../anotherworld.zig");
+
 const Polygon = @import("polygon.zig").Polygon;
 const ColorID = @import("color_id.zig").ColorID;
 const Point = @import("point.zig").Point;
 const Range = @import("range.zig").Range;
 const FixedPrecision = @import("fixed_precision.zig").FixedPrecision;
 
-const static_limits = @import("../../static_limits.zig");
+const static_limits = anotherworld.static_limits;
 const math = @import("std").math;
 
 /// Draws a single polygon into a buffer using the position and draw mode specified in the polygon's data.
@@ -163,7 +165,7 @@ fn stepDistance(delta_x: Point.Coordinate, delta_y: TrustedVerticalDelta) FixedP
 
 // -- Tests --
 
-const testing = @import("../../utils/testing.zig");
+const testing = anotherworld.testing;
 const expectPixels = @import("test_helpers/buffer_test_suite.zig").expectPixels;
 
 /// Given a function that takes a width and a height and returns a type that implements the buffer interface,

@@ -1,3 +1,5 @@
+const anotherworld = @import("../lib/anotherworld.zig");
+
 const fmt = @import("std").fmt;
 
 const _Raw = u8;
@@ -87,7 +89,7 @@ pub const RegisterID = enum(_Raw) {
 
 // -- Tests --
 
-const static_limits = @import("../static_limits.zig");
+const static_limits = anotherworld.static_limits;
 
 test "Raw type matches range of legal register IDs" {
     try static_limits.validateTrustedType(_Raw, static_limits.register_count);

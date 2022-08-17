@@ -1,3 +1,5 @@
+const anotherworld = @import("../anotherworld.zig");
+
 /// Defines an X,Y point in screen space.
 pub const Point = struct {
     /// The X position in virtual 320x200 pixels, starting from the left edge of the screen.
@@ -32,7 +34,7 @@ pub const Point = struct {
 
 // -- Tests --
 
-const testing = @import("../../utils/testing.zig");
+const testing = anotherworld.testing;
 const math = @import("std").math;
 
 const max_coord = math.maxInt(Point.Coordinate);

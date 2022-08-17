@@ -1,5 +1,7 @@
+const anotherworld = @import("../anotherworld.zig");
+
 const Color = @import("color.zig").Color;
-const static_limits = @import("../../static_limits.zig");
+const static_limits = anotherworld.static_limits;
 
 /// The number of colors inside a palette.
 const color_count = static_limits.color_count;

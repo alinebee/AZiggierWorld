@@ -21,6 +21,8 @@
 //! the full VGA gamut, so it's inaccurate to widen them to an 8-bit-per-channel gamut
 //! by leaving the lower 2 bits empty.)
 
+const anotherworld = @import("../anotherworld.zig");
+
 /// A 32-bit color value parsed from Another World's resource data.
 pub const Color = packed struct {
     r: u8,
@@ -76,7 +78,7 @@ const Fixtures = struct {
 
 // -- Tests --
 
-const testing = @import("../../utils/testing.zig");
+const testing = anotherworld.testing;
 
 test "spread converts 4-bit values to expected 8-bit values" {
     // zig fmt: off

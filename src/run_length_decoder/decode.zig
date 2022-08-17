@@ -20,6 +20,8 @@
 //!    - The read cursor and write cursors should both be at the start of the buffer.
 //!    - The checksum should be equal to 0.
 
+const anotherworld = @import("../lib/anotherworld.zig");
+
 const Reader = @import("reader.zig").Reader;
 const Writer = @import("writer.zig").Writer;
 const decodeInstruction = @import("decode_instruction.zig").decodeInstruction;
@@ -59,7 +61,7 @@ pub fn decode(source: []const u8, destination: []u8) Error!void {
 
 // -- Tests --
 
-const testing = @import("../utils/testing.zig");
+const testing = anotherworld.testing;
 const MockEncoder = @import("test_helpers/mock_encoder.zig").MockEncoder;
 
 test "decode decodes valid payload" {

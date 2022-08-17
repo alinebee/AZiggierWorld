@@ -5,6 +5,8 @@
 //! As a tradeoff, buffer takes twice the bytes: a 320x200 buffer takes 64,000 bytes,
 //! versus 32,000 for the packed buffer implementation.
 
+const anotherworld = @import("../anotherworld.zig");
+
 const ColorID = @import("color_id.zig").ColorID;
 const Palette = @import("palette.zig").Palette;
 const DrawMode = @import("draw_mode.zig").DrawMode;
@@ -232,7 +234,7 @@ const NativeColor = ColorID;
 
 // -- Tests --
 
-const testing = @import("../../utils/testing.zig");
+const testing = anotherworld.testing;
 
 test "AlignedBuffer produces buffer of the expected size filled with zeroes." {
     const buffer = AlignedBuffer(320, 200){};

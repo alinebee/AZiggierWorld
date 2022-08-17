@@ -1,3 +1,5 @@
+const anotherworld = @import("../../anotherworld.zig");
+
 const ColorID = @import("../color_id.zig").ColorID;
 
 const std = @import("std");
@@ -132,7 +134,7 @@ pub fn expectEqualBitmaps(expected: anytype, actual: @TypeOf(expected)) !void {
 
 // -- Tests --
 
-const testing = @import("../../../utils/testing.zig");
+const testing = anotherworld.testing;
 
 test "fromString populates bitmap data correctly from multiline string" {
     const bitmap = IndexedBitmap(4, 4).fromString(

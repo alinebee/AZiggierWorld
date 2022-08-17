@@ -1,10 +1,10 @@
+const anotherworld = @import("../anotherworld.zig");
+
 const Opcode = @import("opcode.zig").Opcode;
 const Register = @import("../../values/register.zig");
 const RegisterID = @import("../../values/register_id.zig").RegisterID;
 const Program = @import("../../machine/program.zig").Program;
 const Machine = @import("../../machine/machine.zig").Machine;
-
-const introspection = @import("../../utils/introspection.zig");
 
 /// Right-shift (>>) the bits in a register's value by a specified distance.
 pub const RegisterShiftRight = struct {
@@ -29,7 +29,7 @@ pub const RegisterShiftRight = struct {
         // the register to 0 on execution.
         const raw_shift = try program.read(u16);
 
-        const trusted_shift = introspection.intCast(Register.Shift, raw_shift) catch {
+        const trusted_shift = anotherworld.meta.intCast(Register.Shift, raw_shift) catch {
             return error.ShiftTooLarge;
         };
 
@@ -70,7 +70,7 @@ pub const RegisterShiftRight = struct {
 
 // -- Tests --
 
-const testing = @import("../../utils/testing.zig");
+const testing = anotherworld.testing;
 const expectParse = @import("test_helpers/parse.zig").expectParse;
 
 test "parse parses valid bytecode and consumes 4 bytes" {

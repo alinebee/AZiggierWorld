@@ -2,6 +2,8 @@
 //! The font bitmaps are taken from the original Another World MS-DOS release, and support
 //! a subset of the full ASCII character set.
 
+const anotherworld = @import("../lib/anotherworld.zig");
+
 /// The width in pixels of each glyph.
 pub const glyph_width: usize = @bitSizeOf(u8);
 /// The height in pixels of each glyph.
@@ -1191,7 +1193,7 @@ const @"~" = Glyph{
 
 // -- Tests --
 
-const testing = @import("../utils/testing.zig");
+const testing = anotherworld.testing;
 
 // zig fmt: off
 test "glyph returns correct glyphs for supported characters" {

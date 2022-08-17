@@ -1,3 +1,5 @@
+const anotherworld = @import("../anotherworld.zig");
+
 const ColorID = @import("color_id.zig").ColorID;
 const Point = @import("point.zig").Point;
 const BoundingBox = @import("bounding_box.zig").BoundingBox;
@@ -82,7 +84,7 @@ pub const Error = Font.Error;
 
 // -- Tests --
 
-const testing = @import("../../utils/testing.zig");
+const testing = anotherworld.testing;
 const expectPixels = @import("test_helpers/buffer_test_suite.zig").expectPixels;
 
 /// Given a function that takes a width and a height and returns a type that implements the buffer interface,

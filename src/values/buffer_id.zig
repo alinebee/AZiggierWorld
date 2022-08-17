@@ -1,5 +1,7 @@
 //! Types for parsing video buffer IDs from Another World bytecode instructions.
 
+const anotherworld = @import("../lib/anotherworld.zig");
+
 const math = @import("std").math;
 
 const _Raw = u8;
@@ -40,8 +42,8 @@ pub const BufferID = union(enum(_Raw)) {
 
 // -- Tests --
 
-const testing = @import("../utils/testing.zig");
-const static_limits = @import("../static_limits.zig");
+const testing = anotherworld.testing;
+const static_limits = anotherworld.static_limits;
 
 test "Specific covers range of legal buffer IDs" {
     try static_limits.validateTrustedType(BufferID.Specific, static_limits.buffer_count);

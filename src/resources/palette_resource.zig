@@ -13,12 +13,12 @@
 //! http://fabiensanglard.net/another_world_polygons_amiga500/index.html
 
 const anotherworld = @import("../lib/anotherworld.zig");
+const static_limits = anotherworld.static_limits;
 
 const Color = anotherworld.rendering.Color;
 const Palette = anotherworld.rendering.Palette;
 const PaletteID = @import("../values/palette_id.zig").PaletteID;
 
-const static_limits = @import("../static_limits.zig");
 const mem = @import("std").mem;
 
 /// The number of palettes inside a palette resource.
@@ -99,7 +99,7 @@ pub const PaletteResource = struct {
 
 // -- Tests --
 
-const testing = @import("../utils/testing.zig");
+const testing = anotherworld.testing;
 const fixedBufferStream = @import("std").io.fixedBufferStream;
 const countingReader = @import("std").io.countingReader;
 

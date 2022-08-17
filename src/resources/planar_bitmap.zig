@@ -16,6 +16,7 @@
 //! to be stored efficiently.)
 
 const anotherworld = @import("../lib/anotherworld.zig");
+
 const ColorID = anotherworld.rendering.ColorID;
 
 const math = @import("std").math;
@@ -149,7 +150,7 @@ pub const Fixtures = struct {
 
 // -- Tests --
 
-const testing = @import("../utils/testing.zig");
+const testing = anotherworld.testing;
 
 test "Parses planar data properly" {
     const data = &Fixtures.valid_16px;

@@ -8,10 +8,12 @@ const ResourceDirectory = @import("../resources/resource_directory.zig").Resourc
 const BufferID = @import("../values/buffer_id.zig").BufferID;
 const UserInput = @import("../machine/user_input.zig").UserInput;
 
-const ensureValidFixtureDir = @import("helpers.zig").ensureValidFixtureDir;
-const testing = @import("../utils/testing.zig");
-const log = @import("../utils/logging.zig").log;
 const std = @import("std");
+const anotherworld = @import("../lib/anotherworld.zig");
+
+const ensureValidFixtureDir = @import("helpers.zig").ensureValidFixtureDir;
+const testing = anotherworld.testing;
+const log = anotherworld.log;
 
 const CountingHost = struct {
     render_count: usize = 0,

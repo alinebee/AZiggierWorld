@@ -1,4 +1,5 @@
-const intToEnum = @import("../utils/introspection.zig").intToEnum;
+const anotherworld = @import("../lib/anotherworld.zig");
+const intToEnum = anotherworld.meta.intToEnum;
 
 const Trusted = u6;
 
@@ -37,8 +38,8 @@ pub const ThreadID = enum(Trusted) {
 
 // -- Tests --
 
-const testing = @import("../utils/testing.zig");
-const static_limits = @import("../static_limits.zig");
+const testing = anotherworld.testing;
+const static_limits = anotherworld.static_limits;
 
 test "Trusted type matches range of legal thread IDs" {
     try static_limits.validateTrustedType(Trusted, static_limits.thread_count);

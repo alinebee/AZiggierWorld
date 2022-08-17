@@ -1,3 +1,5 @@
+const anotherworld = @import("../anotherworld.zig");
+
 const Opcode = @import("opcode.zig").Opcode;
 const Register = @import("../../values/register.zig");
 const Program = @import("../../machine/program.zig").Program;
@@ -111,7 +113,7 @@ pub const JumpConditional = struct {
 
 // -- Tests --
 
-const testing = @import("../../utils/testing.zig");
+const testing = anotherworld.testing;
 const expectParse = @import("test_helpers/parse.zig").expectParse;
 
 test "parse parses equal_to_register instruction and consumes 6 bytes" {

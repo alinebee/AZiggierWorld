@@ -10,7 +10,9 @@
 //! However, it's not clear that the stack depth will ever exceed 1 in the original DOS bytecode
 //! (i.e. the game may never use nested subroutines).
 
-const static_limits = @import("../static_limits.zig");
+const anotherworld = @import("../lib/anotherworld.zig");
+const static_limits = anotherworld.static_limits;
+
 const Program = @import("program.zig").Program;
 
 /// Represents the state of the program execution stack.
@@ -60,7 +62,7 @@ pub const Stack = struct {
 
 // -- Tests --
 
-const testing = @import("../utils/testing.zig");
+const testing = anotherworld.testing;
 
 test "Pushing increments the stack" {
     var stack = Stack{};

@@ -75,7 +75,7 @@ pub const DrawString = struct {
 
 // -- Tests --
 
-const testing = @import("../../utils/testing.zig");
+const testing = anotherworld.testing;
 const expectParse = @import("test_helpers/parse.zig").expectParse;
 const mockMachine = @import("../../machine/test_helpers/mock_machine.zig").mockMachine;
 

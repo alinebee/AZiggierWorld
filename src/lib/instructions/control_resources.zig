@@ -1,3 +1,5 @@
+const anotherworld = @import("../anotherworld.zig");
+
 const Opcode = @import("opcode.zig").Opcode;
 const Program = @import("../../machine/program.zig").Program;
 const Machine = @import("../../machine/machine.zig").Machine;
@@ -68,7 +70,7 @@ pub const ControlResources = union(enum) {
 
 // -- Tests --
 
-const testing = @import("../../utils/testing.zig");
+const testing = anotherworld.testing;
 const expectParse = @import("test_helpers/parse.zig").expectParse;
 const mockMachine = @import("../../machine/test_helpers/mock_machine.zig").mockMachine;
 

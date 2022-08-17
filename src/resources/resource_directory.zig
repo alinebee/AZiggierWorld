@@ -14,16 +14,15 @@
 //! const first_resource_descriptor = try reader.resourceDescriptor(0);
 //! const game_data = try reader.allocReadResource(my_allocator, first_resource_descriptor);
 
+const anotherworld = @import("../lib/anotherworld.zig");
+const static_limits = anotherworld.static_limits;
+const log = anotherworld.log;
+
 const ResourceReader = @import("resource_reader.zig").ResourceReader;
 const ResourceDescriptor = @import("resource_descriptor.zig").ResourceDescriptor;
 const ResourceID = @import("../values/resource_id.zig").ResourceID;
 const Filename = @import("filename.zig").Filename;
 const decode = @import("../run_length_decoder/decode.zig").decode;
-
-const introspection = @import("../utils/introspection.zig");
-const log = @import("../utils/logging.zig").log;
-
-const static_limits = @import("../static_limits.zig");
 
 const std = @import("std");
 const mem = std.mem;
@@ -190,7 +189,7 @@ const ResourceListExamples = struct {
 
 // -- Tests --
 
-const testing = @import("../utils/testing.zig");
+const testing = anotherworld.testing;
 
 test "ensure everything compiles" {
     testing.refAllDecls(ResourceDirectory);

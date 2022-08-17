@@ -1,4 +1,5 @@
-const intToEnum = @import("../utils/introspection.zig").intToEnum;
+const anotherworld = @import("../lib/anotherworld.zig");
+const intToEnum = anotherworld.meta.intToEnum;
 
 const _Raw = u8;
 
@@ -48,7 +49,7 @@ pub const ResourceType = enum(_Raw) {
 
 // -- Tests --
 
-const testing = @import("../utils/testing.zig");
+const testing = anotherworld.testing;
 
 test "parse parses raw operation types correctly" {
     try testing.expectEqual(.sound_or_empty, ResourceType.parse(0));

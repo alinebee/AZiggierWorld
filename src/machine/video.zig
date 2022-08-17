@@ -1,12 +1,12 @@
-const rendering = @import("../lib/anotherworld.zig").rendering;
+const anotherworld = @import("../lib/anotherworld.zig");
+const rendering = anotherworld.rendering;
+const static_limits = anotherworld.static_limits;
 
 const PaletteID = @import("../values/palette_id.zig").PaletteID;
 const BufferID = @import("../values/buffer_id.zig").BufferID;
 const StringID = @import("../values/string_id.zig").StringID;
 const PolygonResource = @import("../resources/polygon_resource.zig").PolygonResource;
 const PaletteResource = @import("../resources/palette_resource.zig").PaletteResource;
-
-const static_limits = @import("../static_limits.zig");
 
 const english = @import("../assets/english.zig");
 
@@ -227,7 +227,7 @@ const PolygonVisitor = struct {
 
 // -- Tests --
 
-const testing = @import("../utils/testing.zig");
+const testing = anotherworld.testing;
 const MockHost = @import("test_helpers/mock_host.zig").MockHost;
 const planar_bitmap = @import("../resources/planar_bitmap.zig");
 const Bitmap = rendering.IndexedBitmap(static_limits.virtual_screen_width, static_limits.virtual_screen_height);

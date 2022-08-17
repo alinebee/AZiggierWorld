@@ -1,14 +1,15 @@
 //! This test dumps data about the sizes of each game part's data.
 //! It does not test functionality, and so is kept out of the main suite of integration tests.
 
+const std = @import("std");
+const anotherworld = @import("../lib/anotherworld.zig");
+
 const ResourceDirectory = @import("../resources/resource_directory.zig").ResourceDirectory;
 const GamePart = @import("../values/game_part.zig").GamePart;
 
 const ensureValidFixtureDir = @import("helpers.zig").ensureValidFixtureDir;
-const log = @import("../utils/logging.zig").log;
-const testing = @import("../utils/testing.zig");
-
-const std = @import("std");
+const log = anotherworld.log;
+const testing = anotherworld.testing;
 
 test "Report sizes for each game part" {
     std.testing.log_level = .info;

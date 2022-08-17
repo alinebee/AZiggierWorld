@@ -2,6 +2,8 @@
 //! Records the number of times each host method was called, and allows a test
 //! to perform arbitrary assertions in the body of each host method.
 
+const anotherworld = @import("../../lib/anotherworld.zig");
+
 const Host = @import("../host.zig").Host;
 const Machine = @import("../machine.zig").Machine;
 const BufferID = @import("../../values/buffer_id.zig").BufferID;
@@ -43,7 +45,7 @@ pub fn MockHost(comptime Implementation: type) type {
 
 // -- Tests --
 
-const testing = @import("../../utils/testing.zig");
+const testing = anotherworld.testing;
 
 test "Ensure everything compiles" {
     testing.refAllDecls(MockHost(DefaultImplementation));

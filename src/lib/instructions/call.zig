@@ -1,3 +1,5 @@
+const anotherworld = @import("../anotherworld.zig");
+
 const Opcode = @import("opcode.zig").Opcode;
 const Program = @import("../../machine/program.zig").Program;
 const Machine = @import("../../machine/machine.zig").Machine;
@@ -43,7 +45,7 @@ pub const Call = struct {
 
 // -- Tests --
 
-const testing = @import("../../utils/testing.zig");
+const testing = anotherworld.testing;
 const expectParse = @import("test_helpers/parse.zig").expectParse;
 
 test "parse parses instruction from valid bytecode and consumes 3 bytes" {

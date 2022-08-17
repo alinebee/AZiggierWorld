@@ -1,3 +1,5 @@
+const anotherworld = @import("../lib/anotherworld.zig");
+
 const Register = @import("../values/register.zig");
 
 /// The current state of user input. Expected to be provided by the host on each tic.
@@ -129,7 +131,7 @@ fn normalizedCharacterRegisterValue(char: u8) Register.Unsigned {
 
 // -- Testing --
 
-const testing = @import("../utils/testing.zig");
+const testing = anotherworld.testing;
 
 test "Ensure everything compiles" {
     testing.refAllDecls(UserInput);

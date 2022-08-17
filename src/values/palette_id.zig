@@ -2,7 +2,8 @@
 //! where each palette is indexed in bytecode by an integer from 0-31.
 //! The game swapped between palettes from screen to screen or to do effects like lightning or fades.
 
-const intToEnum = @import("../utils/introspection.zig").intToEnum;
+const anotherworld = @import("../lib/anotherworld.zig");
+const intToEnum = anotherworld.meta.intToEnum;
 
 const _Trusted = u5;
 
@@ -38,8 +39,8 @@ pub const PaletteID = enum(_Trusted) {
 
 // -- Tests --
 
-const testing = @import("../utils/testing.zig");
-const static_limits = @import("../static_limits.zig");
+const testing = anotherworld.testing;
+const static_limits = anotherworld.static_limits;
 
 test "Trusted covers range of legal palette IDs" {
     try static_limits.validateTrustedType(_Trusted, static_limits.palette_count);

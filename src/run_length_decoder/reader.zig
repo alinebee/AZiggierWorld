@@ -8,6 +8,8 @@
 //! See decode.zig for details of the overall algorithm, and decode_instruction.zig for details
 //! of the encoding syntax.
 
+const anotherworld = @import("../lib/anotherworld.zig");
+
 const std = @import("std");
 const mem = std.mem;
 
@@ -185,7 +187,7 @@ const Fixtures = struct {
 
 // -- Tests --
 
-const testing = @import("../utils/testing.zig");
+const testing = anotherworld.testing;
 const io = std.io;
 
 test "init() reads unpacked size, initial checksum and first chunk from end of source data" {

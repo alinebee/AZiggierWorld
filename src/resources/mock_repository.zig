@@ -20,12 +20,13 @@
 //! const garbage_data = try reader.allocReadResource(testing.allocator, first_resource_descriptor);
 //! try testing.expectEqual(1, repository.read_count);
 
+const anotherworld = @import("../lib/anotherworld.zig");
+const static_limits = anotherworld.static_limits;
+const instructions = anotherworld.instructions;
+
 const ResourceReader = @import("resource_reader.zig").ResourceReader;
 const ResourceDescriptor = @import("resource_descriptor.zig").ResourceDescriptor;
 const ResourceID = @import("../values/resource_id.zig").ResourceID;
-const instructions = @import("../lib/anotherworld.zig").instructions;
-
-const static_limits = @import("../static_limits.zig");
 
 const mem = @import("std").mem;
 const BoundedArray = @import("std").BoundedArray;
@@ -283,7 +284,7 @@ const TestFixtures = struct {
 
 // -- Tests --
 
-const testing = @import("../utils/testing.zig");
+const testing = anotherworld.testing;
 
 const example_descriptor = ResourceDescriptor{
     .type = .music,

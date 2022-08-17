@@ -1,7 +1,9 @@
+const anotherworld = @import("../../lib/anotherworld.zig");
+const meta = anotherworld.meta;
+
 const std = @import("std");
 const assert = std.debug.assert;
 const trait = std.meta.trait;
-const introspection = @import("../../utils/introspection.zig");
 
 const ReaderMethods = @import("../reader_methods.zig").ReaderMethods;
 
@@ -22,8 +24,8 @@ pub fn mockReader(comptime Integer: type, bits: Integer) MockReader(Integer) {
 fn MockReader(comptime Integer: type) type {
     comptime assert(trait.isUnsignedInt(Integer));
 
-    const ShiftType = introspection.ShiftType(Integer);
-    const bit_count = introspection.bitCount(Integer);
+    const ShiftType = meta.ShiftType(Integer);
+    const bit_count = meta.bitCount(Integer);
     const max_shift: ShiftType = bit_count - 1;
 
     return struct {
@@ -70,7 +72,7 @@ fn MockReader(comptime Integer: type) type {
 
 // -- Tests --
 
-const testing = @import("../../utils/testing.zig");
+const testing = anotherworld.testing;
 
 test "readBit reads all bits in order from highest to lowest" {
     var reader = mockReader(u8, 0b1001_0110);

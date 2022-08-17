@@ -1,3 +1,5 @@
+const anotherworld = @import("../anotherworld.zig");
+
 const Point = @import("point.zig").Point;
 const Range = @import("range.zig").Range;
 
@@ -82,7 +84,7 @@ pub const BoundingBox = struct {
 
 // -- Tests --
 
-const testing = @import("../../utils/testing.zig");
+const testing = anotherworld.testing;
 const math = @import("std").math;
 
 fn expectIntersects(expectation: bool, bb1: BoundingBox, bb2: BoundingBox) !void {

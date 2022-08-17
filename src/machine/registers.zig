@@ -1,7 +1,8 @@
+const anotherworld = @import("../lib/anotherworld.zig");
+const static_limits = anotherworld.static_limits;
+
 const Register = @import("../values/register.zig");
 const RegisterID = @import("../values/register_id.zig").RegisterID;
-
-const static_limits = @import("../static_limits.zig");
 
 const register_count = static_limits.register_count;
 
@@ -63,7 +64,7 @@ pub const Registers = struct {
 
 // -- Tests --
 
-const testing = @import("../utils/testing.zig");
+const testing = anotherworld.testing;
 
 test "Ensure everything compiles" {
     testing.refAllDecls(Registers);

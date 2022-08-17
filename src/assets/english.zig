@@ -1,5 +1,7 @@
 //! Defines the UI strings from the full DOS English release of the game.
 
+const anotherworld = @import("../lib/anotherworld.zig");
+
 const StringID = @import("../values/string_id.zig").StringID;
 
 pub const Error = StringID.Error;
@@ -165,7 +167,7 @@ pub fn find(id: StringID) Error![]const u8 {
 
 // -- Tests --
 
-const testing = @import("../utils/testing.zig");
+const testing = anotherworld.testing;
 
 test "find returns string for valid identifier" {
     const valid_id = StringID.cast(0x02C);

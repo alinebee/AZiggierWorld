@@ -1,6 +1,8 @@
 //! Provides a standard interface for accessing Another World resource data from a repository,
 //! e.g. a directory on the local filesystem.
 
+const anotherworld = @import("../lib/anotherworld.zig");
+
 const ResourceDescriptor = @import("resource_descriptor.zig").ResourceDescriptor;
 const ResourceID = @import("../values/resource_id.zig").ResourceID;
 
@@ -192,7 +194,7 @@ const CountedRepository = struct {
 
 // -- Tests --
 
-const testing = @import("../utils/testing.zig");
+const testing = anotherworld.testing;
 
 const valid_resource_id = ResourceID.cast(0);
 const invalid_resource_id = ResourceID.cast(1);

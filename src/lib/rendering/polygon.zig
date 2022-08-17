@@ -19,14 +19,15 @@
 //!
 //! (See draw_polygon.zig for the draw algorithm.)
 
+const anotherworld = @import("../anotherworld.zig");
+const meta = anotherworld.meta;
+const static_limits = anotherworld.static_limits;
+
 const Point = @import("point.zig").Point;
 const BoundingBox = @import("bounding_box.zig").BoundingBox;
 const DrawMode = @import("draw_mode.zig").DrawMode;
 const PolygonScale = @import("polygon_scale.zig").PolygonScale;
 
-const introspection = @import("../../utils/introspection.zig");
-
-const static_limits = @import("../../static_limits.zig");
 const math = @import("std").math;
 const BoundedArray = @import("std").BoundedArray;
 
@@ -172,7 +173,7 @@ pub const Polygon = struct {
     const max_vertical_span = static_limits.precomputed_slope_count - 1;
 
     pub fn ParseError(comptime Reader: type) type {
-        const ReaderError = introspection.ErrorType(Reader.readByte);
+        const ReaderError = meta.ErrorType(Reader.readByte);
         return ReaderError || error{
             VertexCountTooHigh,
         };
@@ -274,7 +275,7 @@ pub const Polygon = struct {
 
 // -- Tests --
 
-const testing = @import("../../utils/testing.zig");
+const testing = anotherworld.testing;
 const fixedBufferStream = @import("std").io.fixedBufferStream;
 
 test "parse correctly parses 4-vertex dot polygon" {

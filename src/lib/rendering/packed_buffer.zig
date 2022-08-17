@@ -10,6 +10,8 @@
 //! addressing both pixels of a byte using a byte-length struct containing two 4-bit fields.
 //! Behind the scenes Zig takes care of the masking for us.)
 
+const anotherworld = @import("../anotherworld.zig");
+
 const ColorID = @import("color_id.zig").ColorID;
 const Palette = @import("palette.zig").Palette;
 const DrawMode = @import("draw_mode.zig").DrawMode;
@@ -375,7 +377,7 @@ const Index = struct {
 
 // -- Tests --
 
-const testing = @import("../../utils/testing.zig");
+const testing = anotherworld.testing;
 
 test "PackedBuffer produces buffer of the expected size filled with zeroes." {
     const buffer = PackedBuffer(320, 200){};

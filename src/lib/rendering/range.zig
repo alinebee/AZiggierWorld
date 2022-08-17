@@ -1,3 +1,4 @@
+const anotherworld = @import("../anotherworld.zig");
 const math = @import("std").math;
 
 /// Defines the type for a range of integers from a minimum up to and including a maximum value.
@@ -61,7 +62,7 @@ const Examples = struct {
     const disjoint = Range(isize).init(-20, -11);
 };
 
-const testing = @import("../../utils/testing.zig");
+const testing = anotherworld.testing;
 
 test "init returns range of expected type with expected values" {
     const range = Examples.reference;
