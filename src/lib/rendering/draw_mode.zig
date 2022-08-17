@@ -1,4 +1,4 @@
-const ColorID = @import("../values/color_id.zig").ColorID;
+const ColorID = @import("color_id.zig").ColorID;
 
 /// The modes in which a polygon can be drawn.
 pub const DrawMode = union(enum) {
@@ -34,7 +34,7 @@ pub const DrawMode = union(enum) {
 
 // -- Tests --
 
-const testing = @import("../utils/testing.zig");
+const testing = @import("../../utils/testing.zig");
 
 test "parse correctly parses raw draw mode" {
     try testing.expectEqual(.{ .solid_color = ColorID.cast(1) }, DrawMode.parse(1));

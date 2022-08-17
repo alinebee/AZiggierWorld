@@ -1,9 +1,9 @@
-const planar_bitmap = @import("../../resources/planar_bitmap.zig");
+const planar_bitmap = @import("../../../resources/planar_bitmap.zig");
 const Surface = @import("../surface.zig").Surface;
-const ColorID = @import("../../values/color_id.zig").ColorID;
-const Palette = @import("../../values/palette.zig");
+const ColorID = @import("../color_id.zig").ColorID;
+const PaletteFixtures = @import("../palette.zig").Fixtures;
 
-const testing = @import("../../utils/testing.zig");
+const testing = @import("../../../utils/testing.zig");
 const expectBitmap = @import("indexed_bitmap.zig").expectBitmap;
 
 // -- Test helpers --
@@ -316,7 +316,7 @@ pub fn runTests(comptime Instance: anytype) void {
                 \\3210
             );
 
-            const palette = Palette.Fixtures.palette;
+            const palette = PaletteFixtures.palette;
             const expected = DestinationSurface{
                 palette[15],
                 palette[14],

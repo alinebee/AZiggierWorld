@@ -10,15 +10,15 @@
 //! addressing both pixels of a byte using a byte-length struct containing two 4-bit fields.
 //! Behind the scenes Zig takes care of the masking for us.)
 
-const ColorID = @import("../../values/color_id.zig").ColorID;
-const Palette = @import("../../values/palette.zig").Palette;
-const DrawMode = @import("../../values/draw_mode.zig").DrawMode;
-const Point = @import("../../values/point.zig").Point;
-const Range = @import("../../values/range.zig").Range;
-const BoundingBox = @import("../../values/bounding_box.zig").BoundingBox;
+const ColorID = @import("color_id.zig").ColorID;
+const Palette = @import("palette.zig").Palette;
+const DrawMode = @import("draw_mode.zig").DrawMode;
+const Point = @import("point.zig").Point;
+const Range = @import("range.zig").Range;
+const BoundingBox = @import("bounding_box.zig").BoundingBox;
 
-const Surface = @import("../surface.zig").Surface;
-const indexed_bitmap = @import("../test_helpers/indexed_bitmap.zig");
+const Surface = @import("surface.zig").Surface;
+const indexed_bitmap = @import("test_helpers/indexed_bitmap.zig");
 const planar_bitmap = @import("../../resources/planar_bitmap.zig");
 
 const std = @import("std");
@@ -459,7 +459,7 @@ test "fromString fills buffer with expected contents" {
 }
 // zig fmt: on
 
-const buffer_test_suite = @import("../test_helpers/buffer_test_suite.zig");
+const buffer_test_suite = @import("test_helpers/buffer_test_suite.zig");
 
 test "Run buffer interface tests" {
     buffer_test_suite.runTests(PackedBuffer);

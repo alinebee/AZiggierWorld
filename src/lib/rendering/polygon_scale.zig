@@ -51,7 +51,7 @@ pub const PolygonScale = enum(_Raw) {
 
 // -- Tests --
 
-const testing = @import("../utils/testing.zig");
+const testing = @import("../../utils/testing.zig");
 const math = @import("std").math;
 
 const max_scale = PolygonScale.cast(math.maxInt(PolygonScale.Raw));

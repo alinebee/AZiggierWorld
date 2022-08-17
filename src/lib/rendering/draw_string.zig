@@ -1,6 +1,7 @@
-const ColorID = @import("../../values/color_id.zig").ColorID;
-const Point = @import("../../values/point.zig").Point;
-const BoundingBox = @import("../../values/bounding_box.zig").BoundingBox;
+const ColorID = @import("color_id.zig").ColorID;
+const Point = @import("point.zig").Point;
+const BoundingBox = @import("bounding_box.zig").BoundingBox;
+
 const Font = @import("../../assets/font.zig");
 
 /// Draw a single or multiline string in the specified color,
@@ -82,7 +83,7 @@ pub const Error = Font.Error;
 // -- Tests --
 
 const testing = @import("../../utils/testing.zig");
-const expectPixels = @import("../test_helpers/buffer_test_suite.zig").expectPixels;
+const expectPixels = @import("test_helpers/buffer_test_suite.zig").expectPixels;
 
 /// Given a function that takes a width and a height and returns a type that implements the buffer interface,
 /// test drawString against that buffer type.
@@ -146,8 +147,8 @@ fn runTests(comptime BufferFn: anytype) void {
     };
 }
 
-const AlignedBuffer = @import("../buffers/aligned_buffer.zig").AlignedBuffer;
-const PackedBuffer = @import("../buffers/packed_buffer.zig").PackedBuffer;
+const AlignedBuffer = @import("aligned_buffer.zig").AlignedBuffer;
+const PackedBuffer = @import("packed_buffer.zig").PackedBuffer;
 
 test "Run tests with aligned buffer" {
     runTests(AlignedBuffer);

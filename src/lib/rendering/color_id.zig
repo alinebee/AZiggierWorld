@@ -1,7 +1,7 @@
 //! Another World used 16-color palettes where each color is indexed by an integer from 0-15.
 //! These color IDs appear in bytecode, polygon resources and video buffers.
 
-const intToEnum = @import("../utils/introspection.zig").intToEnum;
+const intToEnum = @import("../../utils/introspection.zig").intToEnum;
 
 /// A color index from 0-15. Guaranteed at compile-time to be valid.
 const _Trusted = u4;
@@ -53,8 +53,8 @@ pub const ColorID = enum(_Trusted) {
 
 // -- Tests --
 
-const testing = @import("../utils/testing.zig");
-const static_limits = @import("../static_limits.zig");
+const testing = @import("../../utils/testing.zig");
+const static_limits = @import("../../static_limits.zig");
 
 test "Trusted covers range of legal color IDs" {
     try static_limits.validateTrustedType(_Trusted, static_limits.color_count);

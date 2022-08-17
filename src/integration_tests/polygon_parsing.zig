@@ -2,12 +2,14 @@
 //! polygon addresses can be parsed from Another World's original resource data.
 //! Requires that the `fixtures/dos` folder contains Another World DOS game files.
 
-const Instruction = @import("anotherworld").instructions.Instruction;
+const anotherworld = @import("anotherworld");
+const Instruction = anotherworld.instructions.Instruction;
+const Polygon = anotherworld.rendering.Polygon;
+const PolygonScale = anotherworld.rendering.PolygonScale;
+const Point = anotherworld.rendering.Point;
+
 const Program = @import("../machine/program.zig").Program;
 const PolygonResource = @import("../resources/polygon_resource.zig").PolygonResource;
-const Polygon = @import("../rendering/polygon.zig").Polygon;
-const PolygonScale = @import("../values/polygon_scale.zig").PolygonScale;
-const Point = @import("../values/point.zig").Point;
 const ResourceDirectory = @import("../resources/resource_directory.zig").ResourceDirectory;
 const GamePart = @import("../values/game_part.zig").GamePart;
 

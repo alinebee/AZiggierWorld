@@ -1,7 +1,10 @@
+const anotherworld = @import("../anotherworld.zig");
+
+const Point = anotherworld.rendering.Point;
+
 const Opcode = @import("opcode.zig").Opcode;
 const Program = @import("../../machine/program.zig").Program;
 const Machine = @import("../../machine/machine.zig").Machine;
-const Point = @import("../../values/point.zig").Point;
 const BufferID = @import("../../values/buffer_id.zig").BufferID;
 
 /// Copies the contents of one video buffer into another.

@@ -1,20 +1,10 @@
-const Point = @import("../values/point.zig").Point;
-const PolygonScale = @import("../values/polygon_scale.zig").PolygonScale;
-const ColorID = @import("../values/color_id.zig").ColorID;
-const StringID = @import("../values/string_id.zig").StringID;
-const BufferID = @import("../values/buffer_id.zig").BufferID;
+const rendering = @import("../lib/anotherworld.zig").rendering;
+
 const PaletteID = @import("../values/palette_id.zig").PaletteID;
-const Palette = @import("../values/palette.zig").Palette;
-const Polygon = @import("../rendering/polygon.zig").Polygon;
+const BufferID = @import("../values/buffer_id.zig").BufferID;
+const StringID = @import("../values/string_id.zig").StringID;
 const PolygonResource = @import("../resources/polygon_resource.zig").PolygonResource;
 const PaletteResource = @import("../resources/palette_resource.zig").PaletteResource;
-
-const PackedBuffer = @import("../rendering/buffers/packed_buffer.zig").PackedBuffer;
-const drawPolygonImpl = @import("../rendering/operations/draw_polygon.zig").drawPolygon;
-const drawStringImpl = @import("../rendering/operations/draw_string.zig").drawString;
-
-const Surface = @import("../rendering/surface.zig").Surface;
-const filledSurface = @import("../rendering/surface.zig").filledSurface;
 
 const static_limits = @import("../static_limits.zig");
 
@@ -25,7 +15,7 @@ const mem = @import("std").mem;
 /// The video subsystem responsible for handling draw calls and sending frames to the host screen.
 pub const Video = struct {
     /// The type used for the video buffers.
-    const Buffer = PackedBuffer(static_limits.virtual_screen_width, static_limits.virtual_screen_height);
+    const Buffer = rendering.PackedBuffer(static_limits.virtual_screen_width, static_limits.virtual_screen_height);
 
     /// The resource from which part-specific polygon data will be read.
     polygons: PolygonResource,
@@ -40,7 +30,7 @@ pub const Video = struct {
     /// Frames will be rendered to the host screen using this palette.
     /// This will be null when first created and after `setResourceLocations` has been called;
     /// The owning context must call `selectPalette` before attempting to call `renderBufferToSurface`.
-    current_palette: ?Palette = null,
+    current_palette: ?rendering.Palette = null,
 
     /// The set of 4 buffers used for rendering.
     /// These will be filled with garbage data when the instance is first created;
@@ -98,14 +88,14 @@ pub const Video = struct {
     }
 
     /// Fill a video buffer with a solid color.
-    pub fn fillBuffer(self: *Self, buffer_id: BufferID, color: ColorID) void {
+    pub fn fillBuffer(self: *Self, buffer_id: BufferID, color: rendering.ColorID) void {
         const buffer = self.resolvedBuffer(buffer_id);
         buffer.fill(color);
     }
 
     /// Copy the contents of one buffer into another at the specified vertical offset.
     /// Does nothing if the vertical offset is out of bounds.
-    pub fn copyBuffer(self: *Self, source_id: BufferID, destination_id: BufferID, y: Point.Coordinate) void {
+    pub fn copyBuffer(self: *Self, source_id: BufferID, destination_id: BufferID, y: rendering.Point.Coordinate) void {
         const source = self.resolvedBuffer(source_id);
         const destination = self.resolvedBuffer(destination_id);
 
@@ -122,7 +112,7 @@ pub const Video = struct {
     /// Render a polygon from the specified source and address into the current target buffer,
     /// at the specified screen position and scale.
     /// Returns an error if the specified polygon address was invalid or if polygon data was malformed.
-    pub fn drawPolygon(self: *Self, source: PolygonSource, address: PolygonResource.Address, point: Point, scale: PolygonScale) !void {
+    pub fn drawPolygon(self: *Self, source: PolygonSource, address: PolygonResource.Address, point: rendering.Point, scale: rendering.PolygonScale) !void {
         const visitor = PolygonVisitor{
             .target_buffer = &self.buffers[self.target_buffer_id],
             .mask_buffer = &self.buffers[mask_buffer_id],
@@ -135,12 +125,12 @@ pub const Video = struct {
     /// Render a string from the English string table at the specified screen position
     /// in the specified color into the current target buffer.
     /// Returns an error if the string ID was not found or the string contained unsupported characters.
-    pub fn drawString(self: *Self, string_id: StringID, color_id: ColorID, point: Point) !void {
+    pub fn drawString(self: *Self, string_id: StringID, color_id: rendering.ColorID, point: rendering.Point) !void {
         // TODO: allow different localizations at runtime.
         const string = try english.find(string_id);
 
         const buffer = &self.buffers[self.target_buffer_id];
-        try drawStringImpl(Buffer, buffer, string, color_id, point);
+        try rendering.drawString(Buffer, buffer, string, color_id, point);
     }
 
     /// Set the specified buffer as the front buffer, marking that it is ready to draw to the host screen.
@@ -212,7 +202,7 @@ pub const Video = struct {
     pub const PolygonAddress = PolygonResource.Address;
 
     /// The type of 24-bit buffer that hosts are expected to provide for the video subsystem to render frames into.
-    pub const HostSurface = Surface(static_limits.virtual_screen_width, static_limits.virtual_screen_height);
+    pub const HostSurface = rendering.Surface(static_limits.virtual_screen_width, static_limits.virtual_screen_height);
 
     pub const Error = error{
         /// Attempted to render polygons from the animations resource when it was not loaded by the current game part.
@@ -230,8 +220,8 @@ const PolygonVisitor = struct {
     mask_buffer: *const Video.Buffer,
 
     /// Draw a single polygon into the target buffer, using the mask buffer to read from if necessary.
-    pub fn visit(self: @This(), polygon: Polygon) !void {
-        try drawPolygonImpl(Video.Buffer, self.target_buffer, self.mask_buffer, polygon);
+    pub fn visit(self: @This(), polygon: rendering.Polygon) !void {
+        try rendering.drawPolygon(Video.Buffer, self.target_buffer, self.mask_buffer, polygon);
     }
 };
 
@@ -239,10 +229,8 @@ const PolygonVisitor = struct {
 
 const testing = @import("../utils/testing.zig");
 const MockHost = @import("test_helpers/mock_host.zig").MockHost;
-const Color = @import("../values/color.zig").Color;
-const indexed_bitmap = @import("../rendering/test_helpers/indexed_bitmap.zig");
 const planar_bitmap = @import("../resources/planar_bitmap.zig");
-const Bitmap = indexed_bitmap.IndexedBitmap(static_limits.virtual_screen_width, static_limits.virtual_screen_height);
+const Bitmap = rendering.IndexedBitmap(static_limits.virtual_screen_width, static_limits.virtual_screen_height);
 
 test "Ensure everything compiles" {
     testing.refAllDecls(Video);
@@ -261,7 +249,7 @@ fn testInstance() Video {
     };
 
     for (instance.buffers) |*buffer| {
-        buffer.fill(ColorID.cast(0x0));
+        buffer.fill(rendering.ColorID.cast(0x0));
     }
 
     return instance;
@@ -317,7 +305,7 @@ test "markBufferAsReady with specific buffer sets front buffer while leaving bac
     const expected_buffer_id = 3;
 
     var instance = testInstance();
-    const resolved_buffer_id = instance.markBufferAsReady(BufferID{ .specific = expected_buffer_id });
+    const resolved_buffer_id = instance.markBufferAsReady(.{ .specific = expected_buffer_id });
 
     try testing.expectEqual(instance.front_buffer_id, resolved_buffer_id);
     try testing.expectEqual(expected_buffer_id, instance.front_buffer_id);
@@ -351,17 +339,17 @@ test "loadBitmapResource loads bitmap data into expected buffer" {
     );
     const filled_bitmap_data = [_]u8{0xFF} ** bitmap_size;
 
-    const expected_bitmap_buffer_contents = Bitmap.filled(ColorID.cast(0xF));
-    const expected_untouched_buffer_contents = Bitmap.filled(ColorID.cast(0x0));
+    const expected_bitmap_buffer_contents = Bitmap.filled(rendering.ColorID.cast(0xF));
+    const expected_untouched_buffer_contents = Bitmap.filled(rendering.ColorID.cast(0x0));
 
     try instance.loadBitmapResource(&filled_bitmap_data);
 
     for (instance.buffers) |buffer, index| {
         const actual = buffer.toBitmap();
         if (index == Video.bitmap_buffer_id) {
-            try indexed_bitmap.expectEqualBitmaps(expected_bitmap_buffer_contents, actual);
+            try rendering.expectEqualBitmaps(expected_bitmap_buffer_contents, actual);
         } else {
-            try indexed_bitmap.expectEqualBitmaps(expected_untouched_buffer_contents, actual);
+            try rendering.expectEqualBitmaps(expected_untouched_buffer_contents, actual);
         }
     }
 }
@@ -397,7 +385,7 @@ test "loadBitmapResource returns error from buffer when data is malformed" {
 
 test "renderBufferToSurface renders colors from current palette into surface" {
     const buffer_id = 0;
-    const color_id = ColorID.cast(15);
+    const color_id = rendering.ColorID.cast(15);
 
     var instance = testInstance();
     try instance.selectPalette(PaletteID.cast(0));
@@ -406,7 +394,7 @@ test "renderBufferToSurface renders colors from current palette into surface" {
 
     var surface: Video.HostSurface = undefined;
     const expected_color = instance.current_palette.?[color_id.index()];
-    const expected_surface = filledSurface(Video.HostSurface, expected_color);
+    const expected_surface = rendering.filledSurface(Video.HostSurface, expected_color);
 
     try instance.renderBufferToSurface(buffer_id, &surface);
     try testing.expectEqual(expected_surface, surface);
@@ -418,12 +406,12 @@ test "renderBufferToSurface returns error.PaletteNotSelected and leaves surface 
     var instance = testInstance();
     try testing.expectEqual(null, instance.current_palette);
 
-    instance.buffers[buffer_id].fill(ColorID.cast(0));
+    instance.buffers[buffer_id].fill(rendering.ColorID.cast(0));
 
     // This color is not present in the palette and should never be rendered normally
     const untouched_color = .{ .r = 1, .g = 2, .b = 3, .a = 0 };
 
-    var surface = filledSurface(Video.HostSurface, untouched_color);
+    var surface = rendering.filledSurface(Video.HostSurface, untouched_color);
     const expected_surface = surface;
 
     try testing.expectError(error.PaletteNotSelected, instance.renderBufferToSurface(buffer_id, &surface));

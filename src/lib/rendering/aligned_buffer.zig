@@ -5,15 +5,15 @@
 //! As a tradeoff, buffer takes twice the bytes: a 320x200 buffer takes 64,000 bytes,
 //! versus 32,000 for the packed buffer implementation.
 
-const ColorID = @import("../../values/color_id.zig").ColorID;
-const Palette = @import("../../values/palette.zig").Palette;
-const DrawMode = @import("../../values/draw_mode.zig").DrawMode;
-const Point = @import("../../values/point.zig").Point;
-const Range = @import("../../values/range.zig").Range;
-const BoundingBox = @import("../../values/bounding_box.zig").BoundingBox;
+const ColorID = @import("color_id.zig").ColorID;
+const Palette = @import("palette.zig").Palette;
+const DrawMode = @import("draw_mode.zig").DrawMode;
+const Point = @import("point.zig").Point;
+const Range = @import("range.zig").Range;
+const BoundingBox = @import("bounding_box.zig").BoundingBox;
 
-const Surface = @import("../surface.zig").Surface;
-const IndexedBitmap = @import("../test_helpers/indexed_bitmap.zig").IndexedBitmap;
+const Surface = @import("surface.zig").Surface;
+const IndexedBitmap = @import("test_helpers/indexed_bitmap.zig").IndexedBitmap;
 const planar_bitmap = @import("../../resources/planar_bitmap.zig");
 
 const mem = @import("std").mem;
@@ -257,7 +257,7 @@ test "AlignedBuffer handles 0 width or height gracefully" {
     try testing.expectEqual([0][0]NativeColor, @TypeOf(zero_dimensions.data));
 }
 
-const buffer_test_suite = @import("../test_helpers/buffer_test_suite.zig");
+const buffer_test_suite = @import("test_helpers/buffer_test_suite.zig");
 
 test "Run buffer interface tests" {
     buffer_test_suite.runTests(AlignedBuffer);

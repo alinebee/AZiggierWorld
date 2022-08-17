@@ -32,7 +32,7 @@ pub const Point = struct {
 
 // -- Tests --
 
-const testing = @import("../utils/testing.zig");
+const testing = @import("../../utils/testing.zig");
 const math = @import("std").math;
 
 const max_coord = math.maxInt(Point.Coordinate);

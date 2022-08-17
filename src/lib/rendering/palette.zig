@@ -1,5 +1,5 @@
 const Color = @import("color.zig").Color;
-const static_limits = @import("../static_limits.zig");
+const static_limits = @import("../../static_limits.zig");
 
 /// The number of colors inside a palette.
 const color_count = static_limits.color_count;

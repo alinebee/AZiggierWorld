@@ -1,10 +1,12 @@
+const anotherworld = @import("../anotherworld.zig");
+
 const Opcode = @import("opcode.zig").Opcode;
 const Program = @import("../../machine/program.zig").Program;
 const Machine = @import("../../machine/machine.zig").Machine;
 
-const Point = @import("../../values/point.zig").Point;
+const ColorID = anotherworld.rendering.ColorID;
+const Point = anotherworld.rendering.Point;
 const StringID = @import("../../values/string_id.zig").StringID;
-const ColorID = @import("../../values/color_id.zig").ColorID;
 
 /// The width in pixels of each column of glyphs.
 const column_width = 8;

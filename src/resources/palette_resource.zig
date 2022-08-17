@@ -12,8 +12,10 @@
 //! color space of the original Amiga hardware that the game was developed on, documented here:
 //! http://fabiensanglard.net/another_world_polygons_amiga500/index.html
 
-const Color = @import("../values/color.zig").Color;
-const Palette = @import("../values/palette.zig").Palette;
+const anotherworld = @import("../lib/anotherworld.zig");
+
+const Color = anotherworld.rendering.Color;
+const Palette = anotherworld.rendering.Palette;
 const PaletteID = @import("../values/palette_id.zig").PaletteID;
 
 const static_limits = @import("../static_limits.zig");

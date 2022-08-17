@@ -1,10 +1,13 @@
+const anotherworld = @import("../anotherworld.zig");
+
+const Point = anotherworld.rendering.Point;
+const PolygonScale = anotherworld.rendering.PolygonScale;
+
 const Opcode = @import("opcode.zig").Opcode;
 const Program = @import("../../machine/program.zig").Program;
 const Machine = @import("../../machine/machine.zig").Machine;
 const Video = @import("../../machine/video.zig").Video;
-const Point = @import("../../values/point.zig").Point;
 const RegisterID = @import("../../values/register_id.zig").RegisterID;
-const PolygonScale = @import("../../values/polygon_scale.zig").PolygonScale;
 
 /// Draw a polygon at a location and zoom level that are either hardcoded constants
 /// or dynamic values read from registers.

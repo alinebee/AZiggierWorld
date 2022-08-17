@@ -1,9 +1,11 @@
+const anotherworld = @import("../anotherworld.zig");
+
 const Opcode = @import("opcode.zig").Opcode;
 const Program = @import("../../machine/program.zig").Program;
 const Machine = @import("../../machine/machine.zig").Machine;
 const Video = @import("../../machine/video.zig").Video;
 const BufferID = @import("../../values/buffer_id.zig").BufferID;
-const ColorID = @import("../../values/color_id.zig").ColorID;
+const ColorID = anotherworld.rendering.ColorID;
 
 /// Fill a specified video buffer with a single color.
 pub const FillVideoBuffer = struct {

@@ -34,7 +34,7 @@ pub const FixedPrecision = struct {
 
 // -- Testing --
 
-const testing = @import("../utils/testing.zig");
+const testing = @import("../../utils/testing.zig");
 
 fn raw(pattern: u32) i32 {
     return @bitCast(i32, pattern);

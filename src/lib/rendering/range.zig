@@ -61,7 +61,7 @@ const Examples = struct {
     const disjoint = Range(isize).init(-20, -11);
 };
 
-const testing = @import("../utils/testing.zig");
+const testing = @import("../../utils/testing.zig");
 
 test "init returns range of expected type with expected values" {
     const range = Examples.reference;

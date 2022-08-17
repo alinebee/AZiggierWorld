@@ -1,12 +1,11 @@
-const Polygon = @import("../polygon.zig").Polygon;
-const ColorID = @import("../../values/color_id.zig").ColorID;
-const Point = @import("../../values/point.zig").Point;
-const Range = @import("../../values/range.zig").Range;
-const FixedPrecision = @import("../../values/fixed_precision.zig").FixedPrecision;
+const Polygon = @import("polygon.zig").Polygon;
+const ColorID = @import("color_id.zig").ColorID;
+const Point = @import("point.zig").Point;
+const Range = @import("range.zig").Range;
+const FixedPrecision = @import("fixed_precision.zig").FixedPrecision;
 
 const static_limits = @import("../../static_limits.zig");
 const math = @import("std").math;
-const log = @import("../../utils/logging.zig").log;
 
 /// Draws a single polygon into a buffer using the position and draw mode specified in the polygon's data.
 /// Returns an error if:
@@ -165,7 +164,7 @@ fn stepDistance(delta_x: Point.Coordinate, delta_y: TrustedVerticalDelta) FixedP
 // -- Tests --
 
 const testing = @import("../../utils/testing.zig");
-const expectPixels = @import("../test_helpers/buffer_test_suite.zig").expectPixels;
+const expectPixels = @import("test_helpers/buffer_test_suite.zig").expectPixels;
 
 /// Given a function that takes a width and a height and returns a type that implements the buffer interface,
 /// test drawPolygon against that buffer type.
@@ -386,8 +385,8 @@ fn runTests(comptime BufferFn: anytype) void {
     };
 }
 
-const AlignedBuffer = @import("../buffers/aligned_buffer.zig").AlignedBuffer;
-const PackedBuffer = @import("../buffers/packed_buffer.zig").PackedBuffer;
+const AlignedBuffer = @import("aligned_buffer.zig").AlignedBuffer;
+const PackedBuffer = @import("packed_buffer.zig").PackedBuffer;
 
 test "Run tests with aligned buffer" {
     runTests(AlignedBuffer);

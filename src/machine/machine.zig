@@ -28,15 +28,15 @@
 //! the host is expected to sleep for that long before allowing execution to continue, which indirectly
 //! decides the framerate of the game.
 
-const ThreadID = @import("../values/thread_id.zig").ThreadID;
+const anotherworld = @import("../lib/anotherworld.zig");
+const rendering = anotherworld.rendering;
+
 const BufferID = @import("../values/buffer_id.zig").BufferID;
+const PaletteID = @import("../values/palette_id.zig").PaletteID;
+const ThreadID = @import("../values/thread_id.zig").ThreadID;
 const ResourceID = @import("../values/resource_id.zig").ResourceID;
 const StringID = @import("../values/string_id.zig").StringID;
-const PaletteID = @import("../values/palette_id.zig").PaletteID;
-const ColorID = @import("../values/color_id.zig").ColorID;
 const ChannelID = @import("../values/channel_id.zig").ChannelID;
-const Point = @import("../values/point.zig").Point;
-const PolygonScale = @import("../values/polygon_scale.zig").PolygonScale;
 const RegisterID = @import("../values/register_id.zig").RegisterID;
 const Register = @import("../values/register.zig");
 const GamePart = @import("../values/game_part.zig").GamePart;
@@ -209,13 +209,13 @@ pub const Machine = struct {
 
     /// Render a polygon from the specified source and address at the specified screen position and scale.
     /// Returns an error if the specified polygon address was invalid.
-    pub fn drawPolygon(self: *Self, source: Video.PolygonSource, address: Video.PolygonAddress, point: Point, scale: PolygonScale) !void {
+    pub fn drawPolygon(self: *Self, source: Video.PolygonSource, address: Video.PolygonAddress, point: rendering.Point, scale: rendering.PolygonScale) !void {
         try self.video.drawPolygon(source, address, point, scale);
     }
 
     /// Render a string from the current string table at the specified screen position in the specified color.
     /// Returns an error if the string could not be found.
-    pub fn drawString(self: *Self, string_id: StringID, color_id: ColorID, point: Point) !void {
+    pub fn drawString(self: *Self, string_id: StringID, color_id: rendering.ColorID, point: rendering.Point) !void {
         try self.video.drawString(string_id, color_id, point);
     }
 
@@ -230,12 +230,12 @@ pub const Machine = struct {
     }
 
     /// Fill a specified video buffer with a single color.
-    pub fn fillVideoBuffer(self: *Self, buffer_id: BufferID, color_id: ColorID) void {
+    pub fn fillVideoBuffer(self: *Self, buffer_id: BufferID, color_id: rendering.ColorID) void {
         self.video.fillBuffer(buffer_id, color_id);
     }
 
     /// Copy the contents of one video buffer into another at the specified vertical offset.
-    pub fn copyVideoBuffer(self: *Self, source: BufferID, destination: BufferID, vertical_offset: Point.Coordinate) void {
+    pub fn copyVideoBuffer(self: *Self, source: BufferID, destination: BufferID, vertical_offset: rendering.Point.Coordinate) void {
         self.video.copyBuffer(source, destination, vertical_offset);
     }
 
@@ -550,7 +550,7 @@ test "loadResource copies bitmap resource directly into video buffer without per
     defer machine.deinit();
 
     const buffer = &machine.video.buffers[Video.bitmap_buffer_id];
-    buffer.fill(ColorID.cast(0x0));
+    buffer.fill(rendering.ColorID.cast(0x0));
     const original_buffer_contents = buffer.toBitmap();
 
     const bitmap_resource_id = MockRepository.Fixtures.bitmap_resource_id;
@@ -674,7 +674,7 @@ test "applyUserInput does not open password screen when already in password scre
 
 // - runTic tests -
 
-const instructions = @import("../lib/anotherworld.zig").instructions;
+const instructions = anotherworld.instructions;
 
 test "runTic starts next game part if scheduled" {
     var machine = Machine.testInstance(.{});

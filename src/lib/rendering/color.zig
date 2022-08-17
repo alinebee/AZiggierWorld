@@ -76,7 +76,7 @@ const Fixtures = struct {
 
 // -- Tests --
 
-const testing = @import("../utils/testing.zig");
+const testing = @import("../../utils/testing.zig");
 
 test "spread converts 4-bit values to expected 8-bit values" {
     // zig fmt: off

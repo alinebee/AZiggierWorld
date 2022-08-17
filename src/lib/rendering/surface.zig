@@ -1,4 +1,4 @@
-const Color = @import("../values/color.zig").Color;
+const Color = @import("color.zig").Color;
 const mem = @import("std").mem;
 
 /// Returns the type of a 24-bit rendering surface that has the specified width and height.
@@ -15,7 +15,7 @@ pub fn filledSurface(comptime SurfaceType: type, color: Color) SurfaceType {
 
 // -- Tests --
 
-const testing = @import("../utils/testing.zig");
+const testing = @import("../../utils/testing.zig");
 
 test "Instance matches the size of a raw u8 buffer" {
     const width = 320;
