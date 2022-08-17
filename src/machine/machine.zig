@@ -30,6 +30,7 @@
 
 const anotherworld = @import("../lib/anotherworld.zig");
 const rendering = anotherworld.rendering;
+const text = anotherworld.text;
 const static_limits = anotherworld.static_limits;
 const log = anotherworld.log;
 
@@ -37,7 +38,6 @@ const BufferID = @import("../values/buffer_id.zig").BufferID;
 const PaletteID = @import("../values/palette_id.zig").PaletteID;
 const ThreadID = @import("../values/thread_id.zig").ThreadID;
 const ResourceID = @import("../values/resource_id.zig").ResourceID;
-const StringID = @import("../values/string_id.zig").StringID;
 const ChannelID = @import("../values/channel_id.zig").ChannelID;
 const RegisterID = @import("../values/register_id.zig").RegisterID;
 const Register = @import("../values/register.zig");
@@ -213,7 +213,7 @@ pub const Machine = struct {
 
     /// Render a string from the current string table at the specified screen position in the specified color.
     /// Returns an error if the string could not be found.
-    pub fn drawString(self: *Self, string_id: StringID, color_id: rendering.ColorID, point: rendering.Point) !void {
+    pub fn drawString(self: *Self, string_id: text.StringID, color_id: rendering.ColorID, point: rendering.Point) !void {
         try self.video.drawString(string_id, color_id, point);
     }
 

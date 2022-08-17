@@ -4,7 +4,7 @@ const ColorID = @import("color_id.zig").ColorID;
 const Point = @import("point.zig").Point;
 const BoundingBox = @import("bounding_box.zig").BoundingBox;
 
-const Font = @import("../../assets/font.zig");
+const Font = @import("font.zig");
 
 /// Draw a single or multiline string in the specified color,
 /// positioning the top left corner of the text at the specified origin point.

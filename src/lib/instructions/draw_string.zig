@@ -6,7 +6,7 @@ const Machine = @import("../../machine/machine.zig").Machine;
 
 const ColorID = anotherworld.rendering.ColorID;
 const Point = anotherworld.rendering.Point;
-const StringID = @import("../../values/string_id.zig").StringID;
+const StringID = anotherworld.text.StringID;
 
 /// The width in pixels of each column of glyphs.
 const column_width = 8;

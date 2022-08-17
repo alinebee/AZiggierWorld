@@ -1,8 +1,8 @@
 //! Defines the UI strings from the full DOS English release of the game.
 
-const anotherworld = @import("../lib/anotherworld.zig");
+const anotherworld = @import("../anotherworld.zig");
 
-const StringID = @import("../values/string_id.zig").StringID;
+const StringID = @import("string_id.zig").StringID;
 
 pub const Error = StringID.Error;
 

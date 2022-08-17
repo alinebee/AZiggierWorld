@@ -1,14 +1,12 @@
 const anotherworld = @import("../lib/anotherworld.zig");
 const rendering = anotherworld.rendering;
 const static_limits = anotherworld.static_limits;
+const text = anotherworld.text;
 
 const PaletteID = @import("../values/palette_id.zig").PaletteID;
 const BufferID = @import("../values/buffer_id.zig").BufferID;
-const StringID = @import("../values/string_id.zig").StringID;
 const PolygonResource = @import("../resources/polygon_resource.zig").PolygonResource;
 const PaletteResource = @import("../resources/palette_resource.zig").PaletteResource;
-
-const english = @import("../assets/english.zig");
 
 const mem = @import("std").mem;
 
@@ -125,9 +123,9 @@ pub const Video = struct {
     /// Render a string from the English string table at the specified screen position
     /// in the specified color into the current target buffer.
     /// Returns an error if the string ID was not found or the string contained unsupported characters.
-    pub fn drawString(self: *Self, string_id: StringID, color_id: rendering.ColorID, point: rendering.Point) !void {
+    pub fn drawString(self: *Self, string_id: text.StringID, color_id: rendering.ColorID, point: rendering.Point) !void {
         // TODO: allow different localizations at runtime.
-        const string = try english.find(string_id);
+        const string = try text.english.find(string_id);
 
         const buffer = &self.buffers[self.target_buffer_id];
         try rendering.drawString(Buffer, buffer, string, color_id, point);

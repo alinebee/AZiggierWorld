@@ -5,12 +5,12 @@ const Registers = @import("../registers.zig").Registers;
 
 const anotherworld = @import("../../lib/anotherworld.zig");
 const rendering = anotherworld.rendering;
+const text = anotherworld.text;
 
 const GamePart = @import("../../values/game_part.zig").GamePart;
 const ChannelID = @import("../../values/channel_id.zig").ChannelID;
 const ResourceID = @import("../../values/resource_id.zig").ResourceID;
 const PaletteID = @import("../../values/palette_id.zig").PaletteID;
-const StringID = @import("../../values/string_id.zig").StringID;
 const BufferID = @import("../../values/buffer_id.zig").BufferID;
 
 const zeroes = @import("std").mem.zeroes;
@@ -50,7 +50,7 @@ pub fn MockMachine(comptime Implementation: type) type {
             try Implementation.drawPolygon(source, address, point, scale);
         }
 
-        pub fn drawString(self: *Self, string_id: StringID, color_id: rendering.ColorID, point: rendering.Point) !void {
+        pub fn drawString(self: *Self, string_id: text.StringID, color_id: rendering.ColorID, point: rendering.Point) !void {
             self.call_counts.drawString += 1;
             try Implementation.drawString(string_id, color_id, point);
         }
@@ -143,15 +143,15 @@ test "MockMachine calls drawPolygon correctly on stub implementation" {
 
 test "MockMachine calls drawString correctly on stub implementation" {
     var mock = mockMachine(struct {
-        fn drawString(string_id: StringID, color_id: rendering.ColorID, point: rendering.Point) !void {
-            try testing.expectEqual(StringID.cast(0xBEEF), string_id);
+        fn drawString(string_id: text.StringID, color_id: rendering.ColorID, point: rendering.Point) !void {
+            try testing.expectEqual(text.StringID.cast(0xBEEF), string_id);
             try testing.expectEqual(rendering.ColorID.cast(2), color_id);
             try testing.expectEqual(320, point.x);
             try testing.expectEqual(200, point.y);
         }
     });
 
-    try mock.drawString(StringID.cast(0xBEEF), rendering.ColorID.cast(2), .{ .x = 320, .y = 200 });
+    try mock.drawString(text.StringID.cast(0xBEEF), rendering.ColorID.cast(2), .{ .x = 320, .y = 200 });
     try testing.expectEqual(1, mock.call_counts.drawString);
 }
 
