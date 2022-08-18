@@ -2,15 +2,19 @@ const std = @import("std");
 const Builder = std.build.Builder;
 const SDLSdk = @import("vendor/SDL.zig/Sdk.zig");
 
+// Define a package for generic utility functions
+const utils_package = std.build.Pkg{
+    .name = "utils",
+    .path = .{ .path = "./src/utils/utils.zig" },
+};
+
 // Define a package for Another World library files
 const lib_package = std.build.Pkg{
     .name = "anotherworld",
     .path = .{ .path = "./src/lib/anotherworld.zig" },
-};
-
-const utils_package = std.build.Pkg{
-    .name = "utils",
-    .path = .{ .path = "./src/utils/utils.zig" },
+    .dependencies = &[_]std.build.Pkg{
+        utils_package,
+    },
 };
 
 pub fn build(b: *Builder) !void {
@@ -34,8 +38,8 @@ pub fn build(b: *Builder) !void {
 
         sdl_sdk.link(exe, .dynamic);
         exe.addPackage(sdl_package);
-        exe.addPackage(lib_package);
         exe.addPackage(utils_package);
+        exe.addPackage(lib_package);
 
         exe.install();
     }
@@ -74,8 +78,8 @@ pub fn build(b: *Builder) !void {
 
         sdl_sdk.link(tests, .dynamic);
         tests.addPackage(sdl_package);
-        tests.addPackage(lib_package);
         tests.addPackage(utils_package);
+        tests.addPackage(lib_package);
 
         test_step.dependOn(&tests.step);
     }
@@ -86,8 +90,8 @@ pub fn build(b: *Builder) !void {
         var benchmark = b.addExecutable("benchmark", "src/benchmark.zig");
         benchmark.setBuildMode(mode);
         benchmark.setTarget(target);
-        benchmark.addPackage(lib_package);
         benchmark.addPackage(utils_package);
+        benchmark.addPackage(lib_package);
 
         const run = benchmark.run();
         benchmark_step.dependOn(&run.step);

@@ -1,17 +1,20 @@
 //! Unlike the other integration tests, which can be run by `zig build test`,
 //! these benchmarks can only be run by `zig build benchmark`.
 
-const Machine = @import("machine/machine.zig").Machine;
-const Host = @import("machine/host.zig").Host;
-const ResourceDirectory = @import("resources/resource_directory.zig").ResourceDirectory;
-const Video = @import("machine/video.zig").Video;
-const BufferID = @import("values/buffer_id.zig").BufferID;
-const UserInput = @import("machine/user_input.zig").UserInput;
-
 const anotherworld = @import("anotherworld");
+const vm = anotherworld.vm;
+const resources = anotherworld.resources;
+const log = anotherworld.log;
+
+const Machine = vm.Machine;
+const Host = vm.Host;
+const Video = vm.Video;
+const BufferID = vm.BufferID;
+const UserInput = vm.UserInput;
+const ResourceDirectory = resources.ResourceDirectory;
+
 const ensureValidFixtureDir = @import("integration_tests/helpers.zig").ensureValidFixtureDir;
 const measure = @import("utils").benchmark.measure;
-const log = anotherworld.log;
 
 const std = @import("std");
 
