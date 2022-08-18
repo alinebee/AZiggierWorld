@@ -1,4 +1,3 @@
-const anotherworld = @import("../../anotherworld.zig");
 const meta = @import("utils").meta;
 
 const std = @import("std");

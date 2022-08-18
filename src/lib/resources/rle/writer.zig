@@ -8,8 +8,6 @@
 //!
 //! See decode.zig for details of the overall algorithm, and decode_instruction.zig for details of the encoding syntax.
 
-const anotherworld = @import("../anotherworld.zig");
-
 /// The byte-wise writer for the run-length decoder. This writing decompressed bytes
 /// to a destination buffer, starting from the end of the buffer and working its way forward.
 pub const Writer = struct {

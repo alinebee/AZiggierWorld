@@ -17,8 +17,8 @@
 const anotherworld = @import("../anotherworld.zig");
 const static_limits = anotherworld.static_limits;
 const log = anotherworld.log;
-const decode = anotherworld.rle.decode;
 
+const decode = @import("rle/decode.zig").decode;
 const ResourceReader = @import("resource_reader.zig").ResourceReader;
 const ResourceDescriptor = @import("resource_descriptor.zig").ResourceDescriptor;
 const ResourceID = @import("resource_id.zig").ResourceID;
