@@ -2,13 +2,13 @@
 //! Requires that the `fixtures/dos` folder contains Another World DOS game files.
 
 const anotherworld = @import("anotherworld");
+const log = anotherworld.log;
 
 const ResourceDirectory = @import("../resources/resource_directory.zig").ResourceDirectory;
 const ResourceID = @import("../values/resource_id.zig").ResourceID;
 
 const testing = @import("utils").testing;
 const ensureValidFixtureDir = @import("helpers.zig").ensureValidFixtureDir;
-const log = anotherworld.log;
 
 test "ResourceDirectory reads all game resources" {
     var game_dir = try ensureValidFixtureDir();

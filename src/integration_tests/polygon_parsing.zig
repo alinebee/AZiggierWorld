@@ -3,7 +3,7 @@
 //! Requires that the `fixtures/dos` folder contains Another World DOS game files.
 
 const anotherworld = @import("anotherworld");
-const std = @import("std");
+const log = anotherworld.log;
 
 const Instruction = anotherworld.instructions.Instruction;
 const Polygon = anotherworld.rendering.Polygon;
@@ -16,8 +16,9 @@ const ResourceDirectory = @import("../resources/resource_directory.zig").Resourc
 const GamePart = @import("../values/game_part.zig").GamePart;
 
 const testing = @import("utils").testing;
-const log = anotherworld.log;
 const ensureValidFixtureDir = @import("helpers.zig").ensureValidFixtureDir;
+
+const std = @import("std");
 
 const PolygonDrawInstruction = union(enum) {
     background: Instruction.DrawBackgroundPolygon,

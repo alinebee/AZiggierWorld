@@ -1,14 +1,15 @@
 //! Tests that palettes are correctly parsed from Another World's original resource data.
 //! Requires that the `fixtures/dos` folder contains Another World DOS game files.
 
+const anotherworld = @import("anotherworld");
+const static_limits = anotherworld.static_limits;
+
 const PaletteResource = @import("../resources/palette_resource.zig").PaletteResource;
 const ResourceDirectory = @import("../resources/resource_directory.zig").ResourceDirectory;
 const PaletteID = @import("../values/palette_id.zig").PaletteID;
 
 const ensureValidFixtureDir = @import("helpers.zig").ensureValidFixtureDir;
 
-const anotherworld = @import("../lib/anotherworld.zig");
-const static_limits = anotherworld.static_limits;
 const testing = @import("utils").testing;
 
 test "Parse all palettes in original game files" {

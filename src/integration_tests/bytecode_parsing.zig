@@ -1,17 +1,18 @@
 //! Tests that Instruction.parse parses all bytecode programs from the original Another World.
 //! Requires that the `fixtures/dos` folder contains Another World DOS game files.
 
-const instructions = @import("anotherworld").instructions;
+const anotherworld = @import("anotherworld");
+const instructions = anotherworld.instructions;
+const log = anotherworld.log;
+
 const Program = @import("../machine/program.zig").Program;
 const ResourceDirectory = @import("../resources/resource_directory.zig").ResourceDirectory;
 
-const std = @import("std");
-const anotherworld = @import("../lib/anotherworld.zig");
-
 const testing = @import("utils").testing;
 const meta = @import("utils").meta;
-const log = anotherworld.log;
 const ensureValidFixtureDir = @import("helpers.zig").ensureValidFixtureDir;
+
+const std = @import("std");
 
 /// Records and prints the details of a bytecode instruction that could not be parsed.
 const ParseFailure = struct {

@@ -1,5 +1,4 @@
-const std = @import("std");
-const testing = std.testing;
+const testing = @import("utils").testing;
 
 test "Run all integration tests" {
     testing.refAllDecls(@import("resource_loading.zig"));

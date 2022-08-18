@@ -2,18 +2,19 @@
 //! and ends by starting the first gameplay game part, without errors or looping indefinitely.
 //! Requires that the `fixtures/dos` folder contains Another World DOS game files.
 
+const anotherworld = @import("anotherworld");
+const log = anotherworld.log;
+
 const Machine = @import("../machine/machine.zig").Machine;
 const Host = @import("../machine/host.zig").Host;
 const ResourceDirectory = @import("../resources/resource_directory.zig").ResourceDirectory;
 const BufferID = @import("../values/buffer_id.zig").BufferID;
 const UserInput = @import("../machine/user_input.zig").UserInput;
 
-const std = @import("std");
-const anotherworld = @import("../lib/anotherworld.zig");
-
 const ensureValidFixtureDir = @import("helpers.zig").ensureValidFixtureDir;
 const testing = @import("utils").testing;
-const log = anotherworld.log;
+
+const std = @import("std");
 
 const CountingHost = struct {
     render_count: usize = 0,
