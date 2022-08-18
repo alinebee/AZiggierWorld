@@ -1,5 +1,5 @@
 const anotherworld = @import("../anotherworld.zig");
-const resources = anotherworld.resources;
+const rendering = anotherworld.rendering;
 
 const Opcode = @import("opcode.zig").Opcode;
 const Program = @import("../../machine/program.zig").Program;
@@ -8,7 +8,7 @@ const Machine = @import("../../machine/machine.zig").Machine;
 /// Select the active palette to render the video buffer in.
 pub const SelectPalette = struct {
     /// The palette to select.
-    palette_id: resources.PaletteID,
+    palette_id: rendering.PaletteID,
 
     const Self = @This();
 
@@ -16,14 +16,14 @@ pub const SelectPalette = struct {
     /// Consumes 3 bytes from the bytecode on success, including the opcode.
     /// Returns an error if the bytecode could not be read or contained an invalid instruction.
     pub fn parse(_: Opcode.Raw, program: *Program) ParseError!Self {
-        const raw_id = try program.read(resources.PaletteID.Raw);
+        const raw_id = try program.read(rendering.PaletteID.Raw);
         // The reference implementation consumes 16 bits but only uses the top 8 for the palette ID,
         // ignoring the bottom 8. It's unclear why two bytes were used in the original bytecode.
         // https://github.com/fabiensanglard/Another-World-Bytecode-Interpreter/blob/8afc0f7d7d47f7700ad2e7d1cad33200ad29b17f/src/vm.cpp#L211-L215
         try program.skip(1);
 
         return Self{
-            .palette_id = try resources.PaletteID.parse(raw_id),
+            .palette_id = try rendering.PaletteID.parse(raw_id),
         };
     }
 
@@ -40,7 +40,7 @@ pub const SelectPalette = struct {
     // - Exported constants -
 
     pub const opcode = Opcode.SelectPalette;
-    pub const ParseError = Program.ReadError || resources.PaletteID.Error;
+    pub const ParseError = Program.ReadError || rendering.PaletteID.Error;
 
     // -- Bytecode examples --
 
@@ -63,7 +63,7 @@ const mockMachine = @import("../../machine/test_helpers/mock_machine.zig").mockM
 test "parse parses valid bytecode and consumes 2 bytes" {
     const instruction = try expectParse(SelectPalette.parse, &SelectPalette.Fixtures.valid, 3);
 
-    try testing.expectEqual(resources.PaletteID.cast(31), instruction.palette_id);
+    try testing.expectEqual(rendering.PaletteID.cast(31), instruction.palette_id);
 }
 
 test "parse returns error.InvalidPaletteID on unknown palette identifier and consumes 2 bytes" {
@@ -75,12 +75,12 @@ test "parse returns error.InvalidPaletteID on unknown palette identifier and con
 
 test "execute calls selectPalette with correct parameters" {
     const instruction = SelectPalette{
-        .palette_id = resources.PaletteID.cast(16),
+        .palette_id = rendering.PaletteID.cast(16),
     };
 
     var machine = mockMachine(struct {
-        pub fn selectPalette(palette_id: resources.PaletteID) !void {
-            try testing.expectEqual(resources.PaletteID.cast(16), palette_id);
+        pub fn selectPalette(palette_id: rendering.PaletteID) !void {
+            try testing.expectEqual(rendering.PaletteID.cast(16), palette_id);
         }
     });
 

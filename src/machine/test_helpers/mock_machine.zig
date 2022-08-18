@@ -54,7 +54,7 @@ pub fn MockMachine(comptime Implementation: type) type {
             try Implementation.drawString(string_id, color_id, point);
         }
 
-        pub fn selectPalette(self: *Self, palette_id: resources.PaletteID) !void {
+        pub fn selectPalette(self: *Self, palette_id: rendering.PaletteID) !void {
             self.call_counts.selectPalette += 1;
             try Implementation.selectPalette(palette_id);
         }
@@ -156,14 +156,14 @@ test "MockMachine calls drawString correctly on stub implementation" {
 
 test "MockMachine calls selectPalette correctly on stub implementation" {
     var mock = mockMachine(struct {
-        fn selectPalette(palette_id: resources.PaletteID) !void {
-            testing.expectEqual(resources.PaletteID.cast(16), palette_id) catch {
+        fn selectPalette(palette_id: rendering.PaletteID) !void {
+            testing.expectEqual(rendering.PaletteID.cast(16), palette_id) catch {
                 unreachable;
             };
         }
     });
 
-    try mock.selectPalette(resources.PaletteID.cast(16));
+    try mock.selectPalette(rendering.PaletteID.cast(16));
     try testing.expectEqual(1, mock.call_counts.selectPalette);
 }
 

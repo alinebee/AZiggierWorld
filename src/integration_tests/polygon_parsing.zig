@@ -4,12 +4,14 @@
 
 const anotherworld = @import("anotherworld");
 const resources = anotherworld.resources;
+const rendering = anotherworld.rendering;
+const instructions = anotherworld.instructions;
 const log = anotherworld.log;
 
-const Instruction = anotherworld.instructions.Instruction;
-const Polygon = anotherworld.rendering.Polygon;
-const PolygonScale = anotherworld.rendering.PolygonScale;
-const Point = anotherworld.rendering.Point;
+const Instruction = instructions.Instruction;
+const Polygon = rendering.Polygon;
+const PolygonScale = rendering.PolygonScale;
+const Point = rendering.Point;
 
 const Program = @import("../machine/program.zig").Program;
 const GamePart = @import("../values/game_part.zig").GamePart;
@@ -60,13 +62,13 @@ fn parsePolygonInstructionsForGamePart(allocator: std.mem.Allocator, resource_di
     const draw_instructions = try findPolygonDrawInstructions(allocator, bytecode);
     defer allocator.free(draw_instructions);
 
-    const polygons = resources.PolygonResource.init(try reader.allocReadResourceByID(allocator, resource_ids.polygons));
+    const polygons = rendering.PolygonResource.init(try reader.allocReadResourceByID(allocator, resource_ids.polygons));
     defer allocator.free(polygons.data);
 
-    const maybe_animations: ?resources.PolygonResource = init: {
+    const maybe_animations: ?rendering.PolygonResource = init: {
         if (resource_ids.animations) |id| {
             const data = try reader.allocReadResourceByID(allocator, id);
-            break :init resources.PolygonResource.init(data);
+            break :init rendering.PolygonResource.init(data);
         } else {
             break :init null;
         }

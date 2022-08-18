@@ -1,6 +1,5 @@
 const anotherworld = @import("../lib/anotherworld.zig");
 const rendering = anotherworld.rendering;
-const resources = anotherworld.resources;
 const static_limits = anotherworld.static_limits;
 const text = anotherworld.text;
 
@@ -14,13 +13,13 @@ pub const Video = struct {
     const Buffer = rendering.PackedBuffer(static_limits.virtual_screen_width, static_limits.virtual_screen_height);
 
     /// The resource from which part-specific polygon data will be read.
-    polygons: resources.PolygonResource,
+    polygons: rendering.PolygonResource,
 
     /// The resource from which global animation data will be read.
-    animations: ?resources.PolygonResource,
+    animations: ?rendering.PolygonResource,
 
     /// The palettes used to render frames to the host screen.
-    palettes: resources.PaletteResource,
+    palettes: rendering.PaletteResource,
 
     /// The currently selected palette, loaded from `palettes` when `selectPalette` is called.
     /// Frames will be rendered to the host screen using this palette.
@@ -60,12 +59,12 @@ pub const Video = struct {
 
     /// Called when a new game part is loaded to set the sources for polygon and palette data to new memory locations.
     pub fn setResourceLocations(self: *Self, palette_data: []const u8, polygon_data: []const u8, possible_animation_data: ?[]const u8) void {
-        self.palettes = resources.PaletteResource.init(palette_data);
+        self.palettes = rendering.PaletteResource.init(palette_data);
         self.current_palette = null;
 
-        self.polygons = resources.PolygonResource.init(polygon_data);
+        self.polygons = rendering.PolygonResource.init(polygon_data);
         if (possible_animation_data) |animation_data| {
-            self.animations = resources.PolygonResource.init(animation_data);
+            self.animations = rendering.PolygonResource.init(animation_data);
         } else {
             self.animations = null;
         }
@@ -74,7 +73,7 @@ pub const Video = struct {
     }
 
     /// Select the palette used to render the next frame to the host screen.
-    pub fn selectPalette(self: *Self, palette_id: resources.PaletteID) !void {
+    pub fn selectPalette(self: *Self, palette_id: rendering.PaletteID) !void {
         self.current_palette = try self.palettes.palette(palette_id);
     }
 
@@ -108,7 +107,7 @@ pub const Video = struct {
     /// Render a polygon from the specified source and address into the current target buffer,
     /// at the specified screen position and scale.
     /// Returns an error if the specified polygon address was invalid or if polygon data was malformed.
-    pub fn drawPolygon(self: *Self, source: PolygonSource, address: resources.PolygonResource.Address, point: rendering.Point, scale: rendering.PolygonScale) !void {
+    pub fn drawPolygon(self: *Self, source: PolygonSource, address: rendering.PolygonResource.Address, point: rendering.Point, scale: rendering.PolygonScale) !void {
         const visitor = PolygonVisitor{
             .target_buffer = &self.buffers[self.target_buffer_id],
             .mask_buffer = &self.buffers[mask_buffer_id],
@@ -173,7 +172,7 @@ pub const Video = struct {
         return &self.buffers[self.resolvedBufferID(buffer_id)];
     }
 
-    fn resolvedPolygonSource(self: Self, source: PolygonSource) !resources.PolygonResource {
+    fn resolvedPolygonSource(self: Self, source: PolygonSource) !rendering.PolygonResource {
         switch (source) {
             .polygons => return self.polygons,
             .animations => return self.animations orelse error.AnimationsNotLoaded,
@@ -195,7 +194,7 @@ pub const Video = struct {
     pub const Milliseconds = usize;
 
     /// The location of a polygon record within its containing resource.
-    pub const PolygonAddress = resources.PolygonResource.Address;
+    pub const PolygonAddress = rendering.PolygonResource.Address;
 
     /// The type of 24-bit buffer that hosts are expected to provide for the video subsystem to render frames into.
     pub const HostSurface = rendering.Surface(static_limits.virtual_screen_width, static_limits.virtual_screen_height);
@@ -234,13 +233,13 @@ test "Ensure everything compiles" {
 /// Construct a video instance populated with sample valid resource data,
 /// with all buffers filled with color ID 0.
 fn testInstance() Video {
-    const polygon_data = &resources.PolygonResource.Fixtures.resource;
-    const palette_data = &resources.PaletteResource.Fixtures.resource;
+    const polygon_data = &rendering.PolygonResource.Fixtures.resource;
+    const palette_data = &rendering.PaletteResource.Fixtures.resource;
 
     var instance = Video{
-        .polygons = resources.PolygonResource.init(polygon_data),
-        .animations = resources.PolygonResource.init(polygon_data),
-        .palettes = resources.PaletteResource.init(palette_data),
+        .polygons = rendering.PolygonResource.init(polygon_data),
+        .animations = rendering.PolygonResource.init(polygon_data),
+        .palettes = rendering.PaletteResource.init(palette_data),
     };
 
     for (instance.buffers) |*buffer| {
@@ -252,7 +251,7 @@ fn testInstance() Video {
 
 test "setResourceLocations sets resource data pointers and resets current palette" {
     var instance = testInstance();
-    try instance.selectPalette(resources.PaletteID.cast(0));
+    try instance.selectPalette(rendering.PaletteID.cast(0));
 
     const new_palette_data = [0]u8{};
     const new_polygon_data = [0]u8{};
@@ -328,7 +327,7 @@ test "markBufferAsReady does not swap buffers when front buffer is marked ready 
 test "loadBitmapResource loads bitmap data into expected buffer" {
     var instance = testInstance();
 
-    const bitmap_size = comptime resources.planar_bitmap.bytesRequiredForSize(
+    const bitmap_size = comptime rendering.planarBitmapDataSize(
         static_limits.virtual_screen_width,
         static_limits.virtual_screen_height,
     );
@@ -352,7 +351,7 @@ test "loadBitmapResource loads bitmap data into expected buffer" {
 test "selectPalette loads specified palette" {
     var instance = testInstance();
 
-    const palette_id = resources.PaletteID.cast(15);
+    const palette_id = rendering.PaletteID.cast(15);
     const expected_palette = try instance.palettes.palette(palette_id);
 
     try testing.expectEqual(null, instance.current_palette);
@@ -364,10 +363,10 @@ test "selectPalette returns error and leaves current palette unchanged when pale
     const empty_palette_data = [0]u8{};
 
     var instance = testInstance();
-    instance.palettes = resources.PaletteResource.init(&empty_palette_data);
+    instance.palettes = rendering.PaletteResource.init(&empty_palette_data);
 
     try testing.expectEqual(null, instance.current_palette);
-    try testing.expectError(error.EndOfStream, instance.selectPalette(resources.PaletteID.cast(0)));
+    try testing.expectError(error.EndOfStream, instance.selectPalette(rendering.PaletteID.cast(0)));
     try testing.expectEqual(null, instance.current_palette);
 }
 
@@ -383,7 +382,7 @@ test "renderBufferToSurface renders colors from current palette into surface" {
     const color_id = rendering.ColorID.cast(15);
 
     var instance = testInstance();
-    try instance.selectPalette(resources.PaletteID.cast(0));
+    try instance.selectPalette(rendering.PaletteID.cast(0));
 
     instance.buffers[buffer_id].fill(color_id);
 

@@ -25,7 +25,7 @@ const static_limits = anotherworld.static_limits;
 
 const Point = @import("point.zig").Point;
 const BoundingBox = @import("bounding_box.zig").BoundingBox;
-const DrawMode = @import("draw_mode.zig").DrawMode;
+const PolygonDrawMode = @import("polygon_draw_mode.zig").PolygonDrawMode;
 const PolygonScale = @import("polygon_scale.zig").PolygonScale;
 
 const math = @import("std").math;
@@ -36,7 +36,7 @@ pub const Polygon = struct {
     const VertexStorage = BoundedArray(Point, max_vertices);
 
     /// The draw mode with which to render this polygon.
-    draw_mode: DrawMode,
+    draw_mode: PolygonDrawMode,
 
     /// The scaled bounding box of this polygon in screen coordinates.
     bounds: BoundingBox,
@@ -50,7 +50,7 @@ pub const Polygon = struct {
     /// Construct a valid polygon instance with the specified vertices.
     /// Intended for testing purposes and does not make use of actual game data.
     /// Precondition: vertices must have > 0 and <= 50 entries.
-    pub fn init(draw_mode: DrawMode, verts: []const Point) Self {
+    pub fn init(draw_mode: PolygonDrawMode, verts: []const Point) Self {
         var self = Self{
             .draw_mode = draw_mode,
             ._raw_vertices = VertexStorage.init(verts.len) catch unreachable,
@@ -76,7 +76,7 @@ pub const Polygon = struct {
 
     /// Parse a stream of bytes from an Another World polygon resource into a polygon instance,
     /// scaling and positioning it according to the specified center and scale factor.
-    pub fn parse(reader: anytype, center: Point, scale: PolygonScale, draw_mode: DrawMode) ParseError(@TypeOf(reader))!Self {
+    pub fn parse(reader: anytype, center: Point, scale: PolygonScale, draw_mode: PolygonDrawMode) ParseError(@TypeOf(reader))!Self {
         const raw_width = try reader.readByte();
         const raw_height = try reader.readByte();
         const count = try reader.readByte();

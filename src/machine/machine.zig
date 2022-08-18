@@ -215,7 +215,7 @@ pub const Machine = struct {
     }
 
     /// Select the active palette to render the video buffer in.
-    pub fn selectPalette(self: *Self, palette_id: resources.PaletteID) !void {
+    pub fn selectPalette(self: *Self, palette_id: rendering.PaletteID) !void {
         try self.video.selectPalette(palette_id);
     }
 

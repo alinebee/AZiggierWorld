@@ -1,5 +1,4 @@
 const anotherworld = @import("../../anotherworld.zig");
-const resources = anotherworld.resources;
 
 const Surface = @import("../surface.zig").Surface;
 const ColorID = @import("../color_id.zig").ColorID;
@@ -7,6 +6,7 @@ const PaletteFixtures = @import("../palette.zig").Fixtures;
 
 const testing = @import("utils").testing;
 const expectBitmap = @import("indexed_bitmap.zig").expectBitmap;
+const planar_bitmap = @import("../planar_bitmap.zig");
 
 // -- Test helpers --
 
@@ -288,7 +288,7 @@ pub fn runTests(comptime Instance: anytype) void {
         }
 
         test "loadBitmapResource correctly parses planar bitmap data" {
-            const data = &resources.planar_bitmap.Fixtures.valid_16px;
+            const data = &planar_bitmap.Fixtures.valid_16px;
             const Buffer = Instance(4, 4);
 
             var buffer = Buffer{};

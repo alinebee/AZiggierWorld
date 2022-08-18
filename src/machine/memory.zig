@@ -36,6 +36,7 @@
 
 const anotherworld = @import("../lib/anotherworld.zig");
 const resources = anotherworld.resources;
+const rendering = anotherworld.rendering;
 const static_limits = anotherworld.static_limits;
 
 const GamePart = @import("../values/game_part.zig").GamePart;
@@ -69,7 +70,7 @@ const IndividualResourceLocation = union(enum) {
 /// The location of a resource in memory, or null if the resource is not loaded.
 const PossibleResourceLocation = ?[]const u8;
 
-const bitmap_region_size = resources.planar_bitmap.bytesRequiredForSize(
+const bitmap_region_size = rendering.planarBitmapDataSize(
     static_limits.virtual_screen_width,
     static_limits.virtual_screen_height,
 );

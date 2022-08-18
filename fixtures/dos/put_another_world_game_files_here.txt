@@ -1,5 +1,5 @@
 
-The tests in fixture_tests require game files from the original DOS release of Another World.
+The tests in integration_tests require game files from the original DOS release of Another World.
 These are copyrighted and so are not legal to distribute as part of this project,
 but they are fairly easy to find on the internet.
 

@@ -58,13 +58,13 @@ pub const color_count = 16;
 /// The width in virtual screen pixels of the video buffer.
 /// The DOS version of Another World stored bitmap resources as 320x200 images:
 /// changing this value will require changing how bitmap resources are loaded into video buffers.
-/// See video_buffer.zig and planar_bitmap.zig.
+/// See packed_buffer.zig and planar_bitmap.zig.
 pub const virtual_screen_width = 320;
 
 /// The height in virtual screen pixels of the video buffer.
 /// The DOS version of Another World stored bitmap resources as 320x200 images:
 /// changing this value will require changing how bitmap resources are loaded into video buffers.
-/// See video_buffer.zig and planar_bitmap.zig.
+/// See packed_buffer.zig and planar_bitmap.zig.
 pub const virtual_screen_height = 200;
 
 /// The maximum size in bytes of an Another World game program.

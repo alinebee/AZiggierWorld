@@ -18,8 +18,13 @@
 //! (It also allows potential recursion cycles, which this parser manually guards against.)
 
 const anotherworld = @import("../anotherworld.zig");
-const rendering = anotherworld.rendering;
 const meta = @import("utils").meta;
+
+const Point = @import("point.zig").Point;
+const ColorID = @import("color_id.zig").ColorID;
+const PolygonDrawMode = @import("polygon_draw_mode.zig").PolygonDrawMode;
+const PolygonScale = @import("polygon_scale.zig").PolygonScale;
+const Polygon = @import("polygon.zig").Polygon;
 
 const fixedBufferStream = @import("std").io.fixedBufferStream;
 
@@ -54,11 +59,11 @@ pub const PolygonResource = struct {
     /// Address must be known in advance to point to the start of a polygon or group definition within the data.
     /// Addresses cannot be validated, so it is possible to start parsing from e.g. the middle of a polygon or group.
     /// At best this will result in an error; at worst, silently succeeding but producing garbage polygon data.
-    pub fn iteratePolygons(self: Self, address: Address, origin: rendering.Point, scale: rendering.PolygonScale, visitor: anytype) Error(@TypeOf(visitor))!void {
+    pub fn iteratePolygons(self: Self, address: Address, origin: Point, scale: PolygonScale, visitor: anytype) Error(@TypeOf(visitor))!void {
         try self.recursivelyParseEntry(address, origin, scale, null, 0, visitor);
     }
 
-    fn recursivelyParseEntry(self: Self, address: Address, origin: rendering.Point, scale: rendering.PolygonScale, draw_mode: ?rendering.DrawMode, recursion_depth: usize, visitor: anytype) Error(@TypeOf(visitor))!void {
+    fn recursivelyParseEntry(self: Self, address: Address, origin: Point, scale: PolygonScale, draw_mode: ?PolygonDrawMode, recursion_depth: usize, visitor: anytype) Error(@TypeOf(visitor))!void {
         if (address >= self.data.len) {
             return error.InvalidAddress;
         }
@@ -74,7 +79,7 @@ pub const PolygonResource = struct {
         switch (header) {
             .single_polygon => |default_draw_mode| {
                 const final_draw_mode = draw_mode orelse default_draw_mode;
-                const polygon = try rendering.Polygon.parse(reader, origin, scale, final_draw_mode);
+                const polygon = try Polygon.parse(reader, origin, scale, final_draw_mode);
 
                 try visitor.visit(polygon);
             },
@@ -109,7 +114,7 @@ pub const PolygonResource = struct {
         const Reader = @import("std").io.FixedBufferStream([]const u8).Reader;
         const ReaderError = meta.ErrorType(Reader.readByte);
 
-        return VisitorError || ReaderError || rendering.Polygon.ParseError(Reader) || error{
+        return VisitorError || ReaderError || Polygon.ParseError(Reader) || error{
             /// The requested polygon address was out of range, or one of the polygon subentries
             /// within the resource pointed to an address that was out of range.
             InvalidAddress,
@@ -153,8 +158,8 @@ pub const PolygonResource = struct {
         // - Full resource block -
 
         // Simple 4-vertex polygons @ 12 bytes long each
-        const polygon_1 = rendering.Polygon.Fixtures.valid_dot;
-        const polygon_2 = rendering.Polygon.Fixtures.valid_dot;
+        const polygon_1 = Polygon.Fixtures.valid_dot;
+        const polygon_2 = Polygon.Fixtures.valid_dot;
 
         const group_1 = [_]u8{
             1, // X negative offset
@@ -247,7 +252,7 @@ pub const PolygonResource = struct {
 const EntryHeader = union(enum) {
     /// The data following the header contains a single polygon,
     /// which should be drawn using the specified draw mode if no override mode has been applied.
-    single_polygon: rendering.DrawMode,
+    single_polygon: PolygonDrawMode,
     /// The data following the header contains a group of polygons or subgroups.
     group: void,
 
@@ -272,10 +277,10 @@ const EntryHeader = union(enum) {
         const raw = try reader.readByte();
 
         const top_2_bits = raw >> 6;
-        const remaining_6_bits = @as(rendering.DrawMode.Raw, raw & 0b0011_1111);
+        const remaining_6_bits = @as(PolygonDrawMode.Raw, raw & 0b0011_1111);
 
         if (top_2_bits == 0b11) {
-            const draw_mode = rendering.DrawMode.parse(remaining_6_bits);
+            const draw_mode = PolygonDrawMode.parse(remaining_6_bits);
             return EntryHeader{ .single_polygon = draw_mode };
         } else if (remaining_6_bits == 0b000010) {
             return EntryHeader.group;
@@ -289,14 +294,14 @@ const EntryHeader = union(enum) {
 const GroupHeader = struct {
     /// The scaled x,y distance to offset this group's polygons and subgroups from the parent origin.
     /// Should be subtracted from - not added to - the parent origin.
-    offset: rendering.Point,
+    offset: Point,
     /// The number of entries within this group, from 1-256.
     count: usize,
 
     /// Parses a group header from a byte stream containing polygon resource data.
     /// Consumes 3 bytes from the stream.
     /// Fails with an error if there are not enough bytes in the stream.
-    fn parse(reader: anytype, scale: rendering.PolygonScale) !GroupHeader {
+    fn parse(reader: anytype, scale: PolygonScale) !GroupHeader {
         // Each polygon group is stored as the following bytes:
         // 0: Unscaled X offset at which to draw the group: multiplied by `scale` to get the final offset.
         // 1: Unscaled Y offset at which to draw the group: multiplied by `scale` to get the final offset.
@@ -316,15 +321,15 @@ const EntryPointer = struct {
     address: PolygonResource.Address,
     /// The x,y distance to offset the entry's polygon or subgroup from the parent origin.
     /// Unlike the group offset, this should be added to - not subtracted from - the parent origin.
-    offset: rendering.Point,
+    offset: Point,
     /// An optional overridden draw mode for this entry's polygon.
     /// Unused if the entry is a subgroup rather than a single polygon.
-    draw_mode: ?rendering.DrawMode,
+    draw_mode: ?PolygonDrawMode,
 
     /// Parses a single entry pointer from a byte stream containing polygon resource data.
     /// Consumes either 4 or 6 bytes from the stream, depending on the contents of the pointer record.
     /// Fails with an error if there are not enough bytes in the stream.
-    fn parse(reader: anytype, scale: rendering.PolygonScale) !EntryPointer {
+    fn parse(reader: anytype, scale: PolygonScale) !EntryPointer {
         // Each pointer is stored as the following bytes:
         // 0...1: A 16-bit control code with the layout `maaa_aaaa_aaaa_aaaa`, where:
         //        - `m` is a 1-bit flag determining whether to read extra bytes for the override draw mode.
@@ -386,7 +391,7 @@ const EntryPointer = struct {
             // https://github.com/fabiensanglard/Another-World-Bytecode-Interpreter/blob/dea6914a82f493cb329188bcffa46b9d0b234ea6/src/video.cpp#L91-L93
             // (note that it checks the high bit of `color` and ignores the rest of the value if it's set,
             // instead parsing the draw mode from the rest of the polygon's header byte.)
-            self.draw_mode = rendering.DrawMode.parse(raw_draw_mode & 0b0111_1111);
+            self.draw_mode = PolygonDrawMode.parse(raw_draw_mode & 0b0111_1111);
         } else {
             self.draw_mode = null;
         }
@@ -397,10 +402,10 @@ const EntryPointer = struct {
 
 // Parse the polygon offset for a group header or entry pointer.
 // Consumes 2 bytes from the reader.
-fn parseOffset(reader: anytype, scale: rendering.PolygonScale) !rendering.Point {
+fn parseOffset(reader: anytype, scale: PolygonScale) !Point {
     const raw_x = try reader.readByte();
     const raw_y = try reader.readByte();
-    return rendering.Point{
+    return Point{
         .x = scale.apply(i16, raw_x),
         .y = scale.apply(i16, raw_y),
     };
@@ -419,7 +424,7 @@ test "EntryHeader.parse parses single polygon entry header correctly and consume
     var stream = countingReader(fixedBufferStream(data).reader());
 
     const actual = try EntryHeader.parse(stream.reader());
-    const expected: EntryHeader = .{ .single_polygon = .{ .solid_color = rendering.ColorID.cast(0xA) } };
+    const expected: EntryHeader = .{ .single_polygon = .{ .solid_color = ColorID.cast(0xA) } };
 
     try testing.expectEqual(expected, actual);
     try testing.expectEqual(1, stream.bytes_read);
@@ -548,11 +553,11 @@ const ArrayList = @import("std").ArrayList;
 const Allocator = @import("std").mem.Allocator;
 
 const TestVisitor = struct {
-    polygons: ArrayList(rendering.Polygon),
+    polygons: ArrayList(Polygon),
 
     fn init(allocator: Allocator) TestVisitor {
         return .{
-            .polygons = ArrayList(rendering.Polygon).init(allocator),
+            .polygons = ArrayList(Polygon).init(allocator),
         };
     }
 
@@ -560,7 +565,7 @@ const TestVisitor = struct {
         self.polygons.deinit();
     }
 
-    fn visit(self: *TestVisitor, polygon: rendering.Polygon) !void {
+    fn visit(self: *TestVisitor, polygon: Polygon) !void {
         try self.polygons.append(polygon);
     }
 };
@@ -582,7 +587,7 @@ test "iteratePolygons correctly visits all polygons in group" {
     // [origin] - [group 1 offset] + [group 1 pointer 1 offset]
     try testing.expectEqual(1000 - 1 + 11, polygon_1.bounds.x.min);
     try testing.expectEqual(2000 - 1 + 11, polygon_1.bounds.y.min);
-    try testing.expectEqual(.{ .solid_color = rendering.ColorID.cast(0xA) }, polygon_1.draw_mode);
+    try testing.expectEqual(.{ .solid_color = ColorID.cast(0xA) }, polygon_1.draw_mode);
     try testing.expectEqual(4, polygon_1.vertices().len);
 
     const polygon_2 = visitor.polygons.items[1];

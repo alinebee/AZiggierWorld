@@ -15,8 +15,8 @@
 const anotherworld = @import("../anotherworld.zig");
 const static_limits = anotherworld.static_limits;
 
-const Color = anotherworld.rendering.Color;
-const Palette = anotherworld.rendering.Palette;
+const Color = @import("color.zig").Color;
+const Palette = @import("palette.zig").Palette;
 const PaletteID = @import("palette_id.zig").PaletteID;
 
 const mem = @import("std").mem;
