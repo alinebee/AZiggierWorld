@@ -5,12 +5,11 @@ const Registers = @import("../registers.zig").Registers;
 
 const anotherworld = @import("../../lib/anotherworld.zig");
 const rendering = anotherworld.rendering;
+const resources = anotherworld.resources;
 const text = anotherworld.text;
 
 const GamePart = @import("../../values/game_part.zig").GamePart;
 const ChannelID = @import("../../values/channel_id.zig").ChannelID;
-const ResourceID = @import("../../values/resource_id.zig").ResourceID;
-const PaletteID = @import("../../values/palette_id.zig").PaletteID;
 const BufferID = @import("../../values/buffer_id.zig").BufferID;
 
 const zeroes = @import("std").mem.zeroes;
@@ -55,7 +54,7 @@ pub fn MockMachine(comptime Implementation: type) type {
             try Implementation.drawString(string_id, color_id, point);
         }
 
-        pub fn selectPalette(self: *Self, palette_id: PaletteID) !void {
+        pub fn selectPalette(self: *Self, palette_id: resources.PaletteID) !void {
             self.call_counts.selectPalette += 1;
             try Implementation.selectPalette(palette_id);
         }
@@ -85,7 +84,7 @@ pub fn MockMachine(comptime Implementation: type) type {
             Implementation.scheduleGamePart(game_part);
         }
 
-        pub fn loadResource(self: *Self, resource_id: ResourceID) !void {
+        pub fn loadResource(self: *Self, resource_id: resources.ResourceID) !void {
             self.call_counts.loadResource += 1;
             try Implementation.loadResource(resource_id);
         }
@@ -95,7 +94,7 @@ pub fn MockMachine(comptime Implementation: type) type {
             Implementation.unloadAllResources();
         }
 
-        pub fn playMusic(self: *Self, resource_id: ResourceID, offset: Audio.Offset, delay: Audio.Delay) !void {
+        pub fn playMusic(self: *Self, resource_id: resources.ResourceID, offset: Audio.Offset, delay: Audio.Delay) !void {
             self.call_counts.playMusic += 1;
             try Implementation.playMusic(resource_id, offset, delay);
         }
@@ -110,7 +109,7 @@ pub fn MockMachine(comptime Implementation: type) type {
             Implementation.stopMusic();
         }
 
-        pub fn playSound(self: *Self, resource_id: ResourceID, channel_id: ChannelID, volume: Audio.Volume, frequency: Audio.Frequency) !void {
+        pub fn playSound(self: *Self, resource_id: resources.ResourceID, channel_id: ChannelID, volume: Audio.Volume, frequency: Audio.Frequency) !void {
             self.call_counts.playSound += 1;
             try Implementation.playSound(resource_id, channel_id, volume, frequency);
         }
@@ -157,14 +156,14 @@ test "MockMachine calls drawString correctly on stub implementation" {
 
 test "MockMachine calls selectPalette correctly on stub implementation" {
     var mock = mockMachine(struct {
-        fn selectPalette(palette_id: PaletteID) !void {
-            testing.expectEqual(PaletteID.cast(16), palette_id) catch {
+        fn selectPalette(palette_id: resources.PaletteID) !void {
+            testing.expectEqual(resources.PaletteID.cast(16), palette_id) catch {
                 unreachable;
             };
         }
     });
 
-    try mock.selectPalette(PaletteID.cast(16));
+    try mock.selectPalette(resources.PaletteID.cast(16));
     try testing.expectEqual(1, mock.call_counts.selectPalette);
 }
 
@@ -241,12 +240,12 @@ test "MockMachine calls scheduleGamePart correctly on stub implementation" {
 
 test "MockMachine calls loadResource correctly on stub implementation" {
     var mock = mockMachine(struct {
-        fn loadResource(resource_id: ResourceID) !void {
-            try testing.expectEqual(ResourceID.cast(0x8BAD), resource_id);
+        fn loadResource(resource_id: resources.ResourceID) !void {
+            try testing.expectEqual(resources.ResourceID.cast(0x8BAD), resource_id);
         }
     });
 
-    try mock.loadResource(ResourceID.cast(0x8BAD));
+    try mock.loadResource(resources.ResourceID.cast(0x8BAD));
     try testing.expectEqual(1, mock.call_counts.loadResource);
 }
 
@@ -261,14 +260,14 @@ test "MockMachine calls unloadAllResources correctly on stub implementation" {
 
 test "MockMachine calls playMusic correctly on stub implementation" {
     var mock = mockMachine(struct {
-        fn playMusic(resource_id: ResourceID, offset: Audio.Offset, delay: Audio.Delay) !void {
-            try testing.expectEqual(ResourceID.cast(0xBEEF), resource_id);
+        fn playMusic(resource_id: resources.ResourceID, offset: Audio.Offset, delay: Audio.Delay) !void {
+            try testing.expectEqual(resources.ResourceID.cast(0xBEEF), resource_id);
             try testing.expectEqual(128, offset);
             try testing.expectEqual(1234, delay);
         }
     });
 
-    try mock.playMusic(ResourceID.cast(0xBEEF), 128, 1234);
+    try mock.playMusic(resources.ResourceID.cast(0xBEEF), 128, 1234);
     try testing.expectEqual(1, mock.call_counts.playMusic);
 }
 
@@ -296,15 +295,15 @@ test "MockMachine calls stopMusic correctly on stub implementation" {
 
 test "MockMachine calls playSound correctly on stub implementation" {
     var mock = mockMachine(struct {
-        fn playSound(resource_id: ResourceID, channel_id: ChannelID, volume: Audio.Volume, frequency: Audio.Frequency) !void {
-            try testing.expectEqual(ResourceID.cast(0xBEEF), resource_id);
+        fn playSound(resource_id: resources.ResourceID, channel_id: ChannelID, volume: Audio.Volume, frequency: Audio.Frequency) !void {
+            try testing.expectEqual(resources.ResourceID.cast(0xBEEF), resource_id);
             try testing.expectEqual(ChannelID.cast(2), channel_id);
             try testing.expectEqual(64, volume);
             try testing.expectEqual(128, frequency);
         }
     });
 
-    try mock.playSound(ResourceID.cast(0xBEEF), ChannelID.cast(2), 64, 128);
+    try mock.playSound(resources.ResourceID.cast(0xBEEF), ChannelID.cast(2), 64, 128);
     try testing.expectEqual(1, mock.call_counts.playSound);
 }
 

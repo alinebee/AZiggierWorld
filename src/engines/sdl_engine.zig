@@ -1,9 +1,9 @@
 const anotherworld = @import("../lib/anotherworld.zig");
+const resources = anotherworld.resources;
 const log = anotherworld.log;
 
 const Machine = @import("../machine/machine.zig").Machine;
 const Host = @import("../machine/host.zig").Host;
-const ResourceDirectory = @import("../resources/resource_directory.zig").ResourceDirectory;
 const BufferID = @import("../values/buffer_id.zig").BufferID;
 const Video = @import("../machine/video.zig").Video;
 const GameInput = @import("../machine/user_input.zig").UserInput;
@@ -76,7 +76,7 @@ pub const SDLEngine = struct {
     allocator: std.mem.Allocator,
 
     game_dir: std.fs.Dir,
-    resource_directory: ResourceDirectory,
+    resource_directory: resources.ResourceDirectory,
     machine: Machine,
 
     window: SDL.Window,
@@ -110,7 +110,7 @@ pub const SDLEngine = struct {
         self.game_dir = try std.fs.cwd().openDir(game_path, .{});
         errdefer self.game_dir.close();
 
-        self.resource_directory = try ResourceDirectory.init(&self.game_dir);
+        self.resource_directory = try resources.ResourceDirectory.init(&self.game_dir);
 
         self.machine = try Machine.init(
             allocator,

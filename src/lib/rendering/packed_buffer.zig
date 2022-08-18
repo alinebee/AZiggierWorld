@@ -11,6 +11,7 @@
 //! Behind the scenes Zig takes care of the masking for us.)
 
 const anotherworld = @import("../anotherworld.zig");
+const resources = anotherworld.resources;
 
 const ColorID = @import("color_id.zig").ColorID;
 const Palette = @import("palette.zig").Palette;
@@ -21,7 +22,6 @@ const BoundingBox = @import("bounding_box.zig").BoundingBox;
 
 const Surface = @import("surface.zig").Surface;
 const indexed_bitmap = @import("test_helpers/indexed_bitmap.zig");
-const planar_bitmap = @import("../../resources/planar_bitmap.zig");
 
 const std = @import("std");
 const mem = std.mem;
@@ -232,8 +232,8 @@ pub fn PackedBuffer(comptime width: usize, comptime height: usize) type {
 
         /// Load the contents of an Another World bitmap resource into this buffer,
         /// replacing all existing pixels.
-        pub fn loadBitmapResource(self: *Self, bitmap_data: []const u8) planar_bitmap.Error!void {
-            var reader = try planar_bitmap.planarBitmapReader(width, height, bitmap_data);
+        pub fn loadBitmapResource(self: *Self, bitmap_data: []const u8) resources.planar_bitmap.Error!void {
+            var reader = try resources.planar_bitmap.planarBitmapReader(width, height, bitmap_data);
 
             for (self.data) |*native_color| {
                 native_color.* = .{

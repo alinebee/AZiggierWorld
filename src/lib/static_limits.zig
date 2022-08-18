@@ -93,6 +93,9 @@ pub const max_instructions_per_tic = 10_000;
 /// The DOS version of Another World has 146 resources.
 pub const max_resource_descriptors = 150;
 
+/// DOS 8.3 filenames require a maximum of 12 characters to represent.
+pub const max_filename_length = 12;
+
 /// The maximum number of vertices allowed in a single polygon.
 /// Determines the size of the array of vertices within a polygon instance.
 /// Can be safely modified without changing types.

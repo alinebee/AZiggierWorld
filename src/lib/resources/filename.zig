@@ -1,11 +1,8 @@
-const anotherworld = @import("../lib/anotherworld.zig");
+const anotherworld = @import("../anotherworld.zig");
+const static_limits = anotherworld.static_limits;
 
 const std = @import("std");
 const fmt = std.fmt;
-const mem = std.mem;
-
-/// DOS 8.3 filenames require a maximum of 12 characters to represent.
-const max_filename_length = 12;
 
 /// Describes all legal filenames for Another World resource files.
 pub const Filename = union(enum) {
@@ -29,7 +26,7 @@ pub const Filename = union(enum) {
     }
 
     /// A buffer large enough to hold a filename.
-    pub const Buffer = [max_filename_length]u8;
+    pub const Buffer = [static_limits.max_filename_length]u8;
 
     /// The type of a bank filename identifier.
     /// These are in the range 01-0D for the MS-DOS version of Another World.

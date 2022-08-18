@@ -3,6 +3,7 @@
 //! Requires that the `fixtures/dos` folder contains Another World DOS game files.
 
 const anotherworld = @import("anotherworld");
+const resources = anotherworld.resources;
 const log = anotherworld.log;
 
 const Instruction = anotherworld.instructions.Instruction;
@@ -11,8 +12,6 @@ const PolygonScale = anotherworld.rendering.PolygonScale;
 const Point = anotherworld.rendering.Point;
 
 const Program = @import("../machine/program.zig").Program;
-const PolygonResource = @import("../resources/polygon_resource.zig").PolygonResource;
-const ResourceDirectory = @import("../resources/resource_directory.zig").ResourceDirectory;
 const GamePart = @import("../values/game_part.zig").GamePart;
 
 const testing = @import("utils").testing;
@@ -51,7 +50,7 @@ fn findPolygonDrawInstructions(allocator: std.mem.Allocator, bytecode: []const u
 /// Parses all polygon draw instructions from the bytecode for a given game part,
 /// then parses the polygons themselves from the respective polygon or animation resource for that game part.
 /// Returns the total number of polygons parsed, or an error if parsing or memory allocation failed.
-fn parsePolygonInstructionsForGamePart(allocator: std.mem.Allocator, resource_directory: *ResourceDirectory, game_part: GamePart) !usize {
+fn parsePolygonInstructionsForGamePart(allocator: std.mem.Allocator, resource_directory: *resources.ResourceDirectory, game_part: GamePart) !usize {
     const resource_ids = game_part.resourceIDs();
     const reader = resource_directory.reader();
 
@@ -61,13 +60,13 @@ fn parsePolygonInstructionsForGamePart(allocator: std.mem.Allocator, resource_di
     const draw_instructions = try findPolygonDrawInstructions(allocator, bytecode);
     defer allocator.free(draw_instructions);
 
-    const polygons = PolygonResource.init(try reader.allocReadResourceByID(allocator, resource_ids.polygons));
+    const polygons = resources.PolygonResource.init(try reader.allocReadResourceByID(allocator, resource_ids.polygons));
     defer allocator.free(polygons.data);
 
-    const maybe_animations: ?PolygonResource = init: {
+    const maybe_animations: ?resources.PolygonResource = init: {
         if (resource_ids.animations) |id| {
             const data = try reader.allocReadResourceByID(allocator, id);
-            break :init PolygonResource.init(data);
+            break :init resources.PolygonResource.init(data);
         } else {
             break :init null;
         }
@@ -122,7 +121,7 @@ test "Parse polygon instructions for every game part" {
     var game_dir = try ensureValidFixtureDir();
     defer game_dir.close();
 
-    var resource_directory = try ResourceDirectory.init(&game_dir);
+    var resource_directory = try resources.ResourceDirectory.init(&game_dir);
 
     var count: usize = 0;
     for (GamePart.all) |game_part| {

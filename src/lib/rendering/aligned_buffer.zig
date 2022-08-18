@@ -6,6 +6,7 @@
 //! versus 32,000 for the packed buffer implementation.
 
 const anotherworld = @import("../anotherworld.zig");
+const resources = anotherworld.resources;
 
 const ColorID = @import("color_id.zig").ColorID;
 const Palette = @import("palette.zig").Palette;
@@ -16,7 +17,6 @@ const BoundingBox = @import("bounding_box.zig").BoundingBox;
 
 const Surface = @import("surface.zig").Surface;
 const IndexedBitmap = @import("test_helpers/indexed_bitmap.zig").IndexedBitmap;
-const planar_bitmap = @import("../../resources/planar_bitmap.zig");
 
 const mem = @import("std").mem;
 const math = @import("std").math;
@@ -181,8 +181,8 @@ pub fn AlignedBuffer(comptime width: usize, comptime height: usize) type {
 
         /// Load the contents of an Another World bitmap resource into this buffer,
         /// replacing all existing pixels.
-        pub fn loadBitmapResource(self: *Self, bitmap_data: []const u8) planar_bitmap.Error!void {
-            var reader = try planar_bitmap.planarBitmapReader(width, height, bitmap_data);
+        pub fn loadBitmapResource(self: *Self, bitmap_data: []const u8) resources.planar_bitmap.Error!void {
+            var reader = try resources.planar_bitmap.planarBitmapReader(width, height, bitmap_data);
 
             for (self.data) |*row| {
                 for (row.*) |*color| {

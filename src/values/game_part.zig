@@ -1,7 +1,7 @@
 const anotherworld = @import("../lib/anotherworld.zig");
 const intToEnum = @import("utils").meta.intToEnum;
 
-const ResourceID = @import("resource_id.zig").ResourceID;
+const ResourceID = anotherworld.resources.ResourceID;
 
 /// A raw game part identifier as represented in Another World's bytecode.
 const Raw = u16;

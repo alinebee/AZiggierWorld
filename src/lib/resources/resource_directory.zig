@@ -14,14 +14,14 @@
 //! const first_resource_descriptor = try reader.resourceDescriptor(0);
 //! const game_data = try reader.allocReadResource(my_allocator, first_resource_descriptor);
 
-const anotherworld = @import("../lib/anotherworld.zig");
+const anotherworld = @import("../anotherworld.zig");
 const static_limits = anotherworld.static_limits;
 const log = anotherworld.log;
 const decode = anotherworld.rle.decode;
 
 const ResourceReader = @import("resource_reader.zig").ResourceReader;
 const ResourceDescriptor = @import("resource_descriptor.zig").ResourceDescriptor;
-const ResourceID = @import("../values/resource_id.zig").ResourceID;
+const ResourceID = @import("resource_id.zig").ResourceID;
 const Filename = @import("filename.zig").Filename;
 
 const std = @import("std");

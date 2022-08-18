@@ -5,10 +5,10 @@
 //! This file defines the structure of these resource descriptors, along with methods
 //! to parse them from a MEMLIST.BIN file.
 
-const anotherworld = @import("../lib/anotherworld.zig");
+const anotherworld = @import("../anotherworld.zig");
 const meta = @import("utils").meta;
 
-const ResourceType = @import("../values/resource_type.zig").ResourceType;
+const ResourceType = @import("resource_type.zig").ResourceType;
 const Filename = @import("filename.zig").Filename;
 
 /// Describes an individual resource in Another World's data files:

@@ -3,11 +3,11 @@
 //! Requires that the `fixtures/dos` folder contains Another World DOS game files.
 
 const anotherworld = @import("anotherworld");
+const resources = anotherworld.resources;
 const log = anotherworld.log;
 
 const Machine = @import("../machine/machine.zig").Machine;
 const Host = @import("../machine/host.zig").Host;
-const ResourceDirectory = @import("../resources/resource_directory.zig").ResourceDirectory;
 const BufferID = @import("../values/buffer_id.zig").BufferID;
 const UserInput = @import("../machine/user_input.zig").UserInput;
 
@@ -54,7 +54,7 @@ test "Introduction runs successfully" {
     var game_dir = try ensureValidFixtureDir();
     defer game_dir.close();
 
-    var resource_directory = try ResourceDirectory.init(&game_dir);
+    var resource_directory = try resources.ResourceDirectory.init(&game_dir);
     var host = CountingHost{};
 
     var machine = try Machine.init(testing.allocator, resource_directory.reader(), host.host(), .{

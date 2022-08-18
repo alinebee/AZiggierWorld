@@ -2,7 +2,7 @@
 //! where each palette is indexed in bytecode by an integer from 0-31.
 //! The game swapped between palettes from screen to screen or to do effects like lightning or fades.
 
-const anotherworld = @import("../lib/anotherworld.zig");
+const anotherworld = @import("../anotherworld.zig");
 const intToEnum = @import("utils").meta.intToEnum;
 
 const _Trusted = u5;

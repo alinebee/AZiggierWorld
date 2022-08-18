@@ -30,14 +30,13 @@
 
 const anotherworld = @import("../lib/anotherworld.zig");
 const rendering = anotherworld.rendering;
+const resources = anotherworld.resources;
 const text = anotherworld.text;
 const static_limits = anotherworld.static_limits;
 const log = anotherworld.log;
 
 const BufferID = @import("../values/buffer_id.zig").BufferID;
-const PaletteID = @import("../values/palette_id.zig").PaletteID;
 const ThreadID = @import("../values/thread_id.zig").ThreadID;
-const ResourceID = @import("../values/resource_id.zig").ResourceID;
 const ChannelID = @import("../values/channel_id.zig").ChannelID;
 const RegisterID = @import("../values/register_id.zig").RegisterID;
 const Register = @import("../values/register.zig");
@@ -53,8 +52,6 @@ const Memory = @import("memory.zig").Memory;
 const Host = @import("host.zig").Host;
 const UserInput = @import("user_input.zig").UserInput;
 
-const ResourceReader = @import("../resources/resource_reader.zig").ResourceReader;
-const MockRepository = @import("../resources/mock_repository.zig").MockRepository;
 const mock_host = @import("test_helpers/mock_host.zig");
 
 const std = @import("std");
@@ -100,7 +97,7 @@ pub const Machine = struct {
     /// reads game data from the specified reader, and sends video and audio output to the specified host.
     /// At startup, the virtual machine will attempt to load the resources for the initial game part.
     /// On success, returns a machine instance that is ready to begin simulating.
-    pub fn init(allocator: mem.Allocator, reader: ResourceReader, host: Host, options: Options) !Self {
+    pub fn init(allocator: mem.Allocator, reader: resources.ResourceReader, host: Host, options: Options) !Self {
         var memory = try Memory.init(allocator, reader);
         errdefer memory.deinit();
 
@@ -185,7 +182,7 @@ pub const Machine = struct {
 
     /// Load the specified resource if it is not already loaded.
     /// Returns an error if the specified resource ID does not exist or could not be loaded.
-    pub fn loadResource(self: *Self, resource_id: ResourceID) !void {
+    pub fn loadResource(self: *Self, resource_id: resources.ResourceID) !void {
         const location = try self.memory.loadIndividualResource(resource_id);
 
         switch (location) {
@@ -218,7 +215,7 @@ pub const Machine = struct {
     }
 
     /// Select the active palette to render the video buffer in.
-    pub fn selectPalette(self: *Self, palette_id: PaletteID) !void {
+    pub fn selectPalette(self: *Self, palette_id: resources.PaletteID) !void {
         try self.video.selectPalette(palette_id);
     }
 
@@ -252,7 +249,7 @@ pub const Machine = struct {
 
     /// Start playing a music track from a specified resource.
     /// Returns an error if the resource does not exist or could not be loaded.
-    pub fn playMusic(_: *Self, resource_id: ResourceID, offset: Audio.Offset, delay: Audio.Delay) !void {
+    pub fn playMusic(_: *Self, resource_id: resources.ResourceID, offset: Audio.Offset, delay: Audio.Delay) !void {
         log.debug("Audio.playMusic: play #{X} at offset {} after delay {}", .{
             resource_id,
             offset,
@@ -272,7 +269,7 @@ pub const Machine = struct {
 
     /// Play a sound effect from the specified resource on the specified channel.
     /// Returns an error if the resource does not exist or could not be loaded.
-    pub fn playSound(_: *Self, resource_id: ResourceID, channel_id: ChannelID, volume: Audio.Volume, frequency: Audio.Frequency) !void {
+    pub fn playSound(_: *Self, resource_id: resources.ResourceID, channel_id: ChannelID, volume: Audio.Volume, frequency: Audio.Frequency) !void {
         log.debug("Audio.playSound: play #{X} on channel {} at volume {}, frequency {}", .{
             resource_id,
             channel_id,
@@ -372,7 +369,7 @@ pub const Machine = struct {
         const options = Options{ .initial_game_part = .intro_cinematic, .seed = 0 };
         const host = config.host orelse mock_host.test_host;
 
-        var machine = Self.init(testing.allocator, MockRepository.test_reader, host, options) catch unreachable;
+        var machine = Self.init(testing.allocator, resources.MockRepository.test_reader, host, options) catch unreachable;
         if (config.bytecode) |bytecode| {
             machine.program = Program.init(bytecode) catch unreachable;
         }
@@ -393,7 +390,7 @@ test "new creates virtual machine instance with expected initial state" {
         .seed = 12345,
     };
 
-    var machine = try Machine.init(testing.allocator, MockRepository.test_reader, mock_host.test_host, options);
+    var machine = try Machine.init(testing.allocator, resources.MockRepository.test_reader, mock_host.test_host, options);
     defer machine.deinit();
 
     for (machine.threads) |thread, index| {
@@ -536,7 +533,7 @@ test "loadResource loads audio resource into main memory" {
     var machine = Machine.testInstance(.{});
     defer machine.deinit();
 
-    const audio_resource_id = MockRepository.Fixtures.sfx_resource_id;
+    const audio_resource_id = resources.MockRepository.Fixtures.sfx_resource_id;
 
     try testing.expectEqual(null, try machine.memory.resourceLocation(audio_resource_id));
     try machine.loadResource(audio_resource_id);
@@ -551,7 +548,7 @@ test "loadResource copies bitmap resource directly into video buffer without per
     buffer.fill(rendering.ColorID.cast(0x0));
     const original_buffer_contents = buffer.toBitmap();
 
-    const bitmap_resource_id = MockRepository.Fixtures.bitmap_resource_id;
+    const bitmap_resource_id = resources.MockRepository.Fixtures.bitmap_resource_id;
     try testing.expectEqual(null, machine.memory.resourceLocation(bitmap_resource_id));
     try machine.loadResource(bitmap_resource_id);
     try testing.expectEqual(null, machine.memory.resourceLocation(bitmap_resource_id));
@@ -566,7 +563,7 @@ test "loadResource returns error on invalid resource ID" {
     var machine = Machine.testInstance(.{});
     defer machine.deinit();
 
-    const invalid_id = MockRepository.Fixtures.invalid_resource_id;
+    const invalid_id = resources.MockRepository.Fixtures.invalid_resource_id;
     try testing.expectError(error.InvalidResourceID, machine.loadResource(invalid_id));
 }
 

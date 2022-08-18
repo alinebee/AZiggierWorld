@@ -1,10 +1,10 @@
 //! Provides a standard interface for accessing Another World resource data from a repository,
 //! e.g. a directory on the local filesystem.
 
-const anotherworld = @import("../lib/anotherworld.zig");
+const anotherworld = @import("../anotherworld.zig");
 
 const ResourceDescriptor = @import("resource_descriptor.zig").ResourceDescriptor;
-const ResourceID = @import("../values/resource_id.zig").ResourceID;
+const ResourceID = @import("resource_id.zig").ResourceID;
 
 const std = @import("std");
 const mem = std.mem;

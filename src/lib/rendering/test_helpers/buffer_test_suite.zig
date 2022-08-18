@@ -1,6 +1,6 @@
 const anotherworld = @import("../../anotherworld.zig");
+const resources = anotherworld.resources;
 
-const planar_bitmap = @import("../../../resources/planar_bitmap.zig");
 const Surface = @import("../surface.zig").Surface;
 const ColorID = @import("../color_id.zig").ColorID;
 const PaletteFixtures = @import("../palette.zig").Fixtures;
@@ -288,7 +288,7 @@ pub fn runTests(comptime Instance: anytype) void {
         }
 
         test "loadBitmapResource correctly parses planar bitmap data" {
-            const data = &planar_bitmap.Fixtures.valid_16px;
+            const data = &resources.planar_bitmap.Fixtures.valid_16px;
             const Buffer = Instance(4, 4);
 
             var buffer = Buffer{};

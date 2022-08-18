@@ -1,17 +1,17 @@
 const anotherworld = @import("../anotherworld.zig");
+const resources = anotherworld.resources;
 
 const Opcode = @import("opcode.zig").Opcode;
 const Program = @import("../../machine/program.zig").Program;
 const Machine = @import("../../machine/machine.zig").Machine;
 const Audio = @import("../../machine/audio.zig").Audio;
-const ResourceID = @import("../../values/resource_id.zig").ResourceID;
 
 /// Starts, stops or delays the current music track.
 pub const ControlMusic = union(enum) {
     /// Begin playing a music track.
     play: struct {
         /// The ID of the music resource to play.
-        resource_id: ResourceID,
+        resource_id: resources.ResourceID,
         /// The offset within the music resource at which to start playing.
         /// (TODO: document the meaning and units of this value.)
         offset: Audio.Offset,
@@ -30,7 +30,7 @@ pub const ControlMusic = union(enum) {
     /// Consumes 6 bytes from the bytecode on success, including the opcode.
     /// Returns an error if the bytecode could not be read or contained an invalid instruction.
     pub fn parse(_: Opcode.Raw, program: *Program) ParseError!Self {
-        const possible_resource_id = try program.read(ResourceID.Raw);
+        const possible_resource_id = try program.read(resources.ResourceID.Raw);
         const delay = try program.read(Audio.Delay);
         const offset = try program.read(Audio.Offset);
 
@@ -40,7 +40,7 @@ pub const ControlMusic = union(enum) {
         if (possible_resource_id != no_resource_id) {
             return Self{
                 .play = .{
-                    .resource_id = ResourceID.cast(possible_resource_id),
+                    .resource_id = resources.ResourceID.cast(possible_resource_id),
                     .offset = offset,
                     .delay = delay,
                 },
@@ -97,7 +97,7 @@ test "parse parses play instruction and consumes 6 bytes" {
     const instruction = try expectParse(ControlMusic.parse, &ControlMusic.Fixtures.play, 6);
     const expected = ControlMusic{
         .play = .{
-            .resource_id = ResourceID.cast(0xDEAD),
+            .resource_id = resources.ResourceID.cast(0xDEAD),
             .offset = 0xFF,
             .delay = 0xBEEF,
         },
@@ -120,15 +120,15 @@ test "parse parses stop instruction and consumes 6 bytes" {
 test "execute with play instruction calls playMusic with correct parameters" {
     const instruction: ControlMusic = .{
         .play = .{
-            .resource_id = ResourceID.cast(0x8BAD),
+            .resource_id = resources.ResourceID.cast(0x8BAD),
             .offset = 0x12,
             .delay = 0xF00D,
         },
     };
 
     var machine = mockMachine(struct {
-        pub fn playMusic(resource_id: ResourceID, offset: Audio.Offset, delay: Audio.Delay) !void {
-            try testing.expectEqual(ResourceID.cast(0x8BAD), resource_id);
+        pub fn playMusic(resource_id: resources.ResourceID, offset: Audio.Offset, delay: Audio.Delay) !void {
+            try testing.expectEqual(resources.ResourceID.cast(0x8BAD), resource_id);
             try testing.expectEqual(0x12, offset);
             try testing.expectEqual(0xF00D, delay);
         }
@@ -150,7 +150,7 @@ test "execute with set_delay instruction calls setMusicDelay with correct parame
     const instruction: ControlMusic = .{ .set_delay = 0xF00D };
 
     var machine = mockMachine(struct {
-        pub fn playMusic(_: ResourceID, _: Audio.Offset, _: Audio.Delay) !void {
+        pub fn playMusic(_: resources.ResourceID, _: Audio.Offset, _: Audio.Delay) !void {
             unreachable;
         }
 
@@ -173,7 +173,7 @@ test "execute with stop instruction calls stopMusic with correct parameters" {
     const instruction: ControlMusic = .stop;
 
     var machine = mockMachine(struct {
-        pub fn playMusic(_: ResourceID, _: Audio.Offset, _: Audio.Delay) !void {
+        pub fn playMusic(_: resources.ResourceID, _: Audio.Offset, _: Audio.Delay) !void {
             unreachable;
         }
 

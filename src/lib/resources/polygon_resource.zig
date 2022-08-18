@@ -17,7 +17,7 @@
 //!
 //! (It also allows potential recursion cycles, which this parser manually guards against.)
 
-const anotherworld = @import("../lib/anotherworld.zig");
+const anotherworld = @import("../anotherworld.zig");
 const rendering = anotherworld.rendering;
 const meta = @import("utils").meta;
 

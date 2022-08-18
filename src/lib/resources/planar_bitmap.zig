@@ -15,7 +15,7 @@
 //! byte boundaries and need to be masked in awkward ways. Planes allow arbitrary index sizes
 //! to be stored efficiently.)
 
-const anotherworld = @import("../lib/anotherworld.zig");
+const anotherworld = @import("../anotherworld.zig");
 
 const ColorID = anotherworld.rendering.ColorID;
 
