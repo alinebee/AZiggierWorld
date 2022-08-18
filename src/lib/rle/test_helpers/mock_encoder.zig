@@ -1,4 +1,4 @@
-const anotherworld = @import("../../lib/anotherworld.zig");
+const anotherworld = @import("../../anotherworld.zig");
 const meta = anotherworld.meta;
 
 const std = @import("std");

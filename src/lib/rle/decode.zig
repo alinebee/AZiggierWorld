@@ -20,7 +20,7 @@
 //!    - The read cursor and write cursors should both be at the start of the buffer.
 //!    - The checksum should be equal to 0.
 
-const anotherworld = @import("../lib/anotherworld.zig");
+const anotherworld = @import("../anotherworld.zig");
 
 const Reader = @import("reader.zig").Reader;
 const Writer = @import("writer.zig").Writer;

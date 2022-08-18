@@ -1,4 +1,4 @@
-const anotherworld = @import("../../lib/anotherworld.zig");
+const anotherworld = @import("../../anotherworld.zig");
 
 pub const MockWriter = struct {
     last_instruction: ?Instruction,

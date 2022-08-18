@@ -8,7 +8,7 @@
 //! See decode.zig for details of the overall algorithm, and decode_instruction.zig for details
 //! of the encoding syntax.
 
-const anotherworld = @import("../lib/anotherworld.zig");
+const anotherworld = @import("../anotherworld.zig");
 
 const std = @import("std");
 const mem = std.mem;

@@ -2,12 +2,12 @@
 //! These methods are shared between the real reader implementation
 //! (see reader.zig) and the mock used in tests (see mock_reader.zig).
 
+const anotherworld = @import("../anotherworld.zig");
+const meta = anotherworld.meta;
+
 const std = @import("std");
 const assert = std.debug.assert;
 const trait = std.meta.trait;
-
-const anotherworld = @import("../lib/anotherworld.zig");
-const meta = anotherworld.meta;
 
 /// Returns a struct of methods that can be mixed into the specified type.
 /// Intended usage:
