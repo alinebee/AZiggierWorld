@@ -19,7 +19,7 @@
 
 const anotherworld = @import("../lib/anotherworld.zig");
 const rendering = anotherworld.rendering;
-const meta = anotherworld.meta;
+const meta = @import("utils").meta;
 
 const fixedBufferStream = @import("std").io.fixedBufferStream;
 
@@ -408,7 +408,7 @@ fn parseOffset(reader: anytype, scale: rendering.PolygonScale) !rendering.Point 
 
 // -- Tests --
 
-const testing = anotherworld.testing;
+const testing = @import("utils").testing;
 const countingReader = @import("std").io.countingReader;
 
 // - EntryHeader tests -

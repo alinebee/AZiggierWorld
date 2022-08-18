@@ -45,7 +45,7 @@ pub fn MockHost(comptime Implementation: type) type {
 
 // -- Tests --
 
-const testing = anotherworld.testing;
+const testing = @import("utils").testing;
 
 test "Ensure everything compiles" {
     testing.refAllDecls(MockHost(DefaultImplementation));

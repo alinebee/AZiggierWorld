@@ -8,8 +8,8 @@ const ResourceDirectory = @import("../resources/resource_directory.zig").Resourc
 const std = @import("std");
 const anotherworld = @import("../lib/anotherworld.zig");
 
-const testing = anotherworld.testing;
-const meta = anotherworld.meta;
+const testing = @import("utils").testing;
+const meta = @import("utils").meta;
 const log = anotherworld.log;
 const ensureValidFixtureDir = @import("helpers.zig").ensureValidFixtureDir;
 

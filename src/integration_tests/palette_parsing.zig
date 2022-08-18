@@ -9,7 +9,7 @@ const ensureValidFixtureDir = @import("helpers.zig").ensureValidFixtureDir;
 
 const anotherworld = @import("../lib/anotherworld.zig");
 const static_limits = anotherworld.static_limits;
-const testing = anotherworld.testing;
+const testing = @import("utils").testing;
 
 test "Parse all palettes in original game files" {
     var game_dir = try ensureValidFixtureDir();

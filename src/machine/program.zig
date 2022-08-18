@@ -10,6 +10,7 @@
 const anotherworld = @import("../lib/anotherworld.zig");
 const static_limits = anotherworld.static_limits;
 const readIntSliceBig = @import("std").mem.readIntSliceBig;
+const meta = @import("utils").meta;
 
 /// An Another World bytecode program, which maintains a counter to the next instruction to execute.
 pub const Program = struct {
@@ -39,7 +40,7 @@ pub const Program = struct {
     pub fn read(self: *Self, comptime Integer: type) ReadError!Integer {
         // readIntSliceBig uses this construction internally.
         // @sizeOf would be nicer, but may include padding bytes.
-        const byte_width = comptime @divExact(anotherworld.meta.bitCount(Integer), 8);
+        const byte_width = comptime @divExact(meta.bitCount(Integer), 8);
 
         const lower_bound = @as(usize, self.counter);
         const upper_bound = lower_bound + byte_width;
@@ -111,7 +112,7 @@ pub const Program = struct {
 };
 
 /// -- Tests --
-const testing = anotherworld.testing;
+const testing = @import("utils").testing;
 
 test "Address type matches range of program counter values" {
     try static_limits.validateTrustedType(Program.Address, static_limits.max_program_size);

@@ -1,5 +1,5 @@
 const anotherworld = @import("../../anotherworld.zig");
-const meta = anotherworld.meta;
+const meta = @import("utils").meta;
 
 const std = @import("std");
 const mem = std.mem;
@@ -164,7 +164,7 @@ pub const MockEncoder = struct {
 
 // -- Tests --
 
-const testing = anotherworld.testing;
+const testing = @import("utils").testing;
 const decode = @import("../decode.zig").decode;
 
 test "write4Bytes generates expected payload" {

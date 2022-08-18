@@ -1,6 +1,7 @@
 //! Functions and types used when testing virtual machine instructions.
 
 const anotherworld = @import("../../anotherworld.zig");
+const meta = @import("utils").meta;
 
 const Opcode = @import("../opcode.zig").Opcode;
 const Program = @import("../../../machine/program.zig").Program;
@@ -36,8 +37,8 @@ pub const Error = error{
 /// Calculates the return type of the expectParse generic function by combining
 /// the original parse function's return type with expectParse's error set.
 fn ReturnType(comptime parseFn: anytype) type {
-    const error_type = anotherworld.meta.ErrorType(parseFn);
-    const payload_type = anotherworld.meta.PayloadType(parseFn);
+    const error_type = meta.ErrorType(parseFn);
+    const payload_type = meta.PayloadType(parseFn);
     return (Error || error_type)!payload_type;
 }
 
@@ -62,7 +63,7 @@ fn parse5MoreBytesAndFail(_: Opcode.Raw, program: *Program) !EmptyInstruction {
 
 // -- Tests --
 
-const testing = anotherworld.testing;
+const testing = @import("utils").testing;
 
 test "expectParse returns parsed instruction if all bytes were parsed" {
     const bytecode = [_]u8{0} ** 6;

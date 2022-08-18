@@ -3,7 +3,7 @@
 //! (see reader.zig) and the mock used in tests (see mock_reader.zig).
 
 const anotherworld = @import("../anotherworld.zig");
-const meta = anotherworld.meta;
+const meta = @import("utils").meta;
 
 const std = @import("std");
 const assert = std.debug.assert;
@@ -47,7 +47,7 @@ pub fn ReaderMethods(comptime Self: type) type {
 
 // -- Tests --
 
-const testing = anotherworld.testing;
+const testing = @import("utils").testing;
 const mockReader = @import("test_helpers/mock_reader.zig").mockReader;
 
 test "readInt reads integers of the specified width" {

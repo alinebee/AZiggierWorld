@@ -1,5 +1,4 @@
-const anotherworld = @import("../anotherworld.zig");
-const intToEnum = anotherworld.meta.intToEnum;
+const intToEnum = @import("utils").meta.intToEnum;
 
 /// A raw ControlThreads operation as it is represented in bytecode.
 const _Raw = u8;
@@ -36,7 +35,7 @@ pub const ThreadOperation = enum(Raw) {
 
 // -- Tests --
 
-const testing = anotherworld.testing;
+const testing = @import("utils").testing;
 
 test "parse parses raw operation bytes correctly" {
     try testing.expectEqual(.@"resume", ThreadOperation.parse(0));

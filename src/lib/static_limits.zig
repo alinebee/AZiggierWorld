@@ -129,7 +129,7 @@ const Error = error{
 // -- Tests --
 
 const anotherworld = @import("anotherworld.zig");
-const testing = anotherworld.testing;
+const testing = @import("utils").testing;
 
 test "validateTrustedType does not assert if trusted type matches limit" {
     const Trusted = u8;

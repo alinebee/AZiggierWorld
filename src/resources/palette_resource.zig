@@ -99,7 +99,7 @@ pub const PaletteResource = struct {
 
 // -- Tests --
 
-const testing = anotherworld.testing;
+const testing = @import("utils").testing;
 const fixedBufferStream = @import("std").io.fixedBufferStream;
 const countingReader = @import("std").io.countingReader;
 

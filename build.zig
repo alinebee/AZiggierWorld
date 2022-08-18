@@ -2,16 +2,21 @@ const std = @import("std");
 const Builder = std.build.Builder;
 const SDLSdk = @import("vendor/SDL.zig/Sdk.zig");
 
+// Define a package for Another World library files
+const lib_package = std.build.Pkg{
+    .name = "anotherworld",
+    .path = .{ .path = "./src/lib/anotherworld.zig" },
+};
+
+const utils_package = std.build.Pkg{
+    .name = "utils",
+    .path = .{ .path = "./src/utils/utils.zig" },
+};
+
 pub fn build(b: *Builder) !void {
     b.setPreferredReleaseMode(.ReleaseSafe);
     const mode = b.standardReleaseOptions();
     const target = b.standardTargetOptions(.{});
-
-    // Define a package for Another World library files
-    const lib_package = std.build.Pkg{
-        .name = "anotherworld",
-        .path = .{ .path = "./src/lib/anotherworld.zig" },
-    };
 
     // On MacOS, add homebrew to search path to make it easier to find SDL2
     if (b.host.target.os.tag == .macos) {
@@ -30,6 +35,7 @@ pub fn build(b: *Builder) !void {
         sdl_sdk.link(exe, .dynamic);
         exe.addPackage(sdl_package);
         exe.addPackage(lib_package);
+        exe.addPackage(utils_package);
 
         exe.install();
     }
@@ -69,6 +75,7 @@ pub fn build(b: *Builder) !void {
         sdl_sdk.link(tests, .dynamic);
         tests.addPackage(sdl_package);
         tests.addPackage(lib_package);
+        tests.addPackage(utils_package);
 
         test_step.dependOn(&tests.step);
     }
@@ -80,6 +87,7 @@ pub fn build(b: *Builder) !void {
         benchmark.setBuildMode(mode);
         benchmark.setTarget(target);
         benchmark.addPackage(lib_package);
+        benchmark.addPackage(utils_package);
 
         const run = benchmark.run();
         benchmark_step.dependOn(&run.step);

@@ -12,7 +12,7 @@ const std = @import("std");
 const anotherworld = @import("../lib/anotherworld.zig");
 
 const ensureValidFixtureDir = @import("helpers.zig").ensureValidFixtureDir;
-const testing = anotherworld.testing;
+const testing = @import("utils").testing;
 const log = anotherworld.log;
 
 const CountingHost = struct {

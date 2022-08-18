@@ -78,7 +78,7 @@ const Fixtures = struct {
 
 // -- Tests --
 
-const testing = anotherworld.testing;
+const testing = @import("utils").testing;
 
 test "spread converts 4-bit values to expected 8-bit values" {
     // zig fmt: off

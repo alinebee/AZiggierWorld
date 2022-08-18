@@ -102,7 +102,7 @@ pub const Writer = struct {
 
 // -- Tests --
 
-const testing = anotherworld.testing;
+const testing = @import("utils").testing;
 const fixedBufferStream = @import("std").io.fixedBufferStream;
 
 const max_usize = @import("std").math.maxInt(usize);

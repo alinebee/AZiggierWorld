@@ -38,7 +38,7 @@ pub const Filename = union(enum) {
 
 // -- Tests --
 
-const testing = anotherworld.testing;
+const testing = @import("utils").testing;
 
 test "dosName formats resource_list filename correctly" {
     const filename: Filename = .resource_list;

@@ -229,7 +229,7 @@ pub const Memory = struct {
 
 // -- Tests --
 
-const testing = anotherworld.testing;
+const testing = @import("utils").testing;
 const MockRepository = @import("../resources/mock_repository.zig").MockRepository;
 const FailingAllocator = @import("std").testing.FailingAllocator;
 

@@ -6,7 +6,7 @@
 //! be cleaned up with some Zig compile-time code generation.
 
 const anotherworld = @import("../anotherworld.zig");
-const meta = anotherworld.meta;
+const meta = @import("utils").meta;
 
 const Program = @import("../../machine/program.zig").Program;
 const Opcode = @import("opcode.zig").Opcode;
@@ -226,7 +226,7 @@ fn expectParse(bytecode: []const u8) !Instruction {
 
 // -- Tests --
 
-const testing = anotherworld.testing;
+const testing = @import("utils").testing;
 const RegisterID = @import("../../values/register_id.zig").RegisterID;
 
 // - Instruction.parse tests --

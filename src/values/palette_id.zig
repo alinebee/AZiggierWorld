@@ -3,7 +3,7 @@
 //! The game swapped between palettes from screen to screen or to do effects like lightning or fades.
 
 const anotherworld = @import("../lib/anotherworld.zig");
-const intToEnum = anotherworld.meta.intToEnum;
+const intToEnum = @import("utils").meta.intToEnum;
 
 const _Trusted = u5;
 
@@ -39,7 +39,7 @@ pub const PaletteID = enum(_Trusted) {
 
 // -- Tests --
 
-const testing = anotherworld.testing;
+const testing = @import("utils").testing;
 const static_limits = anotherworld.static_limits;
 
 test "Trusted covers range of legal palette IDs" {

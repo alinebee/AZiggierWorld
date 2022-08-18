@@ -189,7 +189,7 @@ const ResourceListExamples = struct {
 
 // -- Tests --
 
-const testing = anotherworld.testing;
+const testing = @import("utils").testing;
 
 test "ensure everything compiles" {
     testing.refAllDecls(ResourceDirectory);

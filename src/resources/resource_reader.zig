@@ -194,7 +194,7 @@ const CountedRepository = struct {
 
 // -- Tests --
 
-const testing = anotherworld.testing;
+const testing = @import("utils").testing;
 
 const valid_resource_id = ResourceID.cast(0);
 const invalid_resource_id = ResourceID.cast(1);

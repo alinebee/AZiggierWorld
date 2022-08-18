@@ -6,7 +6,7 @@ const anotherworld = @import("anotherworld");
 const ResourceDirectory = @import("../resources/resource_directory.zig").ResourceDirectory;
 const ResourceID = @import("../values/resource_id.zig").ResourceID;
 
-const testing = anotherworld.testing;
+const testing = @import("utils").testing;
 const ensureValidFixtureDir = @import("helpers.zig").ensureValidFixtureDir;
 const log = anotherworld.log;
 

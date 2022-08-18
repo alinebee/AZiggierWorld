@@ -36,7 +36,7 @@ pub const DrawMode = union(enum) {
 
 // -- Tests --
 
-const testing = anotherworld.testing;
+const testing = @import("utils").testing;
 
 test "parse correctly parses raw draw mode" {
     try testing.expectEqual(.{ .solid_color = ColorID.cast(1) }, DrawMode.parse(1));

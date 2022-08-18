@@ -10,7 +10,7 @@ const UserInput = @import("machine/user_input.zig").UserInput;
 
 const anotherworld = @import("anotherworld");
 const ensureValidFixtureDir = @import("integration_tests/helpers.zig").ensureValidFixtureDir;
-const measure = anotherworld.benchmark.measure;
+const measure = @import("utils").benchmark.measure;
 const log = anotherworld.log;
 
 const std = @import("std");
@@ -101,7 +101,7 @@ pub fn main() !void {
     , .{result});
 }
 
-const testing = anotherworld.testing;
+const testing = @import("utils").testing;
 
 test "Ensure everything compiles" {
     testing.refAllDecls(@This());

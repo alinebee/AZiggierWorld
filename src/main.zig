@@ -2,7 +2,7 @@ const std = @import("std");
 const SDL = @import("sdl2");
 
 const anotherworld = @import("lib/anotherworld.zig");
-const testing = anotherworld.testing;
+const testing = @import("utils").testing;
 const log = anotherworld.log;
 const SDLEngine = @import("engines/sdl_engine.zig").SDLEngine;
 

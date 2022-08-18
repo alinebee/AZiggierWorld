@@ -131,7 +131,7 @@ fn normalizedCharacterRegisterValue(char: u8) Register.Unsigned {
 
 // -- Testing --
 
-const testing = anotherworld.testing;
+const testing = @import("utils").testing;
 
 test "Ensure everything compiles" {
     testing.refAllDecls(UserInput);

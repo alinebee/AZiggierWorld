@@ -64,7 +64,7 @@ pub const Registers = struct {
 
 // -- Tests --
 
-const testing = anotherworld.testing;
+const testing = @import("utils").testing;
 
 test "Ensure everything compiles" {
     testing.refAllDecls(Registers);

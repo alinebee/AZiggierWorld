@@ -6,7 +6,7 @@
 //! to parse them from a MEMLIST.BIN file.
 
 const anotherworld = @import("../lib/anotherworld.zig");
-const meta = anotherworld.meta;
+const meta = @import("utils").meta;
 
 const ResourceType = @import("../values/resource_type.zig").ResourceType;
 const Filename = @import("filename.zig").Filename;
@@ -183,7 +183,7 @@ pub const FileExamples = struct {
 
 // -- Tests --
 
-const testing = anotherworld.testing;
+const testing = @import("utils").testing;
 const fixedBufferStream = @import("std").io.fixedBufferStream;
 
 test "iterator.next() correctly parses file descriptor" {

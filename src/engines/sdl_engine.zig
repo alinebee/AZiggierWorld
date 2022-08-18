@@ -241,7 +241,7 @@ fn resolvedFrameDelay(requested_delay: u64, possible_last_frame_time: ?i64, curr
     }
 }
 
-const testing = anotherworld.testing;
+const testing = @import("utils").testing;
 
 test "Ensure everything compiles" {
     testing.refAllDecls(SDLEngine);

@@ -377,7 +377,7 @@ const Index = struct {
 
 // -- Tests --
 
-const testing = anotherworld.testing;
+const testing = @import("utils").testing;
 
 test "PackedBuffer produces buffer of the expected size filled with zeroes." {
     const buffer = PackedBuffer(320, 200){};

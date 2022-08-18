@@ -1,5 +1,5 @@
 const anotherworld = @import("../../anotherworld.zig");
-const meta = anotherworld.meta;
+const meta = @import("utils").meta;
 
 const std = @import("std");
 const assert = std.debug.assert;
@@ -72,7 +72,7 @@ fn MockReader(comptime Integer: type) type {
 
 // -- Tests --
 
-const testing = anotherworld.testing;
+const testing = @import("utils").testing;
 
 test "readBit reads all bits in order from highest to lowest" {
     var reader = mockReader(u8, 0b1001_0110);

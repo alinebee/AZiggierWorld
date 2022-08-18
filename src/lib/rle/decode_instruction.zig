@@ -72,7 +72,7 @@ pub fn decodeInstruction(reader: anytype, writer: anytype) !void {
 
 // -- Tests --
 
-const testing = anotherworld.testing;
+const testing = @import("utils").testing;
 const mockReader = @import("test_helpers/mock_reader.zig").mockReader;
 const MockWriter = @import("test_helpers/mock_writer.zig").MockWriter;
 

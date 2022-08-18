@@ -146,7 +146,7 @@ pub const Thread = struct {
 
 // -- Tests --
 
-const testing = anotherworld.testing;
+const testing = @import("utils").testing;
 
 // - Schedule tests -
 

@@ -134,7 +134,7 @@ pub fn expectEqualBitmaps(expected: anytype, actual: @TypeOf(expected)) !void {
 
 // -- Tests --
 
-const testing = anotherworld.testing;
+const testing = @import("utils").testing;
 
 test "fromString populates bitmap data correctly from multiline string" {
     const bitmap = IndexedBitmap(4, 4).fromString(

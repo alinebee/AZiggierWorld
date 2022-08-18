@@ -225,7 +225,7 @@ const PolygonVisitor = struct {
 
 // -- Tests --
 
-const testing = anotherworld.testing;
+const testing = @import("utils").testing;
 const MockHost = @import("test_helpers/mock_host.zig").MockHost;
 const planar_bitmap = @import("../resources/planar_bitmap.zig");
 const Bitmap = rendering.IndexedBitmap(static_limits.virtual_screen_width, static_limits.virtual_screen_height);

@@ -53,7 +53,7 @@ pub const PolygonScale = enum(_Raw) {
 
 // -- Tests --
 
-const testing = anotherworld.testing;
+const testing = @import("utils").testing;
 const math = @import("std").math;
 
 const max_scale = PolygonScale.cast(math.maxInt(PolygonScale.Raw));

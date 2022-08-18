@@ -42,7 +42,7 @@ pub const BufferID = union(enum(_Raw)) {
 
 // -- Tests --
 
-const testing = anotherworld.testing;
+const testing = @import("utils").testing;
 const static_limits = anotherworld.static_limits;
 
 test "Specific covers range of legal buffer IDs" {

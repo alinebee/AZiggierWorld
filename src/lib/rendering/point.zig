@@ -34,7 +34,7 @@ pub const Point = struct {
 
 // -- Tests --
 
-const testing = anotherworld.testing;
+const testing = @import("utils").testing;
 const math = @import("std").math;
 
 const max_coord = math.maxInt(Point.Coordinate);

@@ -167,7 +167,7 @@ pub fn find(id: StringID) Error![]const u8 {
 
 // -- Tests --
 
-const testing = anotherworld.testing;
+const testing = @import("utils").testing;
 
 test "find returns string for valid identifier" {
     const valid_id = StringID.cast(0x02C);

@@ -1,5 +1,5 @@
 const anotherworld = @import("../lib/anotherworld.zig");
-const intToEnum = anotherworld.meta.intToEnum;
+const intToEnum = @import("utils").meta.intToEnum;
 
 const ResourceID = @import("resource_id.zig").ResourceID;
 
@@ -115,7 +115,7 @@ const ResourceIDs = struct {
 
 // -- Tests --
 
-const testing = anotherworld.testing;
+const testing = @import("utils").testing;
 
 test "ensure everything compiles" {
     testing.refAllDecls(GamePart);

@@ -113,7 +113,7 @@ pub const JumpConditional = struct {
 
 // -- Tests --
 
-const testing = anotherworld.testing;
+const testing = @import("utils").testing;
 const expectParse = @import("test_helpers/parse.zig").expectParse;
 
 test "parse parses equal_to_register instruction and consumes 6 bytes" {

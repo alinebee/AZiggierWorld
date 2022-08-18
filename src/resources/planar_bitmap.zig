@@ -150,7 +150,7 @@ pub const Fixtures = struct {
 
 // -- Tests --
 
-const testing = anotherworld.testing;
+const testing = @import("utils").testing;
 
 test "Parses planar data properly" {
     const data = &Fixtures.valid_16px;

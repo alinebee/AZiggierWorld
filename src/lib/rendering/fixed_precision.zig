@@ -36,7 +36,7 @@ pub const FixedPrecision = struct {
 
 // -- Testing --
 
-const testing = anotherworld.testing;
+const testing = @import("utils").testing;
 
 fn raw(pattern: u32) i32 {
     return @bitCast(i32, pattern);

@@ -62,7 +62,7 @@ const Examples = struct {
     const disjoint = Range(isize).init(-20, -11);
 };
 
-const testing = anotherworld.testing;
+const testing = @import("utils").testing;
 
 test "init returns range of expected type with expected values" {
     const range = Examples.reference;

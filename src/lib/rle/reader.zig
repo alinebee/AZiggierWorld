@@ -187,7 +187,7 @@ const Fixtures = struct {
 
 // -- Tests --
 
-const testing = anotherworld.testing;
+const testing = @import("utils").testing;
 const io = std.io;
 
 test "init() reads unpacked size, initial checksum and first chunk from end of source data" {

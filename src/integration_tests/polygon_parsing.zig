@@ -15,7 +15,7 @@ const PolygonResource = @import("../resources/polygon_resource.zig").PolygonReso
 const ResourceDirectory = @import("../resources/resource_directory.zig").ResourceDirectory;
 const GamePart = @import("../values/game_part.zig").GamePart;
 
-const testing = anotherworld.testing;
+const testing = @import("utils").testing;
 const log = anotherworld.log;
 const ensureValidFixtureDir = @import("helpers.zig").ensureValidFixtureDir;
 

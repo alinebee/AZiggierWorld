@@ -382,7 +382,7 @@ pub const Machine = struct {
 
 // -- Tests --
 
-const testing = anotherworld.testing;
+const testing = @import("utils").testing;
 const meta = @import("std").meta;
 
 // - Initialization tests -

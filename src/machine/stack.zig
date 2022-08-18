@@ -62,7 +62,7 @@ pub const Stack = struct {
 
 // -- Tests --
 
-const testing = anotherworld.testing;
+const testing = @import("utils").testing;
 
 test "Pushing increments the stack" {
     var stack = Stack{};

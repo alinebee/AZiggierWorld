@@ -2,7 +2,7 @@
 //! See instruction.zig for how these are mapped to implementations of those opcodes.
 
 const anotherworld = @import("../anotherworld.zig");
-const intToEnum = anotherworld.meta.intToEnum;
+const intToEnum = @import("utils").meta.intToEnum;
 
 /// The known opcodes used in Another World's bytecode.
 /// These map to individual instruction types, each defined in their own zig file with the same name.
@@ -95,7 +95,7 @@ pub const Opcode = enum {
 
 // -- Tests --
 
-const testing = anotherworld.testing;
+const testing = @import("utils").testing;
 
 test "parse returns expected values" {
     try testing.expectEqual(.RegisterSet, Opcode.parse(0));

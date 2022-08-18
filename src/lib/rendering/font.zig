@@ -1193,7 +1193,7 @@ const @"~" = Glyph{
 
 // -- Tests --
 
-const testing = anotherworld.testing;
+const testing = @import("utils").testing;
 
 // zig fmt: off
 test "glyph returns correct glyphs for supported characters" {

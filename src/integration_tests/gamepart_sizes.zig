@@ -9,7 +9,7 @@ const GamePart = @import("../values/game_part.zig").GamePart;
 
 const ensureValidFixtureDir = @import("helpers.zig").ensureValidFixtureDir;
 const log = anotherworld.log;
-const testing = anotherworld.testing;
+const testing = @import("utils").testing;
 
 test "Report sizes for each game part" {
     std.testing.log_level = .info;

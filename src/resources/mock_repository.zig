@@ -284,7 +284,7 @@ const TestFixtures = struct {
 
 // -- Tests --
 
-const testing = anotherworld.testing;
+const testing = @import("utils").testing;
 
 const example_descriptor = ResourceDescriptor{
     .type = .music,

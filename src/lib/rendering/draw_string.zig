@@ -84,7 +84,7 @@ pub const Error = Font.Error;
 
 // -- Tests --
 
-const testing = anotherworld.testing;
+const testing = @import("utils").testing;
 const expectPixels = @import("test_helpers/buffer_test_suite.zig").expectPixels;
 
 /// Given a function that takes a width and a height and returns a type that implements the buffer interface,

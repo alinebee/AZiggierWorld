@@ -5,7 +5,7 @@ const Surface = @import("../surface.zig").Surface;
 const ColorID = @import("../color_id.zig").ColorID;
 const PaletteFixtures = @import("../palette.zig").Fixtures;
 
-const testing = anotherworld.testing;
+const testing = @import("utils").testing;
 const expectBitmap = @import("indexed_bitmap.zig").expectBitmap;
 
 // -- Test helpers --

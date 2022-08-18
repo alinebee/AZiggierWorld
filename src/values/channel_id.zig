@@ -1,5 +1,5 @@
 const anotherworld = @import("../lib/anotherworld.zig");
-const intToEnum = anotherworld.meta.intToEnum;
+const intToEnum = @import("utils").meta.intToEnum;
 
 const Trusted = u2;
 
@@ -29,7 +29,7 @@ pub const ChannelID = enum(Trusted) {
 
 // -- Tests --
 
-const testing = anotherworld.testing;
+const testing = @import("utils").testing;
 const static_limits = anotherworld.static_limits;
 
 test "Trusted type covers range of legal channels" {

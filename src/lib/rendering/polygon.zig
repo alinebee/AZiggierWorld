@@ -20,7 +20,7 @@
 //! (See draw_polygon.zig for the draw algorithm.)
 
 const anotherworld = @import("../anotherworld.zig");
-const meta = anotherworld.meta;
+const meta = @import("utils").meta;
 const static_limits = anotherworld.static_limits;
 
 const Point = @import("point.zig").Point;
@@ -275,7 +275,7 @@ pub const Polygon = struct {
 
 // -- Tests --
 
-const testing = anotherworld.testing;
+const testing = @import("utils").testing;
 const fixedBufferStream = @import("std").io.fixedBufferStream;
 
 test "parse correctly parses 4-vertex dot polygon" {

@@ -234,7 +234,7 @@ const NativeColor = ColorID;
 
 // -- Tests --
 
-const testing = anotherworld.testing;
+const testing = @import("utils").testing;
 
 test "AlignedBuffer produces buffer of the expected size filled with zeroes." {
     const buffer = AlignedBuffer(320, 200){};

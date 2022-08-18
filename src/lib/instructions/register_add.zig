@@ -51,7 +51,7 @@ pub const RegisterAdd = struct {
 
 // -- Tests --
 
-const testing = anotherworld.testing;
+const testing = @import("utils").testing;
 const expectParse = @import("test_helpers/parse.zig").expectParse;
 
 test "parse parses valid bytecode and consumes 3 bytes" {

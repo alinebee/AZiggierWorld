@@ -95,7 +95,7 @@ pub const CopyVideoBuffer = struct {
 
 // -- Tests --
 
-const testing = anotherworld.testing;
+const testing = @import("utils").testing;
 const expectParse = @import("test_helpers/parse.zig").expectParse;
 const mockMachine = @import("../../machine/test_helpers/mock_machine.zig").mockMachine;
 

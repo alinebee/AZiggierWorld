@@ -1,5 +1,5 @@
 const anotherworld = @import("../anotherworld.zig");
-const intToEnum = anotherworld.meta.intToEnum;
+const intToEnum = @import("utils").meta.intToEnum;
 
 const Register = @import("../../values/register.zig");
 
@@ -42,7 +42,7 @@ pub const Comparison = enum {
 
 // -- Tests --
 
-const testing = anotherworld.testing;
+const testing = @import("utils").testing;
 
 test "parse parses raw comparison values correctly" {
     try testing.expectEqual(.equal, Comparison.parse(0b000));

@@ -39,7 +39,7 @@ pub const MockWriter = struct {
 
 // -- Testing --
 
-const testing = anotherworld.testing;
+const testing = @import("utils").testing;
 
 const FakeReader = struct {
     fn readByte() void {

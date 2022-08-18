@@ -2,7 +2,7 @@
 //! These color IDs appear in bytecode, polygon resources and video buffers.
 
 const anotherworld = @import("../anotherworld.zig");
-const intToEnum = anotherworld.meta.intToEnum;
+const intToEnum = @import("utils").meta.intToEnum;
 
 /// A color index from 0-15. Guaranteed at compile-time to be valid.
 const _Trusted = u4;
@@ -54,7 +54,7 @@ pub const ColorID = enum(_Trusted) {
 
 // -- Tests --
 
-const testing = anotherworld.testing;
+const testing = @import("utils").testing;
 const static_limits = anotherworld.static_limits;
 
 test "Trusted covers range of legal color IDs" {

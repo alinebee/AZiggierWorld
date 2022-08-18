@@ -90,7 +90,7 @@ pub const ControlThreads = struct {
 
 // -- Tests --
 
-const testing = anotherworld.testing;
+const testing = @import("utils").testing;
 const expectParse = @import("test_helpers/parse.zig").expectParse;
 const static_limits = anotherworld.static_limits;
 

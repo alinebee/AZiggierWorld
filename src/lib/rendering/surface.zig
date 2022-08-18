@@ -17,7 +17,7 @@ pub fn filledSurface(comptime SurfaceType: type, color: Color) SurfaceType {
 
 // -- Tests --
 
-const testing = anotherworld.testing;
+const testing = @import("utils").testing;
 
 test "Instance matches the size of a raw u8 buffer" {
     const width = 320;

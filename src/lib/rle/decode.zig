@@ -61,7 +61,7 @@ pub fn decode(source: []const u8, destination: []u8) Error!void {
 
 // -- Tests --
 
-const testing = anotherworld.testing;
+const testing = @import("utils").testing;
 const MockEncoder = @import("test_helpers/mock_encoder.zig").MockEncoder;
 
 test "decode decodes valid payload" {
