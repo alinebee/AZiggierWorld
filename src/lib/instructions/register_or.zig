@@ -1,10 +1,11 @@
 const anotherworld = @import("../anotherworld.zig");
+const vm = anotherworld.vm;
 
 const Opcode = @import("opcode.zig").Opcode;
-const Register = @import("../../values/register.zig");
-const RegisterID = @import("../../values/register_id.zig").RegisterID;
-const Program = @import("../../machine/program.zig").Program;
-const Machine = @import("../../machine/machine.zig").Machine;
+const Register = vm.Register;
+const RegisterID = vm.RegisterID;
+const Program = vm.Program;
+const Machine = vm.Machine;
 
 /// Applies a bitwise-OR mask to the value in a register.
 pub const RegisterOr = struct {

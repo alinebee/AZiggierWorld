@@ -1,6 +1,6 @@
 //! Register values can interpreted as signed or unsigned 16-bit integers.
 
-const anotherworld = @import("../lib/anotherworld.zig");
+const anotherworld = @import("../anotherworld.zig");
 const meta = @import("utils").meta;
 
 /// A 16-bit register value interpreted as a signed integer.

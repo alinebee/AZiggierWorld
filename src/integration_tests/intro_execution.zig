@@ -5,11 +5,12 @@
 const anotherworld = @import("anotherworld");
 const resources = anotherworld.resources;
 const log = anotherworld.log;
+const vm = anotherworld.vm;
 
-const Machine = @import("../machine/machine.zig").Machine;
-const Host = @import("../machine/host.zig").Host;
-const BufferID = @import("../values/buffer_id.zig").BufferID;
-const UserInput = @import("../machine/user_input.zig").UserInput;
+const Machine = vm.Machine;
+const Host = vm.Host;
+const BufferID = vm.BufferID;
+const UserInput = vm.UserInput;
 
 const ensureValidFixtureDir = @import("helpers.zig").ensureValidFixtureDir;
 const testing = @import("utils").testing;

@@ -1,11 +1,12 @@
 const anotherworld = @import("../anotherworld.zig");
+const vm = anotherworld.vm;
 
 const Point = anotherworld.rendering.Point;
 
 const Opcode = @import("opcode.zig").Opcode;
-const Program = @import("../../machine/program.zig").Program;
-const Machine = @import("../../machine/machine.zig").Machine;
-const BufferID = @import("../../values/buffer_id.zig").BufferID;
+const Program = vm.Program;
+const Machine = vm.Machine;
+const BufferID = vm.BufferID;
 
 /// Copies the contents of one video buffer into another.
 pub const CopyVideoBuffer = struct {
@@ -97,7 +98,7 @@ pub const CopyVideoBuffer = struct {
 
 const testing = @import("utils").testing;
 const expectParse = @import("test_helpers/parse.zig").expectParse;
-const mockMachine = @import("../../machine/test_helpers/mock_machine.zig").mockMachine;
+const mockMachine = vm.mockMachine;
 
 test "parse parses valid bytecode without vertical offset flag and consumes 3 bytes" {
     const instruction = try expectParse(CopyVideoBuffer.parse, &CopyVideoBuffer.Fixtures.specific_buffer_ignore_offset, 3);

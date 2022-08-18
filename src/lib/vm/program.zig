@@ -7,7 +7,7 @@
 //! limited and prescriptive API. The main difference between this and `fixedBufferStream.seekableStream`
 //! is that this does bounds-checking on seek (jump/skip) operations, not just on read.
 
-const anotherworld = @import("../lib/anotherworld.zig");
+const anotherworld = @import("../anotherworld.zig");
 const static_limits = anotherworld.static_limits;
 const readIntSliceBig = @import("std").mem.readIntSliceBig;
 const meta = @import("utils").meta;

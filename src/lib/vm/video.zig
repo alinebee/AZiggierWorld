@@ -1,9 +1,9 @@
-const anotherworld = @import("../lib/anotherworld.zig");
+const anotherworld = @import("../anotherworld.zig");
 const rendering = anotherworld.rendering;
 const static_limits = anotherworld.static_limits;
 const text = anotherworld.text;
 
-const BufferID = @import("../values/buffer_id.zig").BufferID;
+const BufferID = @import("buffer_id.zig").BufferID;
 
 const mem = @import("std").mem;
 

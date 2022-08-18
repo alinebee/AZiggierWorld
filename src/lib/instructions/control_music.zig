@@ -1,10 +1,11 @@
 const anotherworld = @import("../anotherworld.zig");
 const resources = anotherworld.resources;
+const vm = anotherworld.vm;
 
 const Opcode = @import("opcode.zig").Opcode;
-const Program = @import("../../machine/program.zig").Program;
-const Machine = @import("../../machine/machine.zig").Machine;
-const Audio = @import("../../machine/audio.zig").Audio;
+const Program = vm.Program;
+const Machine = vm.Machine;
+const Audio = vm.Audio;
 
 /// Starts, stops or delays the current music track.
 pub const ControlMusic = union(enum) {
@@ -91,7 +92,7 @@ pub const ControlMusic = union(enum) {
 
 const testing = @import("utils").testing;
 const expectParse = @import("test_helpers/parse.zig").expectParse;
-const mockMachine = @import("../../machine/test_helpers/mock_machine.zig").mockMachine;
+const mockMachine = vm.mockMachine;
 
 test "parse parses play instruction and consumes 6 bytes" {
     const instruction = try expectParse(ControlMusic.parse, &ControlMusic.Fixtures.play, 6);

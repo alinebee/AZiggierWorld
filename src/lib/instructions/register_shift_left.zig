@@ -1,11 +1,12 @@
 const anotherworld = @import("../anotherworld.zig");
+const vm = anotherworld.vm;
 const meta = @import("utils").meta;
 
 const Opcode = @import("opcode.zig").Opcode;
-const Register = @import("../../values/register.zig");
-const Program = @import("../../machine/program.zig").Program;
-const Machine = @import("../../machine/machine.zig").Machine;
-const RegisterID = @import("../../values/register_id.zig").RegisterID;
+const Register = vm.Register;
+const Program = vm.Program;
+const Machine = vm.Machine;
+const RegisterID = vm.RegisterID;
 
 /// Left-shift (<<) the bits in a register's value by a specified distance.
 pub const RegisterShiftLeft = struct {

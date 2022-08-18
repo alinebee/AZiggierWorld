@@ -1,13 +1,15 @@
 const anotherworld = @import("../anotherworld.zig");
+const rendering = anotherworld.rendering;
+const vm = anotherworld.vm;
 
-const Point = anotherworld.rendering.Point;
-const PolygonScale = anotherworld.rendering.PolygonScale;
+const Point = rendering.Point;
+const PolygonScale = rendering.PolygonScale;
 
 const Opcode = @import("opcode.zig").Opcode;
-const Program = @import("../../machine/program.zig").Program;
-const Machine = @import("../../machine/machine.zig").Machine;
-const Video = @import("../../machine/video.zig").Video;
-const RegisterID = @import("../../values/register_id.zig").RegisterID;
+const Program = vm.Program;
+const Machine = vm.Machine;
+const Video = vm.Video;
+const RegisterID = vm.RegisterID;
 
 /// Draw a polygon at a location and zoom level that are either hardcoded constants
 /// or dynamic values read from registers.
@@ -200,7 +202,7 @@ pub const DrawSpritePolygon = struct {
 
 const testing = @import("utils").testing;
 const expectParse = @import("test_helpers/parse.zig").expectParse;
-const mockMachine = @import("../../machine/test_helpers/mock_machine.zig").mockMachine;
+const mockMachine = vm.mockMachine;
 
 test "parse parses all-registers instruction and consumes 6 bytes" {
     const instruction = try expectParse(DrawSpritePolygon.parse, &DrawSpritePolygon.Fixtures.registers, 6);

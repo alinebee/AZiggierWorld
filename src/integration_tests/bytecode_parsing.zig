@@ -4,9 +4,10 @@
 const anotherworld = @import("anotherworld");
 const instructions = anotherworld.instructions;
 const resources = anotherworld.resources;
+const vm = anotherworld.vm;
 const log = anotherworld.log;
 
-const Program = @import("../machine/program.zig").Program;
+const Program = vm.Program;
 
 const testing = @import("utils").testing;
 const meta = @import("utils").meta;

@@ -1,9 +1,10 @@
 const anotherworld = @import("../anotherworld.zig");
+const vm = anotherworld.vm;
 
 const Opcode = @import("opcode.zig").Opcode;
-const ThreadID = @import("../../values/thread_id.zig").ThreadID;
-const Program = @import("../../machine/program.zig").Program;
-const Machine = @import("../../machine/machine.zig").Machine;
+const ThreadID = vm.ThreadID;
+const Program = vm.Program;
+const Machine = vm.Machine;
 
 /// Activate a specific thread and move its program counter to the specified address.
 /// Takes effect on the next iteration of the run loop.

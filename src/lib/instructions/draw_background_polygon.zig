@@ -1,12 +1,14 @@
 const anotherworld = @import("../anotherworld.zig");
+const rendering = anotherworld.rendering;
+const vm = anotherworld.vm;
 
-const Point = anotherworld.rendering.Point;
-const PolygonScale = anotherworld.rendering.PolygonScale;
+const Point = rendering.Point;
+const PolygonScale = rendering.PolygonScale;
 
 const Opcode = @import("opcode.zig").Opcode;
-const Program = @import("../../machine/program.zig").Program;
-const Machine = @import("../../machine/machine.zig").Machine;
-const Video = @import("../../machine/video.zig").Video;
+const Program = vm.Program;
+const Machine = vm.Machine;
+const Video = vm.Video;
 
 /// Draw a polygon at the default zoom level and a constant position hardcoded in the bytecode.
 /// Unlike DrawSpritePolygon this is likely intended for drawing backgrounds,
@@ -89,7 +91,7 @@ pub const DrawBackgroundPolygon = struct {
 
 const testing = @import("utils").testing;
 const expectParse = @import("test_helpers/parse.zig").expectParse;
-const mockMachine = @import("../../machine/test_helpers/mock_machine.zig").mockMachine;
+const mockMachine = vm.mockMachine;
 
 test "parse parses bytecode with low X coordinate and consumes 4 bytes" {
     const instruction = try expectParse(DrawBackgroundPolygon.parse, &DrawBackgroundPolygon.Fixtures.low_x, 4);

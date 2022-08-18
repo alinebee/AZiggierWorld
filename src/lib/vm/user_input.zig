@@ -1,6 +1,6 @@
-const anotherworld = @import("../lib/anotherworld.zig");
+const anotherworld = @import("../anotherworld.zig");
 
-const Register = @import("../values/register.zig");
+const Register = @import("register.zig");
 
 /// The current state of user input. Expected to be provided by the host on each tic.
 pub const UserInput = struct {

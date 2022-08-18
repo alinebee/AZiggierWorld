@@ -1,9 +1,10 @@
 const anotherworld = @import("../anotherworld.zig");
+const vm = anotherworld.vm;
 
 const Opcode = @import("opcode.zig").Opcode;
-const Program = @import("../../machine/program.zig").Program;
-const Machine = @import("../../machine/machine.zig").Machine;
-const RegisterID = @import("../../values/register_id.zig").RegisterID;
+const Program = vm.Program;
+const Machine = vm.Machine;
+const RegisterID = vm.RegisterID;
 
 /// Add the value from one register to another, wrapping on overflow.
 pub const RegisterAdd = struct {

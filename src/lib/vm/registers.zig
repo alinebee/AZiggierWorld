@@ -1,8 +1,8 @@
-const anotherworld = @import("../lib/anotherworld.zig");
+const anotherworld = @import("../anotherworld.zig");
 const static_limits = anotherworld.static_limits;
 
-const Register = @import("../values/register.zig");
-const RegisterID = @import("../values/register_id.zig").RegisterID;
+const Register = @import("register.zig");
+const RegisterID = @import("register_id.zig").RegisterID;
 
 const register_count = static_limits.register_count;
 

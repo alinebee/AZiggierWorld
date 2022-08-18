@@ -34,12 +34,12 @@
 //! but we don't need to support that anyway, and future Zig versions may allow us to mark
 //! the entire type as move-only.
 
-const anotherworld = @import("../lib/anotherworld.zig");
+const anotherworld = @import("../anotherworld.zig");
 const resources = anotherworld.resources;
 const rendering = anotherworld.rendering;
 const static_limits = anotherworld.static_limits;
 
-const GamePart = @import("../values/game_part.zig").GamePart;
+const GamePart = @import("game_part.zig").GamePart;
 
 const mem = @import("std").mem;
 

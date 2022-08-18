@@ -3,14 +3,14 @@ const Video = @import("../video.zig").Video;
 const Audio = @import("../audio.zig").Audio;
 const Registers = @import("../registers.zig").Registers;
 
-const anotherworld = @import("../../lib/anotherworld.zig");
+const anotherworld = @import("../../anotherworld.zig");
 const rendering = anotherworld.rendering;
 const resources = anotherworld.resources;
 const text = anotherworld.text;
 
-const GamePart = @import("../../values/game_part.zig").GamePart;
-const ChannelID = @import("../../values/channel_id.zig").ChannelID;
-const BufferID = @import("../../values/buffer_id.zig").BufferID;
+const GamePart = @import("../game_part.zig").GamePart;
+const ChannelID = @import("../channel_id.zig").ChannelID;
+const BufferID = @import("../buffer_id.zig").BufferID;
 
 const zeroes = @import("std").mem.zeroes;
 

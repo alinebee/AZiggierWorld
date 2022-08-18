@@ -1,12 +1,12 @@
 //! Provides a standard interface for an Another World virtual machine to communicate
 //! with the host environment by sending it video and audio output.
 
-const anotherworld = @import("../lib/anotherworld.zig");
+const anotherworld = @import("../anotherworld.zig");
 
 const std = @import("std");
 const assert = std.debug.assert;
 
-const BufferID = @import("../values/buffer_id.zig").BufferID;
+const BufferID = @import("buffer_id.zig").BufferID;
 const Machine = @import("machine.zig").Machine;
 const Video = @import("video.zig").Video;
 

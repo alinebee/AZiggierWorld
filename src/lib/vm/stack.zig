@@ -10,7 +10,7 @@
 //! However, it's not clear that the stack depth will ever exceed 1 in the original DOS bytecode
 //! (i.e. the game may never use nested subroutines).
 
-const anotherworld = @import("../lib/anotherworld.zig");
+const anotherworld = @import("../anotherworld.zig");
 const static_limits = anotherworld.static_limits;
 
 const Program = @import("program.zig").Program;

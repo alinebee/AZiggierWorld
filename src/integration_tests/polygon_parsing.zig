@@ -6,6 +6,7 @@ const anotherworld = @import("anotherworld");
 const resources = anotherworld.resources;
 const rendering = anotherworld.rendering;
 const instructions = anotherworld.instructions;
+const vm = anotherworld.vm;
 const log = anotherworld.log;
 
 const Instruction = instructions.Instruction;
@@ -13,8 +14,8 @@ const Polygon = rendering.Polygon;
 const PolygonScale = rendering.PolygonScale;
 const Point = rendering.Point;
 
-const Program = @import("../machine/program.zig").Program;
-const GamePart = @import("../values/game_part.zig").GamePart;
+const Program = vm.Program;
+const GamePart = vm.GamePart;
 
 const testing = @import("utils").testing;
 const ensureValidFixtureDir = @import("helpers.zig").ensureValidFixtureDir;

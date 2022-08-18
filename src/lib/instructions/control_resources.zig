@@ -1,10 +1,11 @@
 const anotherworld = @import("../anotherworld.zig");
 const resources = anotherworld.resources;
+const vm = anotherworld.vm;
 
 const Opcode = @import("opcode.zig").Opcode;
-const Program = @import("../../machine/program.zig").Program;
-const Machine = @import("../../machine/machine.zig").Machine;
-const GamePart = @import("../../values/game_part.zig").GamePart;
+const Program = vm.Program;
+const Machine = vm.Machine;
+const GamePart = vm.GamePart;
 
 /// Loads individual resources or entire game parts into memory.
 pub const ControlResources = union(enum) {
@@ -72,7 +73,7 @@ pub const ControlResources = union(enum) {
 
 const testing = @import("utils").testing;
 const expectParse = @import("test_helpers/parse.zig").expectParse;
-const mockMachine = @import("../../machine/test_helpers/mock_machine.zig").mockMachine;
+const mockMachine = vm.mockMachine;
 
 test "parse parses unload_all instruction and consumes 3 bytes" {
     const instruction = try expectParse(ControlResources.parse, &ControlResources.Fixtures.unload_all, 3);

@@ -1,6 +1,6 @@
 //! Types for parsing video buffer IDs from Another World bytecode instructions.
 
-const anotherworld = @import("../lib/anotherworld.zig");
+const anotherworld = @import("../anotherworld.zig");
 
 const math = @import("std").math;
 

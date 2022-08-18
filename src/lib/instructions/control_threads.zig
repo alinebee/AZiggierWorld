@@ -1,10 +1,11 @@
 const anotherworld = @import("../anotherworld.zig");
+const vm = anotherworld.vm;
 
 const Opcode = @import("opcode.zig").Opcode;
-const ThreadID = @import("../../values/thread_id.zig").ThreadID;
-const Program = @import("../../machine/program.zig").Program;
-const Machine = @import("../../machine/machine.zig").Machine;
 const ThreadOperation = @import("thread_operation.zig").ThreadOperation;
+const Program = vm.Program;
+const Machine = vm.Machine;
+const ThreadID = vm.ThreadID;
 
 /// Resumes, pauses or deactivates one or more threads on the next game tic.
 /// Note that any threads paused or deactivated by this instruction will still

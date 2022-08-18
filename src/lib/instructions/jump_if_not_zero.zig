@@ -1,9 +1,10 @@
 const anotherworld = @import("../anotherworld.zig");
+const vm = anotherworld.vm;
 
 const Opcode = @import("opcode.zig").Opcode;
-const Program = @import("../../machine/program.zig").Program;
-const Machine = @import("../../machine/machine.zig").Machine;
-const RegisterID = @import("../../values/register_id.zig").RegisterID;
+const Program = vm.Program;
+const Machine = vm.Machine;
+const RegisterID = vm.RegisterID;
 
 /// Decrement the value in a specific register and move the program counter to a specific address
 /// if the value in that register is not yet zero. Likely used for loop counters.

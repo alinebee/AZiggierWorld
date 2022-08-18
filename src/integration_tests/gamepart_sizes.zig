@@ -3,9 +3,11 @@
 
 const anotherworld = @import("anotherworld");
 const log = anotherworld.log;
+const resources = anotherworld.resources;
+const vm = anotherworld.vm;
 
-const ResourceDirectory = @import("../resources/resource_directory.zig").ResourceDirectory;
-const GamePart = @import("../values/game_part.zig").GamePart;
+const ResourceDirectory = resources.ResourceDirectory;
+const GamePart = vm.GamePart;
 
 const ensureValidFixtureDir = @import("helpers.zig").ensureValidFixtureDir;
 const testing = @import("utils").testing;

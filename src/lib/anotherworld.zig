@@ -1,3 +1,4 @@
+pub const vm = @import("vm.zig");
 pub const instructions = @import("instructions.zig");
 pub const rendering = @import("rendering.zig");
 pub const text = @import("text.zig");

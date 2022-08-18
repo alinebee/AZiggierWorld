@@ -1,7 +1,9 @@
 const anotherworld = @import("../anotherworld.zig");
+const vm = anotherworld.vm;
+
 const intToEnum = @import("utils").meta.intToEnum;
 
-const Register = @import("../../values/register.zig");
+const Register = vm.Register;
 
 /// The supported comparisons for a JumpConditional instruction.
 pub const Comparison = enum {

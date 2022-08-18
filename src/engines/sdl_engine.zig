@@ -1,12 +1,13 @@
 const anotherworld = @import("../lib/anotherworld.zig");
 const resources = anotherworld.resources;
 const log = anotherworld.log;
+const vm = anotherworld.vm;
 
-const Machine = @import("../machine/machine.zig").Machine;
-const Host = @import("../machine/host.zig").Host;
-const BufferID = @import("../values/buffer_id.zig").BufferID;
-const Video = @import("../machine/video.zig").Video;
-const GameInput = @import("../machine/user_input.zig").UserInput;
+const Machine = vm.Machine;
+const Host = vm.Host;
+const BufferID = vm.BufferID;
+const Video = vm.Video;
+const GameInput = vm.UserInput;
 
 const SDL = @import("sdl2");
 const std = @import("std");

@@ -1,10 +1,11 @@
 const anotherworld = @import("../anotherworld.zig");
+const vm = anotherworld.vm;
 
 const Opcode = @import("opcode.zig").Opcode;
-const Program = @import("../../machine/program.zig").Program;
-const Machine = @import("../../machine/machine.zig").Machine;
-const Video = @import("../../machine/video.zig").Video;
-const BufferID = @import("../../values/buffer_id.zig").BufferID;
+const Program = vm.Program;
+const Machine = vm.Machine;
+const Video = vm.Video;
+const BufferID = vm.BufferID;
 const ColorID = anotherworld.rendering.ColorID;
 
 /// Fill a specified video buffer with a single color.
@@ -60,7 +61,7 @@ pub const FillVideoBuffer = struct {
 
 const testing = @import("utils").testing;
 const expectParse = @import("test_helpers/parse.zig").expectParse;
-const mockMachine = @import("../../machine/test_helpers/mock_machine.zig").mockMachine;
+const mockMachine = vm.mockMachine;
 
 test "parse parses valid bytecode and consumes 3 bytes" {
     const instruction = try expectParse(FillVideoBuffer.parse, &FillVideoBuffer.Fixtures.valid, 3);

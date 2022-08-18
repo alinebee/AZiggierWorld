@@ -2,11 +2,11 @@
 //! Records the number of times each host method was called, and allows a test
 //! to perform arbitrary assertions in the body of each host method.
 
-const anotherworld = @import("../../lib/anotherworld.zig");
+const anotherworld = @import("../../anotherworld.zig");
 
 const Host = @import("../host.zig").Host;
 const Machine = @import("../machine.zig").Machine;
-const BufferID = @import("../../values/buffer_id.zig").BufferID;
+const BufferID = @import("../buffer_id.zig").BufferID;
 
 // - Exported constants -
 

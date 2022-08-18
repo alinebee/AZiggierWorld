@@ -1,8 +1,9 @@
 const anotherworld = @import("../anotherworld.zig");
+const vm = anotherworld.vm;
 
 const Opcode = @import("opcode.zig").Opcode;
-const Program = @import("../../machine/program.zig").Program;
-const Machine = @import("../../machine/machine.zig").Machine;
+const Program = vm.Program;
+const Machine = vm.Machine;
 const ExecutionResult = @import("execution_result.zig").ExecutionResult;
 
 /// Immediately moves execution to the next thread.

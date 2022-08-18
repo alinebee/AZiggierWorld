@@ -11,7 +11,7 @@
 //! different entities within the game (enemies, projectiles etc.) as well as input-handling
 //! and overall housekeeping for the current section of the game.
 
-const anotherworld = @import("../lib/anotherworld.zig");
+const anotherworld = @import("../anotherworld.zig");
 const executeProgram = anotherworld.instructions.executeProgram;
 
 const Machine = @import("machine.zig").Machine;

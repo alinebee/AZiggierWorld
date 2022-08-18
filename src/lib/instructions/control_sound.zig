@@ -1,12 +1,13 @@
 const anotherworld = @import("../anotherworld.zig");
 const resources = anotherworld.resources;
+const vm = anotherworld.vm;
 
 const Opcode = @import("opcode.zig").Opcode;
-const Program = @import("../../machine/program.zig").Program;
-const Machine = @import("../../machine/machine.zig").Machine;
-const Audio = @import("../../machine/audio.zig").Audio;
+const Program = vm.Program;
+const Machine = vm.Machine;
 
-const ChannelID = @import("../../values/channel_id.zig").ChannelID;
+const Audio = vm.Audio;
+const ChannelID = vm.ChannelID;
 
 /// Play a sound on a channel, or stop a channel from playing.
 pub const ControlSound = union(enum) {
@@ -86,7 +87,7 @@ pub const ControlSound = union(enum) {
 
 const testing = @import("utils").testing;
 const expectParse = @import("test_helpers/parse.zig").expectParse;
-const mockMachine = @import("../../machine/test_helpers/mock_machine.zig").mockMachine;
+const mockMachine = vm.mockMachine;
 
 test "parse parses play instruction and consumes 6 bytes" {
     const instruction = try expectParse(ControlSound.parse, &ControlSound.Fixtures.play, 6);

@@ -1,8 +1,9 @@
 const anotherworld = @import("../anotherworld.zig");
+const vm = anotherworld.vm;
 
 const Opcode = @import("opcode.zig").Opcode;
-const Program = @import("../../machine/program.zig").Program;
-const Machine = @import("../../machine/machine.zig").Machine;
+const Program = vm.Program;
+const Machine = vm.Machine;
 
 const ColorID = anotherworld.rendering.ColorID;
 const Point = anotherworld.rendering.Point;
@@ -77,7 +78,7 @@ pub const DrawString = struct {
 
 const testing = @import("utils").testing;
 const expectParse = @import("test_helpers/parse.zig").expectParse;
-const mockMachine = @import("../../machine/test_helpers/mock_machine.zig").mockMachine;
+const mockMachine = vm.mockMachine;
 
 test "parse parses valid bytecode and consumes 6 bytes" {
     const instruction = try expectParse(DrawString.parse, &DrawString.Fixtures.valid, 6);

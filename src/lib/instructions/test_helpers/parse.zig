@@ -1,10 +1,12 @@
 //! Functions and types used when testing virtual machine instructions.
 
 const anotherworld = @import("../../anotherworld.zig");
+const vm = anotherworld.vm;
+
 const meta = @import("utils").meta;
 
 const Opcode = @import("../opcode.zig").Opcode;
-const Program = @import("../../../machine/program.zig").Program;
+const Program = vm.Program;
 
 // -- Test helpers --
 

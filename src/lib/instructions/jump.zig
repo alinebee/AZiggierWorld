@@ -1,8 +1,9 @@
 const anotherworld = @import("../anotherworld.zig");
+const vm = anotherworld.vm;
 
 const Opcode = @import("opcode.zig").Opcode;
-const Program = @import("../../machine/program.zig").Program;
-const Machine = @import("../../machine/machine.zig").Machine;
+const Program = vm.Program;
+const Machine = vm.Machine;
 
 /// Unconditionally jump to a new address.
 /// Unlike Call, this does not increment the stack with a return address.

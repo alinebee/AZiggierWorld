@@ -28,19 +28,19 @@
 //! the host is expected to sleep for that long before allowing execution to continue, which indirectly
 //! decides the framerate of the game.
 
-const anotherworld = @import("../lib/anotherworld.zig");
+const anotherworld = @import("../anotherworld.zig");
 const rendering = anotherworld.rendering;
 const resources = anotherworld.resources;
 const text = anotherworld.text;
 const static_limits = anotherworld.static_limits;
 const log = anotherworld.log;
 
-const BufferID = @import("../values/buffer_id.zig").BufferID;
-const ThreadID = @import("../values/thread_id.zig").ThreadID;
-const ChannelID = @import("../values/channel_id.zig").ChannelID;
-const RegisterID = @import("../values/register_id.zig").RegisterID;
-const Register = @import("../values/register.zig");
-const GamePart = @import("../values/game_part.zig").GamePart;
+const BufferID = @import("buffer_id.zig").BufferID;
+const ThreadID = @import("thread_id.zig").ThreadID;
+const ChannelID = @import("channel_id.zig").ChannelID;
+const RegisterID = @import("register_id.zig").RegisterID;
+const Register = @import("register.zig");
+const GamePart = @import("game_part.zig").GamePart;
 
 const Thread = @import("thread.zig").Thread;
 const Stack = @import("stack.zig").Stack;
