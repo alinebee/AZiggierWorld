@@ -88,7 +88,7 @@ pub fn build(b: *Builder) !void {
     const benchmark_step = b.step("benchmark", "Run benchmarks");
     {
         var benchmark = b.addExecutable("benchmark", "src/benchmark.zig");
-        benchmark.setBuildMode(mode);
+        benchmark.setBuildMode(.ReleaseSafe);
         benchmark.setTarget(target);
         benchmark.addPackage(utils_package);
         benchmark.addPackage(lib_package);
