@@ -139,35 +139,35 @@ pub const Instruction = union(Opcode) {
     SelectVideoBuffer: SelectVideoBuffer,
     Yield: Yield,
 
-    pub const ActivateThread = @import("activate_thread.zig").ActivateThread;
-    pub const Call = @import("call.zig").Call;
-    pub const ControlMusic = @import("control_music.zig").ControlMusic;
-    pub const ControlResources = @import("control_resources.zig").ControlResources;
-    pub const ControlSound = @import("control_sound.zig").ControlSound;
-    pub const ControlThreads = @import("control_threads.zig").ControlThreads;
-    pub const CopyVideoBuffer = @import("copy_video_buffer.zig").CopyVideoBuffer;
-    pub const DrawBackgroundPolygon = @import("draw_background_polygon.zig").DrawBackgroundPolygon;
-    pub const DrawSpritePolygon = @import("draw_sprite_polygon.zig").DrawSpritePolygon;
-    pub const DrawString = @import("draw_string.zig").DrawString;
-    pub const FillVideoBuffer = @import("fill_video_buffer.zig").FillVideoBuffer;
-    pub const Jump = @import("jump.zig").Jump;
-    pub const JumpConditional = @import("jump_conditional.zig").JumpConditional;
-    pub const JumpIfNotZero = @import("jump_if_not_zero.zig").JumpIfNotZero;
-    pub const Kill = @import("kill.zig").Kill;
-    pub const RegisterAdd = @import("register_add.zig").RegisterAdd;
-    pub const RegisterAddConstant = @import("register_add_constant.zig").RegisterAddConstant;
-    pub const RegisterAnd = @import("register_and.zig").RegisterAnd;
-    pub const RegisterCopy = @import("register_copy.zig").RegisterCopy;
-    pub const RegisterOr = @import("register_or.zig").RegisterOr;
-    pub const RegisterSet = @import("register_set.zig").RegisterSet;
-    pub const RegisterShiftLeft = @import("register_shift_left.zig").RegisterShiftLeft;
-    pub const RegisterShiftRight = @import("register_shift_right.zig").RegisterShiftRight;
-    pub const RegisterSubtract = @import("register_subtract.zig").RegisterSubtract;
-    pub const RenderVideoBuffer = @import("render_video_buffer.zig").RenderVideoBuffer;
-    pub const Return = @import("return.zig").Return;
-    pub const SelectPalette = @import("select_palette.zig").SelectPalette;
-    pub const SelectVideoBuffer = @import("select_video_buffer.zig").SelectVideoBuffer;
-    pub const Yield = @import("yield.zig").Yield;
+    pub const ActivateThread = @import("instructions/activate_thread.zig").ActivateThread;
+    pub const Call = @import("instructions/call.zig").Call;
+    pub const ControlMusic = @import("instructions/control_music.zig").ControlMusic;
+    pub const ControlResources = @import("instructions/control_resources.zig").ControlResources;
+    pub const ControlSound = @import("instructions/control_sound.zig").ControlSound;
+    pub const ControlThreads = @import("instructions/control_threads.zig").ControlThreads;
+    pub const CopyVideoBuffer = @import("instructions/copy_video_buffer.zig").CopyVideoBuffer;
+    pub const DrawBackgroundPolygon = @import("instructions/draw_background_polygon.zig").DrawBackgroundPolygon;
+    pub const DrawSpritePolygon = @import("instructions/draw_sprite_polygon.zig").DrawSpritePolygon;
+    pub const DrawString = @import("instructions/draw_string.zig").DrawString;
+    pub const FillVideoBuffer = @import("instructions/fill_video_buffer.zig").FillVideoBuffer;
+    pub const Jump = @import("instructions/jump.zig").Jump;
+    pub const JumpConditional = @import("instructions/jump_conditional.zig").JumpConditional;
+    pub const JumpIfNotZero = @import("instructions/jump_if_not_zero.zig").JumpIfNotZero;
+    pub const Kill = @import("instructions/kill.zig").Kill;
+    pub const RegisterAdd = @import("instructions/register_add.zig").RegisterAdd;
+    pub const RegisterAddConstant = @import("instructions/register_add_constant.zig").RegisterAddConstant;
+    pub const RegisterAnd = @import("instructions/register_and.zig").RegisterAnd;
+    pub const RegisterCopy = @import("instructions/register_copy.zig").RegisterCopy;
+    pub const RegisterOr = @import("instructions/register_or.zig").RegisterOr;
+    pub const RegisterSet = @import("instructions/register_set.zig").RegisterSet;
+    pub const RegisterShiftLeft = @import("instructions/register_shift_left.zig").RegisterShiftLeft;
+    pub const RegisterShiftRight = @import("instructions/register_shift_right.zig").RegisterShiftRight;
+    pub const RegisterSubtract = @import("instructions/register_subtract.zig").RegisterSubtract;
+    pub const RenderVideoBuffer = @import("instructions/render_video_buffer.zig").RenderVideoBuffer;
+    pub const Return = @import("instructions/return.zig").Return;
+    pub const SelectPalette = @import("instructions/select_palette.zig").SelectPalette;
+    pub const SelectVideoBuffer = @import("instructions/select_video_buffer.zig").SelectVideoBuffer;
+    pub const Yield = @import("instructions/yield.zig").Yield;
 
     /// Parse the next instruction from a bytecode program and wrap it in an Instruction union type.
     /// Returns the instruction or an error if the program could not be read or the bytecode
