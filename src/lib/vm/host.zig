@@ -21,9 +21,9 @@
 //!
 
 const anotherworld = @import("../anotherworld.zig");
+const meta = @import("utils").meta;
 
 const std = @import("std");
-const assert = std.debug.assert;
 
 const Machine = @import("machine.zig").Machine;
 const ResolvedBufferID = @import("video.zig").Video.ResolvedBufferID;
@@ -37,7 +37,7 @@ fn bufferChangedSig(comptime State: type) type {
     return fn (state: State, machine: *const Machine, buffer_id: ResolvedBufferID) void;
 }
 
-fn Callbacks(comptime State: type) type {
+fn Functions(comptime State: type) type {
     return struct {
         bufferReady: ?bufferReadySig(State) = null,
         bufferChanged: ?bufferChangedSig(State) = null,
@@ -60,40 +60,24 @@ pub const Host = struct {
     /// Create a new type-erased "fat pointer" whose functions call host-provided callbacks and pass them
     /// a state pointer provided by the host.
     /// Intended to be called by implementations to create a host interface pointing to their own functions.
-    pub fn init(state: anytype, comptime callbacks: Callbacks(@TypeOf(state))) Self {
+    pub fn init(state: anytype, comptime functions: Functions(@TypeOf(state))) Self {
         const State = @TypeOf(state);
-        const ptr_info = @typeInfo(State);
 
-        assert(ptr_info == .Pointer); // Must be a pointer
-        assert(ptr_info.Pointer.size == .One); // Must be a single-item pointer
-
-        const alignment = ptr_info.Pointer.alignment;
-
-        const TypeUnerasedVTable = struct {
-            fn bufferReadyImpl(type_erased_state: *anyopaque, machine: *const Machine, buffer_id: ResolvedBufferID, delay: Milliseconds) void {
-                if (callbacks.bufferReady) |impl| {
-                    const resolved_state = @ptrCast(State, @alignCast(alignment, type_erased_state));
-                    return @call(.{ .modifier = .always_inline }, impl, .{ resolved_state, machine, buffer_id, delay });
+        const vtable = comptime meta.generateVTable(TypeErasedVTable, struct {
+            pub fn bufferReady(type_erased_state: *anyopaque, machine: *const Machine, buffer_id: ResolvedBufferID, delay: Milliseconds) void {
+                if (functions.bufferReady) |function| {
+                    return meta.unerasedCall(State, function, type_erased_state, .{ machine, buffer_id, delay });
                 }
             }
 
-            fn bufferChangedImpl(type_erased_state: *anyopaque, machine: *const Machine, buffer_id: ResolvedBufferID) void {
-                if (callbacks.bufferChanged) |impl| {
-                    const resolved_state = @ptrCast(State, @alignCast(alignment, type_erased_state));
-                    return @call(.{ .modifier = .always_inline }, impl, .{ resolved_state, machine, buffer_id });
+            pub fn bufferChanged(type_erased_state: *anyopaque, machine: *const Machine, buffer_id: ResolvedBufferID) void {
+                if (functions.bufferChanged) |function| {
+                    return meta.unerasedCall(State, function, type_erased_state, .{ machine, buffer_id });
                 }
             }
+        });
 
-            const vtable = TypeErasedVTable{
-                .bufferReady = bufferReadyImpl,
-                .bufferChanged = bufferChangedImpl,
-            };
-        };
-
-        return .{
-            .state = state,
-            .vtable = &TypeUnerasedVTable.vtable,
-        };
+        return .{ .state = state, .vtable = &vtable };
     }
 
     /// Called when the specified machine has finished filling the specified video buffer

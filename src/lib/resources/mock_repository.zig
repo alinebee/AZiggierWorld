@@ -61,7 +61,10 @@ pub const MockRepository = struct {
 
     /// Returns a reader interface for loading game data from this repository.
     pub fn reader(self: *Self) ResourceReader {
-        return ResourceReader.init(self, bufReadResource, resourceDescriptors);
+        return ResourceReader.init(self, .{
+            .bufReadResource = bufReadResource,
+            .resourceDescriptors = resourceDescriptors,
+        });
     }
 
     /// Fills the specified buffer with sample game data, and returns a pointer to the region

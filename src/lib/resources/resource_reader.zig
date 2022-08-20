@@ -2,59 +2,47 @@
 //! e.g. a directory on the local filesystem.
 
 const anotherworld = @import("../anotherworld.zig");
+const meta = @import("utils").meta;
 
 const ResourceDescriptor = @import("resource_descriptor.zig").ResourceDescriptor;
 const ResourceID = @import("resource_id.zig").ResourceID;
 
 const std = @import("std");
 const mem = std.mem;
-const assert = std.debug.assert;
+
+fn Functions(comptime State: type) type {
+    return struct {
+        bufReadResource: fn (state: State, buffer: []u8, descriptor: ResourceDescriptor) ResourceReader.BufReadResourceError![]const u8,
+        resourceDescriptors: fn (state: State) []const ResourceDescriptor,
+    };
+}
+
+const TypeErasedVTable = Functions(*anyopaque);
 
 /// A generic interface for enumerating available resources and loading resource data into buffers.
 /// This is passed around as a 'fat pointer', following zig 0.9.0's polymorphic allocator pattern.
 pub const ResourceReader = struct {
-    implementation: *anyopaque,
+    state: *anyopaque,
     vtable: *const TypeErasedVTable,
-
-    const TypeErasedVTable = struct {
-        bufReadResource: fn (self: *anyopaque, buffer: []u8, descriptor: ResourceDescriptor) BufReadResourceError![]const u8,
-        resourceDescriptors: fn (self: *anyopaque) []const ResourceDescriptor,
-    };
 
     const Self = @This();
 
     /// Create a new type-erased "fat pointer" that reads from a repository of Another World game data.
     /// Intended to be called by repositories to create a reader interface; should not be used directly.
-    pub fn init(implementation_ptr: anytype, comptime bufReadResourceFn: fn (self: @TypeOf(implementation_ptr), buffer: []u8, descriptor: ResourceDescriptor) BufReadResourceError![]const u8, comptime resourceDescriptorsFn: fn (self: @TypeOf(implementation_ptr)) []const ResourceDescriptor) Self {
-        const Implementation = @TypeOf(implementation_ptr);
-        const ptr_info = @typeInfo(Implementation);
+    pub fn init(state: anytype, comptime functions: Functions(@TypeOf(state))) Self {
+        const State = @TypeOf(state);
 
-        assert(ptr_info == .Pointer); // Must be a pointer
-        assert(ptr_info.Pointer.size == .One); // Must be a single-item pointer
-
-        const alignment = ptr_info.Pointer.alignment;
-
-        const TypeUnerasedVTable = struct {
-            fn bufReadResourceImpl(type_erased_self: *anyopaque, buffer: []u8, descriptor: ResourceDescriptor) BufReadResourceError![]const u8 {
-                const self = @ptrCast(Implementation, @alignCast(alignment, type_erased_self));
-                return @call(.{ .modifier = .always_inline }, bufReadResourceFn, .{ self, buffer, descriptor });
+        const vtable = comptime meta.generateVTable(TypeErasedVTable, struct {
+            pub fn bufReadResource(type_erased_state: *anyopaque, buffer: []u8, descriptor: ResourceDescriptor) BufReadResourceError![]const u8 {
+                return meta.unerasedCall(State, functions.bufReadResource, type_erased_state, .{ buffer, descriptor });
             }
 
-            fn resourceDescriptorsImpl(type_erased_self: *anyopaque) []const ResourceDescriptor {
-                const self = @ptrCast(Implementation, @alignCast(alignment, type_erased_self));
-                return @call(.{ .modifier = .always_inline }, resourceDescriptorsFn, .{self});
+            pub fn resourceDescriptors(type_erased_state: *anyopaque) []const ResourceDescriptor {
+                return meta.unerasedCall(State, functions.resourceDescriptors, type_erased_state, .{});
             }
+        });
 
-            const vtable = TypeErasedVTable{
-                .bufReadResource = bufReadResourceImpl,
-                .resourceDescriptors = resourceDescriptorsImpl,
-            };
-        };
-
-        return .{
-            .implementation = implementation_ptr,
-            .vtable = &TypeUnerasedVTable.vtable,
-        };
+        return .{ .state = state, .vtable = &vtable };
     }
 
     /// Read the specified resource from the appropriate BANKXX file into the provided buffer.
@@ -63,7 +51,7 @@ pub const ResourceReader = struct {
     /// could not be read or decompressed.
     /// In the event of an error, `buffer` may contain partially-loaded game data.
     pub fn bufReadResource(self: Self, buffer: []u8, descriptor: ResourceDescriptor) BufReadResourceError![]const u8 {
-        return self.vtable.bufReadResource(self.implementation, buffer, descriptor);
+        return self.vtable.bufReadResource(self.state, buffer, descriptor);
     }
 
     /// Allocate a buffer and read the specified resource from the appropriate
@@ -93,7 +81,7 @@ pub const ResourceReader = struct {
     /// Returns a list of all valid resource descriptors,
     /// loaded from the MEMLIST.BIN file in the game directory.
     pub fn resourceDescriptors(self: Self) []const ResourceDescriptor {
-        return self.vtable.resourceDescriptors(self.implementation);
+        return self.vtable.resourceDescriptors(self.state);
     }
 
     /// Returns the descriptor matching the specified ID.
@@ -176,7 +164,10 @@ const CountedRepository = struct {
     const Self = @This();
 
     pub fn reader(self: *Self) ResourceReader {
-        return ResourceReader.init(self, bufReadResource, resourceDescriptors);
+        return ResourceReader.init(self, .{
+            .bufReadResource = bufReadResource,
+            .resourceDescriptors = resourceDescriptors,
+        });
     }
 
     fn bufReadResource(self: *Self, buffer: []u8, descriptor: ResourceDescriptor) ![]const u8 {

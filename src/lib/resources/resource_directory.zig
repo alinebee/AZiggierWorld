@@ -65,7 +65,10 @@ pub const ResourceDirectory = struct {
 
     /// Returns a reader interface for loading game data from this repository.
     pub fn reader(self: *Self) ResourceReader {
-        return ResourceReader.init(self, bufReadResource, resourceDescriptors);
+        return ResourceReader.init(self, .{
+            .bufReadResource = bufReadResource,
+            .resourceDescriptors = resourceDescriptors,
+        });
     }
 
     // - Private methods -

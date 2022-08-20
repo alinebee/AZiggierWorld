@@ -11,6 +11,43 @@ pub const intCast = std.math.cast;
 /// Given an integer type, returns the type used for legal left/right-shift operations.
 pub const ShiftType = std.math.Log2Int;
 
+/// Cast a single-item pointer to the expected type, taking into account the alignment of the original type.
+pub fn alignPtrCast(comptime Pointer: type, ptr: anytype) Pointer {
+    const alignment = @typeInfo(Pointer).Pointer.alignment;
+    return @ptrCast(Pointer, @alignCast(alignment, ptr));
+}
+
+/// A version of @call that converts the first parameter to the function from an opaque pointer
+/// into a specific pointer type.
+/// Intended to reduce boilerplate when doing dynamic dispatch in fat pointers.
+pub inline fn unerasedCall(comptime UnerasedState: type, comptime function: anytype, type_erased_state: *anyopaque, extra_args: anytype) ReturnType(function) {
+    const resolved_state = alignPtrCast(UnerasedState, type_erased_state);
+    return @call(.{ .modifier = .always_inline }, function, .{resolved_state} ++ extra_args);
+}
+
+/// Given a type-erased vtable type and a struct containing dispatch functions for each member of that vtable,
+/// creates a vtable populated with pointers to the implementation's dispatch functions.
+/// Usage:
+/// const VTable = struct {
+///   func1: fn (state: *anyopaque) void,
+///   func2: fn (state: *anyopaque) void,
+/// };
+///
+/// const vtable = comptime generateVTable(VTable, struct {
+///    pub fn func1(state: *anyopaque) void { unerasedCall(ConcreteType, func1_implementation, state, .{}); }
+///    pub fn func2(state: *anyopaque) void { unerasedCall(ConcreteType, func2_implementation, state, .{}); }
+/// });
+///
+/// return FatPointer{ .state = state, .vtable = &vtable };
+pub fn generateVTable(comptime VTable: type, comptime Implementation: type) VTable {
+    var vtable: VTable = undefined;
+    inline for (@typeInfo(VTable).Struct.fields) |field| {
+        @field(vtable, field.name) = @field(Implementation, field.name);
+    }
+
+    return vtable;
+}
+
 /// The version of intToEnum in the Zig 0.9.1 Standard Library doesn't correctly handle
 /// non-exhaustive enums.
 pub fn intToEnum(comptime EnumTag: type, tag_int: anytype) std.meta.IntToEnumError!EnumTag {
