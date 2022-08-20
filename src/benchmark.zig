@@ -20,7 +20,7 @@ const RenderHost = struct {
     const Self = @This();
 
     fn host(self: *Self) vm.Host {
-        return vm.Host.init(self, bufferReady);
+        return vm.Host.init(self, bufferReady, null);
     }
 
     fn bufferReady(self: *Self, machine: *const vm.Machine, buffer_id: vm.ResolvedBufferID, _: vm.Milliseconds) void {

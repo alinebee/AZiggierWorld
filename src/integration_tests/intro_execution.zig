@@ -14,6 +14,7 @@ const std = @import("std");
 
 const CountingHost = struct {
     render_count: usize = 0,
+    draw_count: usize = 0,
     total_delay: usize = 0,
     max_delay: ?usize = null,
     min_delay: ?usize = null,
@@ -21,7 +22,7 @@ const CountingHost = struct {
     const Self = @This();
 
     fn host(self: *Self) vm.Host {
-        return vm.Host.init(self, bufferReady);
+        return vm.Host.init(self, bufferReady, bufferChanged);
     }
 
     fn bufferReady(self: *Self, _: *const vm.Machine, _: vm.ResolvedBufferID, delay: vm.Milliseconds) void {
@@ -39,6 +40,10 @@ const CountingHost = struct {
         } else {
             self.min_delay = delay;
         }
+    }
+
+    fn bufferChanged(self: *Self, _: *const vm.Machine, _: vm.ResolvedBufferID) void {
+        self.draw_count += 1;
     }
 };
 
@@ -103,6 +108,7 @@ test "Introduction runs successfully" {
     log.info("\nIntro statistics\n----", .{});
     log.info("Total tics: {}", .{tic_count});
     log.info("Total renders: {}", .{host.render_count});
+    log.info("Total draw calls: {}", .{host.draw_count});
     log.info("Tics without renders: {}", .{tics_without_render});
     log.info("Tics with a single render: {}", .{tics_with_single_render});
     log.info("Tics with multiple renders: {}", .{tics_with_multiple_renders});

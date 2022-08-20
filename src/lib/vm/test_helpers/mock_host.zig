@@ -13,6 +13,7 @@ const Milliseconds = @import("../video.zig").Video.Milliseconds;
 
 const DefaultImplementation = struct {
     pub fn bufferReady(_: *const Machine, _: ResolvedBufferID, _: Milliseconds) void {}
+    pub fn bufferChanged(_: *const Machine, _: ResolvedBufferID) void {}
 };
 
 var test_host_implementation = MockHost(DefaultImplementation){};
@@ -29,17 +30,23 @@ pub fn MockHost(comptime Implementation: type) type {
     return struct {
         call_counts: struct {
             bufferReady: usize = 0,
+            bufferChanged: usize = 0,
         } = .{},
 
         const Self = @This();
 
         pub fn host(self: *Self) Host {
-            return Host.init(self, bufferReady);
+            return Host.init(self, bufferReady, bufferChanged);
         }
 
         fn bufferReady(self: *Self, machine: *const Machine, buffer_id: ResolvedBufferID, delay: Milliseconds) void {
             self.call_counts.bufferReady += 1;
             Implementation.bufferReady(machine, buffer_id, delay);
+        }
+
+        fn bufferChanged(self: *Self, machine: *const Machine, buffer_id: ResolvedBufferID) void {
+            self.call_counts.bufferChanged += 1;
+            Implementation.bufferChanged(machine, buffer_id);
         }
     };
 }

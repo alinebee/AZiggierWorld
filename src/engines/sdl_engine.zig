@@ -162,7 +162,7 @@ pub const SDLEngine = struct {
     }
 
     fn host(self: *Self) vm.Host {
-        return vm.Host.init(self, bufferReady);
+        return vm.Host.init(self, bufferReady, null);
     }
 
     // - VM execution

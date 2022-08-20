@@ -83,31 +83,39 @@ pub const Video = struct {
     }
 
     /// Fill a video buffer with a solid color.
-    pub fn fillBuffer(self: *Self, buffer_id: BufferID, color: rendering.ColorID) void {
-        const buffer = self.resolvedBuffer(buffer_id);
-        buffer.fill(color);
+    pub fn fillBuffer(self: *Self, buffer_id: BufferID, color: rendering.ColorID) ResolvedBufferID {
+        const resolved_buffer_id = self.resolvedBufferID(buffer_id);
+        self.buffers[resolved_buffer_id].fill(color);
+        return resolved_buffer_id;
     }
 
     /// Copy the contents of one buffer into another at the specified vertical offset.
+    /// Returns the ID of the buffer that was modified by the operation.
     /// Does nothing if the vertical offset is out of bounds.
-    pub fn copyBuffer(self: *Self, source_id: BufferID, destination_id: BufferID, y: rendering.Point.Coordinate) void {
-        const source = self.resolvedBuffer(source_id);
-        const destination = self.resolvedBuffer(destination_id);
+    pub fn copyBuffer(self: *Self, source_id: BufferID, destination_id: BufferID, y: rendering.Point.Coordinate) ResolvedBufferID {
+        const resolved_source_id = self.resolvedBufferID(source_id);
+        const resolved_destination_id = self.resolvedBufferID(destination_id);
 
-        destination.copy(source, y);
+        self.buffers[resolved_destination_id].copy(&self.buffers[resolved_source_id], y);
+
+        return resolved_destination_id;
     }
 
     /// Loads the specified bitmap resource into the default destination buffer for bitmaps.
+    /// Returns the ID of the buffer that was modified by the operation.
     /// Returns an error if the specified bitmap data was the wrong size for the buffer.
-    pub fn loadBitmapResource(self: *Self, bitmap_data: []const u8) !void {
+    pub fn loadBitmapResource(self: *Self, bitmap_data: []const u8) !ResolvedBufferID {
         const buffer = &self.buffers[bitmap_buffer_id];
         try buffer.loadBitmapResource(bitmap_data);
+
+        return bitmap_buffer_id;
     }
 
     /// Render a polygon from the specified source and address into the current target buffer,
     /// at the specified screen position and scale.
+    /// Returns the ID of the buffer that was modified by the operation.
     /// Returns an error if the specified polygon address was invalid or if polygon data was malformed.
-    pub fn drawPolygon(self: *Self, source: PolygonSource, address: rendering.PolygonResource.Address, point: rendering.Point, scale: rendering.PolygonScale) !void {
+    pub fn drawPolygon(self: *Self, source: PolygonSource, address: rendering.PolygonResource.Address, point: rendering.Point, scale: rendering.PolygonScale) !ResolvedBufferID {
         const visitor = PolygonVisitor{
             .target_buffer = &self.buffers[self.target_buffer_id],
             .mask_buffer = &self.buffers[mask_buffer_id],
@@ -115,23 +123,28 @@ pub const Video = struct {
 
         const resource = try self.resolvedPolygonSource(source);
         try resource.iteratePolygons(address, point, scale, visitor);
+
+        return self.target_buffer_id;
     }
 
     /// Render a string from the English string table at the specified screen position
     /// in the specified color into the current target buffer.
+    /// Returns the ID of the buffer that was modified by the operation.
     /// Returns an error if the string ID was not found or the string contained unsupported characters.
-    pub fn drawString(self: *Self, string_id: text.StringID, color_id: rendering.ColorID, point: rendering.Point) !void {
+    pub fn drawString(self: *Self, string_id: text.StringID, color_id: rendering.ColorID, point: rendering.Point) !ResolvedBufferID {
         // TODO: allow different localizations at runtime.
         const string = try text.english.find(string_id);
 
         const buffer = &self.buffers[self.target_buffer_id];
         try rendering.drawString(Buffer, buffer, string, color_id, point);
+
+        return self.target_buffer_id;
     }
 
     /// Set the specified buffer as the front buffer, marking that it is ready to draw to the host screen.
     /// If `.back_buffer` is specified, this will swap the front and back buffers.
-    /// Returns the resolved ID of the buffer that should be drawn to the host screen using `renderBufferToSurface`.
-    pub fn markBufferAsReady(self: *Self, buffer_id: BufferID) BufferID.Specific {
+    /// Returns the ID of the buffer that should be drawn to the host screen using `renderBufferToSurface`.
+    pub fn markBufferAsReady(self: *Self, buffer_id: BufferID) ResolvedBufferID {
         switch (buffer_id) {
             // When re-rendering the front buffer, leave the current front and back buffers as they were.
             .front_buffer => {},
@@ -166,10 +179,6 @@ pub const Video = struct {
             .back_buffer => self.back_buffer_id,
             .specific => |id| id,
         };
-    }
-
-    fn resolvedBuffer(self: *Self, buffer_id: BufferID) *Buffer {
-        return &self.buffers[self.resolvedBufferID(buffer_id)];
     }
 
     fn resolvedPolygonSource(self: Self, source: PolygonSource) !rendering.PolygonResource {
@@ -223,7 +232,6 @@ const PolygonVisitor = struct {
 // -- Tests --
 
 const testing = @import("utils").testing;
-const MockHost = @import("test_helpers/mock_host.zig").MockHost;
 const Bitmap = rendering.IndexedBitmap(static_limits.virtual_screen_width, static_limits.virtual_screen_height);
 
 test "Ensure everything compiles" {
@@ -336,7 +344,8 @@ test "loadBitmapResource loads bitmap data into expected buffer" {
     const expected_bitmap_buffer_contents = Bitmap.filled(rendering.ColorID.cast(0xF));
     const expected_untouched_buffer_contents = Bitmap.filled(rendering.ColorID.cast(0x0));
 
-    try instance.loadBitmapResource(&filled_bitmap_data);
+    const modified_buffer_id = try instance.loadBitmapResource(&filled_bitmap_data);
+    try testing.expectEqual(Video.bitmap_buffer_id, modified_buffer_id);
 
     for (instance.buffers) |buffer, index| {
         const actual = buffer.toBitmap();

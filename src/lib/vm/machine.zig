@@ -187,7 +187,10 @@ pub const Machine = struct {
 
         switch (location) {
             // Bitmap resources must be loaded immediately from their temporary location into the video buffer.
-            .temporary_bitmap => |address| try self.video.loadBitmapResource(address),
+            .temporary_bitmap => |address| {
+                const modified_buffer = try self.video.loadBitmapResource(address);
+                self.host.bufferChanged(self, modified_buffer);
+            },
             // Audio resources will remain in memory for a later instruction to play them.
             .audio => {},
         }
@@ -205,13 +208,15 @@ pub const Machine = struct {
     /// Render a polygon from the specified source and address at the specified screen position and scale.
     /// Returns an error if the specified polygon address was invalid.
     pub fn drawPolygon(self: *Self, source: Video.PolygonSource, address: rendering.PolygonResource.Address, point: rendering.Point, scale: rendering.PolygonScale) !void {
-        try self.video.drawPolygon(source, address, point, scale);
+        const modified_buffer = try self.video.drawPolygon(source, address, point, scale);
+        self.host.bufferChanged(self, modified_buffer);
     }
 
     /// Render a string from the current string table at the specified screen position in the specified color.
     /// Returns an error if the string could not be found.
     pub fn drawString(self: *Self, string_id: text.StringID, color_id: rendering.ColorID, point: rendering.Point) !void {
-        try self.video.drawString(string_id, color_id, point);
+        const modified_buffer = try self.video.drawString(string_id, color_id, point);
+        self.host.bufferChanged(self, modified_buffer);
     }
 
     /// Select the active palette to render the video buffer in.
@@ -226,12 +231,14 @@ pub const Machine = struct {
 
     /// Fill a specified video buffer with a single color.
     pub fn fillVideoBuffer(self: *Self, buffer_id: BufferID, color_id: rendering.ColorID) void {
-        self.video.fillBuffer(buffer_id, color_id);
+        const modified_buffer = self.video.fillBuffer(buffer_id, color_id);
+        self.host.bufferChanged(self, modified_buffer);
     }
 
     /// Copy the contents of one video buffer into another at the specified vertical offset.
     pub fn copyVideoBuffer(self: *Self, source: BufferID, destination: BufferID, vertical_offset: rendering.Point.Coordinate) void {
-        self.video.copyBuffer(source, destination, vertical_offset);
+        const modified_buffer = self.video.copyBuffer(source, destination, vertical_offset);
+        self.host.bufferChanged(self, modified_buffer);
     }
 
     /// Render the contents of the specified buffer to the host screen after the specified delay.
@@ -529,8 +536,17 @@ test "scheduleGamePart schedules a new game part without loading it" {
 
 // - loadResource tests -
 
-test "loadResource loads audio resource into main memory" {
-    var machine = Machine.testInstance(.{});
+test "loadResource loads audio resource into main memory and does not notify host of changed buffer" {
+    var host = mock_host.mockHost(struct {
+        pub fn bufferReady(_: *const Machine, _: Video.ResolvedBufferID, _: Video.Milliseconds) void {
+            unreachable;
+        }
+        pub fn bufferChanged(_: *const Machine, _: Video.ResolvedBufferID) void {
+            unreachable;
+        }
+    });
+
+    var machine = Machine.testInstance(.{ .host = host.host() });
     defer machine.deinit();
 
     const audio_resource_id = resources.MockRepository.Fixtures.sfx_resource_id;
@@ -538,10 +554,22 @@ test "loadResource loads audio resource into main memory" {
     try testing.expectEqual(null, try machine.memory.resourceLocation(audio_resource_id));
     try machine.loadResource(audio_resource_id);
     try testing.expect((try machine.memory.resourceLocation(audio_resource_id)) != null);
+
+    try testing.expectEqual(0, host.call_counts.bufferChanged);
 }
 
-test "loadResource copies bitmap resource directly into video buffer without persisting in main memory" {
-    var machine = Machine.testInstance(.{});
+test "loadResource copies bitmap resource directly into video buffer without persisting in main memory and notifies host of changed buffer" {
+    var host = mock_host.mockHost(struct {
+        pub fn bufferReady(_: *const Machine, _: Video.ResolvedBufferID, _: Video.Milliseconds) void {
+            unreachable;
+        }
+        pub fn bufferChanged(_: *const Machine, buffer_id: Video.ResolvedBufferID) void {
+            testing.expectEqual(Video.bitmap_buffer_id, buffer_id) catch unreachable;
+        }
+    });
+
+    var machine = Machine.testInstance(.{ .host = host.host() });
+
     defer machine.deinit();
 
     const buffer = &machine.video.buffers[Video.bitmap_buffer_id];
@@ -557,10 +585,21 @@ test "loadResource copies bitmap resource directly into video buffer without per
     // The fake bitmap resource data should have been filled with a 0b01010 bit pattern,
     // which should never be equal to the flat black color filled into the buffer.
     try testing.expect(meta.eql(original_buffer_contents, new_buffer_contents) == false);
+
+    try testing.expectEqual(1, host.call_counts.bufferChanged);
 }
 
-test "loadResource returns error on invalid resource ID" {
-    var machine = Machine.testInstance(.{});
+test "loadResource returns error on invalid resource ID and does not notify host of changed buffer" {
+    var host = mock_host.mockHost(struct {
+        pub fn bufferReady(_: *const Machine, _: Video.ResolvedBufferID, _: Video.Milliseconds) void {
+            unreachable;
+        }
+        pub fn bufferChanged(_: *const Machine, _: Video.ResolvedBufferID) void {
+            unreachable;
+        }
+    });
+
+    var machine = Machine.testInstance(.{ .host = host.host() });
     defer machine.deinit();
 
     const invalid_id = resources.MockRepository.Fixtures.invalid_resource_id;
@@ -765,6 +804,9 @@ test "renderVideoBuffer notifies host of new frame with expected buffer ID and d
         pub fn bufferReady(_: *const Machine, buffer_id: Video.ResolvedBufferID, delay: Video.Milliseconds) void {
             testing.expectEqual(expected_buffer_id, buffer_id) catch unreachable;
             testing.expectEqual(expected_delay, delay) catch unreachable;
+        }
+        pub fn bufferChanged(_: *const Machine, _: Video.ResolvedBufferID) void {
+            unreachable;
         }
     });
 
