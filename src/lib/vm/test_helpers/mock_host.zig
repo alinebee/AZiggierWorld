@@ -36,7 +36,7 @@ pub fn MockHost(comptime Implementation: type) type {
         const Self = @This();
 
         pub fn host(self: *Self) Host {
-            return Host.init(self, bufferReady, bufferChanged);
+            return Host.init(self, .{ .bufferReady = bufferReady, .bufferChanged = bufferChanged });
         }
 
         fn bufferReady(self: *Self, machine: *const Machine, buffer_id: ResolvedBufferID, delay: Milliseconds) void {

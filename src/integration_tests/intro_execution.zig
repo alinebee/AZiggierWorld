@@ -22,7 +22,7 @@ const CountingHost = struct {
     const Self = @This();
 
     fn host(self: *Self) vm.Host {
-        return vm.Host.init(self, bufferReady, bufferChanged);
+        return vm.Host.init(self, .{ .bufferReady = bufferReady, .bufferChanged = bufferChanged });
     }
 
     fn bufferReady(self: *Self, _: *const vm.Machine, _: vm.ResolvedBufferID, delay: vm.Milliseconds) void {
