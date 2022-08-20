@@ -9,9 +9,9 @@ const anotherworld = @import("../anotherworld.zig");
 const vm = anotherworld.vm;
 const meta = @import("utils").meta;
 
-const Program = vm.Program;
 const Machine = vm.Machine;
 const Opcode = @import("opcode.zig").Opcode;
+const Program = @import("program.zig").Program;
 const ExecutionResult = @import("execution_result.zig").ExecutionResult;
 
 pub const ExecutionError = error{

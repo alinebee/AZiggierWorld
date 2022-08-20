@@ -4,10 +4,7 @@
 const anotherworld = @import("anotherworld");
 const bytecode = anotherworld.bytecode;
 const resources = anotherworld.resources;
-const vm = anotherworld.vm;
 const log = anotherworld.log;
-
-const Program = vm.Program;
 
 const testing = @import("utils").testing;
 const meta = @import("utils").meta;
@@ -23,8 +20,8 @@ const ParseFailure = struct {
     parsed_count: usize,
     err: anyerror,
 
-    fn init(resource_id: usize, program: *Program, offset: usize, err: anyerror) ParseFailure {
-        const parsed_bytes = program.bytecode[offset..program.counter];
+    fn init(resource_id: usize, program: *bytecode.Program, offset: usize, err: anyerror) ParseFailure {
+        const parsed_bytes = program.data[offset..program.counter];
 
         var self = ParseFailure{
             .resource_id = resource_id,
@@ -72,7 +69,7 @@ test "Instruction.parse parses all programs in fixture bytecode" {
         const data = try reader.allocReadResource(testing.allocator, descriptor);
         defer testing.allocator.free(data);
 
-        var program = try Program.init(data);
+        var program = try bytecode.Program.init(data);
 
         while (program.isAtEnd() == false) {
             const last_valid_address = program.counter;

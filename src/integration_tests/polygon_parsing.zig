@@ -14,7 +14,7 @@ const Polygon = rendering.Polygon;
 const PolygonScale = rendering.PolygonScale;
 const Point = rendering.Point;
 
-const Program = vm.Program;
+const Program = bytecode.Program;
 const GamePart = vm.GamePart;
 
 const testing = @import("utils").testing;

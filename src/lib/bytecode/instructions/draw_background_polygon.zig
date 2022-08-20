@@ -6,7 +6,7 @@ const Point = rendering.Point;
 const PolygonScale = rendering.PolygonScale;
 
 const Opcode = @import("../opcode.zig").Opcode;
-const Program = vm.Program;
+const Program = @import("../program.zig").Program;
 const Machine = vm.Machine;
 
 /// Draw a polygon at the default zoom level and a constant position hardcoded in the bytecode.

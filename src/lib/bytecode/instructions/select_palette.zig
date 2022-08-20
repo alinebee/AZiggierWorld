@@ -3,7 +3,7 @@ const rendering = anotherworld.rendering;
 const vm = anotherworld.vm;
 
 const Opcode = @import("../opcode.zig").Opcode;
-const Program = vm.Program;
+const Program = @import("../program.zig").Program;
 const Machine = vm.Machine;
 
 /// Select the active palette to render the video buffer in.

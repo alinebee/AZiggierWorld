@@ -2,7 +2,7 @@ const anotherworld = @import("../../anotherworld.zig");
 const vm = anotherworld.vm;
 
 const Opcode = @import("../opcode.zig").Opcode;
-const Program = vm.Program;
+const Program = @import("../program.zig").Program;
 const Machine = vm.Machine;
 const Milliseconds = vm.Milliseconds;
 const BufferID = vm.BufferID;

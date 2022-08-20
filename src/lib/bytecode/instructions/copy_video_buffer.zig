@@ -4,7 +4,7 @@ const vm = anotherworld.vm;
 const Point = anotherworld.rendering.Point;
 
 const Opcode = @import("../opcode.zig").Opcode;
-const Program = vm.Program;
+const Program = @import("../program.zig").Program;
 const Machine = vm.Machine;
 const BufferID = vm.BufferID;
 

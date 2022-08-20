@@ -3,7 +3,7 @@ const vm = anotherworld.vm;
 
 const Opcode = @import("../opcode.zig").Opcode;
 const ThreadID = vm.ThreadID;
-const Program = vm.Program;
+const Program = @import("../program.zig").Program;
 const Machine = vm.Machine;
 
 /// Activate a specific thread and move its program counter to the specified address.

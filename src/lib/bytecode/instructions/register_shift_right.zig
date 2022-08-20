@@ -5,7 +5,7 @@ const meta = @import("utils").meta;
 const Opcode = @import("../opcode.zig").Opcode;
 const Register = vm.Register;
 const RegisterID = vm.RegisterID;
-const Program = vm.Program;
+const Program = @import("../program.zig").Program;
 const Machine = vm.Machine;
 
 /// Right-shift (>>) the bits in a register's value by a specified distance.

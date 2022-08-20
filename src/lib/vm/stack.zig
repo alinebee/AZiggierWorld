@@ -11,21 +11,22 @@
 //! (i.e. the game may never use nested subroutines).
 
 const anotherworld = @import("../anotherworld.zig");
+const bytecode = anotherworld.bytecode;
 const static_limits = anotherworld.static_limits;
 
-const Program = @import("program.zig").Program;
+const ProgramAddress = bytecode.Program.Address;
 
 /// Represents the state of the program execution stack.
 pub const Stack = struct {
     /// The addresses currently on the stack.
-    return_addresses: [max_depth]Program.Address = undefined,
+    return_addresses: [max_depth]ProgramAddress = undefined,
     /// The current depth on the stack, between 0 and 63.
     depth: usize = 0,
 
     const Self = @This();
 
     /// Add a new return address onto the stack.
-    pub fn push(self: *Self, address: Program.Address) Error!void {
+    pub fn push(self: *Self, address: ProgramAddress) Error!void {
         if (self.depth >= self.return_addresses.len) {
             return error.StackOverflow;
         }
@@ -34,7 +35,7 @@ pub const Stack = struct {
     }
 
     /// Decrement the stack and return the last return address that was on the stack.
-    pub fn pop(self: *Self) Error!Program.Address {
+    pub fn pop(self: *Self) Error!ProgramAddress {
         if (self.depth == 0) {
             return error.StackUnderflow;
         }

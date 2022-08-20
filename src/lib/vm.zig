@@ -2,7 +2,6 @@ pub const Machine = @import("vm/machine.zig").Machine;
 pub const Audio = @import("vm/audio.zig").Audio;
 pub const Host = @import("vm/host.zig").Host;
 pub const Stack = @import("vm/stack.zig").Stack;
-pub const Program = @import("vm/program.zig").Program;
 pub const UserInput = @import("vm/user_input.zig").UserInput;
 
 pub const Register = @import("vm/register.zig");

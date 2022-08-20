@@ -13,14 +13,12 @@
 
 const anotherworld = @import("../anotherworld.zig");
 const bytecode = anotherworld.bytecode;
-const executeProgram = bytecode.executeProgram;
 
 const Machine = @import("machine.zig").Machine;
-const Program = @import("program.zig").Program;
 
 const ExecutionState = union(enum) {
     /// The thread is active and will continue execution from the specified address when it is next run.
-    active: Program.Address,
+    active: bytecode.Program.Address,
 
     /// The thread is inactive and will not run, regardless of whether it is running or paused.
     inactive,
@@ -70,7 +68,7 @@ pub const Thread = struct {
 
     /// On the next game tic, activate this thread and jump to the specified address.
     /// If the thread is currently inactive, then it will remain so for the rest of the current tic.
-    pub fn scheduleJump(self: *Self, address: Program.Address) void {
+    pub fn scheduleJump(self: *Self, address: bytecode.Program.Address) void {
         self.scheduled_execution_state = .{ .active = address };
     }
 
@@ -136,7 +134,7 @@ pub const Thread = struct {
         // Empty the stack before running each thread.
         machine.stack.clear();
 
-        const result = try executeProgram(&machine.program, machine, max_instructions);
+        const result = try bytecode.executeProgram(&machine.program, machine, max_instructions);
         self.execution_state = switch (result) {
             // On yield, record the final position of the program counter so we can resume from there next tic.
             .yield => .{ .active = machine.program.counter },

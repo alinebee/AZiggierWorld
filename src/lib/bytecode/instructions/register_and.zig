@@ -4,7 +4,7 @@ const vm = anotherworld.vm;
 const Opcode = @import("../opcode.zig").Opcode;
 const Register = vm.Register;
 const RegisterID = vm.RegisterID;
-const Program = vm.Program;
+const Program = @import("../program.zig").Program;
 const Machine = vm.Machine;
 
 /// Applies a bitwise-AND mask to the value in a register.

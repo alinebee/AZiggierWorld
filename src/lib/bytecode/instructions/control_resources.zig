@@ -3,7 +3,7 @@ const resources = anotherworld.resources;
 const vm = anotherworld.vm;
 
 const Opcode = @import("../opcode.zig").Opcode;
-const Program = vm.Program;
+const Program = @import("../program.zig").Program;
 const Machine = vm.Machine;
 const GamePart = vm.GamePart;
 

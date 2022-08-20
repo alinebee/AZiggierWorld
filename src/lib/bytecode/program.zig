@@ -15,22 +15,22 @@ const meta = @import("utils").meta;
 /// An Another World bytecode program, which maintains a counter to the next instruction to execute.
 pub const Program = struct {
     /// The bytecode making up the program.
-    bytecode: []const u8,
+    data: []const u8,
 
     /// The address of the next instruction that will be read.
-    /// Invariant: this is less than or equal to bytecode.len.
+    /// Invariant: this is less than or equal to data.len.
     counter: Address = 0,
 
     const Self = @This();
 
     /// Create a new program that will execute from the start of the specified slice of bytecode.
     /// Returns error.ProgramTooLarge if the bytecode slice exceeded the maximum program size.
-    pub fn init(bytecode: []const u8) LoadError!Self {
-        if (bytecode.len > static_limits.max_program_size) {
+    pub fn init(data: []const u8) LoadError!Self {
+        if (data.len > static_limits.max_program_size) {
             return error.ProgramTooLarge;
         }
 
-        return Self{ .bytecode = bytecode };
+        return Self{ .data = data };
     }
 
     /// Reads an integer of the specified type from the current program counter
@@ -44,17 +44,18 @@ pub const Program = struct {
 
         const lower_bound = @as(usize, self.counter);
         const upper_bound = lower_bound + byte_width;
-        if (upper_bound > self.bytecode.len) {
-            // `init` has checked that self.bytecode.len fits within Address when it is first loaded.
+        const end_of_program = self.data.len;
+        if (upper_bound > end_of_program) {
+            // `init` has checked that self.data.len fits within Address when it is first loaded.
             // If this cast fails at runtime, it indicates memory corruption or a programmer error.
-            self.counter = @intCast(Address, self.bytecode.len);
+            self.counter = @intCast(Address, end_of_program);
             return error.EndOfProgram;
         }
 
-        const slice = self.bytecode[lower_bound..upper_bound];
+        const slice = self.data[lower_bound..upper_bound];
         const int = readIntSliceBig(Integer, slice);
 
-        // Likewise, upper_bound implicitly fits within Address if it's <= self.bytecode.len.
+        // Likewise, upper_bound implicitly fits within Address if it's <= self.data.len.
         // If this cast fails at runtime, it indicates memory corruption or a programmer error.
         self.counter = @intCast(Address, upper_bound);
 
@@ -66,9 +67,10 @@ pub const Program = struct {
     /// if there are not enough bytes left in the program to skip the full amount.
     pub fn skip(self: *Self, byte_count: usize) ReadError!void {
         const upper_bound = @as(usize, self.counter) + byte_count;
-        if (upper_bound > self.bytecode.len) {
+        const end_of_program = self.data.len;
+        if (upper_bound > end_of_program) {
             // See comments in `read` above about casts that could fail at runtime.
-            self.counter = @intCast(Address, self.bytecode.len);
+            self.counter = @intCast(Address, end_of_program);
             return error.EndOfProgram;
         }
         self.counter = @intCast(Address, upper_bound);
@@ -78,7 +80,7 @@ pub const Program = struct {
     /// so that program execution continues from that point.
     /// Returns error.InvalidAddress if the address is beyond the end of the program.
     pub fn jump(self: *Self, address: Address) SeekError!void {
-        if (address >= self.bytecode.len) {
+        if (address >= self.data.len) {
             return error.InvalidAddress;
         }
 
@@ -87,7 +89,7 @@ pub const Program = struct {
 
     /// Whether the end of the program has been reached.
     pub fn isAtEnd(self: Self) bool {
-        return self.counter >= self.bytecode.len;
+        return self.counter >= self.data.len;
     }
 
     // - Exported constants -
@@ -119,22 +121,22 @@ test "Address type matches range of program counter values" {
 }
 
 test "init succeeds with slice at maximum size" {
-    const bytecode = try testing.allocator.alloc(u8, static_limits.max_program_size);
-    defer testing.allocator.free(bytecode);
+    const data = try testing.allocator.alloc(u8, static_limits.max_program_size);
+    defer testing.allocator.free(data);
 
-    _ = try Program.init(bytecode);
+    _ = try Program.init(data);
 }
 
 test "init returns error.ProgramTooLarge with slice that exceeds maximum size" {
-    const bytecode = try testing.allocator.alloc(u8, static_limits.max_program_size + 1);
-    defer testing.allocator.free(bytecode);
+    const data = try testing.allocator.alloc(u8, static_limits.max_program_size + 1);
+    defer testing.allocator.free(data);
 
-    try testing.expectError(error.ProgramTooLarge, Program.init(bytecode));
+    try testing.expectError(error.ProgramTooLarge, Program.init(data));
 }
 
 test "read(u8) returns byte at current program counter and advances program counter" {
-    const bytecode = [_]u8{ 0xDE, 0xAD };
-    var program = try Program.init(&bytecode);
+    const data = [_]u8{ 0xDE, 0xAD };
+    var program = try Program.init(&data);
 
     try testing.expectEqual(0, program.counter);
 
@@ -146,8 +148,8 @@ test "read(u8) returns byte at current program counter and advances program coun
 }
 
 test "read(u16) returns big-endian u16 at current program counter and advances program counter by 2" {
-    const bytecode = [_]u8{ 0xDE, 0xAD, 0xBE, 0xEF };
-    var program = try Program.init(&bytecode);
+    const data = [_]u8{ 0xDE, 0xAD, 0xBE, 0xEF };
+    var program = try Program.init(&data);
 
     try testing.expectEqual(0, program.counter);
     try testing.expectEqual(0xDEAD, program.read(u16));
@@ -157,22 +159,22 @@ test "read(u16) returns big-endian u16 at current program counter and advances p
 }
 
 test "read(u16) returns error.EndOfProgram and leaves program counter at end of program when it tries to read beyond end of program" {
-    const bytecode = [_]u8{0xDE};
-    var program = try Program.init(&bytecode);
+    const data = [_]u8{0xDE};
+    var program = try Program.init(&data);
 
     try testing.expectEqual(0, program.counter);
     try testing.expectError(error.EndOfProgram, program.read(u16));
-    try testing.expectEqual(@intCast(Program.Address, bytecode.len), program.counter);
+    try testing.expectEqual(@intCast(Program.Address, data.len), program.counter);
 }
 
 test "read(i16) returns big-endian i16 at current program counter and advances program counter by 2" {
     const int1: i16 = -18901; // 0b1011_0110_0010_1011 in two's complement
     const int2: i16 = 3470; // 0b0000_1101_1000_1110 in two's complement
-    const bytecode = [_]u8{
+    const data = [_]u8{
         0b1011_0110, 0b0010_1011,
         0b0000_1101, 0b1000_1110,
     };
-    var program = try Program.init(&bytecode);
+    var program = try Program.init(&data);
 
     try testing.expectEqual(0, program.counter);
     try testing.expectEqual(int1, program.read(i16));
@@ -182,17 +184,17 @@ test "read(i16) returns big-endian i16 at current program counter and advances p
 }
 
 test "read() returns error.EndOfProgram and leaves program counter at end of program when it tries to read beyond end of program" {
-    const bytecode = [_]u8{0xDE};
-    var program = try Program.init(&bytecode);
+    const data = [_]u8{0xDE};
+    var program = try Program.init(&data);
 
     try testing.expectEqual(0, program.counter);
     try testing.expectError(error.EndOfProgram, program.read(u16));
-    try testing.expectEqual(@intCast(Program.Address, bytecode.len), program.counter);
+    try testing.expectEqual(@intCast(Program.Address, data.len), program.counter);
 }
 
 test "skip() advances program counter" {
-    const bytecode = [_]u8{ 0xDE, 0xAD };
-    var program = try Program.init(&bytecode);
+    const data = [_]u8{ 0xDE, 0xAD };
+    var program = try Program.init(&data);
 
     try testing.expectEqual(0, program.counter);
     try program.skip(2);
@@ -200,8 +202,8 @@ test "skip() advances program counter" {
 }
 
 test "skip() returns error.EndOfProgram and leaves program counter at end of program when it tries to read beyond end of program" {
-    const bytecode = [_]u8{ 0xDE, 0xAD };
-    var program = try Program.init(&bytecode);
+    const data = [_]u8{ 0xDE, 0xAD };
+    var program = try Program.init(&data);
 
     try testing.expectEqual(0, program.counter);
     try testing.expectError(error.EndOfProgram, program.skip(5));
@@ -209,8 +211,8 @@ test "skip() returns error.EndOfProgram and leaves program counter at end of pro
 }
 
 test "jump() moves program counter to specified address" {
-    const bytecode = [_]u8{ 0xDE, 0xAD, 0xBE, 0xEF };
-    var program = try Program.init(&bytecode);
+    const data = [_]u8{ 0xDE, 0xAD, 0xBE, 0xEF };
+    var program = try Program.init(&data);
 
     try program.jump(3);
     try testing.expectEqual(3, program.counter);
@@ -219,8 +221,8 @@ test "jump() moves program counter to specified address" {
 }
 
 test "jump() returns error.InvalidAddress program counter when given address beyond the end of program" {
-    const bytecode = [_]u8{ 0xDE, 0xAD, 0xBE, 0xEF };
-    var program = try Program.init(&bytecode);
+    const data = [_]u8{ 0xDE, 0xAD, 0xBE, 0xEF };
+    var program = try Program.init(&data);
 
     try testing.expectError(error.InvalidAddress, program.jump(6));
 }

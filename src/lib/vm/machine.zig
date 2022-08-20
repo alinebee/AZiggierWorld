@@ -46,7 +46,6 @@ const GamePart = @import("game_part.zig").GamePart;
 const Thread = @import("thread.zig").Thread;
 const Stack = @import("stack.zig").Stack;
 const Registers = @import("registers.zig").Registers;
-const Program = @import("program.zig").Program;
 const Video = @import("video.zig").Video;
 const Audio = @import("audio.zig").Audio;
 const Memory = @import("memory.zig").Memory;
@@ -71,7 +70,7 @@ pub const Machine = struct {
     stack: Stack,
 
     /// The currently-running program.
-    program: Program,
+    program: bytecode.Program,
 
     /// The current state of the video subsystem.
     video: Video,
@@ -318,7 +317,7 @@ pub const Machine = struct {
     /// the new game part on the next run loop.
     fn startGamePart(self: *Self, game_part: GamePart) !void {
         const resource_locations = try self.memory.loadGamePart(game_part);
-        self.program = try Program.init(resource_locations.bytecode);
+        self.program = try bytecode.Program.init(resource_locations.bytecode);
 
         self.video.setResourceLocations(resource_locations.palettes, resource_locations.polygons, resource_locations.animations);
 
@@ -372,7 +371,7 @@ pub const Machine = struct {
 
         var machine = Self.init(testing.allocator, resources.MockRepository.test_reader, host, options) catch unreachable;
         if (config.program_data) |program_data| {
-            machine.program = Program.init(program_data) catch unreachable;
+            machine.program = bytecode.Program.init(program_data) catch unreachable;
         }
         return machine;
     }
@@ -424,7 +423,7 @@ test "new creates virtual machine instance with expected initial state" {
 
     const bytecode_address = try machine.memory.resourceLocation(resource_ids.bytecode);
     try testing.expect(bytecode_address != null);
-    try testing.expectEqual(bytecode_address.?, machine.program.bytecode);
+    try testing.expectEqual(bytecode_address.?, machine.program.data);
 
     const palettes_address = try machine.memory.resourceLocation(resource_ids.palettes);
     try testing.expect(palettes_address != null);

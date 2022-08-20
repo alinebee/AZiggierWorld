@@ -4,7 +4,7 @@ const meta = @import("utils").meta;
 
 const Opcode = @import("../opcode.zig").Opcode;
 const Register = vm.Register;
-const Program = vm.Program;
+const Program = @import("../program.zig").Program;
 const Machine = vm.Machine;
 const RegisterID = vm.RegisterID;
 
