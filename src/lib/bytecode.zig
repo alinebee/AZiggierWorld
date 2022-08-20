@@ -1,8 +1,7 @@
-const instruction = @import("bytecode/instruction.zig");
+pub const Instruction = @import("bytecode/instruction.zig").Instruction;
 
-pub const Instruction = instruction.Instruction;
-pub const executeProgram = instruction.executeProgram;
-pub const ExecutionError = instruction.ExecutionError;
+pub const executeProgram = @import("bytecode/execute.zig").executeProgram;
+pub const ExecutionError = @import("bytecode/execute.zig").ExecutionError;
 
 pub const Program = @import("bytecode/program.zig").Program;
 pub const ThreadOperation = @import("bytecode/thread_operation.zig").ThreadOperation;
