@@ -44,7 +44,7 @@ pub fn MockMachine(comptime Implementation: type) type {
 
         const Self = @This();
 
-        pub fn drawPolygon(self: *Self, source: Video.PolygonSource, address: Video.PolygonAddress, point: rendering.Point, scale: rendering.PolygonScale) !void {
+        pub fn drawPolygon(self: *Self, source: Video.PolygonSource, address: rendering.PolygonResource.Address, point: rendering.Point, scale: rendering.PolygonScale) !void {
             self.call_counts.drawPolygon += 1;
             try Implementation.drawPolygon(source, address, point, scale);
         }
@@ -127,7 +127,7 @@ const testing = @import("utils").testing;
 
 test "MockMachine calls drawPolygon correctly on stub implementation" {
     var mock = mockMachine(struct {
-        fn drawPolygon(source: Video.PolygonSource, address: Video.PolygonAddress, point: rendering.Point, scale: rendering.PolygonScale) !void {
+        fn drawPolygon(source: Video.PolygonSource, address: rendering.PolygonResource.Address, point: rendering.Point, scale: rendering.PolygonScale) !void {
             try testing.expectEqual(.animations, source);
             try testing.expectEqual(0xBEEF, address);
             try testing.expectEqual(320, point.x);

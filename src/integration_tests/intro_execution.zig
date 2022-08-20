@@ -7,11 +7,6 @@ const resources = anotherworld.resources;
 const log = anotherworld.log;
 const vm = anotherworld.vm;
 
-const Machine = vm.Machine;
-const Host = vm.Host;
-const BufferID = vm.BufferID;
-const UserInput = vm.UserInput;
-
 const ensureValidFixtureDir = @import("helpers.zig").ensureValidFixtureDir;
 const testing = @import("utils").testing;
 
@@ -25,11 +20,11 @@ const CountingHost = struct {
 
     const Self = @This();
 
-    fn host(self: *Self) Host {
-        return Host.init(self, bufferReady);
+    fn host(self: *Self) vm.Host {
+        return vm.Host.init(self, bufferReady);
     }
 
-    fn bufferReady(self: *Self, _: *const Machine, _: BufferID.Specific, delay: Host.Milliseconds) void {
+    fn bufferReady(self: *Self, _: *const vm.Machine, _: vm.ResolvedBufferID, delay: vm.Milliseconds) void {
         self.render_count += 1;
         self.total_delay += delay;
 
@@ -58,13 +53,13 @@ test "Introduction runs successfully" {
     var resource_directory = try resources.ResourceDirectory.init(&game_dir);
     var host = CountingHost{};
 
-    var machine = try Machine.init(testing.allocator, resource_directory.reader(), host.host(), .{
+    var machine = try vm.Machine.init(testing.allocator, resource_directory.reader(), host.host(), .{
         .initial_game_part = .intro_cinematic,
         .seed = 0,
     });
     defer machine.deinit();
 
-    const empty_input = UserInput{};
+    const empty_input = vm.UserInput{};
 
     var tics_without_render: usize = 0;
     var tics_with_single_render: usize = 0;

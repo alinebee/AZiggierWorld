@@ -3,17 +3,11 @@ const resources = anotherworld.resources;
 const log = anotherworld.log;
 const vm = anotherworld.vm;
 
-const Machine = vm.Machine;
-const Host = vm.Host;
-const BufferID = vm.BufferID;
-const Video = vm.Video;
-const GameInput = vm.UserInput;
-
 const SDL = @import("sdl2");
 const std = @import("std");
 
 const Input = struct {
-    game_input: GameInput = .{},
+    game_input: vm.UserInput = .{},
     turbo: bool = false,
     paused: bool = false,
     exited: bool = false,
@@ -78,7 +72,7 @@ pub const SDLEngine = struct {
 
     game_dir: std.fs.Dir,
     resource_directory: resources.ResourceDirectory,
-    machine: Machine,
+    machine: vm.Machine,
 
     window: SDL.Window,
     renderer: SDL.Renderer,
@@ -113,7 +107,7 @@ pub const SDLEngine = struct {
 
         self.resource_directory = try resources.ResourceDirectory.init(&self.game_dir);
 
-        self.machine = try Machine.init(
+        self.machine = try vm.Machine.init(
             allocator,
             self.resource_directory.reader(),
             self.host(),
@@ -167,8 +161,8 @@ pub const SDLEngine = struct {
         self.allocator.destroy(self);
     }
 
-    fn host(self: *Self) Host {
-        return Host.init(self, bufferReady);
+    fn host(self: *Self) vm.Host {
+        return vm.Host.init(self, bufferReady);
     }
 
     // - VM execution
@@ -195,13 +189,13 @@ pub const SDLEngine = struct {
         }
     }
 
-    fn bufferReady(self: *Self, machine: *const Machine, buffer_id: BufferID.Specific, requested_delay: Host.Milliseconds) void {
+    fn bufferReady(self: *Self, machine: *const vm.Machine, buffer_id: vm.ResolvedBufferID, requested_delay: vm.Milliseconds) void {
         const delay = resolvedFrameDelay(requested_delay * std.time.ns_per_ms, self.last_frame_time, @truncate(i64, std.time.nanoTimestamp()), self.input.turbo);
 
         std.time.sleep(delay);
 
         var locked_texture = self.texture.lock(null) catch @panic("self.texture.lock failed");
-        const raw_pixels = @ptrCast(*Video.HostSurface, locked_texture.pixels);
+        const raw_pixels = @ptrCast(*vm.HostSurface, locked_texture.pixels);
 
         machine.renderBufferToSurface(buffer_id, raw_pixels) catch |err| {
             switch (err) {

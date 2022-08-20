@@ -4,14 +4,14 @@ const vm = anotherworld.vm;
 const Opcode = @import("opcode.zig").Opcode;
 const Program = vm.Program;
 const Machine = vm.Machine;
-const Video = vm.Video;
+const Milliseconds = vm.Milliseconds;
 const BufferID = vm.BufferID;
 
 /// This instruction reads a variable from a specific register to decide how long to leave
 /// the previous frame on screen before displaying the next one.
 /// That register's value is a number of abstract frame units and needs to be multiplied
 /// by this constant to get the delay in milliseconds.
-const milliseconds_per_frame_unit: Video.Milliseconds = 20;
+const milliseconds_per_frame_unit: Milliseconds = 20;
 
 /// Renders the contents of a video buffer to the host screen.
 pub const RenderVideoBuffer = struct {
@@ -40,7 +40,7 @@ pub const RenderVideoBuffer = struct {
     fn _execute(self: Self, machine: anytype) void {
         // In Another World's original bytecode, the delay is typically set to between 1-11 units (20-220 ms).
         const delay_in_frame_units = machine.registers.unsigned(.frame_duration);
-        const delay_in_milliseconds = @as(Video.Milliseconds, delay_in_frame_units) * milliseconds_per_frame_unit;
+        const delay_in_milliseconds = @as(Milliseconds, delay_in_frame_units) * milliseconds_per_frame_unit;
 
         // Copypasta from reference implementation.
         // From examining Another World's bytecode, nothing else ever writes to this register;
@@ -96,7 +96,7 @@ test "execute calls renderVideoBuffer with correct parameters" {
     const expected_milliseconds = raw_frame_duration * milliseconds_per_frame_unit;
 
     var machine = mockMachine(struct {
-        pub fn renderVideoBuffer(buffer_id: BufferID, delay: Video.Milliseconds) void {
+        pub fn renderVideoBuffer(buffer_id: BufferID, delay: Milliseconds) void {
             testing.expectEqual(.back_buffer, buffer_id) catch unreachable;
             testing.expectEqual(expected_milliseconds, delay) catch unreachable;
         }

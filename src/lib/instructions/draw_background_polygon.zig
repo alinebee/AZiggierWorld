@@ -8,14 +8,13 @@ const PolygonScale = rendering.PolygonScale;
 const Opcode = @import("opcode.zig").Opcode;
 const Program = vm.Program;
 const Machine = vm.Machine;
-const Video = vm.Video;
 
 /// Draw a polygon at the default zoom level and a constant position hardcoded in the bytecode.
 /// Unlike DrawSpritePolygon this is likely intended for drawing backgrounds,
 /// since the polygons cannot be scaled or repositioned programmatically.
 pub const DrawBackgroundPolygon = struct {
     /// The address within the currently-loaded polygon resource from which to read polygon data.
-    address: Video.PolygonAddress,
+    address: rendering.PolygonResource.Address,
     /// The X and Y position in screen space at which to draw the polygon.
     point: Point,
 
@@ -35,8 +34,8 @@ pub const DrawBackgroundPolygon = struct {
         // see opcode.zig).
         // Since the lowest bit will always be zero as a result, polygons must therefore start
         // on even address boundaries within Another World's polygon resources.
-        const high_byte: Video.PolygonAddress = raw_opcode;
-        const low_byte: Video.PolygonAddress = try program.read(u8);
+        const high_byte: rendering.PolygonResource.Address = raw_opcode;
+        const low_byte: rendering.PolygonResource.Address = try program.read(u8);
         self.address = (high_byte << 8 | low_byte) << 1;
 
         // Copypasta from the original reference implementation:
@@ -117,7 +116,7 @@ test "execute calls drawPolygon with correct parameters" {
     };
 
     var machine = mockMachine(struct {
-        pub fn drawPolygon(source: Video.PolygonSource, address: Video.PolygonAddress, point: Point, scale: PolygonScale) !void {
+        pub fn drawPolygon(source: vm.PolygonSource, address: rendering.PolygonResource.Address, point: Point, scale: PolygonScale) !void {
             try testing.expectEqual(.polygons, source);
             try testing.expectEqual(0xDEAD, address);
             try testing.expectEqual(320, point.x);

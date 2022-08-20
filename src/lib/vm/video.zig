@@ -193,8 +193,8 @@ pub const Video = struct {
     /// A length of time in milliseconds to leave a frame on screen.
     pub const Milliseconds = usize;
 
-    /// The location of a polygon record within its containing resource.
-    pub const PolygonAddress = rendering.PolygonResource.Address;
+    /// The ID of one of the 4 buffers used by the rendering system.
+    pub const ResolvedBufferID = BufferID.Specific;
 
     /// The type of 24-bit buffer that hosts are expected to provide for the video subsystem to render frames into.
     pub const HostSurface = rendering.Surface(static_limits.virtual_screen_width, static_limits.virtual_screen_height);

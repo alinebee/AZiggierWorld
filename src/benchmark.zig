@@ -6,13 +6,6 @@ const vm = anotherworld.vm;
 const resources = anotherworld.resources;
 const log = anotherworld.log;
 
-const Machine = vm.Machine;
-const Host = vm.Host;
-const Video = vm.Video;
-const BufferID = vm.BufferID;
-const UserInput = vm.UserInput;
-const ResourceDirectory = resources.ResourceDirectory;
-
 const ensureValidFixtureDir = @import("integration_tests/helpers.zig").ensureValidFixtureDir;
 const measure = @import("utils").benchmark.measure;
 
@@ -22,15 +15,15 @@ pub const log_level: std.log.Level = .info;
 
 /// A virtual machine host that renders each frame to a surface as soon as it is ready, with no delays.
 const RenderHost = struct {
-    surface: Video.HostSurface = undefined,
+    surface: vm.HostSurface = undefined,
 
     const Self = @This();
 
-    fn host(self: *Self) Host {
-        return Host.init(self, bufferReady);
+    fn host(self: *Self) vm.Host {
+        return vm.Host.init(self, bufferReady);
     }
 
-    fn bufferReady(self: *Self, machine: *const Machine, buffer_id: BufferID.Specific, _: Host.Milliseconds) void {
+    fn bufferReady(self: *Self, machine: *const vm.Machine, buffer_id: vm.ResolvedBufferID, _: vm.Milliseconds) void {
         machine.renderBufferToSurface(buffer_id, &self.surface) catch |err| {
             switch (err) {
                 // The Another World intro attempts to render at least 4 times before any palette is selected.
@@ -54,12 +47,12 @@ const Subject = struct {
 
         const max_tics = 10000;
 
-        var resource_directory = try ResourceDirectory.init(&self.game_dir);
+        var resource_directory = try resources.ResourceDirectory.init(&self.game_dir);
         var host = RenderHost{};
 
-        const empty_input = UserInput{};
+        const empty_input = vm.UserInput{};
 
-        var machine = try Machine.init(self.allocator, resource_directory.reader(), host.host(), .{
+        var machine = try vm.Machine.init(self.allocator, resource_directory.reader(), host.host(), .{
             .initial_game_part = .intro_cinematic,
             .seed = 0,
         });

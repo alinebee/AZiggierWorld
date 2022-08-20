@@ -4,7 +4,6 @@ const vm = anotherworld.vm;
 const Opcode = @import("opcode.zig").Opcode;
 const Program = vm.Program;
 const Machine = vm.Machine;
-const Video = vm.Video;
 const BufferID = vm.BufferID;
 const ColorID = anotherworld.rendering.ColorID;
 

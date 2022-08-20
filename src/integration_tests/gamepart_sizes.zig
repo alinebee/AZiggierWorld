@@ -6,9 +6,6 @@ const log = anotherworld.log;
 const resources = anotherworld.resources;
 const vm = anotherworld.vm;
 
-const ResourceDirectory = resources.ResourceDirectory;
-const GamePart = vm.GamePart;
-
 const ensureValidFixtureDir = @import("helpers.zig").ensureValidFixtureDir;
 const testing = @import("utils").testing;
 
@@ -20,7 +17,7 @@ test "Report sizes for each game part" {
     var game_dir = try ensureValidFixtureDir();
     defer game_dir.close();
 
-    var resource_directory = try ResourceDirectory.init(&game_dir);
+    var resource_directory = try vm.ResourceDirectory.init(&game_dir);
     const reader = resource_directory.reader();
 
     var max_bytecode_size: usize = 0;
@@ -31,7 +28,7 @@ test "Report sizes for each game part" {
     // Uncomment to print out statistics
     // std.testing.log_level = .info;
 
-    for (GamePart.all) |part| {
+    for (vm.GamePart.all) |part| {
         const resource_ids = part.resourceIDs();
 
         log.info("\nPart: {s}\n----\n", .{@tagName(part)});

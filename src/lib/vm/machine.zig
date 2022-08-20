@@ -204,7 +204,7 @@ pub const Machine = struct {
 
     /// Render a polygon from the specified source and address at the specified screen position and scale.
     /// Returns an error if the specified polygon address was invalid.
-    pub fn drawPolygon(self: *Self, source: Video.PolygonSource, address: Video.PolygonAddress, point: rendering.Point, scale: rendering.PolygonScale) !void {
+    pub fn drawPolygon(self: *Self, source: Video.PolygonSource, address: rendering.PolygonResource.Address, point: rendering.Point, scale: rendering.PolygonScale) !void {
         try self.video.drawPolygon(source, address, point, scale);
     }
 
@@ -241,7 +241,7 @@ pub const Machine = struct {
     }
 
     /// Called by the host to render the specified buffer into a 24-bit host surface.
-    pub fn renderBufferToSurface(self: *const Self, buffer_id: BufferID.Specific, surface: *Video.HostSurface) !void {
+    pub fn renderBufferToSurface(self: *const Self, buffer_id: Video.ResolvedBufferID, surface: *Video.HostSurface) !void {
         try self.video.renderBufferToSurface(buffer_id, surface);
     }
 
@@ -764,7 +764,7 @@ test "renderVideoBuffer notifies host of new frame with expected buffer ID and d
     const expected_delay = 24;
 
     var host = mock_host.mockHost(struct {
-        pub fn bufferReady(_: *const Machine, buffer_id: BufferID.Specific, delay: Host.Milliseconds) void {
+        pub fn bufferReady(_: *const Machine, buffer_id: Video.ResolvedBufferID, delay: Video.Milliseconds) void {
             testing.expectEqual(expected_buffer_id, buffer_id) catch unreachable;
             testing.expectEqual(expected_delay, delay) catch unreachable;
         }

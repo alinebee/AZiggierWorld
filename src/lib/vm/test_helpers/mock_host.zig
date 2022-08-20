@@ -6,12 +6,13 @@ const anotherworld = @import("../../anotherworld.zig");
 
 const Host = @import("../host.zig").Host;
 const Machine = @import("../machine.zig").Machine;
-const BufferID = @import("../buffer_id.zig").BufferID;
+const ResolvedBufferID = @import("../video.zig").Video.ResolvedBufferID;
+const Milliseconds = @import("../video.zig").Video.Milliseconds;
 
 // - Exported constants -
 
 const DefaultImplementation = struct {
-    pub fn bufferReady(_: *const Machine, _: BufferID.Specific, _: Host.Milliseconds) void {}
+    pub fn bufferReady(_: *const Machine, _: ResolvedBufferID, _: Milliseconds) void {}
 };
 
 var test_host_implementation = MockHost(DefaultImplementation){};
@@ -36,7 +37,7 @@ pub fn MockHost(comptime Implementation: type) type {
             return Host.init(self, bufferReady);
         }
 
-        fn bufferReady(self: *Self, machine: *const Machine, buffer_id: BufferID.Specific, delay: Host.Milliseconds) void {
+        fn bufferReady(self: *Self, machine: *const Machine, buffer_id: ResolvedBufferID, delay: Milliseconds) void {
             self.call_counts.bufferReady += 1;
             Implementation.bufferReady(machine, buffer_id, delay);
         }

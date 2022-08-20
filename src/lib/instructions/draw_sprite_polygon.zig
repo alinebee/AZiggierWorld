@@ -8,17 +8,16 @@ const PolygonScale = rendering.PolygonScale;
 const Opcode = @import("opcode.zig").Opcode;
 const Program = vm.Program;
 const Machine = vm.Machine;
-const Video = vm.Video;
 const RegisterID = vm.RegisterID;
 
 /// Draw a polygon at a location and zoom level that are either hardcoded constants
 /// or dynamic values read from registers.
 pub const DrawSpritePolygon = struct {
     /// The source location from which to read polygon data.
-    source: Video.PolygonSource,
+    source: vm.PolygonSource,
 
     /// The address within the polygon source from which to read polygon data.
-    address: Video.PolygonAddress,
+    address: rendering.PolygonResource.Address,
 
     /// The source for the X offset at which to draw the polygon.
     x: union(enum) {
@@ -52,7 +51,7 @@ pub const DrawSpritePolygon = struct {
         // address and uses the lower 6 bits of the opcode for other parts of the instruction (see below.)
         // It interprets the raw polygon address the same way as DrawBackgroundPolygon though,
         // right-shifting by one to land on an even address boundary.
-        const raw_address = try program.read(Video.PolygonAddress);
+        const raw_address = try program.read(rendering.PolygonResource.Address);
         self.address = raw_address << 1;
 
         // The low 6 bits of the opcode byte determine where to read the x, y and scale values from,
@@ -275,7 +274,7 @@ test "execute with constants calls drawPolygon with correct parameters" {
     };
 
     var machine = mockMachine(struct {
-        pub fn drawPolygon(source: Video.PolygonSource, address: Video.PolygonAddress, point: Point, scale: PolygonScale) !void {
+        pub fn drawPolygon(source: vm.PolygonSource, address: rendering.PolygonResource.Address, point: Point, scale: PolygonScale) !void {
             try testing.expectEqual(.animations, source);
             try testing.expectEqual(0xDEAD, address);
             try testing.expectEqual(320, point.x);
@@ -303,7 +302,7 @@ test "execute with registers calls drawPolygon with correct parameters" {
     };
 
     var machine = mockMachine(struct {
-        pub fn drawPolygon(source: Video.PolygonSource, address: Video.PolygonAddress, point: Point, scale: PolygonScale) !void {
+        pub fn drawPolygon(source: vm.PolygonSource, address: rendering.PolygonResource.Address, point: Point, scale: PolygonScale) !void {
             try testing.expectEqual(.polygons, source);
             try testing.expectEqual(0xDEAD, address);
             try testing.expectEqual(-1234, point.x);
@@ -333,7 +332,7 @@ test "execute with register scale value interprets value as unsigned" {
     };
 
     var machine = mockMachine(struct {
-        pub fn drawPolygon(_: Video.PolygonSource, _: Video.PolygonAddress, _: Point, scale: PolygonScale) !void {
+        pub fn drawPolygon(_: vm.PolygonSource, _: rendering.PolygonResource.Address, _: Point, scale: PolygonScale) !void {
             try testing.expectEqual(PolygonScale.cast(46635), scale);
         }
     });
