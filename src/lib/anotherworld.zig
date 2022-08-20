@@ -1,5 +1,5 @@
 pub const vm = @import("vm.zig");
-pub const instructions = @import("instructions.zig");
+pub const bytecode = @import("bytecode.zig");
 pub const rendering = @import("rendering.zig");
 pub const text = @import("text.zig");
 pub const resources = @import("resources.zig");

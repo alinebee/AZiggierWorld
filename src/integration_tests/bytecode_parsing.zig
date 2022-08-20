@@ -2,7 +2,7 @@
 //! Requires that the `fixtures/dos` folder contains Another World DOS game files.
 
 const anotherworld = @import("anotherworld");
-const instructions = anotherworld.instructions;
+const bytecode = anotherworld.bytecode;
 const resources = anotherworld.resources;
 const vm = anotherworld.vm;
 const log = anotherworld.log;
@@ -38,7 +38,7 @@ const ParseFailure = struct {
     }
 
     fn opcodeName(self: ParseFailure) []const u8 {
-        if (meta.intToEnum(instructions.Opcode, self.parsed_bytes[0])) |value| {
+        if (meta.intToEnum(bytecode.Opcode, self.parsed_bytes[0])) |value| {
             return @tagName(value);
         } else |_| {
             return "Unknown";
@@ -76,7 +76,7 @@ test "Instruction.parse parses all programs in fixture bytecode" {
 
         while (program.isAtEnd() == false) {
             const last_valid_address = program.counter;
-            if (instructions.Instruction.parse(&program)) |instruction| {
+            if (bytecode.Instruction.parse(&program)) |instruction| {
                 switch (instruction) {
                     // .ControlResources => |control_resources| {
                     //     switch (control_resources) {

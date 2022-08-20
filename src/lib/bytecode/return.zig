@@ -49,9 +49,9 @@ test "parse parses instruction from valid bytecode and consumes 1 byte" {
 test "execute jumps to previous address from the stack" {
     const instruction = Return{};
 
-    const bytecode = [_]u8{0} ** 10;
+    const program_data = [_]u8{0} ** 10;
 
-    var machine = Machine.testInstance(.{ .bytecode = &bytecode });
+    var machine = Machine.testInstance(.{ .program_data = &program_data });
     defer machine.deinit();
 
     try machine.stack.push(9);

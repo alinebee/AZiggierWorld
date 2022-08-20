@@ -74,9 +74,9 @@ test "execute decrements register and jumps to new address if register is still 
         .address = 9,
     };
 
-    const bytecode = [_]u8{0} ** 10;
+    const program_data = [_]u8{0} ** 10;
 
-    var machine = Machine.testInstance(.{ .bytecode = &bytecode });
+    var machine = Machine.testInstance(.{ .program_data = &program_data });
     defer machine.deinit();
 
     machine.registers.setSigned(instruction.register_id, 2);
@@ -95,9 +95,9 @@ test "execute decrements register but does not jump if register reaches zero" {
         .address = 9,
     };
 
-    const bytecode = [_]u8{0} ** 10;
+    const program_data = [_]u8{0} ** 10;
 
-    var machine = Machine.testInstance(.{ .bytecode = &bytecode });
+    var machine = Machine.testInstance(.{ .program_data = &program_data });
     defer machine.deinit();
 
     machine.registers.setSigned(instruction.register_id, 1);
@@ -116,9 +116,9 @@ test "execute decrement drops below 0 and jumps if register is already 0" {
         .address = 9,
     };
 
-    const bytecode = [_]u8{0} ** 10;
+    const program_data = [_]u8{0} ** 10;
 
-    var machine = Machine.testInstance(.{ .bytecode = &bytecode });
+    var machine = Machine.testInstance(.{ .program_data = &program_data });
     defer machine.deinit();
 
     try instruction.execute(&machine);
@@ -133,9 +133,9 @@ test "execute decrement wraps around on underflow" {
         .address = 9,
     };
 
-    const bytecode = [_]u8{0} ** 10;
+    const program_data = [_]u8{0} ** 10;
 
-    var machine = Machine.testInstance(.{ .bytecode = &bytecode });
+    var machine = Machine.testInstance(.{ .program_data = &program_data });
     defer machine.deinit();
 
     machine.registers.setSigned(instruction.register_id, -32768);
@@ -152,9 +152,9 @@ test "execute returns error.InvalidAddress on jump when address is out of range"
         .address = 1000,
     };
 
-    const bytecode = [_]u8{0} ** 10;
+    const program_data = [_]u8{0} ** 10;
 
-    var machine = Machine.testInstance(.{ .bytecode = &bytecode });
+    var machine = Machine.testInstance(.{ .program_data = &program_data });
     defer machine.deinit();
 
     machine.registers.setSigned(instruction.register_id, 2);

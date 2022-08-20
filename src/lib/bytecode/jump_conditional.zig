@@ -213,11 +213,11 @@ test "parse returns error.InvalidJumpComparison for instruction with invalid com
 }
 
 test "execute compares expected registers and jumps to expected address when condition succeeds" {
-    const bytecode = [_]u8{0} ** 10;
+    const program_data = [_]u8{0} ** 10;
     const lhs_register = RegisterID.cast(1);
     const rhs_register = RegisterID.cast(2);
 
-    var machine = Machine.testInstance(.{ .bytecode = &bytecode });
+    var machine = Machine.testInstance(.{ .program_data = &program_data });
     defer machine.deinit();
 
     machine.registers.setSigned(lhs_register, 0xFF);
@@ -238,10 +238,10 @@ test "execute compares expected registers and jumps to expected address when con
 }
 
 test "execute compares expected register to constant and jumps to expected address when condition succeeds" {
-    const bytecode = [_]u8{0} ** 10;
+    const program_data = [_]u8{0} ** 10;
     const lhs_register = RegisterID.cast(1);
 
-    var machine = Machine.testInstance(.{ .bytecode = &bytecode });
+    var machine = Machine.testInstance(.{ .program_data = &program_data });
     defer machine.deinit();
 
     machine.registers.setSigned(lhs_register, 0x41BD);
@@ -259,11 +259,11 @@ test "execute compares expected register to constant and jumps to expected addre
 }
 
 test "execute does not jump when condition fails" {
-    const bytecode = [_]u8{0} ** 10;
+    const program_data = [_]u8{0} ** 10;
     const lhs_register = RegisterID.cast(1);
     const rhs_register = RegisterID.cast(2);
 
-    var machine = Machine.testInstance(.{ .bytecode = &bytecode });
+    var machine = Machine.testInstance(.{ .program_data = &program_data });
     defer machine.deinit();
 
     machine.registers.setSigned(lhs_register, 0xFF);
@@ -284,11 +284,11 @@ test "execute does not jump when condition fails" {
 }
 
 test "execute returns error.InvalidAddress when address is out of range" {
-    const bytecode = [_]u8{0} ** 10;
+    const program_data = [_]u8{0} ** 10;
     const lhs_register = RegisterID.cast(1);
     const rhs_register = RegisterID.cast(2);
 
-    var machine = Machine.testInstance(.{ .bytecode = &bytecode });
+    var machine = Machine.testInstance(.{ .program_data = &program_data });
     defer machine.deinit();
 
     machine.registers.setSigned(lhs_register, 0xFF);

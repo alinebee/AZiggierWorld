@@ -56,9 +56,9 @@ test "execute jumps to new address and does not affect stack depth" {
         .address = 9,
     };
 
-    const bytecode = [_]u8{0} ** 10;
+    const program_data = [_]u8{0} ** 10;
 
-    var machine = Machine.testInstance(.{ .bytecode = &bytecode });
+    var machine = Machine.testInstance(.{ .program_data = &program_data });
     defer machine.deinit();
 
     try testing.expectEqual(0, machine.stack.depth);
@@ -75,9 +75,9 @@ test "execute returns error.InvalidAddress when address is out of range" {
         .address = 1000,
     };
 
-    const bytecode = [_]u8{0} ** 10;
+    const program_data = [_]u8{0} ** 10;
 
-    var machine = Machine.testInstance(.{ .bytecode = &bytecode });
+    var machine = Machine.testInstance(.{ .program_data = &program_data });
     defer machine.deinit();
 
     try testing.expectError(error.InvalidAddress, instruction.execute(&machine));

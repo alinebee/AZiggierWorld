@@ -12,7 +12,8 @@
 //! and overall housekeeping for the current section of the game.
 
 const anotherworld = @import("../anotherworld.zig");
-const executeProgram = anotherworld.instructions.executeProgram;
+const bytecode = anotherworld.bytecode;
+const executeProgram = bytecode.executeProgram;
 
 const Machine = @import("machine.zig").Machine;
 const Program = @import("program.zig").Program;
@@ -231,12 +232,10 @@ test "applyScheduledStates applies scheduled pause state" {
 
 // - Run tests -
 
-const instructions = anotherworld.instructions;
-
 test "run stores program counter in thread state upon reaching yield instruction" {
-    const bytecode = instructions.Instruction.Yield.Fixtures.valid;
+    const program_data = bytecode.Instruction.Yield.Fixtures.valid;
 
-    var machine = Machine.testInstance(.{ .bytecode = &bytecode });
+    var machine = Machine.testInstance(.{ .program_data = &program_data });
     defer machine.deinit();
 
     const thread = &machine.threads[0];
@@ -245,9 +244,9 @@ test "run stores program counter in thread state upon reaching yield instruction
 }
 
 test "run deactivates thread upon reaching kill instruction" {
-    const bytecode = instructions.Instruction.Kill.Fixtures.valid;
+    const program_data = bytecode.Instruction.Kill.Fixtures.valid;
 
-    var machine = Machine.testInstance(.{ .bytecode = &bytecode });
+    var machine = Machine.testInstance(.{ .program_data = &program_data });
     defer machine.deinit();
 
     const thread = &machine.threads[0];

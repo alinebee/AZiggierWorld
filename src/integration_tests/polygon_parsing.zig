@@ -5,11 +5,11 @@
 const anotherworld = @import("anotherworld");
 const resources = anotherworld.resources;
 const rendering = anotherworld.rendering;
-const instructions = anotherworld.instructions;
+const bytecode = anotherworld.bytecode;
 const vm = anotherworld.vm;
 const log = anotherworld.log;
 
-const Instruction = instructions.Instruction;
+const Instruction = bytecode.Instruction;
 const Polygon = rendering.Polygon;
 const PolygonScale = rendering.PolygonScale;
 const Point = rendering.Point;
@@ -30,11 +30,11 @@ const PolygonDrawInstruction = union(enum) {
 /// Parses an Another World bytecode program to find all the draw instructions in it.
 /// Returns an array of draw instructions which is owned by the caller.
 /// Returns an error if parsing or memory allocation failed.
-fn findPolygonDrawInstructions(allocator: std.mem.Allocator, bytecode: []const u8) ![]const PolygonDrawInstruction {
+fn findPolygonDrawInstructions(allocator: std.mem.Allocator, data: []const u8) ![]const PolygonDrawInstruction {
     var draw_instructions = std.ArrayList(PolygonDrawInstruction).init(allocator);
     errdefer draw_instructions.deinit();
 
-    var program = try Program.init(bytecode);
+    var program = try Program.init(data);
     while (program.isAtEnd() == false) {
         switch (try Instruction.parse(&program)) {
             .DrawBackgroundPolygon => |instruction| {
@@ -57,19 +57,20 @@ fn parsePolygonInstructionsForGamePart(allocator: std.mem.Allocator, resource_di
     const resource_ids = game_part.resourceIDs();
     const reader = resource_directory.reader();
 
-    const bytecode = try reader.allocReadResourceByID(allocator, resource_ids.bytecode);
-    defer allocator.free(bytecode);
+    const program_data = try reader.allocReadResourceByID(allocator, resource_ids.bytecode);
+    defer allocator.free(program_data);
 
-    const draw_instructions = try findPolygonDrawInstructions(allocator, bytecode);
+    const draw_instructions = try findPolygonDrawInstructions(allocator, program_data);
     defer allocator.free(draw_instructions);
 
-    const polygons = rendering.PolygonResource.init(try reader.allocReadResourceByID(allocator, resource_ids.polygons));
-    defer allocator.free(polygons.data);
+    const polygon_data = try reader.allocReadResourceByID(allocator, resource_ids.polygons);
+    const polygons = rendering.PolygonResource.init(polygon_data);
+    defer allocator.free(polygon_data);
 
     const maybe_animations: ?rendering.PolygonResource = init: {
         if (resource_ids.animations) |id| {
-            const data = try reader.allocReadResourceByID(allocator, id);
-            break :init rendering.PolygonResource.init(data);
+            const animation_data = try reader.allocReadResourceByID(allocator, id);
+            break :init rendering.PolygonResource.init(animation_data);
         } else {
             break :init null;
         }

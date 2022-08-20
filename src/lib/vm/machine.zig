@@ -32,6 +32,7 @@ const anotherworld = @import("../anotherworld.zig");
 const rendering = anotherworld.rendering;
 const resources = anotherworld.resources;
 const text = anotherworld.text;
+const bytecode = anotherworld.bytecode;
 const static_limits = anotherworld.static_limits;
 const log = anotherworld.log;
 
@@ -351,7 +352,7 @@ pub const Machine = struct {
     /// Optional configuration settings for the test machine instance created by `testInstance`.
     pub const TestInstanceConfig = struct {
         // Optional bytecode to load as the machine's program.
-        bytecode: ?[]const u8 = null,
+        program_data: ?[]const u8 = null,
         // An optional host that the test instance should talk to.
         host: ?Host = null,
     };
@@ -370,8 +371,8 @@ pub const Machine = struct {
         const host = config.host orelse mock_host.test_host;
 
         var machine = Self.init(testing.allocator, resources.MockRepository.test_reader, host, options) catch unreachable;
-        if (config.bytecode) |bytecode| {
-            machine.program = Program.init(bytecode) catch unreachable;
+        if (config.program_data) |program_data| {
+            machine.program = Program.init(program_data) catch unreachable;
         }
         return machine;
     }
@@ -669,8 +670,6 @@ test "applyUserInput does not open password screen when already in password scre
 
 // - runTic tests -
 
-const instructions = anotherworld.instructions;
-
 test "runTic starts next game part if scheduled" {
     var machine = Machine.testInstance(.{});
     defer machine.deinit();
@@ -707,14 +706,14 @@ test "runTic applies user input only after loading scheduled game part" {
 }
 
 test "runTic updates each thread with its scheduled state before running each thread" {
-    var bytecode = [_]u8{
+    var program_data = [_]u8{
         // Schedule threads 1-63 to unpause on the next tic
-        instructions.Opcode.ControlThreads.encode(), 1, 63, instructions.ThreadOperation.@"resume".encode(),
+        bytecode.Opcode.ControlThreads.encode(), 1, 63, bytecode.ThreadOperation.@"resume".encode(),
         // Deactivate the current thread (expected to be 0) immediately on this tic
-        instructions.Opcode.Kill.encode(),
+        bytecode.Opcode.Kill.encode(),
     };
 
-    var machine = Machine.testInstance(.{ .bytecode = &bytecode });
+    var machine = Machine.testInstance(.{ .program_data = &program_data });
     defer machine.deinit();
 
     const main_thread = &machine.threads[0];

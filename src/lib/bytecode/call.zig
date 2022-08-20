@@ -59,9 +59,9 @@ test "execute puts previous address on the stack and jumps to new address" {
         .address = 9,
     };
 
-    const bytecode = [_]u8{0} ** 10;
+    const program_data = [_]u8{0} ** 10;
 
-    var machine = Machine.testInstance(.{ .bytecode = &bytecode });
+    var machine = Machine.testInstance(.{ .program_data = &program_data });
     defer machine.deinit();
 
     try testing.expectEqual(0, machine.stack.depth);
@@ -79,9 +79,9 @@ test "execute returns error.StackOverflow when stack is full" {
         .address = 0xDEAD,
     };
 
-    const bytecode = [_]u8{0} ** 10;
+    const program_data = [_]u8{0} ** 10;
 
-    var machine = Machine.testInstance(.{ .bytecode = &bytecode });
+    var machine = Machine.testInstance(.{ .program_data = &program_data });
     defer machine.deinit();
 
     var remaining: usize = Stack.max_depth;
@@ -97,9 +97,9 @@ test "execute returns error.InvalidAddress when address is out of range" {
         .address = 1000,
     };
 
-    const bytecode = [_]u8{0} ** 10;
+    const program_data = [_]u8{0} ** 10;
 
-    var machine = Machine.testInstance(.{ .bytecode = &bytecode });
+    var machine = Machine.testInstance(.{ .program_data = &program_data });
     defer machine.deinit();
 
     try testing.expectError(error.InvalidAddress, instruction.execute(&machine));
