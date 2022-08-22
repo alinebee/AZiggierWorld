@@ -11,7 +11,8 @@ pub const intCast = std.math.cast;
 /// Given an integer type, returns the type used for legal left/right-shift operations.
 pub const ShiftType = std.math.Log2Int;
 
-/// Cast a single-item pointer to the expected type, taking into account the alignment of the original type.
+/// Cast a pointer to another pointer type, taking into account the alignment of the original type.
+/// Intended for casting *anyopaque pointers when doing dynamic dispatch from a fat pointer.
 pub fn alignPtrCast(comptime Pointer: type, ptr: anytype) Pointer {
     const alignment = @typeInfo(Pointer).Pointer.alignment;
     return @ptrCast(Pointer, @alignCast(alignment, ptr));
@@ -19,7 +20,7 @@ pub fn alignPtrCast(comptime Pointer: type, ptr: anytype) Pointer {
 
 /// A version of @call that converts the first parameter to the function from an opaque pointer
 /// into a specific pointer type.
-/// Intended to reduce boilerplate when doing dynamic dispatch in fat pointers.
+/// Intended to reduce boilerplate when doing dynamic dispatch from a fat pointer.
 pub inline fn unerasedCall(comptime UnerasedState: type, comptime function: anytype, type_erased_state: *anyopaque, extra_args: anytype) ReturnType(function) {
     const resolved_state = alignPtrCast(UnerasedState, type_erased_state);
     return @call(.{ .modifier = .always_inline }, function, .{resolved_state} ++ extra_args);
@@ -74,24 +75,31 @@ pub fn intToEnum(comptime EnumTag: type, tag_int: anytype) std.meta.IntToEnumErr
     }
 }
 
+/// If given a type directly, returns that type.
+/// If given a value, returns the type of that value.
+pub fn TypeOf(comptime type_or_value: anytype) type {
+    const Type = @TypeOf(type_or_value);
+    return if (Type == type) type_or_value else Type;
+}
+
 /// If given a pointer type, returns the type that the pointer points to;
 /// if given any other type, returns the base type.
 /// Intended to simplify the introspection of `anytype` parameters that may be passed by reference or by value.
-pub fn BaseType(comptime pointer_or_type: type) type {
-    const type_info = @typeInfo(pointer_or_type);
+pub fn BaseType(comptime pointer_type_or_value_type: type) type {
+    const type_info = @typeInfo(pointer_type_or_value_type);
     return switch (type_info) {
         .Pointer => |info| info.child,
-        else => pointer_or_type,
+        else => pointer_type_or_value_type,
     };
 }
 
-/// Given a function reference, introspects the return type of that function.
+/// Given a function type, function value or function pointer, returns the return type of the function it describes.
 pub fn ReturnType(comptime function: anytype) type {
-    const type_info = @typeInfo(@TypeOf(function));
-    return switch (type_info) {
+    return switch (@typeInfo(TypeOf(function))) {
         .Fn => |info| info.return_type.?,
         .BoundFn => |info| info.return_type.?,
-        else => @compileError("Parameter was not a function or bound function"),
+        .Pointer => |info| ReturnType(info.child),
+        else => @compileError("Parameter was not a function or pointer to function"),
     };
 }
 

@@ -10,6 +10,7 @@ const ResourceID = @import("resource_id.zig").ResourceID;
 const std = @import("std");
 const mem = std.mem;
 
+/// The functions that will be mapped to the implementation of the ResourceReader interface.
 fn Functions(comptime State: type) type {
     return struct {
         bufReadResource: fn (state: State, buffer: []u8, descriptor: ResourceDescriptor) ResourceReader.BufReadResourceError![]const u8,

@@ -29,24 +29,24 @@ const Machine = @import("machine.zig").Machine;
 const ResolvedBufferID = @import("video.zig").Video.ResolvedBufferID;
 const Milliseconds = @import("video.zig").Video.Milliseconds;
 
-fn bufferReadySig(comptime State: type) type {
+fn BufferReadySig(comptime State: type) type {
     return fn (state: State, machine: *const Machine, buffer_id: ResolvedBufferID, delay: Milliseconds) void;
 }
 
-fn bufferChangedSig(comptime State: type) type {
+fn BufferChangedSig(comptime State: type) type {
     return fn (state: State, machine: *const Machine, buffer_id: ResolvedBufferID) void;
 }
 
 fn Functions(comptime State: type) type {
     return struct {
-        bufferReady: ?bufferReadySig(State) = null,
-        bufferChanged: ?bufferChangedSig(State) = null,
+        bufferReady: ?BufferReadySig(State) = null,
+        bufferChanged: ?BufferChangedSig(State) = null,
     };
 }
 
 const TypeErasedVTable = struct {
-    bufferReady: bufferReadySig(*anyopaque),
-    bufferChanged: bufferChangedSig(*anyopaque),
+    bufferReady: BufferReadySig(*anyopaque),
+    bufferChanged: BufferChangedSig(*anyopaque),
 };
 
 /// An interface that the virtual machine uses to communicate with the host.
