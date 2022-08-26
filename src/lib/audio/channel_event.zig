@@ -82,7 +82,7 @@ pub const ChannelEvent = union(enum) {
 
                 const effect = @truncate(u4, control_value_2 >> 8);
                 const raw_volume_delta = @truncate(u8, control_value_2);
-                const clamped_volume_delta = try intCast(audio.Volume.Delta, raw_volume_delta) catch error.InvalidVolumeDelta;
+                const clamped_volume_delta = intCast(audio.Volume.Delta, raw_volume_delta) orelse return error.InvalidVolumeDelta;
                 const volume_delta = switch (effect) {
                     0 => 0,
                     5 => clamped_volume_delta,

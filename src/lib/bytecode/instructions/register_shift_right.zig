@@ -31,7 +31,7 @@ pub const RegisterShiftRight = struct {
         // the register to 0 on execution.
         const raw_shift = try program.read(u16);
 
-        const trusted_shift = meta.intCast(Register.Shift, raw_shift) catch {
+        const trusted_shift = meta.intCast(Register.Shift, raw_shift) orelse {
             return error.ShiftTooLarge;
         };
 
