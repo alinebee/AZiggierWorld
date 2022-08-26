@@ -25,7 +25,7 @@ const Input = struct {
                 // We don't want to record keypresses for those characters anyway,
                 // so ignore them if we can't cast.
                 const raw_keycode = @enumToInt(key_event.keycode);
-                self.game_input.last_pressed_character = std.math.cast(u8, raw_keycode) catch null;
+                self.game_input.last_pressed_character = std.math.cast(u8, raw_keycode);
 
                 switch (key_event.keycode) {
                     .c => self.game_input.show_password_screen = true,
@@ -228,7 +228,7 @@ fn resolvedFrameDelay(requested_delay: u64, possible_last_frame_time: ?i64, curr
 
         if (std.math.cast(u64, possibly_negative_elapsed_time)) |elapsed_time| {
             return requested_delay -| elapsed_time;
-        } else |_| {
+        } else {
             return requested_delay;
         }
     } else {

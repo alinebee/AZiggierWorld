@@ -75,7 +75,7 @@ pub fn drawPolygon(comptime Buffer: type, buffer: *Buffer, mask_buffer: *const B
         // how much to change X between each row.
         const x1_delta = vertices[cw_vertex].x - vertices[cw_vertex - 1].x;
         const x2_delta = vertices[ccw_vertex].x - vertices[ccw_vertex + 1].x;
-        const y_delta = math.cast(TrustedVerticalDelta, vertices[cw_vertex].y - vertices[cw_vertex - 1].y) catch {
+        const y_delta = math.cast(TrustedVerticalDelta, vertices[cw_vertex].y - vertices[cw_vertex - 1].y) orelse {
             return error.InvalidVerticalDelta;
         };
 
