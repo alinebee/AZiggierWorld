@@ -72,7 +72,6 @@ pub const SDLEngine = struct {
 
     game_dir: std.fs.Dir,
     resource_directory: resources.ResourceDirectory,
-    machine: vm.Machine,
 
     window: SDL.Window,
     renderer: SDL.Renderer,
@@ -106,14 +105,6 @@ pub const SDLEngine = struct {
         errdefer self.game_dir.close();
 
         self.resource_directory = try resources.ResourceDirectory.init(&self.game_dir);
-
-        self.machine = try vm.Machine.init(
-            allocator,
-            self.resource_directory.reader(),
-            self.host(),
-            .{ .initial_game_part = .intro_cinematic },
-        );
-        errdefer self.machine.deinit();
 
         // - Initialize SDL -
 
@@ -155,7 +146,6 @@ pub const SDLEngine = struct {
         self.window.destroy();
         SDL.quit();
 
-        self.machine.deinit();
         self.game_dir.close();
 
         self.allocator.destroy(self);
@@ -171,6 +161,14 @@ pub const SDLEngine = struct {
         self.input = .{};
         self.last_frame_time = null;
 
+        var machine = try vm.Machine.init(
+            self.allocator,
+            self.resource_directory.reader(),
+            self.host(),
+            .{ .initial_game_part = .intro_cinematic },
+        );
+        defer machine.deinit();
+
         while (true) {
             while (SDL.pollEvent()) |event| {
                 self.input.updateFromSDLEvent(event);
@@ -183,7 +181,7 @@ pub const SDLEngine = struct {
                 continue;
             }
 
-            try self.machine.runTic(self.input.game_input);
+            try machine.runTic(self.input.game_input);
 
             self.input.clearPressedInputs();
         }
@@ -224,7 +222,7 @@ pub const SDLEngine = struct {
 
 /// Returns the current time in nanoseconds, intended for calculating frame delays.
 /// This strips the top 64 bits of nanosecond time, giving it a maximum range of
-fn currentFrameTime() u64 {
+fn currentFrameTime() i64 {
     return @truncate(i64, std.time.nanoTimestamp());
 }
 
