@@ -122,7 +122,7 @@ pub const SDLEngine = struct {
             .default,
             960,
             640,
-            .{ .shown = true, .allow_high_dpi = true },
+            .{ .vis = .shown, .allow_high_dpi = true },
         );
         errdefer self.window.destroy();
 
