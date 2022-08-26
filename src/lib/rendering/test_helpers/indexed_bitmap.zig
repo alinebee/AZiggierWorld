@@ -145,9 +145,9 @@ test "fromString populates bitmap data correctly from multiline string" {
     );
 
     const expected = @bitCast(@TypeOf(bitmap.data), [4][4]ColorID.Trusted{
-        .{ 00, 01, 02, 03 },
-        .{ 04, 05, 06, 07 },
-        .{ 08, 09, 10, 11 },
+        .{ 0, 1, 2, 3 },
+        .{ 4, 5, 6, 7 },
+        .{ 8, 9, 10, 11 },
         .{ 12, 13, 14, 15 },
     });
 
@@ -170,9 +170,9 @@ test "fileld populates bitmap data correctly" {
 test "format prints colors as lines of hex values" {
     const bitmap = IndexedBitmap(4, 4){
         .data = @bitCast([4][4]ColorID, [4][4]ColorID.Trusted{
-            .{ 00, 01, 02, 03 },
-            .{ 04, 05, 06, 07 },
-            .{ 08, 09, 10, 11 },
+            .{ 0, 1, 2, 3 },
+            .{ 4, 5, 6, 7 },
+            .{ 8, 9, 10, 11 },
             .{ 12, 13, 14, 15 },
         }),
     };
@@ -193,9 +193,9 @@ test "format prints colors as lines of hex values" {
 test "expectBitmap compares bitmap correctly against string" {
     const bitmap = IndexedBitmap(4, 4){
         .data = @bitCast([4][4]ColorID, [4][4]ColorID.Trusted{
-            .{ 00, 01, 02, 03 },
-            .{ 04, 05, 06, 07 },
-            .{ 08, 09, 10, 11 },
+            .{ 0, 1, 2, 3 },
+            .{ 4, 5, 6, 7 },
+            .{ 8, 9, 10, 11 },
             .{ 12, 13, 14, 15 },
         }),
     };
@@ -212,18 +212,18 @@ test "expectBitmap compares bitmap correctly against string" {
 test "expectedEqualBitmaps compares two bitmaps correctly" {
     const expected = IndexedBitmap(4, 4){
         .data = @bitCast([4][4]ColorID, [4][4]ColorID.Trusted{
-            .{ 00, 01, 02, 03 },
-            .{ 04, 05, 06, 07 },
-            .{ 08, 09, 10, 11 },
+            .{ 0, 1, 2, 3 },
+            .{ 4, 5, 6, 7 },
+            .{ 8, 9, 10, 11 },
             .{ 12, 13, 14, 15 },
         }),
     };
 
     const actual = IndexedBitmap(4, 4){
         .data = @bitCast([4][4]ColorID, [4][4]ColorID.Trusted{
-            .{ 00, 01, 02, 03 },
-            .{ 04, 05, 06, 07 },
-            .{ 08, 09, 10, 11 },
+            .{ 0, 1, 2, 3 },
+            .{ 4, 5, 6, 7 },
+            .{ 8, 9, 10, 11 },
             .{ 12, 13, 14, 15 },
         }),
     };
