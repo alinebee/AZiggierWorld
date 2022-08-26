@@ -11,43 +11,143 @@ pub const intCast = std.math.cast;
 /// Given an integer type, returns the type used for legal left/right-shift operations.
 pub const ShiftType = std.math.Log2Int;
 
-/// Cast a pointer to another pointer type, taking into account the alignment of the original type.
-/// Intended for casting *anyopaque pointers when doing dynamic dispatch from a fat pointer.
-pub fn alignPtrCast(comptime Pointer: type, ptr: anytype) Pointer {
-    const alignment = @typeInfo(Pointer).Pointer.alignment;
-    return @ptrCast(Pointer, @alignCast(alignment, ptr));
-}
 
-/// A version of @call that converts the first parameter to the function from an opaque pointer
-/// into a specific pointer type.
-/// Intended to reduce boilerplate when doing dynamic dispatch from a fat pointer.
-pub inline fn unerasedCall(comptime UnerasedState: type, comptime function: anytype, type_erased_state: *anyopaque, extra_args: anytype) ReturnType(function) {
-    const resolved_state = alignPtrCast(UnerasedState, type_erased_state);
-    return @call(.{ .modifier = .always_inline }, function, .{resolved_state} ++ extra_args);
-}
+/// -- VTable shenanigans --
+pub fn WrapperVTable(comptime Template: type) type {
+    const fields = @typeInfo(Template).Struct.fields;
 
-/// Given a type-erased vtable type and a struct containing dispatch functions for each member of that vtable,
-/// creates a vtable populated with pointers to the implementation's dispatch functions.
-/// Usage:
-/// const VTable = struct {
-///   func1: fn (state: *anyopaque) void,
-///   func2: fn (state: *anyopaque) void,
-/// };
-///
-/// const vtable = comptime generateVTable(VTable, struct {
-///    pub fn func1(state: *anyopaque) void { unerasedCall(ConcreteType, func1_implementation, state, .{}); }
-///    pub fn func2(state: *anyopaque) void { unerasedCall(ConcreteType, func2_implementation, state, .{}); }
-/// });
-///
-/// return FatPointer{ .state = state, .vtable = &vtable };
-pub fn generateVTable(comptime VTable: type, comptime Implementation: type) VTable {
-    var vtable: VTable = undefined;
-    inline for (@typeInfo(VTable).Struct.fields) |field| {
-        @field(vtable, field.name) = @field(Implementation, field.name);
+    var erased_fields: [fields.len]std.builtin.TypeInfo.StructField = undefined;
+
+    inline for (fields) |field, idx| {
+        const ErasedFn = TypeErasedFnType(field.field_type);
+        erased_fields[idx] = .{
+            .name = field.name,
+            .field_type = ErasedFn,
+            .default_value = @as(?ErasedFn, null),
+            .is_comptime = false,
+            .alignment = @alignOf(ErasedFn),
+        };
     }
 
-    return vtable;
+    return @Type(.{
+        .Struct = .{
+            .is_tuple = false,
+            .layout = .Auto,
+            .decls = &.{},
+            .fields = &erased_fields,
+        },
+    });
 }
+
+pub fn initVTable(comptime Table: type, comptime type_aware_functions: anytype) Table {
+    var table: Table = undefined;
+    const fields = @typeInfo(Table).Struct.fields;
+    inline for (fields) |field| {
+        const function = @field(type_aware_functions, field.name);
+        const ErasedFn = @TypeOf(@field(table, field.name));
+        const wrapped_function = typeErasedWrap(ErasedFn, function);
+
+        @field(table, field.name) = wrapped_function;
+    }
+    return table;
+}
+
+fn TypeErasedArgsTuple(comptime Fn: type) type {
+    const function_info = @typeInfo(Fn).Fn;
+
+    var arg_fields: [function_info.args.len]std.builtin.TypeInfo.StructField = undefined;
+    inline for (function_info.args) |arg, idx| {
+        const T = arg.arg_type.?;
+        const ResolvedT = if (idx == 0) *anyopaque else T;
+
+        @setEvalBranchQuota(10_000);
+        var num_buf: [128]u8 = undefined;
+        arg_fields[idx] = .{
+            .name = std.fmt.bufPrint(&num_buf, "{d}", .{idx}) catch unreachable,
+            .field_type = ResolvedT,
+            .default_value = @as(?ResolvedT, null),
+            .is_comptime = false,
+            .alignment = if (@sizeOf(T) > 0) @alignOf(T) else 0,
+        };
+    }
+
+    return @Type(.{
+        .Struct = .{
+            .is_tuple = true,
+            .layout = .Auto,
+            .decls = &.{},
+            .fields = &arg_fields,
+        },
+    });
+}
+
+fn typeErasedWrap(comptime ErasedFn: type, comptime function: anytype) ErasedFn {
+    const erased_info = @typeInfo(ErasedFn).Fn;
+    const ErasedParams = erased_info.args[0].arg_type.?;
+    const Return = erased_info.return_type.?;
+
+    const PossibleFn = @TypeOf(function);
+
+    switch (@typeInfo(PossibleFn)) {
+        .Optional => |optional_info| {
+            const Fn = optional_info.child;
+            const UnerasedParams = std.meta.ArgsTuple(Fn);
+
+            return struct {
+                fn wrapped(params: ErasedParams) Return {
+                    if (function) |unwrapped_function| {
+                        const unerased_params = @bitCast(UnerasedParams, params);
+                        return @call(.{ .modifier = .always_inline }, unwrapped_function, unerased_params);
+                    } else {
+                        switch (@typeInfo(Return)) {
+                            .Optional => {
+                                return null;
+                            },
+                            .Void => {
+                                return;
+                            },
+                            else => {
+                                @compileError("Optional vtable function must return optional or void");
+                            },
+                        }
+                    }
+                }
+            }.wrapped;
+        },
+        .Fn => {
+            const UnerasedParams = std.meta.ArgsTuple(PossibleFn);
+            return struct {
+                fn wrapped(params: ErasedParams) Return {
+                    const unerased_params = @bitCast(UnerasedParams, params);
+                    return @call(.{ .modifier = .always_inline }, function, unerased_params);
+                }
+            }.wrapped;
+        },
+        else => {
+            @compileError("Must be function or optional function");
+        },
+    }
+}
+
+fn TypeErasedFnType(comptime PossibleFn: type) type {
+    switch (@typeInfo(PossibleFn)) {
+        .Optional => |optional_info| {
+            const Fn = optional_info.child;
+            const function_info = @typeInfo(Fn).Fn;
+            const Return = function_info.return_type.?;
+            return fn (args: TypeErasedArgsTuple(Fn)) Return;
+        },
+        .Fn => |function_info| {
+            const Return = function_info.return_type.?;
+            return fn (args: TypeErasedArgsTuple(PossibleFn)) Return;
+        },
+        else => {
+            @compileError("Wrapped template must only have function and optional function fields");
+        },
+    }
+}
+
+// -- Everything else --
 
 /// The version of intToEnum in the Zig 0.9.1 Standard Library doesn't correctly handle
 /// non-exhaustive enums.

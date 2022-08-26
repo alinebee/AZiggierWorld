@@ -190,9 +190,15 @@ pub const SDLEngine = struct {
     }
 
     fn bufferReady(self: *Self, machine: *const vm.Machine, buffer_id: vm.ResolvedBufferID, requested_delay: vm.Milliseconds) void {
-        const delay = resolvedFrameDelay(requested_delay * std.time.ns_per_ms, self.last_frame_time, @truncate(i64, std.time.nanoTimestamp()), self.input.turbo);
-
-        std.time.sleep(delay);
+        const requested_delay_in_ns = requested_delay * std.time.ns_per_ms;
+        const current_time_in_ns = currentFrameTime();
+        const delay_in_ns = resolvedFrameDelay(
+            requested_delay_in_ns,
+            self.last_frame_time,
+            current_time_in_ns,
+            self.input.turbo,
+        );
+        std.time.sleep(delay_in_ns);
 
         var locked_texture = self.texture.lock(null) catch @panic("self.texture.lock failed");
         const raw_pixels = @ptrCast(*vm.HostSurface, locked_texture.pixels);
@@ -212,9 +218,15 @@ pub const SDLEngine = struct {
         self.renderer.copy(self.texture, null, null) catch @panic("self.renderer.copy failed");
         self.renderer.present();
 
-        self.last_frame_time = @truncate(i64, std.time.nanoTimestamp());
+        self.last_frame_time = currentFrameTime();
     }
 };
+
+/// Returns the current time in nanoseconds, intended for calculating frame delays.
+/// This strips the top 64 bits of nanosecond time, giving it a maximum range of
+fn currentFrameTime() u64 {
+    return @truncate(i64, std.time.nanoTimestamp());
+}
 
 fn resolvedFrameDelay(requested_delay: u64, possible_last_frame_time: ?i64, current_time: i64, turbo: bool) u64 {
     if (turbo) {

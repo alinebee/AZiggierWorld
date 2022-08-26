@@ -18,7 +18,7 @@ fn Functions(comptime State: type) type {
     };
 }
 
-const TypeErasedVTable = Functions(*anyopaque);
+const TypeErasedVTable = meta.WrapperVTable(Functions(*anyopaque));
 
 /// A generic interface for enumerating available resources and loading resource data into buffers.
 /// This is passed around as a 'fat pointer', following zig 0.9.0's polymorphic allocator pattern.
@@ -31,18 +31,7 @@ pub const ResourceReader = struct {
     /// Create a new type-erased "fat pointer" that reads from a repository of Another World game data.
     /// Intended to be called by repositories to create a reader interface; should not be used directly.
     pub fn init(state: anytype, comptime functions: Functions(@TypeOf(state))) Self {
-        const State = @TypeOf(state);
-
-        const vtable = comptime meta.generateVTable(TypeErasedVTable, struct {
-            pub fn bufReadResource(type_erased_state: *anyopaque, buffer: []u8, descriptor: ResourceDescriptor) BufReadResourceError![]const u8 {
-                return meta.unerasedCall(State, functions.bufReadResource, type_erased_state, .{ buffer, descriptor });
-            }
-
-            pub fn resourceDescriptors(type_erased_state: *anyopaque) []const ResourceDescriptor {
-                return meta.unerasedCall(State, functions.resourceDescriptors, type_erased_state, .{});
-            }
-        });
-
+        const vtable = comptime meta.initVTable(TypeErasedVTable, functions);
         return .{ .state = state, .vtable = &vtable };
     }
 
@@ -52,7 +41,7 @@ pub const ResourceReader = struct {
     /// could not be read or decompressed.
     /// In the event of an error, `buffer` may contain partially-loaded game data.
     pub fn bufReadResource(self: Self, buffer: []u8, descriptor: ResourceDescriptor) BufReadResourceError![]const u8 {
-        return self.vtable.bufReadResource(self.state, buffer, descriptor);
+        return self.vtable.bufReadResource(.{ self.state, buffer, descriptor });
     }
 
     /// Allocate a buffer and read the specified resource from the appropriate
@@ -82,7 +71,7 @@ pub const ResourceReader = struct {
     /// Returns a list of all valid resource descriptors,
     /// loaded from the MEMLIST.BIN file in the game directory.
     pub fn resourceDescriptors(self: Self) []const ResourceDescriptor {
-        return self.vtable.resourceDescriptors(self.state);
+        return self.vtable.resourceDescriptors(.{self.state});
     }
 
     /// Returns the descriptor matching the specified ID.

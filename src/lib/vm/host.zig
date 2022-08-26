@@ -29,25 +29,17 @@ const Machine = @import("machine.zig").Machine;
 const ResolvedBufferID = @import("video.zig").Video.ResolvedBufferID;
 const Milliseconds = @import("video.zig").Video.Milliseconds;
 
-fn BufferReadySig(comptime State: type) type {
-    return fn (state: State, machine: *const Machine, buffer_id: ResolvedBufferID, delay: Milliseconds) void;
-}
-
-fn BufferChangedSig(comptime State: type) type {
-    return fn (state: State, machine: *const Machine, buffer_id: ResolvedBufferID) void;
-}
-
 fn Functions(comptime State: type) type {
+    const BufferReadyFn = fn (state: State, machine: *const Machine, buffer_id: ResolvedBufferID, delay: Milliseconds) void;
+    const BufferChangedFn = fn (state: State, machine: *const Machine, buffer_id: ResolvedBufferID) void;
+
     return struct {
-        bufferReady: ?BufferReadySig(State) = null,
-        bufferChanged: ?BufferChangedSig(State) = null,
+        bufferReady: ?BufferReadyFn = null,
+        bufferChanged: ?BufferChangedFn = null,
     };
 }
 
-const TypeErasedVTable = struct {
-    bufferReady: BufferReadySig(*anyopaque),
-    bufferChanged: BufferChangedSig(*anyopaque),
-};
+const TypeErasedVTable = meta.WrapperVTable(Functions(*anyopaque));
 
 /// An interface that the virtual machine uses to communicate with the host.
 /// The host handles video and audio output from the virtual machine.
@@ -61,22 +53,7 @@ pub const Host = struct {
     /// a state pointer provided by the host.
     /// Intended to be called by implementations to create a host interface pointing to their own functions.
     pub fn init(state: anytype, comptime functions: Functions(@TypeOf(state))) Self {
-        const State = @TypeOf(state);
-
-        const vtable = comptime meta.generateVTable(TypeErasedVTable, struct {
-            pub fn bufferReady(type_erased_state: *anyopaque, machine: *const Machine, buffer_id: ResolvedBufferID, delay: Milliseconds) void {
-                if (functions.bufferReady) |function| {
-                    return meta.unerasedCall(State, function, type_erased_state, .{ machine, buffer_id, delay });
-                }
-            }
-
-            pub fn bufferChanged(type_erased_state: *anyopaque, machine: *const Machine, buffer_id: ResolvedBufferID) void {
-                if (functions.bufferChanged) |function| {
-                    return meta.unerasedCall(State, function, type_erased_state, .{ machine, buffer_id });
-                }
-            }
-        });
-
+        const vtable = comptime meta.initVTable(TypeErasedVTable, functions);
         return .{ .state = state, .vtable = &vtable };
     }
 
@@ -89,14 +66,14 @@ pub const Host = struct {
     /// the *previous* frame before replacing it with this one.
     /// (The host may modify this delay to speed up or slow down gameplay.)
     pub fn bufferReady(self: Self, machine: *const Machine, buffer_id: ResolvedBufferID, delay: Milliseconds) void {
-        self.vtable.bufferReady(self.state, machine, buffer_id, delay);
+        self.vtable.bufferReady(.{ self.state, machine, buffer_id, delay });
     }
 
     /// Called each time the specified machine draws pixel data into a video buffer.
     /// The host can request the contents of the buffer to be rendered into a 24-bit surface
     /// using `machine.renderBufferToSurface(buffer_id, &surface).`
     pub fn bufferChanged(self: Self, machine: *const Machine, buffer_id: ResolvedBufferID) void {
-        self.vtable.bufferChanged(self.state, machine, buffer_id);
+        self.vtable.bufferChanged(.{ self.state, machine, buffer_id });
     }
 };
 
