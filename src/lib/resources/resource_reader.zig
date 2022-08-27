@@ -77,22 +77,16 @@ pub const ResourceReader = struct {
     /// Returns the descriptor matching the specified ID.
     /// Returns an InvalidResourceID error if the ID was out of range.
     pub fn resourceDescriptor(self: Self, id: ResourceID) ValidationError!ResourceDescriptor {
-        try self.validateResourceID(id);
-        return self.resourceDescriptors()[id.index()];
-    }
-
-    /// Returns an error if the specified resource ID is out of range for the underlying repository.
-    pub fn validateResourceID(self: Self, id: ResourceID) ValidationError!void {
         const descriptors = self.resourceDescriptors();
         if (id.index() >= descriptors.len) {
             return error.InvalidResourceID;
         }
+        return descriptors[id.index()];
     }
 
     // -- Public error types --
 
-    /// The errors that can be returned from a call to `ResourceReader.validateResourceID`
-    /// or `ResourceReader.resourceDescriptor`.
+    /// The errors that can be returned from a call to `ResourceReader.resourceDescriptor`.
     pub const ValidationError = error{
         /// The specified resource ID does not exist in the game's resource list.
         InvalidResourceID,
@@ -236,22 +230,10 @@ test "resourceDescriptor returns expected descriptor" {
     var repository = CountedRepository{};
 
     try testing.expectEqual(example_descriptor, repository.reader().resourceDescriptor(valid_resource_id));
-    try testing.expectEqual(2, repository.call_counts.resourceDescriptors);
+    try testing.expectEqual(1, repository.call_counts.resourceDescriptors);
 }
 
 test "resourceDescriptor returns error on out of range ID" {
     var repository = CountedRepository{};
     try testing.expectError(error.InvalidResourceID, repository.reader().resourceDescriptor(invalid_resource_id));
-}
-
-test "validateResourceID returns no error for valid ID" {
-    var repository = CountedRepository{};
-    try repository.reader().validateResourceID(valid_resource_id);
-    try testing.expectEqual(1, repository.call_counts.resourceDescriptors);
-}
-
-test "validateResourceID returns error for invalid ID" {
-    var repository = CountedRepository{};
-    try testing.expectError(error.InvalidResourceID, repository.reader().validateResourceID(invalid_resource_id));
-    try testing.expectEqual(1, repository.call_counts.resourceDescriptors);
 }

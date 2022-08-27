@@ -138,11 +138,11 @@ pub const Memory = struct {
 
         const resource_ids = game_part.resourceIDs();
         return GamePartResourceLocations{
-            .bytecode = try self.loadIfNeeded(resource_ids.bytecode),
-            .palettes = try self.loadIfNeeded(resource_ids.palettes),
-            .polygons = try self.loadIfNeeded(resource_ids.polygons),
+            .bytecode = try self.loadIfNeeded(resource_ids.bytecode, .bytecode),
+            .palettes = try self.loadIfNeeded(resource_ids.palettes, .palettes),
+            .polygons = try self.loadIfNeeded(resource_ids.polygons, .polygons),
             .animations = if (resource_ids.animations) |resource_id|
-                try self.loadIfNeeded(resource_id)
+                try self.loadIfNeeded(resource_id, .animations)
             else
                 null,
         };
@@ -159,7 +159,7 @@ pub const Memory = struct {
 
         return switch (descriptor.type) {
             .sound_or_empty, .music => IndividualResourceLocation{
-                .audio = try self.loadIfNeeded(id),
+                .audio = try self.loadIfNeededFromDescriptor(id, descriptor),
             },
             .bitmap => IndividualResourceLocation{
                 .temporary_bitmap = try self.reader.bufReadResource(self.temporary_bitmap_region, descriptor),
@@ -184,17 +184,25 @@ pub const Memory = struct {
 
     // -- Private methods --
 
-    /// Loads a resource into memory if it is not already loaded, and returns its location.
-    /// Returns an error if the specified resource ID is invalid or the resource with that ID
-    /// could not be read from disk.
-    fn loadIfNeeded(self: *Self, id: resources.ResourceID) ![]const u8 {
-        try self.reader.validateResourceID(id);
+    /// Loads a resource by ID into memory if it is not already loaded, and returns its location.
+    /// Returns an error if the specified resource ID does not exist, the resource at that ID does
+    /// not match the expected type, or the resource could not be read from disk.
+    fn loadIfNeeded(self: *Self, id: resources.ResourceID, expected_type: resources.ResourceType) ![]const u8 {
+        const descriptor = try self.reader.resourceDescriptor(id);
+        if (descriptor.type != expected_type) return error.UnexpectedResourceType;
 
+        return try self.loadIfNeededFromDescriptor(id, descriptor);
+    }
+
+    /// Loads a resource whose descriptor is already known into memory if it is not already loaded,
+    /// and returns its location.
+    /// Returns an error if the resource could not be read from disk.
+    fn loadIfNeededFromDescriptor(self: *Self, id: resources.ResourceID, descriptor: resources.ResourceDescriptor) ![]const u8 {
         const index = id.index();
         if (self.resource_locations[index]) |location| {
             return location;
         } else {
-            const location = try self.reader.allocReadResourceByID(self.allocator, id);
+            const location = try self.reader.allocReadResource(self.allocator, descriptor);
             self.resource_locations[index] = location;
             return location;
         }
@@ -221,7 +229,10 @@ pub const Memory = struct {
     };
 
     /// The errors that can be returned by a call to `Memory.loadGamePart`.
-    pub const LoadGamePartError = resources.ResourceReader.AllocReadResourceByIDError;
+    pub const LoadGamePartError = resources.ResourceReader.AllocReadResourceByIDError || error{
+        /// One of the resource IDs specified by the game part did not match the expected type.
+        UnexpectedResourceType,
+    };
 
     /// The errors that can be returned by a call to `Memory.loadIndividualResource`.
     pub const LoadIndividualResourceError = resources.ResourceReader.AllocReadResourceByIDError || error{
