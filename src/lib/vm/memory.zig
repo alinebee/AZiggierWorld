@@ -117,8 +117,10 @@ pub const Memory = struct {
 
     /// The memory location of the resource with the specified ID, or `null` if the resource is not loaded.
     /// Returns an error if the location is out of range.
-    pub fn resourceLocation(self: Self, id: resources.ResourceID) ResourceLocationError!PossibleResourceLocation {
-        try self.reader.validateResourceID(id);
+    pub fn resourceLocation(self: Self, id: resources.ResourceID, expected_type: resources.ResourceType) ResourceLocationError!PossibleResourceLocation {
+        const descriptor = try self.reader.resourceDescriptor(id);
+        if (descriptor.type != expected_type) return error.UnexpectedResourceType;
+
         return self.resource_locations[id.index()];
     }
 
@@ -162,7 +164,7 @@ pub const Memory = struct {
             .bitmap => IndividualResourceLocation{
                 .temporary_bitmap = try self.reader.bufReadResource(self.temporary_bitmap_region, descriptor),
             },
-            .bytecode, .palettes, .polygons, .sprite_polygons => error.GamePartOnlyResourceType,
+            .bytecode, .palettes, .polygons, .animations => error.GamePartOnlyResourceType,
         };
     }
 
@@ -175,7 +177,7 @@ pub const Memory = struct {
                 // These resource types can only be loaded by loadIndividualResource(id).
                 .sound_or_empty, .music, .bitmap => self.unload(&self.resource_locations[index]),
                 // These resource types can only be loaded by loadGamePart(game_part) and should be left alone.
-                .bytecode, .palettes, .polygons, .sprite_polygons => continue,
+                .bytecode, .palettes, .polygons, .animations => continue,
             }
         }
     }
@@ -213,7 +215,10 @@ pub const Memory = struct {
     pub const InitError = mem.Allocator.Error;
 
     /// The errors that can be returned by a call to `Memory.resourceLocation`.
-    pub const ResourceLocationError = resources.ResourceReader.ValidationError;
+    pub const ResourceLocationError = resources.ResourceReader.ValidationError || error{
+        /// `resourceLocation` tried to look up a resource ID of the wrong type for what was expected.
+        UnexpectedResourceType,
+    };
 
     /// The errors that can be returned by a call to `Memory.loadGamePart`.
     pub const LoadGamePartError = resources.ResourceReader.AllocReadResourceByIDError;
@@ -256,6 +261,42 @@ test "init returns an error if the bitmap region could not be allocated" {
     try testing.expectError(error.OutOfMemory, Memory.init(testing.failing_allocator, test_reader));
 }
 
+// -- resourceLocation tests --
+
+test "ResourceLocation returns location of loaded resource" {
+    var memory = try Memory.init(testing.allocator, test_reader);
+    defer memory.deinit();
+
+    const music_resource_id = ResourceFixtures.music_resource_id;
+    const location = try memory.loadIndividualResource(music_resource_id);
+
+    try testing.expectEqual(location.audio, try memory.resourceLocation(music_resource_id, .music));
+}
+
+test "ResourceLocation returns null for unloaded resource" {
+    var memory = try Memory.init(testing.allocator, test_reader);
+    defer memory.deinit();
+
+    const resource_id = ResourceFixtures.music_resource_id;
+    try testing.expectEqual(null, try memory.resourceLocation(resource_id, .music));
+}
+
+test "ResourceLocation returns error.InvalidResourceID for out-of-range resource" {
+    var memory = try Memory.init(testing.allocator, test_reader);
+    defer memory.deinit();
+
+    const invalid_id = ResourceFixtures.invalid_resource_id;
+    try testing.expectError(error.InvalidResourceID, memory.resourceLocation(invalid_id, .music));
+}
+
+test "ResourceLocation returns error.UnexpectedResourceType when resource type does not match" {
+    var memory = try Memory.init(testing.allocator, test_reader);
+    defer memory.deinit();
+
+    const sfx_resource_id = ResourceFixtures.sfx_resource_id;
+    try testing.expectError(error.UnexpectedResourceType, memory.resourceLocation(sfx_resource_id, .music));
+}
+
 // -- loadIndividualResource tests --
 
 test "loadIndividualResource loads sound resources into shared memory" {
@@ -269,7 +310,7 @@ test "loadIndividualResource loads sound resources into shared memory" {
     const location = try memory.loadIndividualResource(resource_id);
     try testing.expectEqualTags(.audio, location);
     try testing.expectEqual(descriptor.uncompressed_size, location.audio.len);
-    try testing.expectEqual(location.audio, memory.resourceLocation(resource_id));
+    try testing.expectEqual(location.audio, memory.resourceLocation(resource_id, .sound_or_empty));
 }
 
 test "loadIndividualResource loads music resources into shared memory" {
@@ -283,7 +324,7 @@ test "loadIndividualResource loads music resources into shared memory" {
     const location = try memory.loadIndividualResource(resource_id);
     try testing.expectEqualTags(.audio, location);
     try testing.expectEqual(descriptor.uncompressed_size, location.audio.len);
-    try testing.expectEqual(location.audio, memory.resourceLocation(resource_id));
+    try testing.expectEqual(location.audio, memory.resourceLocation(resource_id, .music));
 }
 
 test "loadIndividualResource loads bitmap data into temporary bitmap memory" {
@@ -298,7 +339,7 @@ test "loadIndividualResource loads bitmap data into temporary bitmap memory" {
     try testing.expectEqualTags(.temporary_bitmap, location);
     try testing.expectEqual(memory.temporary_bitmap_region, location.temporary_bitmap);
     // A bitmap resource's temporary location should not be persisted in the list of loaded resources
-    try testing.expectEqual(null, memory.resourceLocation(resource_id));
+    try testing.expectEqual(null, memory.resourceLocation(resource_id, .bitmap));
 }
 
 test "loadIndividualResource clobbers temporary bitmap region when another bitmap is loaded" {
@@ -420,10 +461,10 @@ test "loadGamePart loads expected resources for game part with animations" {
     try testing.expectEqual((try test_reader.resourceDescriptor(resource_ids.polygons)).uncompressed_size, locations.polygons.len);
     try testing.expectEqual((try test_reader.resourceDescriptor(resource_ids.animations.?)).uncompressed_size, locations.animations.?.len);
 
-    try testing.expectEqual(locations.palettes, try memory.resourceLocation(resource_ids.palettes));
-    try testing.expectEqual(locations.bytecode, try memory.resourceLocation(resource_ids.bytecode));
-    try testing.expectEqual(locations.polygons, try memory.resourceLocation(resource_ids.polygons));
-    try testing.expectEqual(locations.animations, try memory.resourceLocation(resource_ids.animations.?));
+    try testing.expectEqual(locations.palettes, try memory.resourceLocation(resource_ids.palettes, .palettes));
+    try testing.expectEqual(locations.bytecode, try memory.resourceLocation(resource_ids.bytecode, .bytecode));
+    try testing.expectEqual(locations.polygons, try memory.resourceLocation(resource_ids.polygons, .polygons));
+    try testing.expectEqual(locations.animations, try memory.resourceLocation(resource_ids.animations.?, .animations));
 }
 
 test "loadGamePart does not load animations for game part without animations" {
@@ -447,23 +488,23 @@ test "loadGamePart unloads any previously loaded game part's resources" {
 
     _ = try memory.loadGamePart(first_game_part);
 
-    try testing.expect((try memory.resourceLocation(first_game_part_ids.palettes)) != null);
-    try testing.expect((try memory.resourceLocation(first_game_part_ids.bytecode)) != null);
-    try testing.expect((try memory.resourceLocation(first_game_part_ids.polygons)) != null);
-    try testing.expectEqual(null, try memory.resourceLocation(second_game_part_ids.palettes));
-    try testing.expectEqual(null, try memory.resourceLocation(second_game_part_ids.bytecode));
-    try testing.expectEqual(null, try memory.resourceLocation(second_game_part_ids.polygons));
-    try testing.expectEqual(null, try memory.resourceLocation(second_game_part_ids.animations.?));
+    try testing.expect((try memory.resourceLocation(first_game_part_ids.palettes, .palettes)) != null);
+    try testing.expect((try memory.resourceLocation(first_game_part_ids.bytecode, .bytecode)) != null);
+    try testing.expect((try memory.resourceLocation(first_game_part_ids.polygons, .polygons)) != null);
+    try testing.expectEqual(null, try memory.resourceLocation(second_game_part_ids.palettes, .palettes));
+    try testing.expectEqual(null, try memory.resourceLocation(second_game_part_ids.bytecode, .bytecode));
+    try testing.expectEqual(null, try memory.resourceLocation(second_game_part_ids.polygons, .polygons));
+    try testing.expectEqual(null, try memory.resourceLocation(second_game_part_ids.animations.?, .animations));
 
     _ = try memory.loadGamePart(second_game_part);
 
-    try testing.expectEqual(null, try memory.resourceLocation(first_game_part_ids.palettes));
-    try testing.expectEqual(null, try memory.resourceLocation(first_game_part_ids.bytecode));
-    try testing.expectEqual(null, try memory.resourceLocation(first_game_part_ids.polygons));
-    try testing.expect((try memory.resourceLocation(second_game_part_ids.palettes)) != null);
-    try testing.expect((try memory.resourceLocation(second_game_part_ids.bytecode)) != null);
-    try testing.expect((try memory.resourceLocation(second_game_part_ids.polygons)) != null);
-    try testing.expect((try memory.resourceLocation(second_game_part_ids.animations.?)) != null);
+    try testing.expectEqual(null, try memory.resourceLocation(first_game_part_ids.palettes, .palettes));
+    try testing.expectEqual(null, try memory.resourceLocation(first_game_part_ids.bytecode, .bytecode));
+    try testing.expectEqual(null, try memory.resourceLocation(first_game_part_ids.polygons, .polygons));
+    try testing.expect((try memory.resourceLocation(second_game_part_ids.palettes, .palettes)) != null);
+    try testing.expect((try memory.resourceLocation(second_game_part_ids.bytecode, .bytecode)) != null);
+    try testing.expect((try memory.resourceLocation(second_game_part_ids.polygons, .polygons)) != null);
+    try testing.expect((try memory.resourceLocation(second_game_part_ids.animations.?, .animations)) != null);
 }
 
 test "loadGamePart unloads any previously loaded individual resources" {
@@ -474,13 +515,13 @@ test "loadGamePart unloads any previously loaded individual resources" {
     const music_resource_id = ResourceFixtures.music_resource_id;
     _ = try memory.loadIndividualResource(sfx_resource_id);
     _ = try memory.loadIndividualResource(music_resource_id);
-    try testing.expect((try memory.resourceLocation(sfx_resource_id)) != null);
-    try testing.expect((try memory.resourceLocation(music_resource_id)) != null);
+    try testing.expect((try memory.resourceLocation(sfx_resource_id, .sound_or_empty)) != null);
+    try testing.expect((try memory.resourceLocation(music_resource_id, .music)) != null);
 
     _ = try memory.loadGamePart(.gameplay1);
 
-    try testing.expectEqual(null, try memory.resourceLocation(sfx_resource_id));
-    try testing.expectEqual(null, try memory.resourceLocation(music_resource_id));
+    try testing.expectEqual(null, try memory.resourceLocation(sfx_resource_id, .sound_or_empty));
+    try testing.expectEqual(null, try memory.resourceLocation(music_resource_id, .music));
 }
 
 test "loadGamePart returns error.InvalidResourceID on out-of-bounds resource ID" {
@@ -524,19 +565,19 @@ test "unloadAllIndividualResources unloads sound and music resources but leaves 
     const sfx_location = try memory.loadIndividualResource(sfx_resource_id);
     const music_location = try memory.loadIndividualResource(music_resource_id);
 
-    try testing.expectEqual(game_part_locations.palettes, try memory.resourceLocation(game_part_resource_ids.palettes));
-    try testing.expectEqual(game_part_locations.bytecode, try memory.resourceLocation(game_part_resource_ids.bytecode));
-    try testing.expectEqual(game_part_locations.polygons, try memory.resourceLocation(game_part_resource_ids.polygons));
-    try testing.expectEqual(game_part_locations.animations, try memory.resourceLocation(game_part_resource_ids.animations.?));
-    try testing.expectEqual(sfx_location.audio, try memory.resourceLocation(sfx_resource_id));
-    try testing.expectEqual(music_location.audio, try memory.resourceLocation(music_resource_id));
+    try testing.expectEqual(game_part_locations.palettes, try memory.resourceLocation(game_part_resource_ids.palettes, .palettes));
+    try testing.expectEqual(game_part_locations.bytecode, try memory.resourceLocation(game_part_resource_ids.bytecode, .bytecode));
+    try testing.expectEqual(game_part_locations.polygons, try memory.resourceLocation(game_part_resource_ids.polygons, .polygons));
+    try testing.expectEqual(game_part_locations.animations, try memory.resourceLocation(game_part_resource_ids.animations.?, .animations));
+    try testing.expectEqual(sfx_location.audio, try memory.resourceLocation(sfx_resource_id, .sound_or_empty));
+    try testing.expectEqual(music_location.audio, try memory.resourceLocation(music_resource_id, .music));
 
     memory.unloadAllIndividualResources();
 
-    try testing.expectEqual(game_part_locations.palettes, try memory.resourceLocation(game_part_resource_ids.palettes));
-    try testing.expectEqual(game_part_locations.bytecode, try memory.resourceLocation(game_part_resource_ids.bytecode));
-    try testing.expectEqual(game_part_locations.polygons, try memory.resourceLocation(game_part_resource_ids.polygons));
-    try testing.expectEqual(game_part_locations.animations, try memory.resourceLocation(game_part_resource_ids.animations.?));
-    try testing.expectEqual(null, try memory.resourceLocation(sfx_resource_id));
-    try testing.expectEqual(null, try memory.resourceLocation(music_resource_id));
+    try testing.expectEqual(game_part_locations.palettes, try memory.resourceLocation(game_part_resource_ids.palettes, .palettes));
+    try testing.expectEqual(game_part_locations.bytecode, try memory.resourceLocation(game_part_resource_ids.bytecode, .bytecode));
+    try testing.expectEqual(game_part_locations.polygons, try memory.resourceLocation(game_part_resource_ids.polygons, .polygons));
+    try testing.expectEqual(game_part_locations.animations, try memory.resourceLocation(game_part_resource_ids.animations.?, .animations));
+    try testing.expectEqual(null, try memory.resourceLocation(sfx_resource_id, .sound_or_empty));
+    try testing.expectEqual(null, try memory.resourceLocation(music_resource_id, .music));
 }

@@ -115,7 +115,7 @@ pub const Machine = struct {
 
         // This list of copy protection bypass values is incomplete:
         // Some sections of the game will work, but other sections will still
-        // soft-lock unless the user has gone completed copy protection.
+        // soft-lock unless the user has completed copy protection.
         self.registers.setUnsigned(.virtual_machine_startup_UNKNOWN, 0x0081);
         self.registers.setUnsigned(.copy_protection_bypass_1, 0b0001_0000); // Bit 4 needs to be set, other bits aren't checked
         self.registers.setUnsigned(.copy_protection_bypass_2, 0x0080); // Doesn't seem to be checked by the 1st gameplay sequence
@@ -382,7 +382,7 @@ const meta = @import("std").meta;
 
 // - Initialization tests -
 
-test "new creates virtual machine instance with expected initial state" {
+test "init creates virtual machine instance with expected initial state" {
     const options = Machine.Options{
         .initial_game_part = .gameplay1,
         .seed = 12345,
@@ -419,19 +419,19 @@ test "new creates virtual machine instance with expected initial state" {
     // and passed to the program and video subsystems
     const resource_ids = options.initial_game_part.resourceIDs();
 
-    const bytecode_address = try machine.memory.resourceLocation(resource_ids.bytecode);
+    const bytecode_address = try machine.memory.resourceLocation(resource_ids.bytecode, .bytecode);
     try testing.expect(bytecode_address != null);
     try testing.expectEqual(bytecode_address.?, machine.program.data);
 
-    const palettes_address = try machine.memory.resourceLocation(resource_ids.palettes);
+    const palettes_address = try machine.memory.resourceLocation(resource_ids.palettes, .palettes);
     try testing.expect(palettes_address != null);
     try testing.expectEqual(palettes_address.?, machine.video.palettes.data);
 
-    const polygons_address = try machine.memory.resourceLocation(resource_ids.polygons);
+    const polygons_address = try machine.memory.resourceLocation(resource_ids.polygons, .polygons);
     try testing.expect(polygons_address != null);
     try testing.expectEqual(polygons_address.?, machine.video.polygons.data);
 
-    const animations_address = try machine.memory.resourceLocation(resource_ids.animations.?);
+    const animations_address = try machine.memory.resourceLocation(resource_ids.animations.?, .animations);
     try testing.expect(animations_address != null);
     try testing.expect(machine.video.animations != null);
     try testing.expectEqual(animations_address.?, machine.video.animations.?.data);
@@ -462,13 +462,13 @@ test "startGamePart resets previous thread state, loads resources for new game p
     const current_resource_ids = machine.current_game_part.resourceIDs();
     const next_resource_ids = next_game_part.resourceIDs();
 
-    try testing.expect((try machine.memory.resourceLocation(current_resource_ids.bytecode)) != null);
-    try testing.expect((try machine.memory.resourceLocation(current_resource_ids.palettes)) != null);
-    try testing.expect((try machine.memory.resourceLocation(current_resource_ids.polygons)) != null);
+    try testing.expect((try machine.memory.resourceLocation(current_resource_ids.bytecode, .bytecode)) != null);
+    try testing.expect((try machine.memory.resourceLocation(current_resource_ids.palettes, .palettes)) != null);
+    try testing.expect((try machine.memory.resourceLocation(current_resource_ids.polygons, .polygons)) != null);
 
-    try testing.expectEqual(null, try machine.memory.resourceLocation(next_resource_ids.bytecode));
-    try testing.expectEqual(null, try machine.memory.resourceLocation(next_resource_ids.palettes));
-    try testing.expectEqual(null, try machine.memory.resourceLocation(next_resource_ids.polygons));
+    try testing.expectEqual(null, try machine.memory.resourceLocation(next_resource_ids.bytecode, .bytecode));
+    try testing.expectEqual(null, try machine.memory.resourceLocation(next_resource_ids.palettes, .palettes));
+    try testing.expectEqual(null, try machine.memory.resourceLocation(next_resource_ids.polygons, .polygons));
 
     try machine.startGamePart(next_game_part);
 
@@ -491,13 +491,13 @@ test "startGamePart resets previous thread state, loads resources for new game p
     try testing.expectEqual(next_game_part, machine.current_game_part);
     try testing.expectEqual(null, machine.scheduled_game_part);
 
-    try testing.expectEqual(null, try machine.memory.resourceLocation(current_resource_ids.bytecode));
-    try testing.expectEqual(null, try machine.memory.resourceLocation(current_resource_ids.palettes));
-    try testing.expectEqual(null, try machine.memory.resourceLocation(current_resource_ids.polygons));
+    try testing.expectEqual(null, try machine.memory.resourceLocation(current_resource_ids.bytecode, .bytecode));
+    try testing.expectEqual(null, try machine.memory.resourceLocation(current_resource_ids.palettes, .palettes));
+    try testing.expectEqual(null, try machine.memory.resourceLocation(current_resource_ids.polygons, .polygons));
 
-    try testing.expect((try machine.memory.resourceLocation(next_resource_ids.bytecode)) != null);
-    try testing.expect((try machine.memory.resourceLocation(next_resource_ids.palettes)) != null);
-    try testing.expect((try machine.memory.resourceLocation(next_resource_ids.polygons)) != null);
+    try testing.expect((try machine.memory.resourceLocation(next_resource_ids.bytecode, .bytecode)) != null);
+    try testing.expect((try machine.memory.resourceLocation(next_resource_ids.palettes, .palettes)) != null);
+    try testing.expect((try machine.memory.resourceLocation(next_resource_ids.polygons, .polygons)) != null);
 }
 
 test "scheduleGamePart schedules a new game part without loading it" {
@@ -512,17 +512,17 @@ test "scheduleGamePart schedules a new game part without loading it" {
 
     const resource_ids = next_game_part.resourceIDs();
 
-    try testing.expectEqual(null, try machine.memory.resourceLocation(resource_ids.bytecode));
-    try testing.expectEqual(null, try machine.memory.resourceLocation(resource_ids.palettes));
-    try testing.expectEqual(null, try machine.memory.resourceLocation(resource_ids.polygons));
+    try testing.expectEqual(null, try machine.memory.resourceLocation(resource_ids.bytecode, .bytecode));
+    try testing.expectEqual(null, try machine.memory.resourceLocation(resource_ids.palettes, .palettes));
+    try testing.expectEqual(null, try machine.memory.resourceLocation(resource_ids.polygons, .polygons));
 
     machine.scheduleGamePart(next_game_part);
     try testing.expectEqual(next_game_part, machine.scheduled_game_part);
     try testing.expectEqual(current_game_part, machine.current_game_part);
 
-    try testing.expectEqual(null, try machine.memory.resourceLocation(resource_ids.bytecode));
-    try testing.expectEqual(null, try machine.memory.resourceLocation(resource_ids.palettes));
-    try testing.expectEqual(null, try machine.memory.resourceLocation(resource_ids.polygons));
+    try testing.expectEqual(null, try machine.memory.resourceLocation(resource_ids.bytecode, .bytecode));
+    try testing.expectEqual(null, try machine.memory.resourceLocation(resource_ids.palettes, .palettes));
+    try testing.expectEqual(null, try machine.memory.resourceLocation(resource_ids.polygons, .polygons));
 }
 
 // - loadResource tests -
@@ -542,9 +542,9 @@ test "loadResource loads audio resource into main memory and does not notify hos
 
     const audio_resource_id = resources.MockRepository.Fixtures.sfx_resource_id;
 
-    try testing.expectEqual(null, try machine.memory.resourceLocation(audio_resource_id));
+    try testing.expectEqual(null, try machine.memory.resourceLocation(audio_resource_id, .sound_or_empty));
     try machine.loadResource(audio_resource_id);
-    try testing.expect((try machine.memory.resourceLocation(audio_resource_id)) != null);
+    try testing.expect((try machine.memory.resourceLocation(audio_resource_id, .sound_or_empty)) != null);
 
     try testing.expectEqual(0, host.call_counts.bufferChanged);
 }
@@ -568,9 +568,9 @@ test "loadResource copies bitmap resource directly into video buffer without per
     const original_buffer_contents = buffer.toBitmap();
 
     const bitmap_resource_id = resources.MockRepository.Fixtures.bitmap_resource_id;
-    try testing.expectEqual(null, machine.memory.resourceLocation(bitmap_resource_id));
+    try testing.expectEqual(null, machine.memory.resourceLocation(bitmap_resource_id, .bitmap));
     try machine.loadResource(bitmap_resource_id);
-    try testing.expectEqual(null, machine.memory.resourceLocation(bitmap_resource_id));
+    try testing.expectEqual(null, machine.memory.resourceLocation(bitmap_resource_id, .bitmap));
 
     const new_buffer_contents = buffer.toBitmap();
     // The fake bitmap resource data should have been filled with a 0b01010 bit pattern,

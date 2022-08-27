@@ -31,7 +31,7 @@ pub const ResourceType = enum(_Raw) {
     /// The resource contains polygon data for rendering player and enemy sprites.
     /// In the original release of Another World, there is only one resource with this type,
     /// which is shared across all parts of the game.
-    sprite_polygons = 6,
+    animations = 6,
 
     /// Parse a valid resource type from a raw bytecode value
     pub fn parse(raw: Raw) Error!ResourceType {
@@ -58,7 +58,7 @@ test "parse parses raw operation types correctly" {
     try testing.expectEqual(.palettes, ResourceType.parse(3));
     try testing.expectEqual(.bytecode, ResourceType.parse(4));
     try testing.expectEqual(.polygons, ResourceType.parse(5));
-    try testing.expectEqual(.sprite_polygons, ResourceType.parse(6));
+    try testing.expectEqual(.animations, ResourceType.parse(6));
     try testing.expectError(
         error.InvalidResourceType,
         ResourceType.parse(7),

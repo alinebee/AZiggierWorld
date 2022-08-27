@@ -207,7 +207,7 @@ const TestFixtures = struct {
     };
 
     const sprite_polygons_descriptor = ResourceDescriptor{
-        .type = .sprite_polygons,
+        .type = .animations,
         .bank_id = 0,
         .bank_offset = 0,
         .compressed_size = 2000,

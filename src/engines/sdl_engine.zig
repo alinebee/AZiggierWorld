@@ -94,7 +94,7 @@ pub const SDLEngine = struct {
         // and the host interface) and for some reason the return from this function was
         // copying the struct instead of filling its data into the return location.
         // We can revisit this once Zig supports move-only types/variables.
-        var self: *Self = try allocator.create(Self);
+        const self: *Self = try allocator.create(Self);
         errdefer allocator.destroy(self);
 
         self.allocator = allocator;
