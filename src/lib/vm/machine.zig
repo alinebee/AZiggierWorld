@@ -42,6 +42,7 @@ const Thread = @import("thread.zig").Thread;
 const Stack = @import("stack.zig").Stack;
 const Registers = @import("registers.zig").Registers;
 const Video = @import("video.zig").Video;
+const Audio = @import("audio.zig").Audio;
 const Memory = @import("memory.zig").Memory;
 const mock_host = @import("test_helpers/mock_host.zig");
 
@@ -65,6 +66,9 @@ pub const Machine = struct {
 
     /// The current state of the video subsystem.
     video: Video,
+
+    /// The current state of the audio subsystem.
+    audio: Audio,
 
     /// The current state of resources loaded into memory.
     memory: Memory,
@@ -105,6 +109,7 @@ pub const Machine = struct {
                 .animations = undefined,
                 .palettes = undefined,
             },
+            .audio = .{},
             .program = undefined,
             .current_game_part = undefined,
         };
@@ -246,39 +251,44 @@ pub const Machine = struct {
     // -- Audio subsystem interface --
 
     /// Start playing a music track from a specified resource.
-    /// Returns an error if the resource does not exist or could not be loaded.
-    pub fn playMusic(_: *Self, resource_id: resources.ResourceID, offset: audio.Offset, delay: audio.Delay) !void {
-        log.debug("playMusic: play #{X} at offset {} after delay {}", .{
-            resource_id,
-            offset,
-            delay,
-        });
+    /// Has no effect if the specified resource has not been loaded by a previous call to loadResource.
+    /// Returns an error if the resource ID is not a music resource or does not exist.
+    pub fn playMusic(self: *Self, resource_id: resources.ResourceID, offset: audio.Offset, delay: audio.Delay) !void {
+        const possible_music_data = try self.memory.resourceLocation(resource_id, .music);
+        if (possible_music_data) |music_data| {
+            try self.audio.playMusic(music_data, offset, delay);
+        } else {
+            // The original game may attempt to do this, so we should swallow it rather than treat it as an error.
+            log.debug("Music resource played before it was loaded: {}", .{resource_id});
+        }
     }
 
     /// Set on the current or subsequent music track.
-    pub fn setMusicDelay(_: *Self, delay: audio.Delay) void {
-        log.debug("setMusicDelay: set delay to {}", .{delay});
+    pub fn setMusicDelay(self: *Self, delay: audio.Delay) void {
+        self.audio.setMusicDelay(delay);
     }
 
     /// Stop playing any current music track.
-    pub fn stopMusic(_: *Self) void {
-        log.debug("stopMusic: stop playing", .{});
+    pub fn stopMusic(self: *Self) void {
+        self.audio.stopMusic();
     }
 
     /// Play a sound effect from the specified resource on the specified channel.
-    /// Returns an error if the resource does not exist or could not be loaded.
-    pub fn playSound(_: *Self, resource_id: resources.ResourceID, channel_id: vm.ChannelID, volume: audio.Volume, frequency: audio.Frequency) !void {
-        log.debug("playSound: play #{X} on channel {} at volume {}, frequency {}", .{
-            resource_id,
-            channel_id,
-            volume,
-            frequency,
-        });
+    /// Returns an error if the resource ID is not a sound resource or does not exist.
+    pub fn playSound(self: *Self, resource_id: resources.ResourceID, channel_id: vm.ChannelID, volume: audio.Volume, frequency: audio.Frequency) !void {
+        const possible_sound_data = try self.memory.resourceLocation(resource_id, .sound_or_empty);
+        if (possible_sound_data) |sound_data| {
+            try self.audio.playSound(sound_data, channel_id, volume, frequency);
+        } else {
+            // The original game does this during the intro sequence,
+            // so we must swallow it rather than treat it as an error.
+            log.debug("Sound resource played before it was loaded: {}", .{resource_id});
+        }
     }
 
     /// Stop any sound effect playing on the specified channel.
-    pub fn stopChannel(_: *Self, channel_id: vm.ChannelID) void {
-        log.debug("stopChannel: stop playing on channel {}", .{channel_id});
+    pub fn stopChannel(self: *Self, channel_id: vm.ChannelID) void {
+        self.audio.stopChannel(channel_id);
     }
 
     // - Private methods -
