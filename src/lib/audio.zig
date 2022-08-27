@@ -5,5 +5,5 @@ pub const Offset = u8;
 pub const Volume = u8;
 pub const Frequency = u8;
 
-pub const SoundResource = @import("audio/sound_resource.zig");
-pub const MusicResource = @import("audio/music_resource.zig");
+pub const SoundEffect = @import("audio/sound_effect.zig").SoundEffect;
+pub const MusicResource = @import("audio/music_resource.zig").MusicResource;

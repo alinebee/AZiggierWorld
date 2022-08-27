@@ -31,11 +31,15 @@ pub const Audio = struct {
 
     /// Play a sound effect from the specified resource on the specified channel.
     pub fn playSound(_: *Self, sound_data: []const u8, channel_id: vm.ChannelID, volume: audio.Volume, frequency: audio.Frequency) !void {
-        log.debug("playSound: play {*} on channel {} at volume {}, frequency {}", .{
+        const sound = try audio.SoundEffect.parse(sound_data);
+
+        log.debug("playSound: play {*} on channel {} at volume {}, frequency {} (has intro: {}, loops: {})", .{
             sound_data,
             channel_id,
             volume,
             frequency,
+            sound.intro != null,
+            sound.loop != null,
         });
     }
 
