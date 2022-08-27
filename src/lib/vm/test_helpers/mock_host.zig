@@ -3,17 +3,13 @@
 //! to perform arbitrary assertions in the body of each host method.
 
 const anotherworld = @import("../../anotherworld.zig");
-
-const Host = @import("../host.zig").Host;
-const Machine = @import("../machine.zig").Machine;
-const ResolvedBufferID = @import("../video.zig").Video.ResolvedBufferID;
-const Milliseconds = @import("../video.zig").Video.Milliseconds;
+const vm = anotherworld.vm;
 
 // - Exported constants -
 
 const DefaultImplementation = struct {
-    pub fn bufferReady(_: *const Machine, _: ResolvedBufferID, _: Milliseconds) void {}
-    pub fn bufferChanged(_: *const Machine, _: ResolvedBufferID) void {}
+    pub fn bufferReady(_: *const vm.Machine, _: vm.ResolvedBufferID, _: vm.Milliseconds) void {}
+    pub fn bufferChanged(_: *const vm.Machine, _: vm.ResolvedBufferID) void {}
 };
 
 var test_host_implementation = MockHost(DefaultImplementation){};
@@ -35,16 +31,16 @@ pub fn MockHost(comptime Implementation: type) type {
 
         const Self = @This();
 
-        pub fn host(self: *Self) Host {
-            return Host.init(self, .{ .bufferReady = bufferReady, .bufferChanged = bufferChanged });
+        pub fn host(self: *Self) vm.Host {
+            return vm.Host.init(self, .{ .bufferReady = bufferReady, .bufferChanged = bufferChanged });
         }
 
-        fn bufferReady(self: *Self, machine: *const Machine, buffer_id: ResolvedBufferID, delay: Milliseconds) void {
+        fn bufferReady(self: *Self, machine: *const vm.Machine, buffer_id: vm.ResolvedBufferID, delay: vm.Milliseconds) void {
             self.call_counts.bufferReady += 1;
             Implementation.bufferReady(machine, buffer_id, delay);
         }
 
-        fn bufferChanged(self: *Self, machine: *const Machine, buffer_id: ResolvedBufferID) void {
+        fn bufferChanged(self: *Self, machine: *const vm.Machine, buffer_id: vm.ResolvedBufferID) void {
             self.call_counts.bufferChanged += 1;
             Implementation.bufferChanged(machine, buffer_id);
         }

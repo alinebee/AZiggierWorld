@@ -2,8 +2,7 @@ const anotherworld = @import("../anotherworld.zig");
 const rendering = anotherworld.rendering;
 const static_limits = anotherworld.static_limits;
 const text = anotherworld.text;
-
-const BufferID = @import("buffer_id.zig").BufferID;
+const vm = anotherworld.vm;
 
 const mem = @import("std").mem;
 
@@ -33,25 +32,25 @@ pub const Video = struct {
     buffers: [static_limits.buffer_count]Buffer = .{.{}} ** static_limits.buffer_count,
 
     /// The index of the buffer in `buffers` that was rendered to the host screen on the previous frame.
-    front_buffer_id: BufferID.Specific = initial_front_buffer_id,
+    front_buffer_id: vm.BufferID.Specific = initial_front_buffer_id,
 
     /// The index of the buffer in `buffers` that will be rendered to the host screen on the next frame.
-    back_buffer_id: BufferID.Specific = initial_back_buffer_id,
+    back_buffer_id: vm.BufferID.Specific = initial_back_buffer_id,
 
     /// The index of the buffer in `buffers` that polygon and string drawing operations will draw into.
     /// (The reference implementation initialized this to the front buffer, not the back buffer:
     /// it's unclear why, as normally a game would want to send its draw operations to the back buffer.)
-    target_buffer_id: BufferID.Specific = initial_front_buffer_id,
+    target_buffer_id: vm.BufferID.Specific = initial_front_buffer_id,
 
-    const initial_front_buffer_id: BufferID.Specific = 2;
-    const initial_back_buffer_id: BufferID.Specific = 1;
+    const initial_front_buffer_id: vm.BufferID.Specific = 2;
+    const initial_back_buffer_id: vm.BufferID.Specific = 1;
 
     /// Masked drawing operations always read the mask from buffer 0,
     /// which presumably contains the scene background.
-    pub const mask_buffer_id: BufferID.Specific = 0;
+    pub const mask_buffer_id: vm.BufferID.Specific = 0;
 
     /// Bitmaps are always loaded into buffer 0, presumably replacing the scene background.
-    pub const bitmap_buffer_id: BufferID.Specific = 0;
+    pub const bitmap_buffer_id: vm.BufferID.Specific = 0;
 
     const Self = @This();
 
@@ -78,12 +77,12 @@ pub const Video = struct {
     }
 
     /// Select the buffer that subsequent polygon and string draw operations will draw into.
-    pub fn selectBuffer(self: *Self, buffer_id: BufferID) void {
+    pub fn selectBuffer(self: *Self, buffer_id: vm.BufferID) void {
         self.target_buffer_id = self.resolvedBufferID(buffer_id);
     }
 
     /// Fill a video buffer with a solid color.
-    pub fn fillBuffer(self: *Self, buffer_id: BufferID, color: rendering.ColorID) ResolvedBufferID {
+    pub fn fillBuffer(self: *Self, buffer_id: vm.BufferID, color: rendering.ColorID) ResolvedBufferID {
         const resolved_buffer_id = self.resolvedBufferID(buffer_id);
         self.buffers[resolved_buffer_id].fill(color);
         return resolved_buffer_id;
@@ -92,7 +91,7 @@ pub const Video = struct {
     /// Copy the contents of one buffer into another at the specified vertical offset.
     /// Returns the ID of the buffer that was modified by the operation.
     /// Does nothing if the vertical offset is out of bounds.
-    pub fn copyBuffer(self: *Self, source_id: BufferID, destination_id: BufferID, y: rendering.Point.Coordinate) ResolvedBufferID {
+    pub fn copyBuffer(self: *Self, source_id: vm.BufferID, destination_id: vm.BufferID, y: rendering.Point.Coordinate) ResolvedBufferID {
         const resolved_source_id = self.resolvedBufferID(source_id);
         const resolved_destination_id = self.resolvedBufferID(destination_id);
 
@@ -144,13 +143,13 @@ pub const Video = struct {
     /// Set the specified buffer as the front buffer, marking that it is ready to draw to the host screen.
     /// If `.back_buffer` is specified, this will swap the front and back buffers.
     /// Returns the ID of the buffer that should be drawn to the host screen using `renderBufferToSurface`.
-    pub fn markBufferAsReady(self: *Self, buffer_id: BufferID) ResolvedBufferID {
+    pub fn markBufferAsReady(self: *Self, buffer_id: vm.BufferID) ResolvedBufferID {
         switch (buffer_id) {
             // When re-rendering the front buffer, leave the current front and back buffers as they were.
             .front_buffer => {},
             // When rendering the back buffer, swap the front and back buffers.
             .back_buffer => {
-                mem.swap(BufferID.Specific, &self.front_buffer_id, &self.back_buffer_id);
+                mem.swap(vm.BufferID.Specific, &self.front_buffer_id, &self.back_buffer_id);
             },
             // When rendering a specific buffer by ID, mark that buffer as the front buffer
             // and leave the current back buffer alone.
@@ -163,7 +162,7 @@ pub const Video = struct {
 
     /// Render the contents of the specified buffer into the specified 24-bit host surface.
     /// Returns an error and leaves the surface unchanged if no palette has been chosen with `selectPalette` yet.
-    pub fn renderBufferToSurface(self: Self, buffer_id: BufferID.Specific, surface: *HostSurface) !void {
+    pub fn renderBufferToSurface(self: Self, buffer_id: vm.BufferID.Specific, surface: *HostSurface) !void {
         if (self.current_palette) |palette| {
             self.buffers[buffer_id].renderToSurface(surface, palette);
         } else {
@@ -173,7 +172,7 @@ pub const Video = struct {
 
     // - Private helpers -
 
-    fn resolvedBufferID(self: Self, buffer_id: BufferID) BufferID.Specific {
+    fn resolvedBufferID(self: Self, buffer_id: vm.BufferID) vm.BufferID.Specific {
         return switch (buffer_id) {
             .front_buffer => self.front_buffer_id,
             .back_buffer => self.back_buffer_id,
@@ -203,7 +202,7 @@ pub const Video = struct {
     pub const Milliseconds = usize;
 
     /// The ID of one of the 4 buffers used by the rendering system.
-    pub const ResolvedBufferID = BufferID.Specific;
+    pub const ResolvedBufferID = vm.BufferID.Specific;
 
     /// The type of 24-bit buffer that hosts are expected to provide for the video subsystem to render frames into.
     pub const HostSurface = rendering.Surface(static_limits.virtual_screen_width, static_limits.virtual_screen_height);

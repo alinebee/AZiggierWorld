@@ -38,8 +38,7 @@ const anotherworld = @import("../anotherworld.zig");
 const resources = anotherworld.resources;
 const rendering = anotherworld.rendering;
 const static_limits = anotherworld.static_limits;
-
-const GamePart = @import("game_part.zig").GamePart;
+const vm = anotherworld.vm;
 
 const mem = @import("std").mem;
 
@@ -130,7 +129,7 @@ pub const Memory = struct {
     /// If an error occurs, all previously loaded resources will still have been unloaded,
     /// and some resources for the specified game part may remain loaded. In this situation,
     /// it is safe to call `loadGamePart` on the instance again.
-    pub fn loadGamePart(self: *Self, game_part: GamePart) LoadGamePartError!GamePartResourceLocations {
+    pub fn loadGamePart(self: *Self, game_part: vm.GamePart) LoadGamePartError!GamePartResourceLocations {
         for (self.resource_locations) |*location| {
             self.unload(location);
         }
@@ -333,7 +332,7 @@ test "loadIndividualResource returns error.GamePartOnlyResourceType on game-part
     var memory = try Memory.init(testing.allocator, test_reader);
     defer memory.deinit();
 
-    const resource_ids = GamePart.gameplay1.resourceIDs();
+    const resource_ids = vm.GamePart.gameplay1.resourceIDs();
     try testing.expectError(error.GamePartOnlyResourceType, memory.loadIndividualResource(resource_ids.palettes));
     try testing.expectError(error.GamePartOnlyResourceType, memory.loadIndividualResource(resource_ids.bytecode));
     try testing.expectError(error.GamePartOnlyResourceType, memory.loadIndividualResource(resource_ids.polygons));
@@ -412,7 +411,7 @@ test "loadGamePart loads expected resources for game part with animations" {
     var memory = try Memory.init(testing.allocator, test_reader);
     defer memory.deinit();
 
-    const game_part: GamePart = .gameplay1;
+    const game_part: vm.GamePart = .gameplay1;
     const resource_ids = game_part.resourceIDs();
     const locations = try memory.loadGamePart(game_part);
 
@@ -431,7 +430,7 @@ test "loadGamePart does not load animations for game part without animations" {
     var memory = try Memory.init(testing.allocator, test_reader);
     defer memory.deinit();
 
-    const game_part: GamePart = .copy_protection;
+    const game_part: vm.GamePart = .copy_protection;
     const locations = try memory.loadGamePart(game_part);
 
     try testing.expectEqual(null, locations.animations);
@@ -441,8 +440,8 @@ test "loadGamePart unloads any previously loaded game part's resources" {
     var memory = try Memory.init(testing.allocator, test_reader);
     defer memory.deinit();
 
-    const first_game_part: GamePart = .intro_cinematic;
-    const second_game_part: GamePart = .gameplay1;
+    const first_game_part: vm.GamePart = .intro_cinematic;
+    const second_game_part: vm.GamePart = .gameplay1;
     const first_game_part_ids = first_game_part.resourceIDs();
     const second_game_part_ids = second_game_part.resourceIDs();
 
@@ -516,7 +515,7 @@ test "unloadAllIndividualResources unloads sound and music resources but leaves 
     var memory = try Memory.init(testing.allocator, test_reader);
     defer memory.deinit();
 
-    const game_part: GamePart = .gameplay1;
+    const game_part: vm.GamePart = .gameplay1;
     const game_part_resource_ids = game_part.resourceIDs();
     const sfx_resource_id = ResourceFixtures.sfx_resource_id;
     const music_resource_id = ResourceFixtures.music_resource_id;

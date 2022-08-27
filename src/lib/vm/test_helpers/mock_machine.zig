@@ -1,16 +1,11 @@
-const Machine = @import("../machine.zig").Machine;
-const Video = @import("../video.zig").Video;
-const Audio = @import("../audio.zig").Audio;
-const Registers = @import("../registers.zig").Registers;
-
 const anotherworld = @import("../../anotherworld.zig");
 const rendering = anotherworld.rendering;
 const resources = anotherworld.resources;
 const text = anotherworld.text;
+const audio = anotherworld.audio;
+const vm = anotherworld.vm;
 
-const GamePart = @import("../game_part.zig").GamePart;
-const ChannelID = @import("../channel_id.zig").ChannelID;
-const BufferID = @import("../buffer_id.zig").BufferID;
+const Registers = @import("../registers.zig").Registers;
 
 const zeroes = @import("std").mem.zeroes;
 
@@ -44,7 +39,7 @@ pub fn MockMachine(comptime Implementation: type) type {
 
         const Self = @This();
 
-        pub fn drawPolygon(self: *Self, source: Video.PolygonSource, address: rendering.PolygonResource.Address, point: rendering.Point, scale: rendering.PolygonScale) !void {
+        pub fn drawPolygon(self: *Self, source: vm.PolygonSource, address: rendering.PolygonResource.Address, point: rendering.Point, scale: rendering.PolygonScale) !void {
             self.call_counts.drawPolygon += 1;
             try Implementation.drawPolygon(source, address, point, scale);
         }
@@ -59,27 +54,27 @@ pub fn MockMachine(comptime Implementation: type) type {
             try Implementation.selectPalette(palette_id);
         }
 
-        pub fn selectVideoBuffer(self: *Self, buffer_id: BufferID) void {
+        pub fn selectVideoBuffer(self: *Self, buffer_id: vm.BufferID) void {
             self.call_counts.selectVideoBuffer += 1;
             Implementation.selectVideoBuffer(buffer_id);
         }
 
-        pub fn fillVideoBuffer(self: *Self, buffer_id: BufferID, color_id: rendering.ColorID) void {
+        pub fn fillVideoBuffer(self: *Self, buffer_id: vm.BufferID, color_id: rendering.ColorID) void {
             self.call_counts.fillVideoBuffer += 1;
             Implementation.fillVideoBuffer(buffer_id, color_id);
         }
 
-        pub fn copyVideoBuffer(self: *Self, source: BufferID, destination: BufferID, vertical_offset: rendering.Point.Coordinate) void {
+        pub fn copyVideoBuffer(self: *Self, source: vm.BufferID, destination: vm.BufferID, vertical_offset: rendering.Point.Coordinate) void {
             self.call_counts.copyVideoBuffer += 1;
             Implementation.copyVideoBuffer(source, destination, vertical_offset);
         }
 
-        pub fn renderVideoBuffer(self: *Self, buffer_id: BufferID, delay: Video.Milliseconds) void {
+        pub fn renderVideoBuffer(self: *Self, buffer_id: vm.BufferID, delay: vm.Milliseconds) void {
             self.call_counts.renderVideoBuffer += 1;
             Implementation.renderVideoBuffer(buffer_id, delay);
         }
 
-        pub fn scheduleGamePart(self: *Self, game_part: GamePart) void {
+        pub fn scheduleGamePart(self: *Self, game_part: vm.GamePart) void {
             self.call_counts.scheduleGamePart += 1;
             Implementation.scheduleGamePart(game_part);
         }
@@ -94,12 +89,12 @@ pub fn MockMachine(comptime Implementation: type) type {
             Implementation.unloadAllResources();
         }
 
-        pub fn playMusic(self: *Self, resource_id: resources.ResourceID, offset: Audio.Offset, delay: Audio.Delay) !void {
+        pub fn playMusic(self: *Self, resource_id: resources.ResourceID, offset: audio.Offset, delay: audio.Delay) !void {
             self.call_counts.playMusic += 1;
             try Implementation.playMusic(resource_id, offset, delay);
         }
 
-        pub fn setMusicDelay(self: *Self, delay: Audio.Delay) void {
+        pub fn setMusicDelay(self: *Self, delay: audio.Delay) void {
             self.call_counts.setMusicDelay += 1;
             Implementation.setMusicDelay(delay);
         }
@@ -109,12 +104,12 @@ pub fn MockMachine(comptime Implementation: type) type {
             Implementation.stopMusic();
         }
 
-        pub fn playSound(self: *Self, resource_id: resources.ResourceID, channel_id: ChannelID, volume: Audio.Volume, frequency: Audio.Frequency) !void {
+        pub fn playSound(self: *Self, resource_id: resources.ResourceID, channel_id: vm.ChannelID, volume: audio.Volume, frequency: audio.Frequency) !void {
             self.call_counts.playSound += 1;
             try Implementation.playSound(resource_id, channel_id, volume, frequency);
         }
 
-        pub fn stopChannel(self: *Self, channel_id: ChannelID) void {
+        pub fn stopChannel(self: *Self, channel_id: vm.ChannelID) void {
             self.call_counts.stopChannel += 1;
             Implementation.stopChannel(channel_id);
         }
@@ -127,7 +122,7 @@ const testing = @import("utils").testing;
 
 test "MockMachine calls drawPolygon correctly on stub implementation" {
     var mock = mockMachine(struct {
-        fn drawPolygon(source: Video.PolygonSource, address: rendering.PolygonResource.Address, point: rendering.Point, scale: rendering.PolygonScale) !void {
+        fn drawPolygon(source: vm.PolygonSource, address: rendering.PolygonResource.Address, point: rendering.Point, scale: rendering.PolygonScale) !void {
             try testing.expectEqual(.animations, source);
             try testing.expectEqual(0xBEEF, address);
             try testing.expectEqual(320, point.x);
@@ -169,7 +164,7 @@ test "MockMachine calls selectPalette correctly on stub implementation" {
 
 test "MockMachine calls selectVideoBuffer correctly on stub implementation" {
     var mock = mockMachine(struct {
-        fn selectVideoBuffer(buffer_id: BufferID) void {
+        fn selectVideoBuffer(buffer_id: vm.BufferID) void {
             testing.expectEqual(.front_buffer, buffer_id) catch {
                 unreachable;
             };
@@ -182,7 +177,7 @@ test "MockMachine calls selectVideoBuffer correctly on stub implementation" {
 
 test "MockMachine calls fillVideoBuffer correctly on stub implementation" {
     var mock = mockMachine(struct {
-        fn fillVideoBuffer(buffer_id: BufferID, color_id: rendering.ColorID) void {
+        fn fillVideoBuffer(buffer_id: vm.BufferID, color_id: rendering.ColorID) void {
             testing.expectEqual(.front_buffer, buffer_id) catch {
                 unreachable;
             };
@@ -198,7 +193,7 @@ test "MockMachine calls fillVideoBuffer correctly on stub implementation" {
 
 test "MockMachine calls copyVideoBuffer correctly on stub implementation" {
     var mock = mockMachine(struct {
-        fn copyVideoBuffer(source: BufferID, destination: BufferID, vertical_offset: rendering.Point.Coordinate) void {
+        fn copyVideoBuffer(source: vm.BufferID, destination: vm.BufferID, vertical_offset: rendering.Point.Coordinate) void {
             testing.expectEqual(.{ .specific = 1 }, source) catch {
                 unreachable;
             };
@@ -217,7 +212,7 @@ test "MockMachine calls copyVideoBuffer correctly on stub implementation" {
 
 test "MockMachine calls renderVideoBuffer correctly on stub implementation" {
     var mock = mockMachine(struct {
-        fn renderVideoBuffer(buffer_id: BufferID, delay: Video.Milliseconds) void {
+        fn renderVideoBuffer(buffer_id: vm.BufferID, delay: vm.Milliseconds) void {
             testing.expectEqual(.back_buffer, buffer_id) catch unreachable;
             testing.expectEqual(5, delay) catch unreachable;
         }
@@ -229,7 +224,7 @@ test "MockMachine calls renderVideoBuffer correctly on stub implementation" {
 
 test "MockMachine calls scheduleGamePart correctly on stub implementation" {
     var mock = mockMachine(struct {
-        fn scheduleGamePart(game_part: GamePart) void {
+        fn scheduleGamePart(game_part: vm.GamePart) void {
             testing.expectEqual(.copy_protection, game_part) catch unreachable;
         }
     });
@@ -260,7 +255,7 @@ test "MockMachine calls unloadAllResources correctly on stub implementation" {
 
 test "MockMachine calls playMusic correctly on stub implementation" {
     var mock = mockMachine(struct {
-        fn playMusic(resource_id: resources.ResourceID, offset: Audio.Offset, delay: Audio.Delay) !void {
+        fn playMusic(resource_id: resources.ResourceID, offset: audio.Offset, delay: audio.Delay) !void {
             try testing.expectEqual(resources.ResourceID.cast(0xBEEF), resource_id);
             try testing.expectEqual(128, offset);
             try testing.expectEqual(1234, delay);
@@ -273,7 +268,7 @@ test "MockMachine calls playMusic correctly on stub implementation" {
 
 test "MockMachine calls setMusicDelay correctly on stub implementation" {
     var mock = mockMachine(struct {
-        fn setMusicDelay(delay: Audio.Delay) void {
+        fn setMusicDelay(delay: audio.Delay) void {
             testing.expectEqual(1234, delay) catch {
                 unreachable;
             };
@@ -295,27 +290,27 @@ test "MockMachine calls stopMusic correctly on stub implementation" {
 
 test "MockMachine calls playSound correctly on stub implementation" {
     var mock = mockMachine(struct {
-        fn playSound(resource_id: resources.ResourceID, channel_id: ChannelID, volume: Audio.Volume, frequency: Audio.Frequency) !void {
+        fn playSound(resource_id: resources.ResourceID, channel_id: vm.ChannelID, volume: audio.Volume, frequency: audio.Frequency) !void {
             try testing.expectEqual(resources.ResourceID.cast(0xBEEF), resource_id);
-            try testing.expectEqual(ChannelID.cast(2), channel_id);
+            try testing.expectEqual(vm.ChannelID.cast(2), channel_id);
             try testing.expectEqual(64, volume);
             try testing.expectEqual(128, frequency);
         }
     });
 
-    try mock.playSound(resources.ResourceID.cast(0xBEEF), ChannelID.cast(2), 64, 128);
+    try mock.playSound(resources.ResourceID.cast(0xBEEF), vm.ChannelID.cast(2), 64, 128);
     try testing.expectEqual(1, mock.call_counts.playSound);
 }
 
 test "MockMachine calls stopChannel correctly on stub implementation" {
     var mock = mockMachine(struct {
-        fn stopChannel(channel_id: ChannelID) void {
-            testing.expectEqual(ChannelID.cast(2), channel_id) catch {
+        fn stopChannel(channel_id: vm.ChannelID) void {
+            testing.expectEqual(vm.ChannelID.cast(2), channel_id) catch {
                 unreachable;
             };
         }
     });
 
-    mock.stopChannel(ChannelID.cast(2));
+    mock.stopChannel(vm.ChannelID.cast(2));
     try testing.expectEqual(1, mock.call_counts.stopChannel);
 }

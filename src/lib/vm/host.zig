@@ -10,7 +10,7 @@
 //!     return Host.init(self, .{ .bufferReady = bufferReady, .bufferChanged = bufferChanged });
 //!   }
 //!
-//!   fn bufferReady(self: *MyHost, machine: *const Machine, buffer_id: ResolvedBufferID, delay: Milliseconds) void {
+//!   fn bufferReady(self: *MyHost, machine: *const vm.Machine, buffer_id: vm.ResolvedBufferID, delay: vm.Milliseconds) void {
 //!     machine.renderBufferToSurface(buffer_id, &self.surface);
 //!   }
 //!
@@ -22,16 +22,13 @@
 
 const anotherworld = @import("../anotherworld.zig");
 const meta = @import("utils").meta;
-
 const std = @import("std");
 
-const Machine = @import("machine.zig").Machine;
-const ResolvedBufferID = @import("video.zig").Video.ResolvedBufferID;
-const Milliseconds = @import("video.zig").Video.Milliseconds;
+const vm = anotherworld.vm;
 
 fn Functions(comptime State: type) type {
-    const BufferReadyFn = fn (state: State, machine: *const Machine, buffer_id: ResolvedBufferID, delay: Milliseconds) void;
-    const BufferChangedFn = fn (state: State, machine: *const Machine, buffer_id: ResolvedBufferID) void;
+    const BufferReadyFn = fn (state: State, machine: *const vm.Machine, buffer_id: vm.ResolvedBufferID, delay: vm.Milliseconds) void;
+    const BufferChangedFn = fn (state: State, machine: *const vm.Machine, buffer_id: vm.ResolvedBufferID) void;
 
     return struct {
         bufferReady: ?BufferReadyFn = null,
@@ -65,14 +62,14 @@ pub const Host = struct {
     /// `delay` is the number of milliseconds that the host should continue displaying
     /// the *previous* frame before replacing it with this one.
     /// (The host may modify this delay to speed up or slow down gameplay.)
-    pub fn bufferReady(self: Self, machine: *const Machine, buffer_id: ResolvedBufferID, delay: Milliseconds) void {
+    pub fn bufferReady(self: Self, machine: *const vm.Machine, buffer_id: vm.ResolvedBufferID, delay: vm.Milliseconds) void {
         self.vtable.bufferReady(.{ self.state, machine, buffer_id, delay });
     }
 
     /// Called each time the specified machine draws pixel data into a video buffer.
     /// The host can request the contents of the buffer to be rendered into a 24-bit surface
     /// using `machine.renderBufferToSurface(buffer_id, &surface).`
-    pub fn bufferChanged(self: Self, machine: *const Machine, buffer_id: ResolvedBufferID) void {
+    pub fn bufferChanged(self: Self, machine: *const vm.Machine, buffer_id: vm.ResolvedBufferID) void {
         self.vtable.bufferChanged(.{ self.state, machine, buffer_id });
     }
 };
@@ -86,8 +83,8 @@ test "Ensure everything compiles" {
 }
 
 test "Host calls callback implementations" {
-    const expected_buffer_id: ResolvedBufferID = 0;
-    const expected_delay: Milliseconds = 0;
+    const expected_buffer_id: vm.ResolvedBufferID = 0;
+    const expected_delay: vm.Milliseconds = 0;
 
     const Implementation = struct {
         call_counts: struct {
@@ -97,13 +94,13 @@ test "Host calls callback implementations" {
 
         const Self = @This();
 
-        fn bufferReady(self: *Self, _: *const Machine, buffer_id: ResolvedBufferID, delay: Milliseconds) void {
+        fn bufferReady(self: *Self, _: *const vm.Machine, buffer_id: vm.ResolvedBufferID, delay: vm.Milliseconds) void {
             self.call_counts.bufferReady += 1;
             testing.expectEqual(expected_buffer_id, buffer_id) catch unreachable;
             testing.expectEqual(expected_delay, delay) catch unreachable;
         }
 
-        fn bufferChanged(self: *Self, _: *const Machine, buffer_id: ResolvedBufferID) void {
+        fn bufferChanged(self: *Self, _: *const vm.Machine, buffer_id: vm.ResolvedBufferID) void {
             self.call_counts.bufferChanged += 1;
             testing.expectEqual(expected_buffer_id, buffer_id) catch unreachable;
         }
@@ -119,7 +116,7 @@ test "Host calls callback implementations" {
     var implementation = Implementation{};
     const host = implementation.host();
 
-    var machine = Machine.testInstance(.{});
+    var machine = vm.Machine.testInstance(.{});
     defer machine.deinit();
 
     host.bufferReady(&machine, expected_buffer_id, expected_delay);

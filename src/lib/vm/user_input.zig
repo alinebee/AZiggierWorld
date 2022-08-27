@@ -1,6 +1,5 @@
 const anotherworld = @import("../anotherworld.zig");
-
-const Register = @import("register.zig");
+const vm = anotherworld.vm;
 
 /// The current state of user input. Expected to be provided by the host on each tic.
 pub const UserInput = struct {
@@ -79,36 +78,36 @@ pub const UserInput = struct {
 const RegisterValues = struct {
     /// The value to insert into `RegisterID.up_down_input`.
     /// Will be -1 if left is active, 1 if right is active, 0 if neither is active.
-    up_down_input: Register.Signed = 0,
+    up_down_input: vm.Register.Signed = 0,
 
     /// The value to insert into `RegisterID.left_right_input`.
     /// Will be -1 if left is active, 1 if right is active, 0 if neither is active.
-    left_right_input: Register.Signed = 0,
+    left_right_input: vm.Register.Signed = 0,
 
     /// The value to insert into `RegisterID.action_input`.
     /// Will be 1 if action is active, 0 otherwise.
-    action_input: Register.Signed = 0,
+    action_input: vm.Register.Signed = 0,
 
     /// The value to insert into `RegisterID.movement_inputs`.
     /// Contains bitflags of the currently active movement directions:
     /// Bits 0, 1, 2, 3 correspond to right, left, down, up.
-    movement_inputs: Register.BitPattern = 0b0000,
+    movement_inputs: vm.Register.BitPattern = 0b0000,
 
     /// The value to insert into `RegisterID.all_inputs`.
     /// Contains bitflags of the currently active movement directions plus action:
     /// Bits 0, 1, 2, 3 correspond to right, left, down, up, and bit 7 is the action flag.
-    all_inputs: Register.BitPattern = 0b0000_0000,
+    all_inputs: vm.Register.BitPattern = 0b0000_0000,
 
     /// The value to insert into `RegisterID.last_pressed_character`.
     /// Contains the uppercased ASCII value of the most recently-pressed key,
     /// or `0` if the key is unknown or does not correspond to a supported character.
-    last_pressed_character: Register.Unsigned = 0,
+    last_pressed_character: vm.Register.Unsigned = 0,
 };
 
 /// Given an ASCII character representing the most recently pressed key,
 /// normalizes it into a value supported by the Another World bytecode.
 /// Returns `0` if the character is unsupported.
-fn normalizedCharacterRegisterValue(char: u8) Register.Unsigned {
+fn normalizedCharacterRegisterValue(char: u8) vm.Register.Unsigned {
     return switch (char) {
         'A'...'Z' => |uppercase_char| uppercase_char,
         'a'...'z' => |lowercase_char| {

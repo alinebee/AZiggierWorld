@@ -13,8 +13,7 @@
 
 const anotherworld = @import("../anotherworld.zig");
 const bytecode = anotherworld.bytecode;
-
-const Machine = @import("machine.zig").Machine;
+const vm = anotherworld.vm;
 
 const ExecutionState = union(enum) {
     /// The thread is active and will continue execution from the specified address when it is next run.
@@ -121,7 +120,7 @@ pub const Thread = struct {
 
     /// Execute the machine's current program on this thread, running until the thread yields
     /// or deactivates, or an error occurs, or the execution limit is exceeded.
-    pub fn run(self: *Self, machine: *Machine, max_instructions: usize) !void {
+    pub fn run(self: *Self, machine: *vm.Machine, max_instructions: usize) !void {
         if (self.pause_state == .paused) return;
 
         // If this thread is active, resume executing the program from the previous address for this thread;
@@ -233,7 +232,7 @@ test "applyScheduledStates applies scheduled pause state" {
 test "run stores program counter in thread state upon reaching yield instruction" {
     const program_data = bytecode.Instruction.Yield.Fixtures.valid;
 
-    var machine = Machine.testInstance(.{ .program_data = &program_data });
+    var machine = vm.Machine.testInstance(.{ .program_data = &program_data });
     defer machine.deinit();
 
     const thread = &machine.threads[0];
@@ -244,7 +243,7 @@ test "run stores program counter in thread state upon reaching yield instruction
 test "run deactivates thread upon reaching kill instruction" {
     const program_data = bytecode.Instruction.Kill.Fixtures.valid;
 
-    var machine = Machine.testInstance(.{ .program_data = &program_data });
+    var machine = vm.Machine.testInstance(.{ .program_data = &program_data });
     defer machine.deinit();
 
     const thread = &machine.threads[0];

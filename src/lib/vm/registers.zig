@@ -1,49 +1,47 @@
 const anotherworld = @import("../anotherworld.zig");
 const static_limits = anotherworld.static_limits;
-
-const Register = @import("register.zig");
-const RegisterID = @import("register_id.zig").RegisterID;
+const vm = anotherworld.vm;
 
 const register_count = static_limits.register_count;
 
 /// A bank of 256 16-bit registers, that can be read and written as either signed or unsigned values.
 pub const Registers = struct {
-    const UnsignedValues = [register_count]Register.Unsigned;
-    const SignedValues = [register_count]Register.Signed;
-    const BitPatternValues = [register_count]Register.BitPattern;
+    const UnsignedValues = [register_count]vm.Register.Unsigned;
+    const SignedValues = [register_count]vm.Register.Signed;
+    const BitPatternValues = [register_count]vm.Register.BitPattern;
 
     values: UnsignedValues = .{0} ** register_count,
 
     const Self = @This();
 
     /// Get the value of the specified register as an unsigned value.
-    pub fn unsigned(self: Self, id: RegisterID) Register.Unsigned {
-        return @bitCast(Register.Unsigned, self.values[id.index()]);
+    pub fn unsigned(self: Self, id: vm.RegisterID) vm.Register.Unsigned {
+        return @bitCast(vm.Register.Unsigned, self.values[id.index()]);
     }
 
     /// Set the value of the specified register to the specified unsigned value.
-    pub fn setUnsigned(self: *Self, id: RegisterID, value: Register.Unsigned) void {
-        self.values[id.index()] = @bitCast(Register.Unsigned, value);
+    pub fn setUnsigned(self: *Self, id: vm.RegisterID, value: vm.Register.Unsigned) void {
+        self.values[id.index()] = @bitCast(vm.Register.Unsigned, value);
     }
 
     /// Get the value of the specified register as a signed value.
-    pub fn signed(self: Self, id: RegisterID) Register.Signed {
-        return @bitCast(Register.Signed, self.values[id.index()]);
+    pub fn signed(self: Self, id: vm.RegisterID) vm.Register.Signed {
+        return @bitCast(vm.Register.Signed, self.values[id.index()]);
     }
 
     /// Set the value of the specified register to the specified signed value.
-    pub fn setSigned(self: *Self, id: RegisterID, value: Register.Signed) void {
-        self.values[id.index()] = @bitCast(Register.Unsigned, value);
+    pub fn setSigned(self: *Self, id: vm.RegisterID, value: vm.Register.Signed) void {
+        self.values[id.index()] = @bitCast(vm.Register.Unsigned, value);
     }
 
     /// Get the value of the specified register as a signed value.
-    pub fn bitPattern(self: Self, id: RegisterID) Register.BitPattern {
-        return @bitCast(Register.BitPattern, self.values[id.index()]);
+    pub fn bitPattern(self: Self, id: vm.RegisterID) vm.Register.BitPattern {
+        return @bitCast(vm.Register.BitPattern, self.values[id.index()]);
     }
 
     /// Set the value of the specified register to the specified value.
-    pub fn setBitPattern(self: *Self, id: RegisterID, value: Register.BitPattern) void {
-        self.values[id.index()] = @bitCast(Register.Unsigned, value);
+    pub fn setBitPattern(self: *Self, id: vm.RegisterID, value: vm.Register.BitPattern) void {
+        self.values[id.index()] = @bitCast(vm.Register.Unsigned, value);
     }
 
     /// A mutable view of the contents of all registers as unsigned values.

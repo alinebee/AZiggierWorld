@@ -30,28 +30,19 @@
 
 const anotherworld = @import("../anotherworld.zig");
 const rendering = anotherworld.rendering;
+const audio = anotherworld.audio;
 const resources = anotherworld.resources;
 const text = anotherworld.text;
 const bytecode = anotherworld.bytecode;
 const static_limits = anotherworld.static_limits;
 const log = anotherworld.log;
-
-const BufferID = @import("buffer_id.zig").BufferID;
-const ThreadID = @import("thread_id.zig").ThreadID;
-const ChannelID = @import("channel_id.zig").ChannelID;
-const RegisterID = @import("register_id.zig").RegisterID;
-const Register = @import("register.zig");
-const GamePart = @import("game_part.zig").GamePart;
+const vm = anotherworld.vm;
 
 const Thread = @import("thread.zig").Thread;
 const Stack = @import("stack.zig").Stack;
 const Registers = @import("registers.zig").Registers;
 const Video = @import("video.zig").Video;
-const Audio = @import("audio.zig").Audio;
 const Memory = @import("memory.zig").Memory;
-const Host = @import("host.zig").Host;
-const UserInput = @import("user_input.zig").UserInput;
-
 const mock_host = @import("test_helpers/mock_host.zig");
 
 const std = @import("std");
@@ -79,14 +70,14 @@ pub const Machine = struct {
     memory: Memory,
 
     /// The host which the machine will send video and audio output to.
-    host: Host,
+    host: vm.Host,
 
     /// The currently-active game part.
-    current_game_part: GamePart,
+    current_game_part: vm.GamePart,
 
     /// The game part that has been scheduled to start on the next game tic.
     /// Null if no game part is scheduled.
-    scheduled_game_part: ?GamePart = null,
+    scheduled_game_part: ?vm.GamePart = null,
 
     const Self = @This();
 
@@ -97,7 +88,7 @@ pub const Machine = struct {
     /// reads game data from the specified reader, and sends video and audio output to the specified host.
     /// At startup, the virtual machine will attempt to load the resources for the initial game part.
     /// On success, returns a machine instance that is ready to begin simulating.
-    pub fn init(allocator: mem.Allocator, reader: resources.ResourceReader, host: Host, options: Options) !Self {
+    pub fn init(allocator: mem.Allocator, reader: resources.ResourceReader, host: vm.Host, options: Options) !Self {
         var memory = try Memory.init(allocator, reader);
         errdefer memory.deinit();
 
@@ -118,7 +109,7 @@ pub const Machine = struct {
             .current_game_part = undefined,
         };
 
-        const seed = options.seed orelse @truncate(Register.Signed, std.time.milliTimestamp());
+        const seed = options.seed orelse @truncate(vm.Register.Signed, std.time.milliTimestamp());
         // Initialize registers to their expected values.
         self.registers.setSigned(.random_seed, seed);
 
@@ -149,7 +140,7 @@ pub const Machine = struct {
     /// 2. apply the specified user input to the state of the VM;
     /// 3. apply any thread state changes that were scheduled on the previous tic;
     /// 4. run every thread using the bytecode for the current game part.
-    pub fn runTic(self: *Self, input: UserInput) !void {
+    pub fn runTic(self: *Self, input: vm.UserInput) !void {
         if (self.scheduled_game_part) |game_part| {
             try self.startGamePart(game_part);
         }
@@ -176,7 +167,7 @@ pub const Machine = struct {
     // -- Resource subsystem interface --
 
     /// Schedule the specified game part to begin on the next run loop.
-    pub fn scheduleGamePart(self: *Self, game_part: GamePart) void {
+    pub fn scheduleGamePart(self: *Self, game_part: vm.GamePart) void {
         self.scheduled_game_part = game_part;
     }
 
@@ -207,7 +198,7 @@ pub const Machine = struct {
 
     /// Render a polygon from the specified source and address at the specified screen position and scale.
     /// Returns an error if the specified polygon address was invalid.
-    pub fn drawPolygon(self: *Self, source: Video.PolygonSource, address: rendering.PolygonResource.Address, point: rendering.Point, scale: rendering.PolygonScale) !void {
+    pub fn drawPolygon(self: *Self, source: vm.PolygonSource, address: rendering.PolygonResource.Address, point: rendering.Point, scale: rendering.PolygonScale) !void {
         const modified_buffer = try self.video.drawPolygon(source, address, point, scale);
         self.host.bufferChanged(self, modified_buffer);
     }
@@ -225,30 +216,30 @@ pub const Machine = struct {
     }
 
     /// Select the video buffer that subsequent drawPolygon and drawString operations will draw into.
-    pub fn selectVideoBuffer(self: *Self, buffer_id: BufferID) void {
+    pub fn selectVideoBuffer(self: *Self, buffer_id: vm.BufferID) void {
         self.video.selectBuffer(buffer_id);
     }
 
     /// Fill a specified video buffer with a single color.
-    pub fn fillVideoBuffer(self: *Self, buffer_id: BufferID, color_id: rendering.ColorID) void {
+    pub fn fillVideoBuffer(self: *Self, buffer_id: vm.BufferID, color_id: rendering.ColorID) void {
         const modified_buffer = self.video.fillBuffer(buffer_id, color_id);
         self.host.bufferChanged(self, modified_buffer);
     }
 
     /// Copy the contents of one video buffer into another at the specified vertical offset.
-    pub fn copyVideoBuffer(self: *Self, source: BufferID, destination: BufferID, vertical_offset: rendering.Point.Coordinate) void {
+    pub fn copyVideoBuffer(self: *Self, source: vm.BufferID, destination: vm.BufferID, vertical_offset: rendering.Point.Coordinate) void {
         const modified_buffer = self.video.copyBuffer(source, destination, vertical_offset);
         self.host.bufferChanged(self, modified_buffer);
     }
 
     /// Render the contents of the specified buffer to the host screen after the specified delay.
-    pub fn renderVideoBuffer(self: *Self, buffer_id: BufferID, delay: Video.Milliseconds) void {
+    pub fn renderVideoBuffer(self: *Self, buffer_id: vm.BufferID, delay: vm.Milliseconds) void {
         const buffer_to_draw = self.video.markBufferAsReady(buffer_id);
         self.host.bufferReady(self, buffer_to_draw, delay);
     }
 
     /// Called by the host to render the specified buffer into a 24-bit host surface.
-    pub fn renderBufferToSurface(self: *const Self, buffer_id: Video.ResolvedBufferID, surface: *Video.HostSurface) !void {
+    pub fn renderBufferToSurface(self: *const Self, buffer_id: vm.ResolvedBufferID, surface: *vm.HostSurface) !void {
         try self.video.renderBufferToSurface(buffer_id, surface);
     }
 
@@ -256,8 +247,8 @@ pub const Machine = struct {
 
     /// Start playing a music track from a specified resource.
     /// Returns an error if the resource does not exist or could not be loaded.
-    pub fn playMusic(_: *Self, resource_id: resources.ResourceID, offset: Audio.Offset, delay: Audio.Delay) !void {
-        log.debug("Audio.playMusic: play #{X} at offset {} after delay {}", .{
+    pub fn playMusic(_: *Self, resource_id: resources.ResourceID, offset: audio.Offset, delay: audio.Delay) !void {
+        log.debug("playMusic: play #{X} at offset {} after delay {}", .{
             resource_id,
             offset,
             delay,
@@ -265,19 +256,19 @@ pub const Machine = struct {
     }
 
     /// Set on the current or subsequent music track.
-    pub fn setMusicDelay(_: *Self, delay: Audio.Delay) void {
-        log.debug("Audio.setMusicDelay: set delay to {}", .{delay});
+    pub fn setMusicDelay(_: *Self, delay: audio.Delay) void {
+        log.debug("setMusicDelay: set delay to {}", .{delay});
     }
 
     /// Stop playing any current music track.
     pub fn stopMusic(_: *Self) void {
-        log.debug("Audio.stopMusic: stop playing", .{});
+        log.debug("stopMusic: stop playing", .{});
     }
 
     /// Play a sound effect from the specified resource on the specified channel.
     /// Returns an error if the resource does not exist or could not be loaded.
-    pub fn playSound(_: *Self, resource_id: resources.ResourceID, channel_id: ChannelID, volume: Audio.Volume, frequency: Audio.Frequency) !void {
-        log.debug("Audio.playSound: play #{X} on channel {} at volume {}, frequency {}", .{
+    pub fn playSound(_: *Self, resource_id: resources.ResourceID, channel_id: vm.ChannelID, volume: audio.Volume, frequency: audio.Frequency) !void {
+        log.debug("playSound: play #{X} on channel {} at volume {}, frequency {}", .{
             resource_id,
             channel_id,
             volume,
@@ -286,14 +277,14 @@ pub const Machine = struct {
     }
 
     /// Stop any sound effect playing on the specified channel.
-    pub fn stopChannel(_: *Self, channel_id: ChannelID) void {
-        log.debug("Audio.stopChannel: stop playing on channel {}", .{channel_id});
+    pub fn stopChannel(_: *Self, channel_id: vm.ChannelID) void {
+        log.debug("stopChannel: stop playing on channel {}", .{channel_id});
     }
 
     // - Private methods -
 
     /// Update the machine's registers to reflect the current state of the user's input.
-    fn applyUserInput(self: *Self, input: UserInput) void {
+    fn applyUserInput(self: *Self, input: vm.UserInput) void {
         const register_values = input.registerValues();
 
         self.registers.setSigned(.left_right_input, register_values.left_right_input);
@@ -322,7 +313,7 @@ pub const Machine = struct {
     /// Not intended to be called during thread execution: instead call `scheduleGamePart`,
     /// which will let the current game tic finish executing all threads before beginning
     /// the new game part on the next run loop.
-    fn startGamePart(self: *Self, game_part: GamePart) !void {
+    fn startGamePart(self: *Self, game_part: vm.GamePart) !void {
         const resource_locations = try self.memory.loadGamePart(game_part);
         self.program = try bytecode.Program.init(resource_locations.bytecode);
 
@@ -334,7 +325,7 @@ pub const Machine = struct {
         }
 
         // Reset the main thread to begin execution at the start of the current program.
-        self.threads[ThreadID.main.index()].start();
+        self.threads[vm.ThreadID.main.index()].start();
 
         self.current_game_part = game_part;
         self.scheduled_game_part = null;
@@ -348,11 +339,11 @@ pub const Machine = struct {
     pub const Options = struct {
         /// Which game part to start up with.
         /// TODO: default this to .intro_cinematic once the copy protection bypass is working fully.
-        initial_game_part: GamePart = .copy_protection,
+        initial_game_part: vm.GamePart = .copy_protection,
 
         /// The seed to use for the game's random number generator.
         /// If null, a random seed will be chosen based on the system clock.
-        seed: ?Register.Signed = null,
+        seed: ?vm.Register.Signed = null,
     };
 
     /// Optional configuration settings for the test machine instance created by `testInstance`.
@@ -360,7 +351,7 @@ pub const Machine = struct {
         // Optional bytecode to load as the machine's program.
         program_data: ?[]const u8 = null,
         // An optional host that the test instance should talk to.
-        host: ?Host = null,
+        host: ?vm.Host = null,
     };
 
     /// Returns a machine instance suitable for use in tests.
@@ -401,7 +392,7 @@ test "new creates virtual machine instance with expected initial state" {
     defer machine.deinit();
 
     for (machine.threads) |thread, index| {
-        if (index == ThreadID.main.index()) {
+        if (index == vm.ThreadID.main.index()) {
             try testing.expectEqual(.{ .active = 0 }, thread.execution_state);
         } else {
             try testing.expectEqual(.inactive, thread.execution_state);
@@ -410,7 +401,7 @@ test "new creates virtual machine instance with expected initial state" {
     }
 
     for (machine.registers.unsignedSlice()) |register, id| {
-        const expected_value: Register.Unsigned = switch (@intToEnum(RegisterID, id)) {
+        const expected_value: vm.Register.Unsigned = switch (@intToEnum(vm.RegisterID, id)) {
             .virtual_machine_startup_UNKNOWN => 0x81,
             .copy_protection_bypass_1 => 0b0001_0000,
             .copy_protection_bypass_2 => 0x0080,
@@ -465,7 +456,7 @@ test "startGamePart resets previous thread state, loads resources for new game p
         register.* = 0xBEEF;
     }
 
-    const next_game_part = GamePart.arena_cinematic;
+    const next_game_part = vm.GamePart.arena_cinematic;
     try testing.expect(machine.current_game_part != next_game_part);
 
     const current_resource_ids = machine.current_game_part.resourceIDs();
@@ -482,7 +473,7 @@ test "startGamePart resets previous thread state, loads resources for new game p
     try machine.startGamePart(next_game_part);
 
     for (machine.threads) |thread, index| {
-        if (index == ThreadID.main.index()) {
+        if (index == vm.ThreadID.main.index()) {
             try testing.expectEqual(.{ .active = 0 }, thread.execution_state);
         } else {
             try testing.expectEqual(.inactive, thread.execution_state);
@@ -516,7 +507,7 @@ test "scheduleGamePart schedules a new game part without loading it" {
     try testing.expectEqual(null, machine.scheduled_game_part);
 
     const current_game_part = machine.current_game_part;
-    const next_game_part = GamePart.arena_cinematic;
+    const next_game_part = vm.GamePart.arena_cinematic;
     try testing.expect(current_game_part != next_game_part);
 
     const resource_ids = next_game_part.resourceIDs();
@@ -538,10 +529,10 @@ test "scheduleGamePart schedules a new game part without loading it" {
 
 test "loadResource loads audio resource into main memory and does not notify host of changed buffer" {
     var host = mock_host.mockHost(struct {
-        pub fn bufferReady(_: *const Machine, _: Video.ResolvedBufferID, _: Video.Milliseconds) void {
+        pub fn bufferReady(_: *const Machine, _: vm.ResolvedBufferID, _: vm.Milliseconds) void {
             unreachable;
         }
-        pub fn bufferChanged(_: *const Machine, _: Video.ResolvedBufferID) void {
+        pub fn bufferChanged(_: *const Machine, _: vm.ResolvedBufferID) void {
             unreachable;
         }
     });
@@ -560,10 +551,10 @@ test "loadResource loads audio resource into main memory and does not notify hos
 
 test "loadResource copies bitmap resource directly into video buffer without persisting in main memory and notifies host of changed buffer" {
     var host = mock_host.mockHost(struct {
-        pub fn bufferReady(_: *const Machine, _: Video.ResolvedBufferID, _: Video.Milliseconds) void {
+        pub fn bufferReady(_: *const Machine, _: vm.ResolvedBufferID, _: vm.Milliseconds) void {
             unreachable;
         }
-        pub fn bufferChanged(_: *const Machine, buffer_id: Video.ResolvedBufferID) void {
+        pub fn bufferChanged(_: *const Machine, buffer_id: vm.ResolvedBufferID) void {
             testing.expectEqual(Video.bitmap_buffer_id, buffer_id) catch unreachable;
         }
     });
@@ -591,10 +582,10 @@ test "loadResource copies bitmap resource directly into video buffer without per
 
 test "loadResource returns error on invalid resource ID and does not notify host of changed buffer" {
     var host = mock_host.mockHost(struct {
-        pub fn bufferReady(_: *const Machine, _: Video.ResolvedBufferID, _: Video.Milliseconds) void {
+        pub fn bufferReady(_: *const Machine, _: vm.ResolvedBufferID, _: vm.Milliseconds) void {
             unreachable;
         }
-        pub fn bufferChanged(_: *const Machine, _: Video.ResolvedBufferID) void {
+        pub fn bufferChanged(_: *const Machine, _: vm.ResolvedBufferID) void {
             unreachable;
         }
     });
@@ -612,7 +603,7 @@ test "applyUserInput sets expected register values" {
     var machine = Machine.testInstance(.{});
     defer machine.deinit();
 
-    const full_input = UserInput{
+    const full_input = vm.UserInput{
         .action = true,
         .left = true,
         .right = true,
@@ -629,7 +620,7 @@ test "applyUserInput sets expected register values" {
     try testing.expectEqual(0b1111, machine.registers.bitPattern(.movement_inputs));
     try testing.expectEqual(0b1000_1111, machine.registers.bitPattern(.all_inputs));
 
-    const empty_input = UserInput{};
+    const empty_input = vm.UserInput{};
     machine.applyUserInput(empty_input);
 
     try testing.expectEqual(0, machine.registers.signed(.action_input));
@@ -649,7 +640,7 @@ test "applyUserInput sets RegisterID.last_pressed_character when in password ent
     const original_value = 1234;
     machine.registers.setUnsigned(.last_pressed_character, original_value);
 
-    const input = UserInput{ .last_pressed_character = 'a' };
+    const input = vm.UserInput{ .last_pressed_character = 'a' };
     machine.applyUserInput(input);
 
     try testing.expectEqual('A', machine.registers.unsigned(.last_pressed_character));
@@ -664,7 +655,7 @@ test "applyUserInput does not touch RegisterID.last_pressed_character during oth
     const original_value = 1234;
     machine.registers.setUnsigned(.last_pressed_character, original_value);
 
-    const input = UserInput{ .last_pressed_character = 'a' };
+    const input = vm.UserInput{ .last_pressed_character = 'a' };
     machine.applyUserInput(input);
 
     try testing.expectEqual(original_value, machine.registers.unsigned(.last_pressed_character));
@@ -676,7 +667,7 @@ test "applyUserInput opens password screen if permitted for current game part" {
 
     try testing.expectEqual(.intro_cinematic, machine.current_game_part);
 
-    const input = UserInput{ .show_password_screen = true };
+    const input = vm.UserInput{ .show_password_screen = true };
     machine.applyUserInput(input);
 
     try testing.expectEqual(.password_entry, machine.scheduled_game_part);
@@ -688,7 +679,7 @@ test "applyUserInput does not open password screen when in copy protection" {
 
     try machine.startGamePart(.copy_protection);
 
-    const input = UserInput{ .show_password_screen = true };
+    const input = vm.UserInput{ .show_password_screen = true };
     machine.applyUserInput(input);
 
     try testing.expectEqual(null, machine.scheduled_game_part);
@@ -700,7 +691,7 @@ test "applyUserInput does not open password screen when already in password scre
 
     try machine.startGamePart(.password_entry);
 
-    const input = UserInput{ .show_password_screen = true };
+    const input = vm.UserInput{ .show_password_screen = true };
     machine.applyUserInput(input);
 
     try testing.expectEqual(null, machine.scheduled_game_part);
@@ -717,7 +708,7 @@ test "runTic starts next game part if scheduled" {
 
     machine.scheduleGamePart(next_game_part);
 
-    try machine.runTic(UserInput{});
+    try machine.runTic(vm.UserInput{});
 
     try testing.expectEqual(next_game_part, machine.current_game_part);
     try testing.expectEqual(null, machine.scheduled_game_part);
@@ -733,7 +724,7 @@ test "runTic applies user input only after loading scheduled game part" {
     try testing.expectEqual(0, machine.registers.signed(.left_right_input));
     try testing.expectEqual(0, machine.registers.unsigned(.last_pressed_character));
 
-    const input = UserInput{ .left = true, .last_pressed_character = 'A' };
+    const input = vm.UserInput{ .left = true, .last_pressed_character = 'A' };
 
     try machine.runTic(input);
 
@@ -773,7 +764,7 @@ test "runTic updates each thread with its scheduled state before running each th
     try testing.expectEqual(null, main_thread.scheduled_pause_state);
     try testing.expectEqual(null, main_thread.scheduled_execution_state);
 
-    try machine.runTic(UserInput{});
+    try machine.runTic(vm.UserInput{});
 
     for (machine.threads[1..64]) |*thread| {
         // Every thread except main should have remained inactive.
@@ -801,11 +792,11 @@ test "renderVideoBuffer notifies host of new frame with expected buffer ID and d
     const expected_delay = 24;
 
     var host = mock_host.mockHost(struct {
-        pub fn bufferReady(_: *const Machine, buffer_id: Video.ResolvedBufferID, delay: Video.Milliseconds) void {
+        pub fn bufferReady(_: *const Machine, buffer_id: vm.ResolvedBufferID, delay: vm.Milliseconds) void {
             testing.expectEqual(expected_buffer_id, buffer_id) catch unreachable;
             testing.expectEqual(expected_delay, delay) catch unreachable;
         }
-        pub fn bufferChanged(_: *const Machine, _: Video.ResolvedBufferID) void {
+        pub fn bufferChanged(_: *const Machine, _: vm.ResolvedBufferID) void {
             unreachable;
         }
     });
