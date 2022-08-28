@@ -1,24 +1,27 @@
+//! Sound effect resources have the following big-endian data layout:
+//! (Byte offset, type, purpose, description)
+//! ------HEADER------
+//! 0..2    u16     intro length    Length in 16-bit words of intro section.
+//! 2..4    u16     loop length     Length in 16-bit words of loop section.
+//!                                 0 if sound does not loop.
+//! 4..8  unused
+//! ------DATA------
+//! 8..loop_section_start       u8[]    intro data  played through once, then switches to loop
+//! loop_section_start..end     u8[]    loop data   played continuously, restarting from start of loop data
+
 const std = @import("std");
 const anotherworld = @import("../anotherworld.zig");
 const log = anotherworld.log;
 
+/// Data offsets within a sound effect resource.
 const DataLayout = struct {
-    // Another World sound effect resources have the following big-endian data layout:
-    // (Byte offset, type, purpose)
-    // ------HEADER------
-    // 0..2  u16     length in 16-bit words of intro section
-    // 2..4  u16     length in 16-bit words of loop section
-    // 4..8  unused
-    // ------DATA------
-    // 8..loop_section_start    u8[]    start of intro data
-    // loop_section_start..end  u8[]    start of looped data
-
     const intro_length = 0x00;
     const loop_length = 0x02;
     const unused = 0x04;
     const intro = 0x08;
 };
 
+/// Parses an Another World sound effect resource into a structure that can be played back on a mixer.
 pub const SoundResource = struct {
     /// The non-repeated intro section of the sound effect.
     /// Once this plays through, the sample will move on to the looped section.

@@ -13,10 +13,12 @@ pub const Audio = struct {
     pub fn playMusic(_: *Self, music_data: []const u8, offset: audio.Offset, delay: audio.Delay) !void {
         const music = try audio.MusicResource.parse(music_data);
 
-        log.debug("playMusic: play {} at offset {} after delay {}", .{
-            music,
+        log.debug("playMusic: play {*} at offset {} after delay {} (sequence length: {})", .{
+            music_data,
             offset,
             delay,
+
+            music.sequence().len,
         });
     }
 
@@ -35,8 +37,8 @@ pub const Audio = struct {
     pub fn playSound(_: *Self, sound_data: []const u8, channel_id: vm.ChannelID, volume: audio.Volume, frequency_id: audio.FrequencyID) !void {
         const sound = try audio.SoundResource.parse(sound_data);
 
-        log.debug("playSound: play {} on channel {} at volume {}, frequency {} (has intro: {}, loops: {})", .{
-            sound,
+        log.debug("playSound: play {*} on channel {} at volume {}, frequency {} (has intro: {}, loops: {})", .{
+            sound_data,
             channel_id,
             volume,
             frequency_id,

@@ -1,3 +1,17 @@
+//! Music resources have the following big-endian data layout:
+//! (Byte offset, type, purpose, description)
+//! -- HEADER --
+//! 0..2     u16            delay            TODO: figure out unit and range
+//! 2..62    [15][2]u16     instruments      15 entries of 2 words each. See Instrument for layout.
+//! 62-64    u16            sequence length  Number of used entries in sequence block.
+//!                                          Legal range is 0-128, so top byte goes unused.
+//! 64..192  [128]u8        sequence         List of pattern indexes to play in order
+//! -- DATA --
+//! 192..end [64][4][2]u16  patterns         Each pattern is 64 rows of 4 channel events:
+//!                                          1 event for each channel, 2 words each.
+//!                                          See ChannelEvent for layout.
+//!
+
 const std = @import("std");
 const anotherworld = @import("../anotherworld.zig");
 const resources = anotherworld.resources;
@@ -8,74 +22,76 @@ const static_limits = anotherworld.static_limits;
 const Instrument = @import("instrument.zig").Instrument;
 const ChannelEvent = @import("channel_event.zig").ChannelEvent;
 
-const max_sequences = 128;
+const max_sequence_length = 128;
 const max_instruments = 15;
-const events_per_pattern = 64;
+const event_blocks_per_pattern = 64;
 
-/// Another World sound effect data has the following big-endian data layout:
-/// (Byte offset, type, purpose)
-/// ------HEADER------
-/// 0..2     u16         delay (TODO: figure out unit and range)
-/// 2..62    [u16, u16]  instrument data: resource ID and volume
-/// 62-64    u16         number of sequences (legal range from 0-127, high byte unused?)
-/// 64..192  [u8]        a list of the indexes of patterns to play in order
-/// ------DATA------
-/// 192..end u8[]    pattern data (TODO: figure out format)
+/// Data offsets within a music resource.
 const DataLayout = struct {
     // The starting offset of the delay
     const delay = 0x00;
     // The starting offset of the instruments block
     const instruments = 0x02;
-    // The starting offset of the sequence count
-    const sequence_count = 0x3E;
-    // The starting offset of the sequences block
-    const sequences = 0x40;
+    // The starting offset of the sequence length
+    const sequence_length = 0x3E;
+    // The starting offset of the sequence list
+    const sequence = 0x40;
     // The starting offset of pattern data
-    const pattern_data = 0xC0;
+    const patterns = 0xC0;
 
     comptime {
-        std.debug.assert((sequence_count - instruments) / @sizeOf(Instrument.Raw) == max_instruments);
-        std.debug.assert((pattern_data - sequences) / @sizeOf(MusicResource.PatternID) == max_sequences);
+        std.debug.assert((sequence_length - instruments) / @sizeOf(Instrument.Raw) == max_instruments);
+        std.debug.assert((patterns - sequence) / @sizeOf(MusicResource.PatternID) == max_sequence_length);
     }
 };
 
 const RawChannelEvents = [static_limits.channel_count]ChannelEvent.Raw;
-const RawPattern = [events_per_pattern]RawChannelEvents;
+const RawPattern = [event_blocks_per_pattern]RawChannelEvents;
 
+/// Parses an Another World music resource into a structure that can be played back on a mixer.
 pub const MusicResource = struct {
-    const SequenceStorage = std.BoundedArray(PatternID, max_sequences);
+    const SequenceStorage = std.BoundedArray(PatternID, max_sequence_length);
 
-    pattern_data: []const u8,
     delay: audio.Delay,
     instruments: [max_instruments]?Instrument,
-    _raw_sequences: SequenceStorage,
+    _raw_sequence: SequenceStorage,
+    _raw_patterns: []const RawPattern,
 
     const Self = @This();
 
+    /// Parse a slice of resource data as a music track.
+    /// Returns a music resource, or an error if the data was malformed.
+    /// The music resource stores pointers into the slice, and is only valid for the lifetime of the slice.
     pub fn parse(data: []const u8) ParseError!Self {
-        if (data.len < DataLayout.pattern_data) {
+        if (data.len < DataLayout.patterns) {
             return error.TruncatedData;
         }
 
         const delay_data = data[DataLayout.delay..DataLayout.instruments];
-        const raw_instrument_data = data[DataLayout.instruments..DataLayout.sequence_count];
-        const sequence_count_data = data[DataLayout.sequence_count..DataLayout.sequences];
-        const sequence_data = data[DataLayout.sequences..DataLayout.pattern_data];
-        const raw_pattern_data = data[DataLayout.pattern_data..];
+        const raw_instrument_data = data[DataLayout.instruments..DataLayout.sequence_length];
+        const sequence_length_data = data[DataLayout.sequence_length..DataLayout.sequence];
+        const sequence_data = data[DataLayout.sequence..DataLayout.patterns];
+        const raw_pattern_data = data[DataLayout.patterns..];
+
+        // The pattern section must accommodate whole patterns (1024 bytes each)
+        if (@rem(raw_pattern_data.len, @sizeOf(RawPattern)) != 0) {
+            return error.TruncatedData;
+        }
 
         const delay = std.mem.readIntBig(u16, delay_data);
-        const parsed_sequence_count = std.mem.readIntBig(u16, sequence_count_data);
-        const segmented_instrument_data = @ptrCast(*const [max_instruments]Instrument.Raw, raw_instrument_data);
-
-        if (parsed_sequence_count > max_sequences) {
-            return error.TooManySequences;
+        const parsed_sequence_length = std.mem.readIntBig(u16, sequence_length_data);
+        if (parsed_sequence_length > max_sequence_length) {
+            return error.SequenceTooLong;
         }
+
+        const segmented_instrument_data = @ptrCast(*const [max_instruments]Instrument.Raw, raw_instrument_data);
+        const segmented_pattern_data = @bitCast([]const RawPattern, raw_pattern_data);
 
         var self = Self{
             .delay = delay,
-            .pattern_data = raw_pattern_data,
             .instruments = undefined,
-            ._raw_sequences = SequenceStorage.fromSlice(sequence_data[0..parsed_sequence_count]) catch unreachable,
+            ._raw_sequence = SequenceStorage.fromSlice(sequence_data[0..parsed_sequence_length]) catch unreachable,
+            ._raw_patterns = segmented_pattern_data,
         };
 
         for (self.instruments) |*instrument, index| {
@@ -85,46 +101,57 @@ pub const MusicResource = struct {
         return self;
     }
 
-    pub fn sequences(self: Self) []const PatternID {
-        return self._raw_sequences.constSlice();
+    /// The sequence of pattern IDs that should be played back in order.
+    /// This sequence may repeat patterns.
+    pub fn sequence(self: Self) []const PatternID {
+        return self._raw_sequence.constSlice();
     }
 
-    pub fn iteratePattern(self: Self, index: PatternID) ReadError!PatternIterator {
-        const pattern_length: usize = @sizeOf(RawPattern);
-        const pattern_start: usize = index * pattern_length;
-        const pattern_end: usize = pattern_start + pattern_length;
-
-        if (self.pattern_data.len < pattern_end) {
+    /// An iterator that loops through the 64 blocks of a pattern.
+    /// Returns error.InvalidPatternID if the specified pattern ID was outside the range of the resource.
+    ///
+    /// Usage:
+    ///
+    /// var iterator = try music_resource.iteratePattern(pattern_id);
+    /// while (try iterator.next()) |events| {
+    ///   playEventsOnMixerChannels(events);
+    /// }
+    pub fn iteratePattern(self: Self, index: PatternID) IteratePatternError!PatternIterator {
+        if (index > self._raw_patterns.len) {
             return error.InvalidPatternID;
         }
-
-        const data_for_pattern = @ptrCast(*const RawPattern, self.pattern_data[pattern_start..pattern_end]);
-        return PatternIterator{ .pattern_data = data_for_pattern };
+        return PatternIterator{ .pattern = &self._raw_patterns[index] };
     }
 
+    /// The ID of a pattern.
     pub const PatternID = u8;
 
-    pub const ReadError = error{
+    /// Errors that can be produced by iteratePattern().
+    pub const IteratePatternError = error{
         InvalidPatternID,
     };
 
+    /// Errors that can be produced by parse().
     pub const ParseError = error{
         TruncatedData,
-        TooManySequences,
+        SequenceTooLong,
     };
 
+    /// An iterator with a next() function that loops through blocks of 4 channel events in a pattern.
+    /// Returned by MusicResource.iteratePattern().
     pub const PatternIterator = struct {
-        pattern_data: *const RawPattern,
+        pattern: *const RawPattern,
         counter: usize = 0,
 
         /// Returns the next batch of 4 channel events from the reader.
-        /// Returns null once it reaches the end of the pattern, or an error if it cannot parse a channel event.
+        /// Returns null once it reaches the end of the pattern.
+        /// Returns an error if it reaches a channel event that can't be parsed.
         pub fn next(self: *PatternIterator) ChannelEvent.ParseError!?ChannelEvents {
-            if (self.counter >= self.pattern_data.len) {
+            if (self.counter >= self.pattern.len) {
                 return null;
             }
 
-            const raw_events = &self.pattern_data[self.counter];
+            const raw_events = &self.pattern[self.counter];
             var events: ChannelEvents = undefined;
             for (events) |*event, index| {
                 event.* = try ChannelEvent.parse(raw_events[index]);
