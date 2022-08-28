@@ -11,8 +11,10 @@ pub const Audio = struct {
 
     /// Start playing a music track from a specified resource.
     pub fn playMusic(_: *Self, music_data: []const u8, offset: audio.Offset, delay: audio.Delay) !void {
-        log.debug("playMusic: play {*} at offset {} after delay {}", .{
-            music_data,
+        const music = try audio.MusicResource.parse(music_data);
+
+        log.debug("playMusic: play {} at offset {} after delay {}", .{
+            music,
             offset,
             delay,
         });
@@ -31,6 +33,7 @@ pub const Audio = struct {
 
     /// Play a sound effect from the specified resource on the specified channel.
     pub fn playSound(_: *Self, sound_data: []const u8, channel_id: vm.ChannelID, volume: audio.Volume, frequency_id: audio.FrequencyID) !void {
+        const sound = try audio.SoundResource.parse(sound_data);
 
         log.debug("playSound: play {} on channel {} at volume {}, frequency {} (has intro: {}, loops: {})", .{
             sound,
