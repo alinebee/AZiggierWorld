@@ -21,24 +21,29 @@ test "Parse all sound effects in original game files" {
     @import("std").testing.log_level = .debug;
 
     for (reader.resourceDescriptors()) |descriptor, id| {
-        if (descriptor.type != .sound_or_empty) continue;
+        switch (descriptor) {
+            .empty => continue,
+            .valid => |valid_descriptor| {
+                if (valid_descriptor.type != .sound) continue;
 
-        // Skip 0-length markers
-        if (descriptor.uncompressed_size == 0) {
-            log.info("Skipping 0-length file at {}", .{id});
-            continue;
-        }
+                // Skip 0-length markers
+                if (valid_descriptor.uncompressed_size == 0) {
+                    log.info("Skipping 0-length file at {}", .{id});
+                    continue;
+                }
 
-        const data = try reader.allocReadResource(testing.allocator, descriptor);
-        defer testing.allocator.free(data);
+                const data = try reader.allocReadResource(testing.allocator, valid_descriptor);
+                defer testing.allocator.free(data);
 
-        const sound = try audio.SoundEffect.parse(data);
-        if (sound.intro == null) {
-            if (sound.loop == null) {
-                log.info("Empty sound effect at {}", .{id});
-            } else {
-                log.info("Sound effect with no intro at {}", .{id});
-            }
+                const sound = try audio.SoundEffect.parse(data);
+                if (sound.intro == null) {
+                    if (sound.loop == null) {
+                        log.info("Empty sound effect at {}", .{id});
+                    } else {
+                        log.info("Sound effect with no intro at {}", .{id});
+                    }
+                }
+            },
         }
     }
 }

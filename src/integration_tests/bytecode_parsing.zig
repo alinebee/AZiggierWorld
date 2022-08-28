@@ -63,35 +63,40 @@ test "Instruction.parse parses all programs in fixture bytecode" {
     var failures = std.ArrayList(ParseFailure).init(testing.allocator);
     defer failures.deinit();
 
-    for (reader.resourceDescriptors()) |descriptor, index| {
-        if (descriptor.type != .bytecode) continue;
+    for (reader.resourceDescriptors()) |descriptor, id| {
+        switch (descriptor) {
+            .empty => continue,
+            .valid => |valid_descriptor| {
+                if (valid_descriptor.type != .bytecode) continue;
 
-        const data = try reader.allocReadResource(testing.allocator, descriptor);
-        defer testing.allocator.free(data);
+                const data = try reader.allocReadResource(testing.allocator, valid_descriptor);
+                defer testing.allocator.free(data);
 
-        var program = try bytecode.Program.init(data);
+                var program = try bytecode.Program.init(data);
 
-        while (program.isAtEnd() == false) {
-            const last_valid_address = program.counter;
-            if (bytecode.Instruction.parse(&program)) |instruction| {
-                switch (instruction) {
-                    // .ControlResources => |control_resources| {
-                    //     switch (control_resources) {
-                    //         .start_game_part => |game_part| log.debug("\nGame part: {X}\n", .{game_part}),
-                    //         else => {},
-                    //     }
-                    // },
-                    else => {},
+                while (program.isAtEnd() == false) {
+                    const last_valid_address = program.counter;
+                    if (bytecode.Instruction.parse(&program)) |instruction| {
+                        switch (instruction) {
+                            // .ControlResources => |control_resources| {
+                            //     switch (control_resources) {
+                            //         .start_game_part => |game_part| log.debug("\nGame part: {X}\n", .{game_part}),
+                            //         else => {},
+                            //     }
+                            // },
+                            else => {},
+                        }
+                    } else |err| {
+                        // Log and continue parsing after encountering a failure
+                        try failures.append(ParseFailure.init(
+                            id,
+                            &program,
+                            last_valid_address,
+                            err,
+                        ));
+                    }
                 }
-            } else |err| {
-                // Log and continue parsing after encountering a failure
-                try failures.append(ParseFailure.init(
-                    index,
-                    &program,
-                    last_valid_address,
-                    err,
-                ));
-            }
+            },
         }
     }
 

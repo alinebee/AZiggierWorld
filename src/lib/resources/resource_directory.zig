@@ -11,7 +11,7 @@
 //! defer game_dir.close();
 //! var repository = try ResourceDirectory.init(game_dir);
 //! const reader = repository.reader();
-//! const first_resource_descriptor = try reader.resourceDescriptor(0);
+//! const first_resource_descriptor = try reader.validResourceDescriptor(0);
 //! const game_data = try reader.allocReadResource(my_allocator, first_resource_descriptor);
 
 const anotherworld = @import("../anotherworld.zig");
@@ -78,7 +78,7 @@ pub const ResourceDirectory = struct {
     /// Returns an error if `buffer` was not large enough to hold the data or if the data
     /// could not be read or decompressed.
     /// In the event of an error, `buffer` may contain partially-loaded game data.
-    fn bufReadResource(self: *const Self, buffer: []u8, descriptor: ResourceDescriptor) ResourceReader.BufReadResourceError![]const u8 {
+    fn bufReadResource(self: *const Self, buffer: []u8, descriptor: ResourceDescriptor.Valid) ResourceReader.BufReadResourceError![]const u8 {
         if (buffer.len < descriptor.uncompressed_size) {
             return error.BufferTooSmall;
         }
@@ -258,7 +258,12 @@ test "readResourceList parses all descriptors from a stream" {
     var buffer: [max_resource_descriptors]ResourceDescriptor = undefined;
     const count = try readResourceList(&buffer, reader);
 
-    try testing.expectEqual(3, count);
+    try testing.expectEqual(4, count);
+
+    try testing.expectEqual(.{ .valid = ResourceDescriptorExamples.valid_descriptor }, buffer[0]);
+    try testing.expectEqual(.{ .valid = ResourceDescriptorExamples.valid_descriptor }, buffer[1]);
+    try testing.expectEqual(.{ .valid = ResourceDescriptorExamples.valid_descriptor }, buffer[2]);
+    try testing.expectEqual(.empty, buffer[3]);
 }
 
 test "readResourceList returns error.BufferTooSmall when stream contains too many descriptors for the buffer" {

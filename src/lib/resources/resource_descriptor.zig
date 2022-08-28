@@ -13,23 +13,32 @@ const Filename = @import("filename.zig").Filename;
 
 /// Describes an individual resource in Another World's data files:
 /// its length, type and the bank file in which it is located.
-pub const ResourceDescriptor = struct {
-    /// The type of content stored in this resource.
-    type: ResourceType,
-    /// The bank file to look for the resource in: in the MS-DOS version these are numbered from 01 to 0D.
-    bank_id: Filename.BankID,
-    /// The byte offset (within the packed data of the bank file) at which the resource is located.
-    bank_offset: usize,
-    /// The compressed size of the resource in bytes.
-    compressed_size: usize,
-    /// The uncompressed size of the resource in bytes.
-    /// If this differs from compressed_size, it indicates the resource has been compressed
-    /// with run-length encoding (RLE).
-    uncompressed_size: usize,
+pub const ResourceDescriptor = union(enum) {
+    /// The descriptor marks an empty resource that cannot be loaded.
+    /// These appear to be used as file markers, or perhaps deleted assets.
+    empty,
+    valid: Valid,
 
-    pub fn isCompressed(self: ResourceDescriptor) bool {
-        return self.uncompressed_size != self.compressed_size;
-    }
+    pub const Valid = struct {
+        /// The type of content stored in this resource.
+        type: ResourceType,
+        /// The bank file to look for the resource in: in the MS-DOS version these are numbered from 01 to 0D.
+        bank_id: Filename.BankID,
+        /// The byte offset (within the packed data of the bank file) at which the resource is located.
+        bank_offset: usize,
+        /// The compressed size of the resource in bytes.
+        compressed_size: usize,
+        /// The uncompressed size of the resource in bytes.
+        /// If this differs from compressed_size, it indicates the resource has been compressed
+        /// with run-length encoding (RLE).
+        uncompressed_size: usize,
+
+        const Self = @This();
+
+        pub fn isCompressed(self: Self) bool {
+            return self.uncompressed_size != self.compressed_size;
+        }
+    };
 
     /// An iterator that parses resource descriptors from a `Reader` instance until it reaches
     /// an end-of-file marker.
@@ -44,6 +53,8 @@ pub const ResourceDescriptor = struct {
         return ReaderError || ResourceType.Error || error{
             /// A resource defined a compressed size that was larger than its uncompressed size.
             InvalidResourceSize,
+            /// A 0-length resource was found that did not have the expected marker.
+            InvalidEmptyResource,
         };
     }
 };
@@ -110,13 +121,17 @@ fn Iterator(comptime Reader: type) type {
                 return error.InvalidResourceSize;
             }
 
-            return ResourceDescriptor{
+            if (uncompressed_size == 0) {
+                return if (raw_type == 0) ResourceDescriptor.empty else error.InvalidEmptyResource;
+            }
+
+            return ResourceDescriptor{ .valid = .{
                 .type = try ResourceType.parse(raw_type),
                 .bank_id = bank_id,
                 .bank_offset = bank_offset,
                 .compressed_size = compressed_size,
                 .uncompressed_size = uncompressed_size,
-            };
+            } };
         }
     };
 }
@@ -145,6 +160,17 @@ pub const DescriptorExamples = struct {
         0xF0, 0x0D,             // unpacked size (big-endian 16-bit unsigned integer)
     };
 
+    const valid_empty_data = block: {
+        var empty_data = valid_data;
+        empty_data[1] = 0x00; // Empty type marker
+        // 0 out the compressed and uncompressed lengths
+        empty_data[14] = 0x00;
+        empty_data[15] = 0x00;
+        empty_data[18] = 0x00;
+        empty_data[19] = 0x00;
+        break :block empty_data;
+    };
+
     const invalid_resource_type = block: {
         var invalid_data = valid_data;
         invalid_data[1] = 0xFF; // Does not map to any ResourceType value
@@ -159,9 +185,16 @@ pub const DescriptorExamples = struct {
         break :block invalid_data;
     };
 
+    // Length is 0 but type is not 0
+    const invalid_empty_data = block: {
+        var empty_data = valid_empty_data;
+        empty_data[1] = 0x04; // Type marker for an empty descriptor should also be 0
+        break :block empty_data;
+    };
+
     const valid_end_of_file = [_]u8{end_of_file_marker};
 
-    const valid_descriptor = ResourceDescriptor{
+    pub const valid_descriptor = ResourceDescriptor.Valid{
         .type = .bytecode,
         .bank_id = 5,
         .bank_offset = 0xDEADBEEF,
@@ -171,7 +204,7 @@ pub const DescriptorExamples = struct {
 };
 
 pub const FileExamples = struct {
-    pub const valid = (DescriptorExamples.valid_data ** 3) ++ DescriptorExamples.valid_end_of_file;
+    pub const valid = (DescriptorExamples.valid_data ** 3) ++ DescriptorExamples.valid_empty_data ++ DescriptorExamples.valid_end_of_file;
     pub const truncated = DescriptorExamples.valid_data ** 2;
 
     pub const invalid_resource_type =
@@ -190,7 +223,14 @@ test "iterator.next() correctly parses file descriptor" {
     const reader = fixedBufferStream(&DescriptorExamples.valid_data).reader();
     var descriptors = ResourceDescriptor.iterator(reader);
 
-    try testing.expectEqual(DescriptorExamples.valid_descriptor, descriptors.next());
+    try testing.expectEqual(.{ .valid = DescriptorExamples.valid_descriptor }, descriptors.next());
+}
+
+test "iterator.next() returns empty descriptor for type 0, length 0" {
+    const reader = fixedBufferStream(&DescriptorExamples.valid_empty_data).reader();
+    var descriptors = ResourceDescriptor.iterator(reader);
+
+    try testing.expectEqual(.empty, descriptors.next());
 }
 
 test "iterator.next() stops parsing at end-of-file marker" {
@@ -198,6 +238,13 @@ test "iterator.next() stops parsing at end-of-file marker" {
     var descriptors = ResourceDescriptor.iterator(reader);
 
     try testing.expectEqual(null, descriptors.next());
+}
+
+test "iterator.next() returns error.InvalidEmptyResource when 0-length resource has wrong type" {
+    const reader = fixedBufferStream(&DescriptorExamples.invalid_empty_data).reader();
+    var descriptors = ResourceDescriptor.iterator(reader);
+
+    try testing.expectError(error.InvalidEmptyResource, descriptors.next());
 }
 
 test "iterator.next() returns error.InvalidResourceType when resource type byte is not recognized" {
@@ -225,9 +272,11 @@ test "iterator parses all expected descriptors until it reaches end-of-file mark
     const reader = fixedBufferStream(&FileExamples.valid).reader();
     var descriptors = ResourceDescriptor.iterator(reader);
 
-    while (try descriptors.next()) |descriptor| {
-        try testing.expectEqual(DescriptorExamples.valid_descriptor, descriptor);
-    }
+    try testing.expectEqual(.{ .valid = DescriptorExamples.valid_descriptor }, descriptors.next());
+    try testing.expectEqual(.{ .valid = DescriptorExamples.valid_descriptor }, descriptors.next());
+    try testing.expectEqual(.{ .valid = DescriptorExamples.valid_descriptor }, descriptors.next());
+    try testing.expectEqual(.empty, descriptors.next());
+    try testing.expectEqual(null, descriptors.next());
 
     // Check that it parsed all available bytes from the reader
     try testing.expectError(error.EndOfStream, reader.readByte());
@@ -237,8 +286,8 @@ test "iterator returns error.EndOfStream when it runs out of data before encount
     const reader = fixedBufferStream(&FileExamples.truncated).reader();
     var descriptors = ResourceDescriptor.iterator(reader);
 
-    try testing.expectEqual(DescriptorExamples.valid_descriptor, descriptors.next());
-    try testing.expectEqual(DescriptorExamples.valid_descriptor, descriptors.next());
+    try testing.expectEqual(.{ .valid = DescriptorExamples.valid_descriptor }, descriptors.next());
+    try testing.expectEqual(.{ .valid = DescriptorExamples.valid_descriptor }, descriptors.next());
     try testing.expectError(error.EndOfStream, descriptors.next());
 }
 
@@ -246,6 +295,6 @@ test "iterator returns error when it reaches invalid data in the middle of strea
     const reader = fixedBufferStream(&FileExamples.invalid_resource_type).reader();
     var descriptors = ResourceDescriptor.iterator(reader);
 
-    try testing.expectEqual(DescriptorExamples.valid_descriptor, descriptors.next());
+    try testing.expectEqual(.{ .valid = DescriptorExamples.valid_descriptor }, descriptors.next());
     try testing.expectError(error.InvalidResourceType, descriptors.next());
 }

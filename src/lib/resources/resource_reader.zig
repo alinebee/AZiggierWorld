@@ -13,7 +13,7 @@ const mem = std.mem;
 /// The functions that will be mapped to the implementation of the ResourceReader interface.
 fn Functions(comptime State: type) type {
     return struct {
-        bufReadResource: fn (state: State, buffer: []u8, descriptor: ResourceDescriptor) ResourceReader.BufReadResourceError![]const u8,
+        bufReadResource: fn (state: State, buffer: []u8, descriptor: ResourceDescriptor.Valid) ResourceReader.BufReadResourceError![]const u8,
         resourceDescriptors: fn (state: State) []const ResourceDescriptor,
     };
 }
@@ -40,7 +40,7 @@ pub const ResourceReader = struct {
     /// Returns an error if `buffer` was not large enough to hold the data or if the data
     /// could not be read or decompressed.
     /// In the event of an error, `buffer` may contain partially-loaded game data.
-    pub fn bufReadResource(self: Self, buffer: []u8, descriptor: ResourceDescriptor) BufReadResourceError![]const u8 {
+    pub fn bufReadResource(self: Self, buffer: []u8, descriptor: ResourceDescriptor.Valid) BufReadResourceError![]const u8 {
         return self.vtable.bufReadResource(.{ self.state, buffer, descriptor });
     }
 
@@ -50,7 +50,7 @@ pub const ResourceReader = struct {
     /// Caller owns the returned slice and must free it with `allocator.free`.
     /// Returns an error if the allocator failed to allocate memory or if the data
     /// could not be read or decompressed.
-    pub fn allocReadResource(self: Self, allocator: mem.Allocator, descriptor: ResourceDescriptor) AllocReadResourceError![]const u8 {
+    pub fn allocReadResource(self: Self, allocator: mem.Allocator, descriptor: ResourceDescriptor.Valid) AllocReadResourceError![]const u8 {
         // Create a buffer just large enough to decompress the resource into.
         const destination = try allocator.alloc(u8, descriptor.uncompressed_size);
         errdefer allocator.free(destination);
@@ -65,7 +65,7 @@ pub const ResourceReader = struct {
     /// Returns an error if the resource ID was invalid, the allocator failed
     /// to allocate memory, or the data could not be read or decompressed.
     pub fn allocReadResourceByID(self: Self, allocator: mem.Allocator, id: ResourceID) AllocReadResourceByIDError![]const u8 {
-        return self.allocReadResource(allocator, try self.resourceDescriptor(id));
+        return self.allocReadResource(allocator, try self.validResourceDescriptor(id));
     }
 
     /// Returns a list of all valid resource descriptors,
@@ -75,21 +75,27 @@ pub const ResourceReader = struct {
     }
 
     /// Returns the descriptor matching the specified ID.
-    /// Returns an InvalidResourceID error if the ID was out of range.
-    pub fn resourceDescriptor(self: Self, id: ResourceID) ValidationError!ResourceDescriptor {
+    /// Returns an InvalidResourceID error if the ID is out of range or the resource descriptor
+    /// at that ID is an empty marker.
+    pub fn validResourceDescriptor(self: Self, id: ResourceID) ValidationError!ResourceDescriptor.Valid {
         const descriptors = self.resourceDescriptors();
         if (id.index() >= descriptors.len) {
             return error.InvalidResourceID;
         }
-        return descriptors[id.index()];
+        return switch (descriptors[id.index()]) {
+            .valid => |valid| valid,
+            .empty => error.EmptyResourceID,
+        };
     }
 
     // -- Public error types --
 
-    /// The errors that can be returned from a call to `ResourceReader.resourceDescriptor`.
+    /// The errors that can be returned from a call to `ResourceReader.validResourceDescriptor`.
     pub const ValidationError = error{
         /// The specified resource ID does not exist in the game's resource list.
         InvalidResourceID,
+        /// The specified resource ID points to an empty marker entry that cannot be loaded.
+        EmptyResourceID,
     };
 
     /// The errors that can be returned from a call to `ResourceReader.bufReadResource`.
@@ -123,7 +129,7 @@ pub const ResourceReader = struct {
 
 // -- Test data --
 
-const example_descriptor = ResourceDescriptor{
+const valid_descriptor = ResourceDescriptor.Valid{
     .type = .music,
     .bank_id = 0,
     .bank_offset = 0,
@@ -131,7 +137,14 @@ const example_descriptor = ResourceDescriptor{
     .uncompressed_size = 16,
 };
 
-const example_descriptors = [_]ResourceDescriptor{example_descriptor};
+const example_descriptors = [_]ResourceDescriptor{
+    .{ .valid = valid_descriptor },
+    .empty,
+};
+
+const valid_resource_id = ResourceID.cast(0);
+const empty_resource_id = ResourceID.cast(1);
+const invalid_resource_id = ResourceID.cast(2);
 
 /// Fake repository used solely for testing the interface's dynamic dispatch.
 /// Not intended for use outside this file: instead see mock_repository.zig,
@@ -154,10 +167,10 @@ const CountedRepository = struct {
         });
     }
 
-    fn bufReadResource(self: *Self, buffer: []u8, descriptor: ResourceDescriptor) ![]const u8 {
+    fn bufReadResource(self: *Self, buffer: []u8, descriptor: ResourceDescriptor.Valid) ![]const u8 {
         self.call_counts.bufReadResource += 1;
 
-        testing.expectEqual(example_descriptor, descriptor) catch unreachable;
+        testing.expectEqual(valid_descriptor, descriptor) catch unreachable;
         return buffer;
     }
 
@@ -171,9 +184,6 @@ const CountedRepository = struct {
 
 const testing = @import("utils").testing;
 
-const valid_resource_id = ResourceID.cast(0);
-const invalid_resource_id = ResourceID.cast(1);
-
 test "Ensure everything compiles" {
     testing.refAllDecls(ResourceReader);
 }
@@ -182,7 +192,7 @@ test "bufReadResource calls underlying implementation" {
     var repository = CountedRepository{};
 
     var buffer: [16]u8 = undefined;
-    const data = try repository.reader().bufReadResource(&buffer, example_descriptor);
+    const data = try repository.reader().bufReadResource(&buffer, valid_descriptor);
 
     try testing.expectEqual(&buffer, data);
     try testing.expectEqual(1, repository.call_counts.bufReadResource);
@@ -193,22 +203,23 @@ test "resourceDescriptors calls underlying implementation" {
 
     const descriptors = repository.reader().resourceDescriptors();
     try testing.expectEqual(1, repository.call_counts.resourceDescriptors);
-    try testing.expectEqual(1, descriptors.len);
-    try testing.expectEqual(example_descriptor, descriptors[0]);
+    try testing.expectEqual(2, descriptors.len);
+    try testing.expectEqual(.{ .valid = valid_descriptor }, descriptors[0]);
+    try testing.expectEqual(.empty, descriptors[1]);
 }
 
 test "allocReadResource calls bufReadResource with suitably sized buffer" {
     var repository = CountedRepository{};
-    const data = try repository.reader().allocReadResource(testing.allocator, example_descriptor);
+    const data = try repository.reader().allocReadResource(testing.allocator, valid_descriptor);
     defer testing.allocator.free(data);
 
-    try testing.expectEqual(example_descriptor.uncompressed_size, data.len);
+    try testing.expectEqual(valid_descriptor.uncompressed_size, data.len);
 }
 
 test "allocReadResource returns error when memory cannot be allocated" {
     var repository = CountedRepository{};
 
-    try testing.expectEqual(error.OutOfMemory, repository.reader().allocReadResource(testing.failing_allocator, example_descriptor));
+    try testing.expectEqual(error.OutOfMemory, repository.reader().allocReadResource(testing.failing_allocator, valid_descriptor));
     try testing.expectEqual(0, repository.call_counts.bufReadResource);
 }
 
@@ -217,7 +228,7 @@ test "allocReadResourceByID calls bufReadResource with suitably sized buffer for
     const data = try repository.reader().allocReadResourceByID(testing.allocator, valid_resource_id);
     defer testing.allocator.free(data);
 
-    try testing.expectEqual(example_descriptor.uncompressed_size, data.len);
+    try testing.expectEqual(valid_descriptor.uncompressed_size, data.len);
     try testing.expectEqual(1, repository.call_counts.bufReadResource);
 }
 
@@ -226,14 +237,19 @@ test "allocReadResourceByID returns error on out of range ID" {
     try testing.expectError(error.InvalidResourceID, repository.reader().allocReadResourceByID(testing.allocator, invalid_resource_id));
 }
 
-test "resourceDescriptor returns expected descriptor" {
+test "validResourceDescriptor returns expected descriptor" {
     var repository = CountedRepository{};
 
-    try testing.expectEqual(example_descriptor, repository.reader().resourceDescriptor(valid_resource_id));
+    try testing.expectEqual(valid_descriptor, repository.reader().validResourceDescriptor(valid_resource_id));
     try testing.expectEqual(1, repository.call_counts.resourceDescriptors);
 }
 
-test "resourceDescriptor returns error on out of range ID" {
+test "validResourceDescriptor returns error on empty descriptor" {
     var repository = CountedRepository{};
-    try testing.expectError(error.InvalidResourceID, repository.reader().resourceDescriptor(invalid_resource_id));
+    try testing.expectError(error.EmptyResourceID, repository.reader().validResourceDescriptor(empty_resource_id));
+}
+
+test "validResourceDescriptor returns error on out of range ID" {
+    var repository = CountedRepository{};
+    try testing.expectError(error.InvalidResourceID, repository.reader().validResourceDescriptor(invalid_resource_id));
 }

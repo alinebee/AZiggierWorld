@@ -276,7 +276,8 @@ pub const Machine = struct {
     /// Play a sound effect from the specified resource on the specified channel.
     /// Returns an error if the resource ID is not a sound resource or does not exist.
     pub fn playSound(self: *Self, resource_id: resources.ResourceID, channel_id: vm.ChannelID, volume: audio.Volume, frequency: audio.Frequency) !void {
-        const possible_sound_data = try self.memory.resourceLocation(resource_id, .sound_or_empty);
+        // TWEAK: the Another World DOS intro attempts to play effect #52, which is an empty file that should not be loaded.
+        const possible_sound_data = self.memory.resourceLocation(resource_id, .sound) catch null;
         if (possible_sound_data) |sound_data| {
             try self.audio.playSound(sound_data, channel_id, volume, frequency);
         } else {
@@ -552,9 +553,9 @@ test "loadResource loads audio resource into main memory and does not notify hos
 
     const audio_resource_id = resources.MockRepository.Fixtures.sfx_resource_id;
 
-    try testing.expectEqual(null, try machine.memory.resourceLocation(audio_resource_id, .sound_or_empty));
+    try testing.expectEqual(null, try machine.memory.resourceLocation(audio_resource_id, .sound));
     try machine.loadResource(audio_resource_id);
-    try testing.expect((try machine.memory.resourceLocation(audio_resource_id, .sound_or_empty)) != null);
+    try testing.expect((try machine.memory.resourceLocation(audio_resource_id, .sound)) != null);
 
     try testing.expectEqual(0, host.call_counts.bufferChanged);
 }

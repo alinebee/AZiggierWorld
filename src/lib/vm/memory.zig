@@ -118,7 +118,7 @@ pub const Memory = struct {
     /// The memory location of the resource with the specified ID, or `null` if the resource is not loaded.
     /// Returns an error if the location is out of range.
     pub fn resourceLocation(self: Self, id: resources.ResourceID, expected_type: resources.ResourceType) ResourceLocationError!PossibleResourceLocation {
-        const descriptor = try self.reader.resourceDescriptor(id);
+        const descriptor = try self.reader.validResourceDescriptor(id);
         if (descriptor.type != expected_type) return error.UnexpectedResourceType;
 
         return self.resource_locations[id.index()];
@@ -155,10 +155,10 @@ pub const Memory = struct {
     /// could not be read from disk, or the resource is of a type that can only be loaded
     /// by `loadGamePart` (not individually).
     pub fn loadIndividualResource(self: *Self, id: resources.ResourceID) LoadIndividualResourceError!IndividualResourceLocation {
-        const descriptor = try self.reader.resourceDescriptor(id);
+        const descriptor = try self.reader.validResourceDescriptor(id);
 
         return switch (descriptor.type) {
-            .sound_or_empty, .music => IndividualResourceLocation{
+            .sound, .music => IndividualResourceLocation{
                 .audio = try self.loadIfNeededFromDescriptor(id, descriptor),
             },
             .bitmap => IndividualResourceLocation{
@@ -173,11 +173,20 @@ pub const Memory = struct {
     /// Any resources that are intrinsic to the current game part will remain loaded.
     pub fn unloadAllIndividualResources(self: *Self) void {
         for (self.reader.resourceDescriptors()) |descriptor, index| {
-            switch (descriptor.type) {
-                // These resource types can only be loaded by loadIndividualResource(id).
-                .sound_or_empty, .music, .bitmap => self.unload(&self.resource_locations[index]),
-                // These resource types can only be loaded by loadGamePart(game_part) and should be left alone.
-                .bytecode, .palettes, .polygons, .animations => continue,
+            switch (descriptor) {
+                .empty => continue,
+                .valid => |valid_descriptor| {
+                    switch (valid_descriptor.type) {
+                        // These resource types can only be loaded by loadIndividualResource(id)
+                        // and should be unloaded.
+                        .sound, .music => self.unload(&self.resource_locations[index]),
+                        // These resource types can only be loaded by loadGamePart(game_part)
+                        // and should be left alone.
+                        .bytecode, .palettes, .polygons, .animations => continue,
+                        // Bitmaps are never loaded into the help and can be skipped.
+                        .bitmap => continue,
+                    }
+                },
             }
         }
     }
@@ -188,7 +197,7 @@ pub const Memory = struct {
     /// Returns an error if the specified resource ID does not exist, the resource at that ID does
     /// not match the expected type, or the resource could not be read from disk.
     fn loadIfNeeded(self: *Self, id: resources.ResourceID, expected_type: resources.ResourceType) ![]const u8 {
-        const descriptor = try self.reader.resourceDescriptor(id);
+        const descriptor = try self.reader.validResourceDescriptor(id);
         if (descriptor.type != expected_type) return error.UnexpectedResourceType;
 
         return try self.loadIfNeededFromDescriptor(id, descriptor);
@@ -197,7 +206,7 @@ pub const Memory = struct {
     /// Loads a resource whose descriptor is already known into memory if it is not already loaded,
     /// and returns its location.
     /// Returns an error if the resource could not be read from disk.
-    fn loadIfNeededFromDescriptor(self: *Self, id: resources.ResourceID, descriptor: resources.ResourceDescriptor) ![]const u8 {
+    fn loadIfNeededFromDescriptor(self: *Self, id: resources.ResourceID, descriptor: resources.ResourceDescriptor.Valid) ![]const u8 {
         const index = id.index();
         if (self.resource_locations[index]) |location| {
             return location;
@@ -315,13 +324,13 @@ test "loadIndividualResource loads sound resources into shared memory" {
     defer memory.deinit();
 
     const resource_id = ResourceFixtures.sfx_resource_id;
-    const descriptor = try test_reader.resourceDescriptor(resource_id);
-    try testing.expectEqual(.sound_or_empty, descriptor.type);
+    const descriptor = try test_reader.validResourceDescriptor(resource_id);
+    try testing.expectEqual(.sound, descriptor.type);
 
     const location = try memory.loadIndividualResource(resource_id);
     try testing.expectEqualTags(.audio, location);
     try testing.expectEqual(descriptor.uncompressed_size, location.audio.len);
-    try testing.expectEqual(location.audio, memory.resourceLocation(resource_id, .sound_or_empty));
+    try testing.expectEqual(location.audio, memory.resourceLocation(resource_id, .sound));
 }
 
 test "loadIndividualResource loads music resources into shared memory" {
@@ -329,7 +338,7 @@ test "loadIndividualResource loads music resources into shared memory" {
     defer memory.deinit();
 
     const resource_id = ResourceFixtures.music_resource_id;
-    const descriptor = try test_reader.resourceDescriptor(resource_id);
+    const descriptor = try test_reader.validResourceDescriptor(resource_id);
     try testing.expectEqual(.music, descriptor.type);
 
     const location = try memory.loadIndividualResource(resource_id);
@@ -343,7 +352,7 @@ test "loadIndividualResource loads bitmap data into temporary bitmap memory" {
     defer memory.deinit();
 
     const resource_id = ResourceFixtures.bitmap_resource_id;
-    const descriptor = try test_reader.resourceDescriptor(resource_id);
+    const descriptor = try test_reader.validResourceDescriptor(resource_id);
     try testing.expectEqual(.bitmap, descriptor.type);
 
     const location = try memory.loadIndividualResource(resource_id);
@@ -360,8 +369,8 @@ test "loadIndividualResource clobbers temporary bitmap region when another bitma
     const bitmap_1_id = ResourceFixtures.bitmap_resource_id;
     const bitmap_2_id = ResourceFixtures.bitmap_resource_id_2;
 
-    try testing.expectEqual(.bitmap, (try test_reader.resourceDescriptor(bitmap_1_id)).type);
-    try testing.expectEqual(.bitmap, (try test_reader.resourceDescriptor(bitmap_2_id)).type);
+    try testing.expectEqual(.bitmap, (try test_reader.validResourceDescriptor(bitmap_1_id)).type);
+    try testing.expectEqual(.bitmap, (try test_reader.validResourceDescriptor(bitmap_2_id)).type);
 
     const location_1 = try memory.loadIndividualResource(bitmap_1_id);
     try testing.expectEqualTags(.temporary_bitmap, location_1);
@@ -467,10 +476,10 @@ test "loadGamePart loads expected resources for game part with animations" {
     const resource_ids = game_part.resourceIDs();
     const locations = try memory.loadGamePart(game_part);
 
-    try testing.expectEqual((try test_reader.resourceDescriptor(resource_ids.palettes)).uncompressed_size, locations.palettes.len);
-    try testing.expectEqual((try test_reader.resourceDescriptor(resource_ids.bytecode)).uncompressed_size, locations.bytecode.len);
-    try testing.expectEqual((try test_reader.resourceDescriptor(resource_ids.polygons)).uncompressed_size, locations.polygons.len);
-    try testing.expectEqual((try test_reader.resourceDescriptor(resource_ids.animations.?)).uncompressed_size, locations.animations.?.len);
+    try testing.expectEqual((try test_reader.validResourceDescriptor(resource_ids.palettes)).uncompressed_size, locations.palettes.len);
+    try testing.expectEqual((try test_reader.validResourceDescriptor(resource_ids.bytecode)).uncompressed_size, locations.bytecode.len);
+    try testing.expectEqual((try test_reader.validResourceDescriptor(resource_ids.polygons)).uncompressed_size, locations.polygons.len);
+    try testing.expectEqual((try test_reader.validResourceDescriptor(resource_ids.animations.?)).uncompressed_size, locations.animations.?.len);
 
     try testing.expectEqual(locations.palettes, try memory.resourceLocation(resource_ids.palettes, .palettes));
     try testing.expectEqual(locations.bytecode, try memory.resourceLocation(resource_ids.bytecode, .bytecode));
@@ -526,12 +535,12 @@ test "loadGamePart unloads any previously loaded individual resources" {
     const music_resource_id = ResourceFixtures.music_resource_id;
     _ = try memory.loadIndividualResource(sfx_resource_id);
     _ = try memory.loadIndividualResource(music_resource_id);
-    try testing.expect((try memory.resourceLocation(sfx_resource_id, .sound_or_empty)) != null);
+    try testing.expect((try memory.resourceLocation(sfx_resource_id, .sound)) != null);
     try testing.expect((try memory.resourceLocation(music_resource_id, .music)) != null);
 
     _ = try memory.loadGamePart(.gameplay1);
 
-    try testing.expectEqual(null, try memory.resourceLocation(sfx_resource_id, .sound_or_empty));
+    try testing.expectEqual(null, try memory.resourceLocation(sfx_resource_id, .sound));
     try testing.expectEqual(null, try memory.resourceLocation(music_resource_id, .music));
 }
 
@@ -580,7 +589,7 @@ test "unloadAllIndividualResources unloads sound and music resources but leaves 
     try testing.expectEqual(game_part_locations.bytecode, try memory.resourceLocation(game_part_resource_ids.bytecode, .bytecode));
     try testing.expectEqual(game_part_locations.polygons, try memory.resourceLocation(game_part_resource_ids.polygons, .polygons));
     try testing.expectEqual(game_part_locations.animations, try memory.resourceLocation(game_part_resource_ids.animations.?, .animations));
-    try testing.expectEqual(sfx_location.audio, try memory.resourceLocation(sfx_resource_id, .sound_or_empty));
+    try testing.expectEqual(sfx_location.audio, try memory.resourceLocation(sfx_resource_id, .sound));
     try testing.expectEqual(music_location.audio, try memory.resourceLocation(music_resource_id, .music));
 
     memory.unloadAllIndividualResources();
@@ -589,6 +598,6 @@ test "unloadAllIndividualResources unloads sound and music resources but leaves 
     try testing.expectEqual(game_part_locations.bytecode, try memory.resourceLocation(game_part_resource_ids.bytecode, .bytecode));
     try testing.expectEqual(game_part_locations.polygons, try memory.resourceLocation(game_part_resource_ids.polygons, .polygons));
     try testing.expectEqual(game_part_locations.animations, try memory.resourceLocation(game_part_resource_ids.animations.?, .animations));
-    try testing.expectEqual(null, try memory.resourceLocation(sfx_resource_id, .sound_or_empty));
+    try testing.expectEqual(null, try memory.resourceLocation(sfx_resource_id, .sound));
     try testing.expectEqual(null, try memory.resourceLocation(music_resource_id, .music));
 }

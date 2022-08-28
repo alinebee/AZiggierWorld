@@ -19,11 +19,19 @@ test "ResourceDirectory reads all game resources" {
     try testing.expectEqual(146, descriptors.len);
 
     // For each resource, test that it can be parsed and decompressed without errors.
-    for (descriptors) |descriptor| {
-        const data = try reader.allocReadResource(testing.allocator, descriptor);
-        defer testing.allocator.free(data);
+    for (descriptors) |descriptor, id| {
+        switch (descriptor) {
+            .empty => {
+                log.warn("Skipping empty resource at {}", .{id});
+                continue;
+            },
+            .valid => |valid_descriptor| {
+                const data = try reader.allocReadResource(testing.allocator, valid_descriptor);
+                defer testing.allocator.free(data);
 
-        try testing.expectEqual(descriptor.uncompressed_size, data.len);
+                try testing.expectEqual(valid_descriptor.uncompressed_size, data.len);
+            },
+        }
     }
 }
 
@@ -34,10 +42,10 @@ test "Instance.readResourceAlloc returns error.OutOfMemory if it runs out of mem
     var resource_directory = try resources.ResourceDirectory.init(&game_dir);
     const reader = resource_directory.reader();
 
-    // Some resources are zero-length; testing.failing_allocator would not fail if the memory required is 0.
-    const non_empty_descriptor = for (reader.resourceDescriptors()) |descriptor| {
-        if (descriptor.uncompressed_size > 0) {
-            break descriptor;
+    const valid_descriptor = for (reader.resourceDescriptors()) |descriptor| {
+        switch (descriptor) {
+            .empty => continue,
+            .valid => |valid| break valid,
         }
     } else {
         log.warn("\nNo non-empty resources found in game directory, skipping test. This probably indicates a corrupted version of the game.\n", .{});
@@ -46,7 +54,7 @@ test "Instance.readResourceAlloc returns error.OutOfMemory if it runs out of mem
 
     try testing.expectError(
         error.OutOfMemory,
-        reader.allocReadResource(testing.failing_allocator, non_empty_descriptor),
+        reader.allocReadResource(testing.failing_allocator, valid_descriptor),
     );
 }
 

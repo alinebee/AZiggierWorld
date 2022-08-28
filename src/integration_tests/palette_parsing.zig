@@ -18,17 +18,22 @@ test "Parse all palettes in original game files" {
     const reader = resource_directory.reader();
 
     for (reader.resourceDescriptors()) |descriptor| {
-        if (descriptor.type != .palettes) continue;
+        switch (descriptor) {
+            .empty => continue,
+            .valid => |valid_descriptor| {
+                if (valid_descriptor.type != .palettes) continue;
 
-        const data = try reader.allocReadResource(testing.allocator, descriptor);
-        defer testing.allocator.free(data);
+                const data = try reader.allocReadResource(testing.allocator, valid_descriptor);
+                defer testing.allocator.free(data);
 
-        const palettes = rendering.PaletteResource.init(data);
+                const palettes = rendering.PaletteResource.init(data);
 
-        var idx: usize = 0;
-        while (idx < static_limits.palette_count) : (idx += 1) {
-            const palette_id = rendering.PaletteID.cast(idx);
-            _ = try palettes.palette(palette_id);
+                var idx: usize = 0;
+                while (idx < static_limits.palette_count) : (idx += 1) {
+                    const palette_id = rendering.PaletteID.cast(idx);
+                    _ = try palettes.palette(palette_id);
+                }
+            },
         }
     }
 }

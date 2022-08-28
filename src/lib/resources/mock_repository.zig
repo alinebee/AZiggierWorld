@@ -15,7 +15,7 @@
 //! var repository = MockRepository.init(resource_descriptors, null);
 //! const reader = repository.reader();
 //!
-//! const first_resource_descriptor = try reader.resourceDescriptor(0);
+//! const first_resource_descriptor = try reader.validResourceDescriptor(0);
 //! try testing.expectEqual(0, repository.read_count);
 //! const garbage_data = try reader.allocReadResource(testing.allocator, first_resource_descriptor);
 //! try testing.expectEqual(1, repository.read_count);
@@ -78,7 +78,7 @@ pub const MockRepository = struct {
     ///
     /// Returns error.BufferTooSmall and leaves the buffer unchanged if the supplied buffer
     /// is not large enough to hold the descriptor's uncompressed size in bytes.
-    fn bufReadResource(self: *Self, buffer: []u8, descriptor: ResourceDescriptor) ResourceReader.BufReadResourceError![]const u8 {
+    fn bufReadResource(self: *Self, buffer: []u8, descriptor: ResourceDescriptor.Valid) ResourceReader.BufReadResourceError![]const u8 {
         self.read_count += 1;
 
         if (buffer.len < descriptor.uncompressed_size) {
@@ -150,23 +150,17 @@ const minimum_looped_program_length = loop_instruction.len + 1;
 // -- Resource descriptor fixture data --
 
 const TestFixtures = struct {
-    const empty_descriptor = ResourceDescriptor{
-        .type = .sound_or_empty,
-        .bank_id = 0,
-        .bank_offset = 0,
-        .compressed_size = 0,
-        .uncompressed_size = 0,
-    };
+    const empty_descriptor = ResourceDescriptor.empty;
 
-    const sfx_descriptor = ResourceDescriptor{
-        .type = .sound_or_empty,
+    const sfx_descriptor = ResourceDescriptor.Valid{
+        .type = .sound,
         .bank_id = 0,
         .bank_offset = 0,
         .compressed_size = 100,
         .uncompressed_size = 100,
     };
 
-    const music_descriptor = ResourceDescriptor{
+    const music_descriptor = ResourceDescriptor.Valid{
         .type = .music,
         .bank_id = 0,
         .bank_offset = 0,
@@ -174,7 +168,7 @@ const TestFixtures = struct {
         .uncompressed_size = 100,
     };
 
-    const bitmap_descriptor = ResourceDescriptor{
+    const bitmap_descriptor = ResourceDescriptor.Valid{
         .type = .bitmap,
         .bank_id = 0,
         .bank_offset = 0,
@@ -182,7 +176,7 @@ const TestFixtures = struct {
         .uncompressed_size = 32_000,
     };
 
-    const palettes_descriptor = ResourceDescriptor{
+    const palettes_descriptor = ResourceDescriptor.Valid{
         .type = .palettes,
         .bank_id = 0,
         .bank_offset = 0,
@@ -190,7 +184,7 @@ const TestFixtures = struct {
         .uncompressed_size = 1024,
     };
 
-    const bytecode_descriptor = ResourceDescriptor{
+    const bytecode_descriptor = ResourceDescriptor.Valid{
         .type = .bytecode,
         .bank_id = 0,
         .bank_offset = 0,
@@ -198,7 +192,7 @@ const TestFixtures = struct {
         .uncompressed_size = minimum_looped_program_length,
     };
 
-    const polygons_descriptor = ResourceDescriptor{
+    const polygons_descriptor = ResourceDescriptor.Valid{
         .type = .polygons,
         .bank_id = 0,
         .bank_offset = 0,
@@ -206,7 +200,7 @@ const TestFixtures = struct {
         .uncompressed_size = 2000,
     };
 
-    const sprite_polygons_descriptor = ResourceDescriptor{
+    const sprite_polygons_descriptor = ResourceDescriptor.Valid{
         .type = .animations,
         .bank_id = 0,
         .bank_offset = 0,
@@ -223,63 +217,63 @@ const TestFixtures = struct {
 
     /// A list of fake descriptors with realistic values for resources that are referenced in game parts.
     pub const descriptors = block: {
-        var d = [_]ResourceDescriptor{empty_descriptor} ** (invalid_resource_id.index());
+        var d = [_]ResourceDescriptor{empty_descriptor} ** (max_resource_id.index() + 1);
 
         // Drop in individually loadable resources at known offsets
-        d[sfx_resource_id.index()] = sfx_descriptor;
-        d[music_resource_id.index()] = music_descriptor;
-        d[bitmap_resource_id.index()] = bitmap_descriptor;
-        d[bitmap_resource_id_2.index()] = bitmap_descriptor;
+        d[sfx_resource_id.index()] = .{ .valid = sfx_descriptor };
+        d[music_resource_id.index()] = .{ .valid = music_descriptor };
+        d[bitmap_resource_id.index()] = .{ .valid = bitmap_descriptor };
+        d[bitmap_resource_id_2.index()] = .{ .valid = bitmap_descriptor };
 
         // Animation data shared by all game parts
-        d[0x11] = sprite_polygons_descriptor;
+        d[0x11] = .{ .valid = sprite_polygons_descriptor };
 
         // Part-specific data: see game_part.zig
 
         // GamePart.copy_protection
-        d[0x14] = palettes_descriptor;
-        d[0x15] = bytecode_descriptor;
-        d[0x16] = polygons_descriptor;
+        d[0x14] = .{ .valid = palettes_descriptor };
+        d[0x15] = .{ .valid = bytecode_descriptor };
+        d[0x16] = .{ .valid = polygons_descriptor };
 
         // GamePart.intro_cinematic
-        d[0x17] = palettes_descriptor;
-        d[0x18] = bytecode_descriptor;
-        d[0x19] = polygons_descriptor;
+        d[0x17] = .{ .valid = palettes_descriptor };
+        d[0x18] = .{ .valid = bytecode_descriptor };
+        d[0x19] = .{ .valid = polygons_descriptor };
 
         // GamePart.gameplay1
-        d[0x1A] = palettes_descriptor;
-        d[0x1B] = bytecode_descriptor;
-        d[0x1C] = polygons_descriptor;
+        d[0x1A] = .{ .valid = palettes_descriptor };
+        d[0x1B] = .{ .valid = bytecode_descriptor };
+        d[0x1C] = .{ .valid = polygons_descriptor };
 
         // GamePart.gameplay2
-        d[0x1D] = palettes_descriptor;
-        d[0x1E] = bytecode_descriptor;
-        d[0x1F] = polygons_descriptor;
+        d[0x1D] = .{ .valid = palettes_descriptor };
+        d[0x1E] = .{ .valid = bytecode_descriptor };
+        d[0x1F] = .{ .valid = polygons_descriptor };
 
         // GamePart.gameplay3
-        d[0x20] = palettes_descriptor;
-        d[0x21] = bytecode_descriptor;
-        d[0x22] = polygons_descriptor;
+        d[0x20] = .{ .valid = palettes_descriptor };
+        d[0x21] = .{ .valid = bytecode_descriptor };
+        d[0x22] = .{ .valid = polygons_descriptor };
 
         // GamePart.arena_cinematic
-        d[0x23] = palettes_descriptor;
-        d[0x24] = bytecode_descriptor;
-        d[0x25] = polygons_descriptor;
+        d[0x23] = .{ .valid = palettes_descriptor };
+        d[0x24] = .{ .valid = bytecode_descriptor };
+        d[0x25] = .{ .valid = polygons_descriptor };
 
         // GamePart.gameplay4
-        d[0x26] = palettes_descriptor;
-        d[0x27] = bytecode_descriptor;
-        d[0x28] = polygons_descriptor;
+        d[0x26] = .{ .valid = palettes_descriptor };
+        d[0x27] = .{ .valid = bytecode_descriptor };
+        d[0x28] = .{ .valid = polygons_descriptor };
 
         // GamePart.ending_cinematic
-        d[0x29] = palettes_descriptor;
-        d[0x2A] = bytecode_descriptor;
-        d[0x2B] = polygons_descriptor;
+        d[0x29] = .{ .valid = palettes_descriptor };
+        d[0x2A] = .{ .valid = bytecode_descriptor };
+        d[0x2B] = .{ .valid = polygons_descriptor };
 
         // GamePart.password_entry
-        d[0x7D] = palettes_descriptor;
-        d[0x7E] = bytecode_descriptor;
-        d[0x7F] = polygons_descriptor;
+        d[0x7D] = .{ .valid = palettes_descriptor };
+        d[0x7E] = .{ .valid = bytecode_descriptor };
+        d[0x7F] = .{ .valid = polygons_descriptor };
 
         break :block d;
     };
@@ -289,12 +283,16 @@ const TestFixtures = struct {
 
 const testing = @import("utils").testing;
 
-const example_descriptor = ResourceDescriptor{
+const example_descriptor = ResourceDescriptor.Valid{
     .type = .music,
     .bank_id = 0,
     .bank_offset = 0,
     .compressed_size = 10,
     .uncompressed_size = 10,
+};
+
+const example_descriptors = [_]ResourceDescriptor{
+    .{ .valid = example_descriptor },
 };
 
 test "bufReadResource with music descriptor returns slice of original buffer filled with bit pattern when buffer is appropriate size" {
@@ -304,7 +302,7 @@ test "bufReadResource with music descriptor returns slice of original buffer fil
     // for loaded data, and the rest of the buffer left as-is.
     const expected_buffer_contents = [_]u8{resource_bit_pattern} ** example_descriptor.uncompressed_size ++ [_]u8{0x0} ** example_descriptor.uncompressed_size;
 
-    var repository = MockRepository.init(&.{example_descriptor}, false);
+    var repository = MockRepository.init(&example_descriptors, false);
     try testing.expectEqual(0, repository.read_count);
     const result = try repository.reader().bufReadResource(&buffer, example_descriptor);
     try testing.expectEqual(@ptrToInt(&buffer), @ptrToInt(result.ptr));
@@ -321,7 +319,7 @@ test "bufReadResource with bytecode descriptor returns slice of original buffer 
         0x0,
     };
 
-    const example_bytecode_descriptor = ResourceDescriptor{
+    const example_bytecode_descriptor = ResourceDescriptor.Valid{
         .type = .bytecode,
         .bank_id = 0,
         .bank_offset = 0,
@@ -331,7 +329,7 @@ test "bufReadResource with bytecode descriptor returns slice of original buffer 
 
     var buffer: [expected_program.len]u8 = undefined;
 
-    var repository = MockRepository.init(&.{example_descriptor}, false);
+    var repository = MockRepository.init(&.{.{ .valid = example_bytecode_descriptor }}, false);
     try testing.expectEqual(0, repository.read_count);
     _ = try repository.reader().bufReadResource(&buffer, example_bytecode_descriptor);
     try testing.expectEqual(expected_program, buffer);
@@ -340,7 +338,7 @@ test "bufReadResource with bytecode descriptor returns slice of original buffer 
 test "bufReadResource with bytecode descriptor omits loop instruction when buffer is too short" {
     const expected_program = [_]u8{bytecode.Opcode.Yield.encode()} ** 3;
 
-    const example_bytecode_descriptor = ResourceDescriptor{
+    const example_bytecode_descriptor = ResourceDescriptor.Valid{
         .type = .bytecode,
         .bank_id = 0,
         .bank_offset = 0,
@@ -350,7 +348,7 @@ test "bufReadResource with bytecode descriptor omits loop instruction when buffe
 
     var buffer: [expected_program.len]u8 = undefined;
 
-    var repository = MockRepository.init(&.{example_descriptor}, false);
+    var repository = MockRepository.init(&.{.{ .valid = example_bytecode_descriptor }}, false);
     try testing.expectEqual(0, repository.read_count);
     _ = try repository.reader().bufReadResource(&buffer, example_bytecode_descriptor);
     try testing.expectEqual(expected_program, buffer);
@@ -361,7 +359,7 @@ test "bufReadResource returns supplied error and leaves buffer alone when buffer
     // The whole buffer should be left untouched.
     const expected_buffer_contents = buffer;
 
-    var repository = MockRepository.init(&.{example_descriptor}, true);
+    var repository = MockRepository.init(&example_descriptors, true);
     try testing.expectEqual(0, repository.read_count);
     try testing.expectError(error.InvalidCompressedData, repository.reader().bufReadResource(&buffer, example_descriptor));
     try testing.expectEqual(1, repository.read_count);
@@ -373,7 +371,7 @@ test "bufReadResource returns error.BufferTooSmall if buffer is too small for re
     // The whole buffer should be left untouched.
     const expected_buffer_contents = buffer;
 
-    var repository = MockRepository.init(&.{example_descriptor}, true);
+    var repository = MockRepository.init(&.{.{ .valid = example_descriptor }}, true);
     try testing.expectEqual(0, repository.read_count);
     try testing.expectError(error.BufferTooSmall, repository.reader().bufReadResource(&buffer, example_descriptor));
     try testing.expectEqual(1, repository.read_count);

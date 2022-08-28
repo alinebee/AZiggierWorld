@@ -6,9 +6,7 @@ const _Raw = u8;
 /// The possible types for an Another World resource.
 pub const ResourceType = enum(_Raw) {
     /// The resource contains sound effect data.
-    /// Descriptors for 0-byte resources also have this type.
-    /// Those may be be a file marker of some kind and not intended to be "played"?
-    sound_or_empty = 0,
+    sound = 0,
 
     /// The resource contains music data.
     music = 1,
@@ -52,7 +50,7 @@ pub const ResourceType = enum(_Raw) {
 const testing = @import("utils").testing;
 
 test "parse parses raw operation types correctly" {
-    try testing.expectEqual(.sound_or_empty, ResourceType.parse(0));
+    try testing.expectEqual(.sound, ResourceType.parse(0));
     try testing.expectEqual(.music, ResourceType.parse(1));
     try testing.expectEqual(.bitmap, ResourceType.parse(2));
     try testing.expectEqual(.palettes, ResourceType.parse(3));
