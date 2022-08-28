@@ -35,6 +35,8 @@ pub const SoundEffect = struct {
 
         if (data.len < loop_end) return error.TruncatedData;
         if (data.len > loop_end) {
+            // At least one sound effect resource in the Another World DOS game files
+            // is padded out to a longer data length than the sample actually uses.
             log.debug("Slice too long for expected data: {} actual vs {} expected", .{ data.len, loop_end });
         }
 
@@ -112,7 +114,6 @@ test "init parses sound data with intro and loop" {
 }
 
 test "init parsed data that is longer than necessary" {
-    // Still to verify: whether any sound effect resources in the DOS game are too long for their sample data.
     const padded_fixture = &(Fixtures.intro_with_loop ++ [_]u8{ 0x00, 0x01, 0x02, 0x03, 0x04 });
     const sound = try SoundEffect.parse(padded_fixture);
     try testing.expectEqual(padded_fixture[8..14], sound.intro);
