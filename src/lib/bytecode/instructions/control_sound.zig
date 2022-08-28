@@ -16,9 +16,8 @@ pub const ControlSound = union(enum) {
         /// The volume at which to play the sound.
         /// TODO: document default volume and observed range.
         volume: audio.Volume,
-        /// The pitch at which to play the sound.
-        /// TODO: document default frequency and observed range.
-        frequency: audio.Frequency,
+        /// The ID of the preset pitch at which to play the sound.
+        frequency_id: audio.FrequencyID,
     },
     stop: vm.ChannelID,
 
@@ -29,7 +28,7 @@ pub const ControlSound = union(enum) {
     /// Returns an error if the bytecode could not be read or contained an invalid instruction.
     pub fn parse(_: Opcode.Raw, program: *Program) ParseError!Self {
         const resource_id = resources.ResourceID.cast(try program.read(resources.ResourceID.Raw));
-        const frequency = try program.read(audio.Frequency);
+        const frequency_id = try program.read(audio.FrequencyID);
         const volume = try program.read(audio.Volume);
         const channel_id = try vm.ChannelID.parse(try program.read(vm.ChannelID.Raw));
 
@@ -39,7 +38,7 @@ pub const ControlSound = union(enum) {
                     .resource_id = resource_id,
                     .channel_id = channel_id,
                     .volume = volume,
-                    .frequency = frequency,
+                    .frequency_id = frequency_id,
                 },
             };
         } else {
@@ -55,7 +54,7 @@ pub const ControlSound = union(enum) {
     // Private implementation is generic to allow tests to use mocks.
     fn _execute(self: Self, machine: anytype) !void {
         switch (self) {
-            .play => |operation| try machine.playSound(operation.resource_id, operation.channel_id, operation.volume, operation.frequency),
+            .play => |operation| try machine.playSound(operation.resource_id, operation.channel_id, operation.volume, operation.frequency_id),
             .stop => |channel_id| machine.stopChannel(channel_id),
         }
     }
@@ -93,7 +92,7 @@ test "parse parses play instruction and consumes 6 bytes" {
             .resource_id = resources.ResourceID.cast(0xDEAD),
             .channel_id = vm.ChannelID.cast(3),
             .volume = 0xEF,
-            .frequency = 0xBE,
+            .frequency_id = 0xBE,
         },
     };
     try testing.expectEqual(expected, instruction);
@@ -118,12 +117,12 @@ test "execute with play instruction calls playSound with correct parameters" {
             .resource_id = resources.ResourceID.cast(0xDEAD),
             .channel_id = vm.ChannelID.cast(0),
             .volume = 20,
-            .frequency = 0,
+            .frequency_id = 0,
         },
     };
 
     var machine = mockMachine(struct {
-        pub fn playSound(resource_id: resources.ResourceID, channel_id: vm.ChannelID, volume: audio.Volume, frequency: audio.Frequency) !void {
+        pub fn playSound(resource_id: resources.ResourceID, channel_id: vm.ChannelID, volume: audio.Volume, frequency: audio.FrequencyID) !void {
             try testing.expectEqual(resources.ResourceID.cast(0xDEAD), resource_id);
             try testing.expectEqual(vm.ChannelID.cast(0), channel_id);
             try testing.expectEqual(20, volume);
@@ -143,7 +142,7 @@ test "execute with stop instruction runs on machine without errors" {
     const instruction = ControlSound{ .stop = vm.ChannelID.cast(1) };
 
     var machine = mockMachine(struct {
-        pub fn playSound(_: resources.ResourceID, _: vm.ChannelID, _: audio.Volume, _: audio.Frequency) !void {
+        pub fn playSound(_: resources.ResourceID, _: vm.ChannelID, _: audio.Volume, _: audio.FrequencyID) !void {
             unreachable;
         }
 

@@ -104,9 +104,9 @@ pub fn MockMachine(comptime Implementation: type) type {
             Implementation.stopMusic();
         }
 
-        pub fn playSound(self: *Self, resource_id: resources.ResourceID, channel_id: vm.ChannelID, volume: audio.Volume, frequency: audio.Frequency) !void {
+        pub fn playSound(self: *Self, resource_id: resources.ResourceID, channel_id: vm.ChannelID, volume: audio.Volume, frequency_id: audio.FrequencyID) !void {
             self.call_counts.playSound += 1;
-            try Implementation.playSound(resource_id, channel_id, volume, frequency);
+            try Implementation.playSound(resource_id, channel_id, volume, frequency_id);
         }
 
         pub fn stopChannel(self: *Self, channel_id: vm.ChannelID) void {
@@ -290,11 +290,11 @@ test "MockMachine calls stopMusic correctly on stub implementation" {
 
 test "MockMachine calls playSound correctly on stub implementation" {
     var mock = mockMachine(struct {
-        fn playSound(resource_id: resources.ResourceID, channel_id: vm.ChannelID, volume: audio.Volume, frequency: audio.Frequency) !void {
+        fn playSound(resource_id: resources.ResourceID, channel_id: vm.ChannelID, volume: audio.Volume, frequency_id: audio.FrequencyID) !void {
             try testing.expectEqual(resources.ResourceID.cast(0xBEEF), resource_id);
             try testing.expectEqual(vm.ChannelID.cast(2), channel_id);
             try testing.expectEqual(64, volume);
-            try testing.expectEqual(128, frequency);
+            try testing.expectEqual(128, frequency_id);
         }
     });
 
