@@ -275,7 +275,7 @@ pub const Machine = struct {
 
     /// Play a sound effect from the specified resource on the specified channel.
     /// Returns an error if the resource ID is not a sound resource or does not exist.
-    pub fn playSound(self: *Self, resource_id: resources.ResourceID, channel_id: vm.ChannelID, volume: audio.Volume, frequency_id: audio.FrequencyID) !void {
+    pub fn playSound(self: *Self, resource_id: resources.ResourceID, channel_id: vm.ChannelID, volume: audio.Volume.Trusted, frequency_id: audio.FrequencyID) !void {
         const possible_sound_data = try self.memory.resourceLocation(resource_id, .sound_or_empty);
         if (possible_sound_data) |sound_data| {
             try self.audio.playSound(sound_data, channel_id, volume, frequency_id);

@@ -104,7 +104,7 @@ pub fn MockMachine(comptime Implementation: type) type {
             Implementation.stopMusic();
         }
 
-        pub fn playSound(self: *Self, resource_id: resources.ResourceID, channel_id: vm.ChannelID, volume: audio.Volume, frequency_id: audio.FrequencyID) !void {
+        pub fn playSound(self: *Self, resource_id: resources.ResourceID, channel_id: vm.ChannelID, volume: audio.Volume.Trusted, frequency_id: audio.FrequencyID) !void {
             self.call_counts.playSound += 1;
             try Implementation.playSound(resource_id, channel_id, volume, frequency_id);
         }
@@ -290,15 +290,15 @@ test "MockMachine calls stopMusic correctly on stub implementation" {
 
 test "MockMachine calls playSound correctly on stub implementation" {
     var mock = mockMachine(struct {
-        fn playSound(resource_id: resources.ResourceID, channel_id: vm.ChannelID, volume: audio.Volume, frequency_id: audio.FrequencyID) !void {
+        fn playSound(resource_id: resources.ResourceID, channel_id: vm.ChannelID, volume: audio.Volume.Trusted, frequency_id: audio.FrequencyID) !void {
             try testing.expectEqual(resources.ResourceID.cast(0xBEEF), resource_id);
             try testing.expectEqual(vm.ChannelID.cast(2), channel_id);
-            try testing.expectEqual(64, volume);
+            try testing.expectEqual(63, volume);
             try testing.expectEqual(128, frequency_id);
         }
     });
 
-    try mock.playSound(resources.ResourceID.cast(0xBEEF), vm.ChannelID.cast(2), 64, 128);
+    try mock.playSound(resources.ResourceID.cast(0xBEEF), vm.ChannelID.cast(2), 63, 128);
     try testing.expectEqual(1, mock.call_counts.playSound);
 }
 

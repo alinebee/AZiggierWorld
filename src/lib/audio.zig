@@ -2,7 +2,9 @@
 
 pub const Delay = u16;
 pub const Offset = u8;
-pub const Volume = u8;
+
+pub const Volume = @import("audio/volume.zig");
+
 pub const FrequencyID = u8;
 pub const Frequency = u16;
 

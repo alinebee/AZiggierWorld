@@ -15,7 +15,7 @@ pub const ControlSound = union(enum) {
         channel_id: vm.ChannelID,
         /// The volume at which to play the sound.
         /// TODO: document default volume and observed range.
-        volume: audio.Volume,
+        volume: audio.Volume.Trusted,
         /// The ID of the preset pitch at which to play the sound.
         frequency_id: audio.FrequencyID,
     },
@@ -29,8 +29,11 @@ pub const ControlSound = union(enum) {
     pub fn parse(_: Opcode.Raw, program: *Program) ParseError!Self {
         const resource_id = resources.ResourceID.cast(try program.read(resources.ResourceID.Raw));
         const frequency_id = try program.read(audio.FrequencyID);
-        const volume = try program.read(audio.Volume);
-        const channel_id = try vm.ChannelID.parse(try program.read(vm.ChannelID.Raw));
+        const raw_volume = try program.read(audio.Volume.Raw);
+        const raw_channel_id = try program.read(vm.ChannelID.Raw);
+
+        const volume = try audio.Volume.parse(raw_volume);
+        const channel_id = try vm.ChannelID.parse(raw_channel_id);
 
         if (volume > 0) {
             return Self{
@@ -62,7 +65,7 @@ pub const ControlSound = union(enum) {
     // - Exported constants -
 
     pub const opcode = Opcode.ControlSound;
-    pub const ParseError = Program.ReadError || vm.ChannelID.Error;
+    pub const ParseError = Program.ReadError || vm.ChannelID.Error || audio.Volume.ParseError;
 
     // -- Bytecode examples --
 
@@ -72,10 +75,11 @@ pub const ControlSound = union(enum) {
         /// Example bytecode that should produce a valid instruction.
         pub const valid = play;
 
-        const play = [6]u8{ raw_opcode, 0xDE, 0xAD, 0xBE, 0xEF, 0x03 };
+        const play = [6]u8{ raw_opcode, 0xDE, 0xAD, 0xBE, 0x3F, 0x03 };
         const stop = [6]u8{ raw_opcode, 0x00, 0x00, 0x00, 0x00, 0x01 };
 
-        const invalid_channel = [6]u8{ raw_opcode, 0xDE, 0xAD, 0xFF, 0x80, 0x04 };
+        const invalid_channel = [6]u8{ raw_opcode, 0xDE, 0xAD, 0xFF, 0x3F, 0x04 };
+        const invalid_volume = [6]u8{ raw_opcode, 0xDE, 0xAD, 0xFF, 0x40, 0x03 };
     };
 };
 
@@ -91,7 +95,7 @@ test "parse parses play instruction and consumes 6 bytes" {
         .play = .{
             .resource_id = resources.ResourceID.cast(0xDEAD),
             .channel_id = vm.ChannelID.cast(3),
-            .volume = 0xEF,
+            .volume = 63,
             .frequency_id = 0xBE,
         },
     };
@@ -102,6 +106,13 @@ test "parse parses stop instruction and consumes 6 bytes" {
     const instruction = try expectParse(ControlSound.parse, &ControlSound.Fixtures.stop, 6);
     const expected = ControlSound{ .stop = vm.ChannelID.cast(1) };
     try testing.expectEqual(expected, instruction);
+}
+
+test "parse returns error.VolumeOutOfRange when invalid volume is specified in bytecode" {
+    try testing.expectError(
+        error.VolumeOutOfRange,
+        expectParse(ControlSound.parse, &ControlSound.Fixtures.invalid_volume, 6),
+    );
 }
 
 test "parse returns error.InvalidChannelID when unknown channel is specified in bytecode" {
@@ -122,7 +133,7 @@ test "execute with play instruction calls playSound with correct parameters" {
     };
 
     var machine = mockMachine(struct {
-        pub fn playSound(resource_id: resources.ResourceID, channel_id: vm.ChannelID, volume: audio.Volume, frequency: audio.FrequencyID) !void {
+        pub fn playSound(resource_id: resources.ResourceID, channel_id: vm.ChannelID, volume: audio.Volume.Trusted, frequency: audio.FrequencyID) !void {
             try testing.expectEqual(resources.ResourceID.cast(0xDEAD), resource_id);
             try testing.expectEqual(vm.ChannelID.cast(0), channel_id);
             try testing.expectEqual(20, volume);
@@ -142,7 +153,7 @@ test "execute with stop instruction runs on machine without errors" {
     const instruction = ControlSound{ .stop = vm.ChannelID.cast(1) };
 
     var machine = mockMachine(struct {
-        pub fn playSound(_: resources.ResourceID, _: vm.ChannelID, _: audio.Volume, _: audio.FrequencyID) !void {
+        pub fn playSound(_: resources.ResourceID, _: vm.ChannelID, _: audio.Volume.Trusted, _: audio.FrequencyID) !void {
             unreachable;
         }
 

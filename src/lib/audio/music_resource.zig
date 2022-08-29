@@ -95,7 +95,7 @@ pub const MusicResource = struct {
         };
 
         for (self.instruments) |*instrument, index| {
-            instrument.* = Instrument.parse(segmented_instrument_data[index]);
+            instrument.* = try Instrument.parse(segmented_instrument_data[index]);
         }
 
         return self;
@@ -132,7 +132,7 @@ pub const MusicResource = struct {
     };
 
     /// Errors that can be produced by parse().
-    pub const ParseError = error{
+    pub const ParseError = Instrument.ParseError || error{
         TruncatedData,
         SequenceTooLong,
     };
@@ -143,10 +143,8 @@ pub const MusicResource = struct {
         pattern: *const RawPattern,
         counter: usize = 0,
 
-        /// Returns the next batch of 4 channel events from the reader.
         /// Returns the next batch of 4 channel events from the pattern.
         /// Returns null once it reaches the end of the pattern.
-        /// Returns an error if it reaches a channel event that can't be parsed.
         /// Returns an error if the iterator reaches a channel event that can't be parsed.
         pub fn next(self: *PatternIterator) ChannelEvent.ParseError!?ChannelEvents {
             if (self.counter >= self.pattern.len) {
