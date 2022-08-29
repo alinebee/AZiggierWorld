@@ -11,6 +11,10 @@
 //!                                          1 event for each channel, 2 words each.
 //!                                          See ChannelEvent for layout.
 //!
+//! This appears to be adapted from the ProTracker MOD format, which also used 64 rows per pattern
+//! and supported a sequence of 128 patterns: https://www.exotica.org.uk/wiki/Protracker
+//! Another World replaced the MOD format's list of 32 samples embedded after the end of pattern data
+//! with a list of 16 instruments that referred to sound resources stored separately in the game files.
 
 const std = @import("std");
 const anotherworld = @import("../anotherworld.zig");
