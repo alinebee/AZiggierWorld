@@ -19,41 +19,12 @@ const audio = anotherworld.audio;
 const vm = anotherworld.vm;
 const static_limits = anotherworld.static_limits;
 
-const Instrument = @import("instrument.zig").Instrument;
-const ChannelEvent = @import("channel_event.zig").ChannelEvent;
-
-const max_sequence_length = 128;
-const max_instruments = 15;
-const event_blocks_per_pattern = 64;
-
-/// Data offsets within a music resource.
-const DataLayout = struct {
-    // The starting offset of the delay
-    const delay = 0x00;
-    // The starting offset of the instruments block
-    const instruments = 0x02;
-    // The starting offset of the sequence length
-    const sequence_length = 0x3E;
-    // The starting offset of the sequence list
-    const sequence = 0x40;
-    // The starting offset of pattern data
-    const patterns = 0xC0;
-
-    comptime {
-        std.debug.assert((sequence_length - instruments) / @sizeOf(Instrument.Raw) == max_instruments);
-        std.debug.assert((patterns - sequence) / @sizeOf(MusicResource.PatternID) == max_sequence_length);
-    }
-};
-
-const RawChannelEvents = [static_limits.channel_count]ChannelEvent.Raw;
-const RawPattern = [event_blocks_per_pattern]RawChannelEvents;
-
 /// Parses an Another World music resource into a structure that can be played back on a mixer.
 pub const MusicResource = struct {
-    const SequenceStorage = std.BoundedArray(PatternID, max_sequence_length);
+    const SequenceStorage = std.BoundedArray(PatternID, static_limits.max_pattern_sequence_length);
 
     delay: audio.Delay,
-    instruments: [max_instruments]?Instrument,
+    instruments: [static_limits.max_instruments]?Instrument,
     _raw_sequence: SequenceStorage,
     _raw_patterns: []const RawPattern,
 
@@ -80,11 +51,11 @@ pub const MusicResource = struct {
 
         const delay = std.mem.readIntBig(u16, delay_data);
         const parsed_sequence_length = std.mem.readIntBig(u16, sequence_length_data);
-        if (parsed_sequence_length > max_sequence_length) {
+        if (parsed_sequence_length > static_limits.max_pattern_sequence_length) {
             return error.SequenceTooLong;
         }
 
-        const segmented_instrument_data = @ptrCast(*const [max_instruments]Instrument.Raw, raw_instrument_data);
+        const segmented_instrument_data = @ptrCast(*const [static_limits.max_instruments]Instrument.Raw, raw_instrument_data);
         const segmented_pattern_data = @bitCast([]const RawPattern, raw_pattern_data);
 
         var self = Self{
@@ -107,7 +78,8 @@ pub const MusicResource = struct {
         return self._raw_sequence.constSlice();
     }
 
-    /// An iterator that loops through the 64 blocks of a pattern.
+    /// An iterator that loops through the 64 "beats" of a pattern.
+    /// On each beat, it returns a block of 4 events to process on each channel.
     /// Returns error.InvalidPatternID if the specified pattern ID was outside the range of the resource.
     ///
     /// Usage:
@@ -122,6 +94,9 @@ pub const MusicResource = struct {
         }
         return PatternIterator{ .pattern = &self._raw_patterns[index] };
     }
+
+    pub const Instrument = @import("instrument.zig").Instrument;
+    pub const ChannelEvent = @import("channel_event.zig").ChannelEvent;
 
     /// The ID of a pattern.
     pub const PatternID = u8;
@@ -143,10 +118,8 @@ pub const MusicResource = struct {
         pattern: *const RawPattern,
         counter: usize = 0,
 
-        /// Returns the next batch of 4 channel events from the reader.
         /// Returns the next batch of 4 channel events from the pattern.
         /// Returns null once it reaches the end of the pattern.
-        /// Returns an error if it reaches a channel event that can't be parsed.
         /// Returns an error if the iterator reaches a channel event that can't be parsed.
         pub fn next(self: *PatternIterator) ChannelEvent.ParseError!?ChannelEvents {
             if (self.counter >= self.pattern.len) {
@@ -166,6 +139,28 @@ pub const MusicResource = struct {
 
         pub const ChannelEvents = [static_limits.channel_count]ChannelEvent;
     };
+
+    const RawPattern = [static_limits.beats_per_pattern]RawChannelEvents;
+    const RawChannelEvents = [static_limits.channel_count]ChannelEvent.Raw;
+};
+
+/// Data offsets within a music resource.
+const DataLayout = struct {
+    // The starting offset of the delay
+    const delay = 0x00;
+    // The starting offset of the instruments block
+    const instruments = 0x02;
+    // The starting offset of the sequence length
+    const sequence_length = 0x3E;
+    // The starting offset of the sequence list
+    const sequence = 0x40;
+    // The starting offset of pattern data
+    const patterns = 0xC0;
+
+    comptime {
+        std.debug.assert((sequence_length - instruments) / @sizeOf(MusicResource.Instrument.Raw) == static_limits.max_instruments);
+        std.debug.assert((patterns - sequence) / @sizeOf(MusicResource.PatternID) == static_limits.max_pattern_sequence_length);
+    }
 };
 
 // -- Tests --

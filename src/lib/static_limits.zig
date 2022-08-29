@@ -30,15 +30,6 @@ pub const register_count = 256;
 /// The DOS version of Another World uses 4 buffers.
 pub const buffer_count = 4;
 
-/// The number of addressable sound channels.
-/// Channels are addressed in bytecode instructions using an unsigned 8-bit integer,
-/// so this value must fit within a u8. Channel IDs are also bounds-checked by casting them
-/// to a trusted u2 integer type: changing this value will require defining a new trusted type.
-/// See channel.zig.
-///
-/// The DOS version of Another World uses 4 channels.
-pub const channel_count = 4;
-
 /// The number of addressable palettes.
 /// Palettes are addressed in bytecode instructions using an unsigned 8-bit integer,
 /// so this value must fit within a u8. Palette IDs are also bounds-checked by casting them
@@ -110,6 +101,27 @@ pub const max_polygon_vertices = 50;
 ///
 /// The DOS version of Another World precomputed 1024 slope values.
 pub const precomputed_slope_count = 1024;
+
+/// The number of addressable sound channels.
+/// Channels are addressed in bytecode instructions using an unsigned 8-bit integer,
+/// so this value must fit within a u8. Channel IDs are also bounds-checked by casting them
+/// to a trusted u2 integer type: changing this value will require defining a new trusted type.
+/// See channel_id.zig.
+///
+/// The DOS version of Another World uses 4 channels.
+pub const channel_count = 4;
+
+/// The maximum length of the pattern sequence in a music track.
+/// See music_resource.zig.
+pub const max_pattern_sequence_length = 128;
+
+/// The maximum number of instruments that can be used by a single music track.
+/// See music_resource.zig.
+pub const max_instruments = 15;
+
+/// The number of "beats" (regular intervals on which channel events happen)
+/// within a single pattern of a music track. See channel_event.zig.
+pub const beats_per_pattern = 64;
 
 // -- Helper functions --
 
