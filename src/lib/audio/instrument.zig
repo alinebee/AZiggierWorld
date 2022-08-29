@@ -28,10 +28,27 @@ pub const Instrument = struct {
     pub const Raw = [4]u8;
 };
 
+const Fixtures = struct {
+    const instrument = [4]u8{ 0x12, 0x34, 0x00, 0x3F };
+    const no_instrument = [4]u8{ 0x00, 0x00, 0x00, 0x00 };
+};
+
 // -- Tests --
 
 const testing = @import("utils").testing;
 
 test "Ensure everything compiles" {
     testing.refAllDecls(Instrument);
+}
+
+test "parse returns correct raw instrument definition" {
+    const expected = Instrument{
+        .resource_id = resources.ResourceID.cast(0x1234),
+        .volume = 63,
+    };
+    try testing.expectEqual(expected, Instrument.parse(Fixtures.instrument));
+}
+
+test "parse returns null for blank instrument definition" {
+    try testing.expectEqual(null, Instrument.parse(Fixtures.no_instrument));
 }
