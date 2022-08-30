@@ -10,6 +10,8 @@ pub const Instrument = struct {
     resource_id: resources.ResourceID,
     volume: audio.Volume,
 
+    /// Parse a raw 4-byte code from a music resource header into an instrument definition.
+    /// Returns an instrument, or null if the instrument was blank.
     pub fn parse(data: Raw) ?Instrument {
         const raw_resource_id = std.mem.readIntBig(u16, data[0..2]);
 

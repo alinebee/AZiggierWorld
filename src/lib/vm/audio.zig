@@ -11,14 +11,12 @@ pub const Audio = struct {
 
     /// Start playing a music track from a specified resource.
     pub fn playMusic(_: *Self, music_data: []const u8, offset: audio.Offset, delay: audio.Delay) !void {
-        const music = try audio.MusicResource.parse(music_data);
+        _ = try audio.MusicResource.parse(music_data);
 
-        log.debug("playMusic: play {*} at offset {} after delay {} (sequence length: {})", .{
+        log.debug("playMusic: play {*} at offset {} after delay {}", .{
             music_data,
             offset,
             delay,
-
-            music.sequence().len,
         });
     }
 

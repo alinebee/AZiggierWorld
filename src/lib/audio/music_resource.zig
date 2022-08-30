@@ -36,7 +36,7 @@ pub const MusicResource = struct {
 
     /// Parse a slice of resource data as a music track.
     /// Returns a music resource, or an error if the data was malformed.
-    /// The music resource stores pointers into the slice, and is only valid for the lifetime of the slice.
+    /// The resource stores pointers into the slice, and is only valid for the lifetime of the slice.
     pub fn parse(data: []const u8) ParseError!Self {
         if (data.len < DataLayout.patterns) {
             return error.TruncatedData;
@@ -76,13 +76,14 @@ pub const MusicResource = struct {
         return self;
     }
 
-    /// The sequence of pattern IDs that should be played back in order.
+    /// Returns an iterator of the sequence of pattern IDs in this music track,
+    /// indicating the order in which patterns should be played.
     /// This sequence may repeat patterns.
-    pub fn sequence(self: Self) []const PatternID {
-        return self._raw_sequence.constSlice();
+    pub fn iterateSequence(self: Self) SequenceIterator {
+        return .{ .sequence = self._raw_sequence.constSlice() };
     }
 
-    /// An iterator that loops through the 64 "beats" of a pattern.
+    /// Returns an iterator that loops through the 64 "beats" of a specific pattern.
     /// On each beat, it returns a block of 4 events to process on each channel.
     /// Returns error.InvalidPatternID if the specified pattern ID was outside the range of the resource.
     ///
@@ -116,6 +117,23 @@ pub const MusicResource = struct {
         SequenceTooLong,
     };
 
+    pub const SequenceIterator = struct {
+        sequence: []const PatternID,
+        counter: usize = 0,
+
+        pub fn next(self: *SequenceIterator) ?PatternID {
+            if (self.isAtEnd()) return null;
+
+            const pattern_id = self.sequence[self.counter];
+            self.counter += 1;
+            return pattern_id;
+        }
+
+        pub fn isAtEnd(self: SequenceIterator) bool {
+            return self.counter >= self.sequence.len;
+        }
+    };
+
     /// An iterator with a next() function that loops through blocks of 4 channel events in a pattern.
     /// Returned by MusicResource.iteratePattern().
     pub const PatternIterator = struct {
@@ -126,9 +144,7 @@ pub const MusicResource = struct {
         /// Returns null once it reaches the end of the pattern.
         /// Returns an error if the iterator reaches a channel event that can't be parsed.
         pub fn next(self: *PatternIterator) ChannelEvent.ParseError!?ChannelEvents {
-            if (self.counter >= self.pattern.len) {
-                return null;
-            }
+            if (self.isAtEnd()) return null;
 
             const raw_events = &self.pattern[self.counter];
             var events: ChannelEvents = undefined;
@@ -139,6 +155,10 @@ pub const MusicResource = struct {
             self.counter += 1;
 
             return events;
+        }
+
+        pub fn isAtEnd(self: PatternIterator) bool {
+            return self.counter >= self.pattern.len;
         }
 
         pub const ChannelEvents = [static_limits.channel_count]ChannelEvent;

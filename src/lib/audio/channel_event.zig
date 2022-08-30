@@ -39,7 +39,7 @@ pub const ChannelEvent = union(enum) {
 
     const Self = @This();
 
-    /// Parses a raw 4-byte code from a stream of pattern data into a channel event.
+    /// Parses a raw 4-byte code from a music resource's pattern data into a channel event.
     /// Returns an error if the code was malformed.
     pub fn parse(data: Raw) ParseError!Self {
         const control_value_1 = std.mem.readIntBig(u16, data[0..2]);

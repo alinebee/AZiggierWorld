@@ -31,6 +31,9 @@ pub const SoundResource = struct {
     /// Null if the sound effect does not loop.
     loop: ?[]const u8,
 
+    /// Parse a slice of resource data as a sound effect.
+    /// Returns a sound resource, or an error if the data was malformed.
+    /// The resource stores pointers into the slice, and is only valid for the lifetime of the slice.
     pub fn parse(data: []const u8) ParseError!SoundResource {
         if (data.len < DataLayout.intro) return error.TruncatedData;
 
