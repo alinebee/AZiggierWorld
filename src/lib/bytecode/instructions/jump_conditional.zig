@@ -52,6 +52,8 @@ pub const JumpConditional = struct {
 
         const control_code = try program.read(u8);
         // Operand source is the top 2 bits; comparison is the bottom 3 bits
+        // TODO 0.10: replace shift-and-truncate with packed struct:
+        // https://github.com/ziglang/zig/pull/12379
         const raw_source = @truncate(u2, control_code >> 6);
         const raw_comparison = @truncate(Comparison.Raw, control_code);
 

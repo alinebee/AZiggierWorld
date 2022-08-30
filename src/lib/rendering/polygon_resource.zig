@@ -276,6 +276,8 @@ const EntryHeader = union(enum) {
 
         const raw = try reader.readByte();
 
+        // TODO 0.10: replace shift with packed struct:
+        // https://github.com/ziglang/zig/pull/12379
         const top_2_bits = raw >> 6;
         const remaining_6_bits = @as(PolygonDrawMode.Raw, raw & 0b0011_1111);
 
@@ -343,6 +345,8 @@ const EntryPointer = struct {
         //        This has the layout `mmmm_mmmm_xxxx_xxxx`, where:
         //        - `m` is the draw mode to render the polygon with, overriding the polygon's own draw mode.
         //        - `x` appears to be an unused padding byte to ensure the following data starts on an even address.
+        // TODO 0.10: replace shift with packed struct:
+        // https://github.com/ziglang/zig/pull/12379
         const code = try reader.readInt(PolygonResource.Address, .Big);
         const overrides_draw_mode = (code >> 15) == 0b1;
 

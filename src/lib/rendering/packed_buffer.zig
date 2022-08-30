@@ -343,6 +343,8 @@ pub fn PackedBuffer(comptime width: usize, comptime height: usize) type {
 /// The unit in which the buffer will read and write color values for individual pixels.
 /// Two 4-bit colors are packed into a single byte: Zig packed structs have
 /// endianness-dependent field order so we must flip based on endianness.
+// TODO 0.10: merge these into a single packed struct with explicit integer size:
+// https://github.com/ziglang/zig/pull/12379
 const NativeColor = switch (@import("builtin").target.cpu.arch.endian()) {
     .Big => packed struct {
         left: ColorID,

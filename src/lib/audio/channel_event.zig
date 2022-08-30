@@ -58,6 +58,8 @@ pub const ChannelEvent = union(enum) {
                 return Self.stop;
             },
             else => {
+                // TODO 0.10: replace shift-and-truncate with packed struct:
+                // https://github.com/ziglang/zig/pull/12379
                 const raw_instrument_id = @truncate(u4, control_value_2 >> 12);
 
                 // Ignoring index 0, and subtracting 1 from the 4-bit instrument ID,

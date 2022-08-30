@@ -38,6 +38,8 @@ pub const Color = packed struct {
         // as 16 bits with the layout xxxxRRRRGGGGBBBB:
         // First 4 bits are unused and are just for alignment.
         // Next 4 are red, next 4 are green, next 4 are blue.
+        // TODO 0.10: replace shift-and-truncate with packed struct:
+        // https://github.com/ziglang/zig/pull/12379
         const raw_r = @truncate(u4, raw >> 8);
         const raw_g = @truncate(u4, raw >> 4);
         const raw_b = @truncate(u4, raw >> 0);

@@ -82,6 +82,8 @@ pub fn PlanarBitmapReader(comptime width: usize, comptime height: usize) type {
             var color_bits: ColorID.Trusted = 0b0000;
 
             // Pop the highest bit from each of the 4 planar bytes and push them onto the color.
+            // TODO: it may be more efficient to rotate all 4 bytes at once and store them in
+            // a temporary stack we can then pop off one-by-one.
             for (self.current_chunk) |*byte| {
                 const bit = @truncate(u1, byte.* >> 7);
 

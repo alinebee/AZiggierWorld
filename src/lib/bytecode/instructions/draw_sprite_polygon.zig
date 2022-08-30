@@ -79,6 +79,8 @@ pub const DrawSpritePolygon = struct {
         //   - 10: use `.polygons` resource, read next byte as unsigned 8-bit constant
         //   - 11: use `.animations` resource, set default scale
 
+        // TODO 0.10: replace shift-and-truncate with packed struct:
+        // https://github.com/ziglang/zig/pull/12379
         const raw_x = @truncate(u2, raw_opcode >> 4);
         const raw_y = @truncate(u2, raw_opcode >> 2);
         const raw_scale = @truncate(u2, raw_opcode);
