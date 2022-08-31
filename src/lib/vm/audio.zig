@@ -5,25 +5,22 @@ const log = anotherworld.log;
 
 /// The audio subsystem responsible for handling sound and music playback and sending audio data to the host's mixer.
 pub const Audio = struct {
-    music_delay: audio.Delay = 0,
-
     const Self = @This();
 
     /// Start playing a music track from a specified resource.
-    pub fn playMusic(_: *Self, music_data: []const u8, offset: audio.Offset, delay: audio.Delay) !void {
+    pub fn playMusic(_: *Self, music_data: []const u8, offset: audio.Offset, tempo: audio.Tempo) !void {
         _ = try audio.MusicResource.parse(music_data);
 
-        log.debug("playMusic: play {*} at offset {} after delay {}", .{
+        log.debug("playMusic: play {*} at offset {} tempo {}", .{
             music_data,
             offset,
-            delay,
+            tempo,
         });
     }
 
-    /// Set a delay on the current or subsequent music track.
-    pub fn setMusicDelay(self: *Self, delay: audio.Delay) void {
-        self.music_delay = delay;
-        log.debug("setMusicDelay: set delay to {}", .{delay});
+    /// Override the tempo of the current music track. Has no effect if no music is playing.
+    pub fn setMusicTempo(_: *Self, tempo: audio.Tempo) void {
+        log.debug("setMusicTempo: set tempo to {}", .{tempo});
     }
 
     /// Stop playing any current music track.

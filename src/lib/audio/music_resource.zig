@@ -1,7 +1,8 @@
 //! Music resources have the following big-endian data layout:
 //! (Byte offset, type, purpose, description)
 //! -- HEADER --
-//! 0..2     u16            delay            TODO: figure out unit and range
+//! 0..2     u16            tempo            The tempo at which to play the beats of the music track.
+//!                                          TODO: figure out unit and range.
 //! 2..62    [15][2]u16     instruments      15 entries of 2 words each. See Instrument for layout.
 //! 62-64    u16            sequence length  Number of used entries in sequence block.
 //!                                          Legal range is 0-128, so top byte goes unused.
@@ -27,7 +28,7 @@ const static_limits = anotherworld.static_limits;
 pub const MusicResource = struct {
     const SequenceStorage = std.BoundedArray(PatternID, static_limits.max_pattern_sequence_length);
 
-    delay: audio.Delay,
+    tempo: audio.Tempo,
     instruments: [static_limits.max_instruments]?Instrument,
     _raw_sequence: SequenceStorage,
     _raw_patterns: []const RawPattern,
@@ -42,7 +43,7 @@ pub const MusicResource = struct {
             return error.TruncatedData;
         }
 
-        const delay_data = data[DataLayout.delay..DataLayout.instruments];
+        const tempo_data = data[DataLayout.tempo..DataLayout.instruments];
         const raw_instrument_data = data[DataLayout.instruments..DataLayout.sequence_length];
         const sequence_length_data = data[DataLayout.sequence_length..DataLayout.sequence];
         const sequence_data = data[DataLayout.sequence..DataLayout.patterns];
@@ -53,7 +54,7 @@ pub const MusicResource = struct {
             return error.TruncatedData;
         }
 
-        const delay = std.mem.readIntBig(u16, delay_data);
+        const tempo = std.mem.readIntBig(u16, tempo_data);
         const parsed_sequence_length = std.mem.readIntBig(u16, sequence_length_data);
         if (parsed_sequence_length > static_limits.max_pattern_sequence_length) {
             return error.SequenceTooLong;
@@ -63,7 +64,7 @@ pub const MusicResource = struct {
         const segmented_pattern_data = @bitCast([]const RawPattern, raw_pattern_data);
 
         var self = Self{
-            .delay = delay,
+            .tempo = tempo,
             .instruments = undefined,
             ._raw_sequence = SequenceStorage.fromSlice(sequence_data[0..parsed_sequence_length]) catch unreachable,
             ._raw_patterns = segmented_pattern_data,
@@ -170,8 +171,8 @@ pub const MusicResource = struct {
 
 /// Data offsets within a music resource.
 const DataLayout = struct {
-    // The starting offset of the delay
-    const delay = 0x00;
+    // The starting offset of the tempo
+    const tempo = 0x00;
     // The starting offset of the instruments block
     const instruments = 0x02;
     // The starting offset of the sequence length

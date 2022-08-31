@@ -6,7 +6,7 @@ const audio = anotherworld.audio;
 const Opcode = @import("../opcode.zig").Opcode;
 const Program = @import("../program.zig").Program;
 
-/// Starts, stops or delays the current music track.
+/// Starts, stops or adjusts the tempo of the current music track.
 pub const ControlMusic = union(enum) {
     /// Begin playing a music track.
     play: struct {
@@ -15,12 +15,14 @@ pub const ControlMusic = union(enum) {
         /// The offset within the music resource at which to start playing.
         /// (TODO: document the meaning and units of this value.)
         offset: audio.Offset,
-        /// The delay before playing the track.
+        /// A custom tempo to play the track at. If 0 tempo,
+        /// the track's default tempo will be used.
         /// (TODO: document what units this is in. Tics?)
-        delay: audio.Delay,
+        /// (TODO: make sentinel null instead of 0?)
+        tempo: audio.Tempo,
     },
-    /// Override the delay on the current or subsequent `play` instruction.
-    set_delay: audio.Delay,
+    /// Override the tempo on the current or subsequent `play` instruction.
+    set_tempo: audio.Tempo,
     /// Stop playing any currently-playing music track.
     stop,
 
@@ -31,22 +33,22 @@ pub const ControlMusic = union(enum) {
     /// Returns an error if the bytecode could not be read or contained an invalid instruction.
     pub fn parse(_: Opcode.Raw, program: *Program) ParseError!Self {
         const possible_resource_id = try program.read(resources.ResourceID.Raw);
-        const delay = try program.read(audio.Delay);
+        const tempo = try program.read(audio.Tempo);
         const offset = try program.read(audio.Offset);
 
         const no_resource_id = 0;
-        const no_delay = 0;
+        const no_tempo = 0;
 
         if (possible_resource_id != no_resource_id) {
             return Self{
                 .play = .{
                     .resource_id = resources.ResourceID.cast(possible_resource_id),
                     .offset = offset,
-                    .delay = delay,
+                    .tempo = tempo,
                 },
             };
-        } else if (delay != no_delay) {
-            return Self{ .set_delay = delay };
+        } else if (tempo != no_tempo) {
+            return Self{ .set_tempo = tempo };
         } else {
             return .stop;
         }
@@ -60,8 +62,8 @@ pub const ControlMusic = union(enum) {
     // Private implementation is generic to allow tests to use mocks.
     fn _execute(self: Self, machine: anytype) !void {
         switch (self) {
-            .play => |operation| try machine.playMusic(operation.resource_id, operation.offset, operation.delay),
-            .set_delay => |delay| machine.setMusicDelay(delay),
+            .play => |operation| try machine.playMusic(operation.resource_id, operation.offset, operation.tempo),
+            .set_tempo => |tempo| machine.setMusicTempo(tempo),
             .stop => machine.stopMusic(),
         }
     }
@@ -81,7 +83,7 @@ pub const ControlMusic = union(enum) {
         pub const valid = play;
 
         const play      = [6]u8{ raw_opcode, 0xDE, 0xAD, 0xBE, 0xEF, 0xFF };
-        const set_delay = [6]u8{ raw_opcode, 0x00, 0x00, 0xBE, 0xEF, 0xFF };
+        const set_tempo = [6]u8{ raw_opcode, 0x00, 0x00, 0xBE, 0xEF, 0xFF };
         const stop      = [6]u8{ raw_opcode, 0x00, 0x00, 0x00, 0x00, 0xFF };
     };
     // zig fmt: on
@@ -99,16 +101,16 @@ test "parse parses play instruction and consumes 6 bytes" {
         .play = .{
             .resource_id = resources.ResourceID.cast(0xDEAD),
             .offset = 0xFF,
-            .delay = 0xBEEF,
+            .tempo = 0xBEEF,
         },
     };
     try testing.expectEqual(expected, instruction);
 }
 
-test "parse parses set_delay instruction and consumes 6 bytes" {
-    const instruction = try expectParse(ControlMusic.parse, &ControlMusic.Fixtures.set_delay, 6);
+test "parse parses set_tempo instruction and consumes 6 bytes" {
+    const instruction = try expectParse(ControlMusic.parse, &ControlMusic.Fixtures.set_tempo, 6);
 
-    try testing.expectEqual(.{ .set_delay = 0xBEEF }, instruction);
+    try testing.expectEqual(.{ .set_tempo = 0xBEEF }, instruction);
 }
 
 test "parse parses stop instruction and consumes 6 bytes" {
@@ -122,18 +124,18 @@ test "execute with play instruction calls playMusic with correct parameters" {
         .play = .{
             .resource_id = resources.ResourceID.cast(0x8BAD),
             .offset = 0x12,
-            .delay = 0xF00D,
+            .tempo = 0xF00D,
         },
     };
 
     var machine = mockMachine(struct {
-        pub fn playMusic(resource_id: resources.ResourceID, offset: audio.Offset, delay: audio.Delay) !void {
+        pub fn playMusic(resource_id: resources.ResourceID, offset: audio.Offset, tempo: audio.Tempo) !void {
             try testing.expectEqual(resources.ResourceID.cast(0x8BAD), resource_id);
             try testing.expectEqual(0x12, offset);
-            try testing.expectEqual(0xF00D, delay);
+            try testing.expectEqual(0xF00D, tempo);
         }
 
-        pub fn setMusicDelay(_: audio.Delay) void {
+        pub fn setMusicTempo(_: audio.Tempo) void {
             unreachable;
         }
 
@@ -146,16 +148,16 @@ test "execute with play instruction calls playMusic with correct parameters" {
     try testing.expectEqual(1, machine.call_counts.playMusic);
 }
 
-test "execute with set_delay instruction calls setMusicDelay with correct parameters" {
-    const instruction: ControlMusic = .{ .set_delay = 0xF00D };
+test "execute with set_tempo instruction calls setMusicTempo with correct parameters" {
+    const instruction: ControlMusic = .{ .set_tempo = 0xF00D };
 
     var machine = mockMachine(struct {
-        pub fn playMusic(_: resources.ResourceID, _: audio.Offset, _: audio.Delay) !void {
+        pub fn playMusic(_: resources.ResourceID, _: audio.Offset, _: audio.Tempo) !void {
             unreachable;
         }
 
-        pub fn setMusicDelay(delay: audio.Delay) void {
-            testing.expectEqual(0xF00D, delay) catch {
+        pub fn setMusicTempo(tempo: audio.Tempo) void {
+            testing.expectEqual(0xF00D, tempo) catch {
                 unreachable;
             };
         }
@@ -166,18 +168,18 @@ test "execute with set_delay instruction calls setMusicDelay with correct parame
     });
 
     try instruction._execute(&machine);
-    try testing.expectEqual(1, machine.call_counts.setMusicDelay);
+    try testing.expectEqual(1, machine.call_counts.setMusicTempo);
 }
 
 test "execute with stop instruction calls stopMusic with correct parameters" {
     const instruction: ControlMusic = .stop;
 
     var machine = mockMachine(struct {
-        pub fn playMusic(_: resources.ResourceID, _: audio.Offset, _: audio.Delay) !void {
+        pub fn playMusic(_: resources.ResourceID, _: audio.Offset, _: audio.Tempo) !void {
             unreachable;
         }
 
-        pub fn setMusicDelay(_: audio.Delay) void {
+        pub fn setMusicTempo(_: audio.Tempo) void {
             unreachable;
         }
 

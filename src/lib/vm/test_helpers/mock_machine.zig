@@ -21,7 +21,7 @@ const CallCounts = struct {
     loadResource: usize,
     unloadAllResources: usize,
     playMusic: usize,
-    setMusicDelay: usize,
+    setMusicTempo: usize,
     stopMusic: usize,
     playSound: usize,
     stopChannel: usize,
@@ -89,14 +89,14 @@ pub fn MockMachine(comptime Implementation: type) type {
             Implementation.unloadAllResources();
         }
 
-        pub fn playMusic(self: *Self, resource_id: resources.ResourceID, offset: audio.Offset, delay: audio.Delay) !void {
+        pub fn playMusic(self: *Self, resource_id: resources.ResourceID, offset: audio.Offset, tempo: audio.Tempo) !void {
             self.call_counts.playMusic += 1;
-            try Implementation.playMusic(resource_id, offset, delay);
+            try Implementation.playMusic(resource_id, offset, tempo);
         }
 
-        pub fn setMusicDelay(self: *Self, delay: audio.Delay) void {
-            self.call_counts.setMusicDelay += 1;
-            Implementation.setMusicDelay(delay);
+        pub fn setMusicTempo(self: *Self, tempo: audio.Tempo) void {
+            self.call_counts.setMusicTempo += 1;
+            Implementation.setMusicTempo(tempo);
         }
 
         pub fn stopMusic(self: *Self) void {
@@ -255,10 +255,10 @@ test "MockMachine calls unloadAllResources correctly on stub implementation" {
 
 test "MockMachine calls playMusic correctly on stub implementation" {
     var mock = mockMachine(struct {
-        fn playMusic(resource_id: resources.ResourceID, offset: audio.Offset, delay: audio.Delay) !void {
+        fn playMusic(resource_id: resources.ResourceID, offset: audio.Offset, tempo: audio.Tempo) !void {
             try testing.expectEqual(resources.ResourceID.cast(0xBEEF), resource_id);
             try testing.expectEqual(128, offset);
-            try testing.expectEqual(1234, delay);
+            try testing.expectEqual(1234, tempo);
         }
     });
 
@@ -266,17 +266,17 @@ test "MockMachine calls playMusic correctly on stub implementation" {
     try testing.expectEqual(1, mock.call_counts.playMusic);
 }
 
-test "MockMachine calls setMusicDelay correctly on stub implementation" {
+test "MockMachine calls setMusicTempo correctly on stub implementation" {
     var mock = mockMachine(struct {
-        fn setMusicDelay(delay: audio.Delay) void {
-            testing.expectEqual(1234, delay) catch {
+        fn setMusicTempo(tempo: audio.Tempo) void {
+            testing.expectEqual(1234, tempo) catch {
                 unreachable;
             };
         }
     });
 
-    mock.setMusicDelay(1234);
-    try testing.expectEqual(1, mock.call_counts.setMusicDelay);
+    mock.setMusicTempo(1234);
+    try testing.expectEqual(1, mock.call_counts.setMusicTempo);
 }
 
 test "MockMachine calls stopMusic correctly on stub implementation" {
