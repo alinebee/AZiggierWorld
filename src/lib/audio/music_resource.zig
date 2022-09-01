@@ -26,11 +26,12 @@ const static_limits = anotherworld.static_limits;
 
 /// Parses an Another World music resource into a structure that can be played back on a mixer.
 pub const MusicResource = struct {
-    const SequenceStorage = std.BoundedArray(PatternID, static_limits.max_pattern_sequence_length);
-
+    /// The default tempo to play this track, if no custom tempo was specified.
     tempo: audio.Tempo,
+    /// The resources and default volumes of each instrument used in the track,
+    /// indexed by instrument ID. A null means no instrument will be played in that slot.
     instruments: [static_limits.max_instruments]?Instrument,
-    _raw_sequence: SequenceStorage,
+    sequence: []const PatternID,
     _raw_patterns: []const RawPattern,
 
     const Self = @This();
@@ -55,18 +56,28 @@ pub const MusicResource = struct {
         }
 
         const tempo = std.mem.readIntBig(u16, tempo_data);
-        const parsed_sequence_length = std.mem.readIntBig(u16, sequence_length_data);
-        if (parsed_sequence_length > static_limits.max_pattern_sequence_length) {
+
+        const sequence_length = std.mem.readIntBig(u16, sequence_length_data);
+        if (sequence_length == 0) {
+            return error.SequenceEmpty;
+        }
+        if (sequence_length > static_limits.max_pattern_sequence_length) {
             return error.SequenceTooLong;
         }
+        const sequence = sequence_data[0..sequence_length];
 
         const segmented_instrument_data = @ptrCast(*const [static_limits.max_instruments]Instrument.Raw, raw_instrument_data);
+
         const segmented_pattern_data = @bitCast([]const RawPattern, raw_pattern_data);
+        const highest_pattern_id = std.mem.max(PatternID, sequence);
+        if (highest_pattern_id >= segmented_pattern_data.len) {
+            return error.TruncatedData;
+        }
 
         var self = Self{
             .tempo = tempo,
             .instruments = undefined,
-            ._raw_sequence = SequenceStorage.fromSlice(sequence_data[0..parsed_sequence_length]) catch unreachable,
+            .sequence = sequence,
             ._raw_patterns = segmented_pattern_data,
         };
 
@@ -81,7 +92,7 @@ pub const MusicResource = struct {
     /// indicating the order in which patterns should be played.
     /// This sequence may repeat patterns.
     pub fn iterateSequence(self: Self) SequenceIterator {
-        return .{ .sequence = self._raw_sequence.constSlice() };
+        return .{ .sequence = self.sequence };
     }
 
     /// Returns an iterator that loops through the 64 "beats" of a specific pattern.
@@ -114,7 +125,11 @@ pub const MusicResource = struct {
 
     /// Errors that can be produced by parse().
     pub const ParseError = error{
+        /// The data slice was too short to accommodate all expected pattern data.
         TruncatedData,
+        /// The music track defined an empty pattern sequence.
+        SequenceEmpty,
+        /// The music track defined a pattern sequence longer than 128 entries.
         SequenceTooLong,
     };
 
