@@ -15,11 +15,10 @@ pub const ControlMusic = union(enum) {
         /// The offset within the music resource at which to start playing.
         /// (TODO: document the meaning and units of this value.)
         offset: audio.Offset,
-        /// A custom tempo to play the track at. If 0 tempo,
-        /// the track's default tempo will be used.
+        /// An optional custom tempo to play the track at.
+        /// If specified, this will override the track's default tempo.
         /// (TODO: document what units this is in. Tics?)
-        /// (TODO: make sentinel null instead of 0?)
-        tempo: audio.Tempo,
+        tempo: ?audio.Tempo,
     },
     /// Override the tempo on the current or subsequent `play` instruction.
     set_tempo: audio.Tempo,
@@ -44,7 +43,7 @@ pub const ControlMusic = union(enum) {
                 .play = .{
                     .resource_id = resources.ResourceID.cast(possible_resource_id),
                     .offset = offset,
-                    .tempo = tempo,
+                    .tempo = if (tempo != no_tempo) tempo else null,
                 },
             };
         } else if (tempo != no_tempo) {
@@ -129,7 +128,7 @@ test "execute with play instruction calls playMusic with correct parameters" {
     };
 
     var machine = mockMachine(struct {
-        pub fn playMusic(resource_id: resources.ResourceID, offset: audio.Offset, tempo: audio.Tempo) !void {
+        pub fn playMusic(resource_id: resources.ResourceID, offset: audio.Offset, tempo: ?audio.Tempo) !void {
             try testing.expectEqual(resources.ResourceID.cast(0x8BAD), resource_id);
             try testing.expectEqual(0x12, offset);
             try testing.expectEqual(0xF00D, tempo);
@@ -152,7 +151,7 @@ test "execute with set_tempo instruction calls setMusicTempo with correct parame
     const instruction: ControlMusic = .{ .set_tempo = 0xF00D };
 
     var machine = mockMachine(struct {
-        pub fn playMusic(_: resources.ResourceID, _: audio.Offset, _: audio.Tempo) !void {
+        pub fn playMusic(_: resources.ResourceID, _: audio.Offset, _: ?audio.Tempo) !void {
             unreachable;
         }
 
@@ -175,7 +174,7 @@ test "execute with stop instruction calls stopMusic with correct parameters" {
     const instruction: ControlMusic = .stop;
 
     var machine = mockMachine(struct {
-        pub fn playMusic(_: resources.ResourceID, _: audio.Offset, _: audio.Tempo) !void {
+        pub fn playMusic(_: resources.ResourceID, _: audio.Offset, _: ?audio.Tempo) !void {
             unreachable;
         }
 

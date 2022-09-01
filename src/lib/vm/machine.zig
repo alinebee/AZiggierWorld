@@ -253,7 +253,7 @@ pub const Machine = struct {
     /// Start playing a music track from a specified resource.
     /// Has no effect if the specified resource has not been loaded by a previous call to loadResource.
     /// Returns an error if the resource ID is not a music resource or does not exist.
-    pub fn playMusic(self: *Self, resource_id: resources.ResourceID, offset: audio.Offset, tempo: audio.Tempo) !void {
+    pub fn playMusic(self: *Self, resource_id: resources.ResourceID, offset: audio.Offset, tempo: ?audio.Tempo) !void {
         const possible_music_data = try self.memory.resourceLocation(resource_id, .music);
         if (possible_music_data) |music_data| {
             try self.audio.playMusic(music_data, offset, tempo);

@@ -8,7 +8,7 @@ pub const Audio = struct {
     const Self = @This();
 
     /// Start playing a music track from a specified resource.
-    pub fn playMusic(_: *Self, music_data: []const u8, offset: audio.Offset, tempo: audio.Tempo) !void {
+    pub fn playMusic(_: *Self, music_data: []const u8, offset: audio.Offset, tempo: ?audio.Tempo) !void {
         _ = try audio.MusicResource.parse(music_data);
 
         log.debug("playMusic: play {*} at offset {} tempo {}", .{
