@@ -56,6 +56,9 @@ pub const MusicResource = struct {
         }
 
         const tempo = std.mem.readIntBig(u16, tempo_data);
+        if (tempo == 0) {
+            return error.InvalidTempo;
+        }
 
         const sequence_length = std.mem.readIntBig(u16, sequence_length_data);
         if (sequence_length == 0) {
@@ -131,6 +134,8 @@ pub const MusicResource = struct {
         SequenceEmpty,
         /// The music track defined a pattern sequence longer than 128 entries.
         SequenceTooLong,
+        /// The music track defined an invalid tempo.
+        InvalidTempo,
     };
 
     pub const SequenceIterator = struct {

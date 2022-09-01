@@ -77,8 +77,6 @@ pub const ChannelEvent = union(enum) {
                     return error.InvalidInstrumentID;
                 }
 
-                const frequency = try amigaPeriodToHz(control_value_1);
-
                 const effect = @truncate(u4, control_value_2 >> 8);
                 const raw_volume_delta = @truncate(u8, control_value_2);
                 const volume_delta = switch (effect) {
@@ -89,6 +87,8 @@ pub const ChannelEvent = union(enum) {
                         return error.InvalidEffect;
                     },
                 };
+
+                const frequency = try amigaPeriodToHz(control_value_1);
 
                 return Self{ .play = .{
                     .instrument_id = raw_instrument_id - 1,
