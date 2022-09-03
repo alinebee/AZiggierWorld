@@ -3,13 +3,13 @@
 //! Another World's RLE algorithm compressed data using 6 different instructions,
 //! which are identified by the first 2 or 3 bits of each instruction sequence:
 //!
-//! 111|cccc_cccc: next 8 bits are count: write the [count + 9] bytes following this instruction to the write cursor.
-//! 110|cccc_cccc|oooo_oooo_oooo: next 8 bits are count, next 12 bits are an offset *relative to the write cursor*:
-//! duplicate the [count + 1] already-uncompressed bytes from that offset to the write cursor.
-//! 101|oooo_oooo_oo: next 10 bits are relative offset: duplicate 4 bytes from uncompressed data at offset.
-//! 100|oooo_oooo_o: next 9 bits are relative offset: duplicate 3 bytes from uncompressed data at offset.
-//! 01|oooo_oooo: next 8 bits are relative offset: duplicate 2 bytes from uncompressed data at offset.
 //! 00|ccc: next 3 bits are count: write the next [count + 1] bytes following this instruction to the write cursor.
+//! 01|oooo_oooo: next 8 bits are relative offset from write cursor: duplicate 2 bytes from uncompressed data at offset.
+//! 100|oooo_oooo_o: next 9 bits are relative offset: duplicate 3 bytes from uncompressed data at offset.
+//! 101|oooo_oooo_oo: next 10 bits are relative offset: duplicate 4 bytes from uncompressed data at offset.
+//! 110|cccc_cccc|oooo_oooo_oooo: next 8 bits are count, next 12 bits are relative offset:
+//! duplicate [count + 1] bytes from uncompressed data at offset.
+//! 111|cccc_cccc: next 8 bits are count: write the [count + 9] bytes following this instruction to the write cursor.
 
 /// Reads the next RLE instruction from the specified reader, and executes the instruction on the specified writer.
 /// Returns an error if the reader could not read or the writer could not write.
@@ -18,13 +18,36 @@
 /// `writer` must respond to `writeFromSource(reader, count) !void` and `copyFromDestination(count, offset) !void`.
 pub fn decodeInstruction(reader: anytype, writer: anytype) !void {
     switch (try reader.readBit()) {
+        0b0 => {
+            switch (try reader.readBit()) {
+                0b0 => {
+                    // 00|ccc
+                    // next 3 bits are count: write the subsequent (count + 1) bytes of raw data
+                    const count: usize = try reader.readInt(u3);
+                    try writer.writeFromSource(reader, count + 1);
+                },
+                0b1 => {
+                    // 01|oooo_oooo
+                    // next 8 bits are relative offset: copy 2 bytes from uncompressed data at offset
+                    const offset: usize = try reader.readInt(u8);
+                    try writer.copyFromDestination(2, offset);
+                },
+            }
+        },
         0b1 => {
             switch (try reader.readInt(u2)) {
-                0b11 => {
-                    // 111|cccc_cccc
-                    // next 8 bits are count: write the subsequent `count + 9` bytes of raw data
-                    const count: usize = try reader.readInt(u8);
-                    try writer.writeFromSource(reader, count + 9);
+                0b00 => {
+                    // 100|oooo_oooo_o
+                    // next 9 bits are relative offset: copy 3 bytes from uncompressed data at offset
+                    const offset: usize = try reader.readInt(u9);
+                    try writer.copyFromDestination(3, offset);
+                },
+                0b01 => {
+                    // 101|oooo_oooo_oo
+                    // next 10 bits are relative offset within uncompressed data:
+                    // copy 4 bytes from uncompressed data at offset
+                    const offset: usize = try reader.readInt(u10);
+                    try writer.copyFromDestination(4, offset);
                 },
                 0b10 => {
                     // 110|cccc_cccc|oooo_oooo_oooo
@@ -34,34 +57,11 @@ pub fn decodeInstruction(reader: anytype, writer: anytype) !void {
                     const offset: usize = try reader.readInt(u12);
                     try writer.copyFromDestination(count + 1, offset);
                 },
-                0b01 => {
-                    // 101|oooo_oooo_oo
-                    // next 10 bits are relative offset within uncompressed data:
-                    // copy 4 bytes from uncompressed data at offset
-                    const offset: usize = try reader.readInt(u10);
-                    try writer.copyFromDestination(4, offset);
-                },
-                0b00 => {
-                    // 100|oooo_oooo_o
-                    // next 9 bits are relative offset: copy 3 bytes from uncompressed data at offset
-                    const offset: usize = try reader.readInt(u9);
-                    try writer.copyFromDestination(3, offset);
-                },
-            }
-        },
-        0b0 => {
-            switch (try reader.readBit()) {
-                0b1 => {
-                    // 01|oooo_oooo
-                    // next 8 bits are relative offset: copy 2 bytes from uncompressed data at offset
-                    const offset: usize = try reader.readInt(u8);
-                    try writer.copyFromDestination(2, offset);
-                },
-                0b0 => {
-                    // 00|ccc
-                    // next 3 bits are count: write the subsequent (count + 1) bytes of raw data
-                    const count: usize = try reader.readInt(u3);
-                    try writer.writeFromSource(reader, count + 1);
+                0b11 => {
+                    // 111|cccc_cccc
+                    // next 8 bits are count: write the subsequent `count + 9` bytes of raw data
+                    const count: usize = try reader.readInt(u8);
+                    try writer.writeFromSource(reader, count + 9);
                 },
             }
         },

@@ -4,7 +4,7 @@
 //! or duplicate sequences of bytes from previously-decompressed regions of the destination.
 //!
 //! The writer begins writing from the end of the destination buffer, working backwards to the start,
-//! with the upshot that bytes from the soruce reader are written in reverse order.
+//! with the upshot that bytes from the source reader are written in reverse order.
 //!
 //! See decode.zig for details of the overall algorithm, and decode_instruction.zig for details of the encoding syntax.
 
@@ -66,7 +66,7 @@ pub const Writer = struct {
 
         // -1 accounts for the fact that our internal cursor is at the "end" of the byte,
         // and is only decremented once we write the byte, to avoid underflowing.
-        // The offset we get from Another World's data files assume the cursor indicates
+        // The offsets we get from Another World's data files assume the cursor indicates
         // the start of the byte.
         var start_index: usize = self.cursor + (offset - 1);
         const end_index = start_index - count;
