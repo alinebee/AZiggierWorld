@@ -31,6 +31,8 @@ pub const MusicResource = struct {
     /// The resources and default volumes of each instrument used in the track,
     /// indexed by instrument ID. A null means no instrument will be played in that slot.
     instruments: [static_limits.max_instruments]?Instrument,
+    /// The sequence of patterns in the order they should be played.
+    /// Will be at most 128 entries long: see static_limits.max_pattern_sequence_length.
     sequence: []const PatternID,
     _raw_patterns: []const RawPattern,
 
@@ -92,10 +94,19 @@ pub const MusicResource = struct {
     }
 
     /// Returns an iterator of the sequence of pattern IDs in this music track,
-    /// indicating the order in which patterns should be played.
-    /// This sequence may repeat patterns.
-    pub fn iterateSequence(self: Self) SequenceIterator {
-        return .{ .sequence = self.sequence };
+    /// indicating the order in which patterns should be played. The sequence may repeat patterns.
+    /// This takes a starting offset into the sequence: use 0 to start at the beginning.
+    /// Returns error.InvalidOffset if the specified offset is beyond the end of the sequence.
+    ///
+    /// Usage:
+    ///
+    /// var sequence_iterator = try music_resource.iterateSequence(0);
+    /// while (try sequence_iterator.next()) |pattern_id| {
+    ///     playPattern(pattern_id);
+    /// }
+    pub fn iterateSequence(self: Self, starting_offset: audio.Offset) IterateSequenceError!SequenceIterator {
+        if (starting_offset >= self.sequence.len) return error.InvalidOffset;
+        return SequenceIterator{ .counter = starting_offset, .sequence = self.sequence };
     }
 
     /// Returns an iterator that loops through the 64 rows of a specific pattern.
@@ -107,7 +118,7 @@ pub const MusicResource = struct {
     ///
     /// var iterator = try music_resource.iteratePattern(pattern_id);
     /// while (try iterator.next()) |events| {
-    ///   playEventsOnMixerChannels(events);
+    ///     playEventsOnMixerChannels(events);
     /// }
     pub fn iteratePattern(self: Self, index: PatternID) IteratePatternError!PatternIterator {
         if (index > self._raw_patterns.len) {
@@ -121,6 +132,11 @@ pub const MusicResource = struct {
 
     /// The ID of a pattern.
     pub const PatternID = u8;
+
+    /// Errors that can be produced by iterateSequence().
+    pub const IterateSequenceError = error{
+        InvalidOffset,
+    };
 
     /// Errors that can be produced by iteratePattern().
     pub const IteratePatternError = error{

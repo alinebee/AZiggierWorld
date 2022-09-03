@@ -13,11 +13,9 @@ pub const ControlMusic = union(enum) {
         /// The ID of the music resource to play.
         resource_id: resources.ResourceID,
         /// The offset within the music resource at which to start playing.
-        /// (TODO: document the meaning and units of this value.)
         offset: audio.Offset,
         /// An optional custom tempo to play the track at.
         /// If specified, this will override the track's default tempo.
-        /// (TODO: document what units this is in. Tics?)
         tempo: ?audio.Tempo,
     },
     /// Override the tempo on the current or subsequent `play` instruction.

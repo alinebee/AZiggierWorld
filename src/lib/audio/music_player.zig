@@ -51,7 +51,7 @@ pub const MusicPlayer = struct {
 
     /// Create a player that plays from the beginning to the end of the specified music track,
     /// loading instrument data from the specified repository.
-    fn init(music: audio.MusicResource, repository: anytype, custom_tempo: ?audio.Tempo) LoadError!Self {
+    fn init(music: audio.MusicResource, repository: anytype, offset: audio.Offset, custom_tempo: ?audio.Tempo) LoadError!Self {
         const ms_per_row = timing_mode.msFromTempo(custom_tempo orelse music.tempo);
         if (ms_per_row == 0) {
             return error.InvalidTempo;
@@ -73,11 +73,11 @@ pub const MusicPlayer = struct {
             };
         }
 
-        self.sequence_iterator = music.iterateSequence();
+        self.sequence_iterator = try music.iterateSequence(offset);
         if (self.sequence_iterator.next()) |first_pattern_id| {
             self.pattern_iterator = try music.iteratePattern(first_pattern_id);
         } else {
-            return error.EmptySequence;
+            return error.InvalidOffset;
         }
 
         return self;
@@ -145,11 +145,9 @@ pub const MusicPlayer = struct {
     }
 
     /// The possible errors that can occur from init().
-    pub const LoadError = audio.MusicResource.Instrument.ParseError || error{
+    pub const LoadError = audio.MusicResource.Instrument.ParseError || audio.MusicResource.IterateSequenceError || error{
         /// One of the sound resources referenced in the music track was not yet loaded.
         SoundNotLoaded,
-        /// The music track has an empty sequence.
-        EmptySequence,
         /// An invalid custom tempo was specified.
         InvalidTempo,
     };
