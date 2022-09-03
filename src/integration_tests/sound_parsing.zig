@@ -62,9 +62,8 @@ test "Parse all music in original game files" {
 
         const music = try audio.MusicResource.parse(data);
 
-        log.debug("Parsing music #{}", .{id});
+        log.debug("Parsing music #{} (tempo {}, {} patterns in sequence)", .{ id, music.tempo, music.sequence.len });
         var sequence_iterator = music.iterateSequence();
-
         while (sequence_iterator.next()) |pattern_id| {
             log.debug("Iterating pattern #{}", .{pattern_id});
             var iterator = try music.iteratePattern(pattern_id);

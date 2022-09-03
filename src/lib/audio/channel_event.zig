@@ -1,19 +1,19 @@
-//! Channel events in Another World music patterns consist of two 16-bit unsigned word
+//! Channel events in Another World music patterns consist of two 16-bit unsigned words
 //! whose meaning depends on the value of the first word.
 //! Word 1                  Word 2                  Meaning
 //! 0b0000_0000_0000_0000   0b0000_0000_0000_0000   No-op: do nothing on the channel.
 //! 0x1111_1111_1111_1110   0b0000_0000_0000_0000   Stop the current channel.
 //! 0x1111_1111_1111_1101   0brrrr_rrrr_rrrr_rrrr   Set music mark register to value of second word.
 //! 0xffff_ffff_ffff_ffff   0biiii_eeee_vvvv_vvvv   Play sound effect on channel:
-//!                                                 - f: Treat all bits of first word as note frequency
-//!                                                      (technically Amiga clock period: see amigaPeriodToHz below)
-//!                                                 - i: Treat top 4 bits of second word as instrument ID - 1
-//!                                                 - e: Treat next 4 bits of second word as "effect bits":
-//!                                                      - 5: treat last 8 bits of second word as volume increase
-//!                                                      - 6: treat last 8 bits of second word as volume decrease
-//!                                                 - v: Value of volume increase/decrease, depending on effect bits.
-//!                                                      Ignored unless effect is 5 or 6.
-//!
+//!     - f: Treat all bits of first word as note frequency
+//!          (technically Amiga clock period: see timing.hzFromPeriod)
+//!     - i: Treat top 4 bits of second word as instrument ID - 1
+//!     - e: Treat next 4 bits of second word as "effect bits":
+//!          5: treat bottom 8 bits of second word as volume increase
+//!          6: treat bottom 8 bits of second word as volume decrease
+//!     - v: Value of volume increase/decrease, depending on effect.
+//!          Ignored unless effect is 5 or 6.
+
 const std = @import("std");
 const anotherworld = @import("../anotherworld.zig");
 const audio = anotherworld.audio;
@@ -24,7 +24,7 @@ pub const ChannelEvent = union(enum) {
     /// Start playing an instrument on the channel.
     play: struct {
         /// The index of the instrument to play, from the song's bank of 15 instruments.
-        instrument_id: u4,
+        instrument_id: InstrumentID,
         /// The amount by which to adjust the instrument's base volume up or down.
         volume_delta: i16,
         /// The frequency to play the instrument at.
@@ -65,14 +65,14 @@ pub const ChannelEvent = union(enum) {
                 // Ignoring index 0, and subtracting 1 from the 4-bit instrument ID,
                 // matches the reference implementation but seems like a mistake:
                 // it makes the instrument range 0-14 rather than the 0-15 it would be
-                // if the implementation had permitted 0 and not substracted 1.
+                // if the implementation had permitted 0 and not subtracted 1.
                 // (0 isn't needed as a sentinel for "don't play anything" anyway,
                 // control_value_1 == 0 already does that.)
                 // This means that the music tracks couldn't address instrument 15,
                 // even though the instrument array supports 15 instruments.
                 //
                 // Speculation: the game adopted an existing mod-tracker format
-                // but implemented it wrongly.
+                // but implemented it wrongly?
                 if (raw_instrument_id == 0) {
                     return error.InvalidInstrumentID;
                 }
@@ -103,6 +103,8 @@ pub const ChannelEvent = union(enum) {
     }
 
     pub const Raw = [4]u8;
+
+    pub const InstrumentID = u4;
 
     pub const ParseError = error{
         /// A play event referred to an instrument that does not exist.
