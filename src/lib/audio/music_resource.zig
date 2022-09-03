@@ -1,7 +1,7 @@
 //! Music resources have the following big-endian data layout:
 //! (Byte offset, type, purpose, description)
 //! -- HEADER --
-//! 0..2     u16            tempo            The tempo at which to play the beats of the music track.
+//! 0..2     u16            tempo            The tempo at which to play the rows of the music track.
 //!                                          TODO: figure out unit and range.
 //! 2..62    [15][2]u16     instruments      15 entries of 2 words each. See Instrument for layout.
 //! 62-64    u16            sequence length  Number of used entries in sequence block.
@@ -98,9 +98,10 @@ pub const MusicResource = struct {
         return .{ .sequence = self.sequence };
     }
 
-    /// Returns an iterator that loops through the 64 "beats" of a specific pattern.
-    /// On each beat, it returns a block of 4 events to process on each channel.
-    /// Returns error.InvalidPatternID if the specified pattern ID was outside the range of the resource.
+    /// Returns an iterator that loops through the 64 rows of a specific pattern.
+    /// On each row, it returns a block of 4 events to process on each channel.
+    /// Returns error.InvalidPatternID if the specified pattern ID was outside
+    /// the range of the resource.
     ///
     /// Usage:
     ///
@@ -185,7 +186,7 @@ pub const MusicResource = struct {
         pub const ChannelEvents = [static_limits.channel_count]ChannelEvent;
     };
 
-    const RawPattern = [static_limits.beats_per_pattern]RawChannelEvents;
+    const RawPattern = [static_limits.rows_per_pattern]RawChannelEvents;
     const RawChannelEvents = [static_limits.channel_count]ChannelEvent.Raw;
 };
 

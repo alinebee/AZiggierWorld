@@ -119,9 +119,9 @@ pub const max_pattern_sequence_length = 128;
 /// See music_resource.zig.
 pub const max_instruments = 15;
 
-/// The number of "beats" (regular intervals on which channel events happen)
+/// The number of event rows (regular intervals on which channel events happen)
 /// within a single pattern of a music track. See channel_event.zig.
-pub const beats_per_pattern = 64;
+pub const rows_per_pattern = 64;
 
 // -- Helper functions --
 

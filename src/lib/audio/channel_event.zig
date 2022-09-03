@@ -28,7 +28,7 @@ pub const ChannelEvent = union(enum) {
         /// The amount by which to adjust the instrument's base volume up or down.
         volume_delta: i16,
         /// The frequency to play the instrument at.
-        frequency: audio.Frequency,
+        period: audio.Period,
     },
     /// Set RegisterID.music_mark to the specified value.
     set_mark: vm.Register.Unsigned,
@@ -88,11 +88,14 @@ pub const ChannelEvent = union(enum) {
                     },
                 };
 
-                const frequency = try amigaPeriodToHz(control_value_1);
+                const period = control_value_1;
+                if (period < min_period or period > max_period) {
+                    return error.InvalidPeriod;
+                }
 
                 return Self{ .play = .{
                     .instrument_id = raw_instrument_id - 1,
-                    .frequency = frequency,
+                    .period = period,
                     .volume_delta = volume_delta,
                 } };
             },
@@ -104,8 +107,8 @@ pub const ChannelEvent = union(enum) {
     pub const ParseError = error{
         /// A play event referred to an instrument that does not exist.
         InvalidInstrumentID,
-        /// A play event defined a frequency that was out of range.
-        InvalidFrequency,
+        /// A play event defined a period that was out of range.
+        InvalidPeriod,
         /// A play event defined an unrecognized effect.
         InvalidEffect,
         /// A stop event contained unused junk data.
@@ -113,39 +116,15 @@ pub const ChannelEvent = union(enum) {
         /// A no-op event contained unused junk data.
         MalformedNoopEvent,
     };
-
-    // -- Private --
-
-    /// The clock speed of an NTSC Amiga in Hz.
-    const ntsc_amiga_clock_hz = 3_579_545;
-    /// The clock speed of a PAL Amiga in Hz.
-    const pal_amiga_clock_hz = 3_546_895;
-    /// The minimum period allowed.
-    /// The reference implementation used 55, but the Amiga hardware manual claims that
-    /// a period smaller than 124 would be too few tics for the hardware to keep up.
-    const min_period = 124;
-    /// The maximum period allowed. The Protracker MOD format could not specify a period higher than this,
-    /// and all note periods in the Another World game data are well below this.
-    const max_period = 4095;
-
-    /// Convert from the "period" of a note in Another World's music format to a frequency in Hz.
-    /// NTSC Amigas used a clock speed of 3.579545MhZ to match the NTSC standard; PAL Amigas used 3.546895MhZ.
-    /// Another World's music resources specified the frequency (i.e. pitch) of a note as a "period" of the Amiga's
-    /// clock value. To get the frequency in Hz to play back the note, we must divide the clock speed by the period.
-    ///
-    /// References:
-    /// -----------
-    /// Reference implementation: https://github.com/fabiensanglard/Another-World-Bytecode-Interpreter/blob/master/srcsfxplayer.cpp#L194
-    /// Clock speed discussion: https://retrocomputing.stackexchange.com/questions/2146/reason-for-the-amiga-clock-speed
-    /// ProTracker MOD format discussion: https://www.exotica.org.uk/wiki/Protracker
-    /// Amiga hardware manual: http://amiga.nvg.org/amiga/reference/Hardware_Manual_guide/node00DE.html
-    fn amigaPeriodToHz(period: u16) ParseError!audio.Frequency {
-        if (period < min_period or period > max_period) {
-            return error.InvalidFrequency;
-        }
-        return @truncate(audio.Frequency, ntsc_amiga_clock_hz / @as(usize, period));
-    }
 };
+
+/// The minimum period allowed.
+/// The reference implementation used 55, but the Amiga hardware manual claims that
+/// a period smaller than 124 would be too few tics for the hardware to keep up.
+const min_period = 124;
+/// The maximum period allowed. The Protracker MOD format could not specify a period higher than this,
+/// and all note periods in the Another World game data are well below this.
+const max_period = 4095;
 
 const Fixtures = struct {
     // Raw frequency 4095, raw instrument 15, raw effect 5, raw volume 63
@@ -186,7 +165,7 @@ test "parse parses play event" {
     const expected = ChannelEvent{
         .play = .{
             .instrument_id = 14,
-            .frequency = 874, // 3,579,545Hz / 4095 period
+            .period = 4095,
             .volume_delta = 63,
         },
     };
@@ -210,9 +189,9 @@ test "parse returns error.InvalidInstrumentID when play event specifies instrume
     try testing.expectError(error.InvalidInstrumentID, ChannelEvent.parse(Fixtures.play_invalid_instrument_id));
 }
 
-test "parse returns error.InvalidFrequency when play event specifies frequencies out of range" {
-    try testing.expectError(error.InvalidFrequency, ChannelEvent.parse(Fixtures.play_period_too_high));
-    try testing.expectError(error.InvalidFrequency, ChannelEvent.parse(Fixtures.play_period_too_low));
+test "parse returns error.InvalidPeriod when play event specifies frequencies out of range" {
+    try testing.expectError(error.InvalidPeriod, ChannelEvent.parse(Fixtures.play_period_too_high));
+    try testing.expectError(error.InvalidPeriod, ChannelEvent.parse(Fixtures.play_period_too_low));
 }
 
 test "parse returns error.InvalidEffect when play event specifies unknown effect" {

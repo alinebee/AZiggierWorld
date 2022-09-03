@@ -68,11 +68,11 @@ pub const MusicPlayer = struct {
         return self;
     }
 
-    /// Process the next "beat" (row of events for each channel) in the music track.
-    /// Returns true if there are more beats left in the track,
+    /// Process the next row of events for each channel in the music track.
+    /// Returns true if there are more rows left in the track,
     /// or false if playback reached the end of the track.
     /// Returns an error if there was a problem reading pattern data.
-    pub fn playNextBeat(self: *Self) PlayError!bool {
+    pub fn playNextRow(self: *Self) PlayError!bool {
         while (true) {
             if (try pattern_iterator.next()) |events| {
                 for (events) |event, index| {
@@ -99,7 +99,7 @@ pub const MusicPlayer = struct {
                     log.debug("Play channel #{}: Instrument #{}, frequency: {}, volume: {}", .{
                         channel_id,
                         play.instrument_id,
-                        play.frequency,
+                        play.period,
                         adjusted_volume,
                     });
                 }
@@ -123,7 +123,7 @@ pub const MusicPlayer = struct {
         }
     }
 
-    /// The possible errors that can occur from playNextBeat().
+    /// The possible errors that can occur from playNextRow().
     pub const PlayError = audio.MusicResource.IteratePatternError || audio.MusicResource.ChannelEvent.ParseError;
 
     /// The possible errors that can occur from init().
