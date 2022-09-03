@@ -36,7 +36,7 @@ pub const Audio = struct {
             sound_data,
             channel_id,
             volume,
-            frequency_id,
+            frequency_id.frequency(),
             sound.intro != null,
             sound.loop != null,
         });

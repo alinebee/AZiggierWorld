@@ -123,6 +123,9 @@ pub const max_instruments = 15;
 /// within a single pattern of a music track. See channel_event.zig.
 pub const rows_per_pattern = 64;
 
+/// The maximum volume allowed for a sound effect or music sample.
+pub const max_volume = 63;
+
 // -- Helper functions --
 
 const math = @import("std").math;

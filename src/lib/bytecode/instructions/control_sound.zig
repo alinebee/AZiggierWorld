@@ -27,10 +27,17 @@ pub const ControlSound = union(enum) {
     /// Consumes 6 bytes from the bytecode on success, including the opcode.
     /// Returns an error if the bytecode could not be read or contained an invalid instruction.
     pub fn parse(_: Opcode.Raw, program: *Program) ParseError!Self {
-        const resource_id = resources.ResourceID.cast(try program.read(resources.ResourceID.Raw));
-        const frequency_id = try program.read(audio.FrequencyID);
-        const volume = try program.read(audio.Volume);
-        const channel_id = try vm.ChannelID.parse(try program.read(vm.ChannelID.Raw));
+        const raw_resource_id = try program.read(resources.ResourceID.Raw);
+        const raw_frequency_id = try program.read(audio.FrequencyID.Raw);
+        const raw_volume = try program.read(audio.Volume);
+        const raw_channel_id = try program.read(vm.ChannelID.Raw);
+
+        // Do failable parsing *after* loading all the bytes that this instruction would normally consume;
+        // This way, tests that recover from failed parsing will parse the rest of the bytecode correctly.
+        const resource_id = resources.ResourceID.cast(raw_resource_id);
+        const volume = raw_volume;
+        const frequency_id = try audio.FrequencyID.parse(raw_frequency_id);
+        const channel_id = try vm.ChannelID.parse(raw_channel_id);
 
         if (volume > 0) {
             return Self{
@@ -62,7 +69,7 @@ pub const ControlSound = union(enum) {
     // - Exported constants -
 
     pub const opcode = Opcode.ControlSound;
-    pub const ParseError = Program.ReadError || vm.ChannelID.Error;
+    pub const ParseError = Program.ReadError || vm.ChannelID.Error || audio.FrequencyID.Error;
 
     // -- Bytecode examples --
 
@@ -72,10 +79,11 @@ pub const ControlSound = union(enum) {
         /// Example bytecode that should produce a valid instruction.
         pub const valid = play;
 
-        const play = [6]u8{ raw_opcode, 0xDE, 0xAD, 0xBE, 0xEF, 0x03 };
+        const play = [6]u8{ raw_opcode, 0xDE, 0xAD, 0x27, 0x3F, 0x03 };
         const stop = [6]u8{ raw_opcode, 0x00, 0x00, 0x00, 0x00, 0x01 };
 
-        const invalid_channel = [6]u8{ raw_opcode, 0xDE, 0xAD, 0xFF, 0x80, 0x04 };
+        const invalid_frequency_id = [6]u8{ raw_opcode, 0xDE, 0xAD, 0x28, 0x3F, 0x03 };
+        const invalid_channel_id = [6]u8{ raw_opcode, 0xDE, 0xAD, 0x27, 0x3F, 0x04 };
     };
 };
 
@@ -91,8 +99,8 @@ test "parse parses play instruction and consumes 6 bytes" {
         .play = .{
             .resource_id = resources.ResourceID.cast(0xDEAD),
             .channel_id = vm.ChannelID.cast(3),
-            .volume = 0xEF,
-            .frequency_id = 0xBE,
+            .volume = 63,
+            .frequency_id = try audio.FrequencyID.parse(39),
         },
     };
     try testing.expectEqual(expected, instruction);
@@ -104,10 +112,17 @@ test "parse parses stop instruction and consumes 6 bytes" {
     try testing.expectEqual(expected, instruction);
 }
 
+test "parse returns error.FrequencyID when out of range frequency is specified in bytecode" {
+    try testing.expectError(
+        error.InvalidFrequencyID,
+        expectParse(ControlSound.parse, &ControlSound.Fixtures.invalid_frequency_id, 6),
+    );
+}
+
 test "parse returns error.InvalidChannelID when unknown channel is specified in bytecode" {
     try testing.expectError(
         error.InvalidChannelID,
-        expectParse(ControlSound.parse, &ControlSound.Fixtures.invalid_channel, 6),
+        expectParse(ControlSound.parse, &ControlSound.Fixtures.invalid_channel_id, 6),
     );
 }
 
@@ -117,7 +132,7 @@ test "execute with play instruction calls playSound with correct parameters" {
             .resource_id = resources.ResourceID.cast(0xDEAD),
             .channel_id = vm.ChannelID.cast(0),
             .volume = 20,
-            .frequency_id = 0,
+            .frequency_id = try audio.FrequencyID.parse(0),
         },
     };
 
@@ -126,7 +141,7 @@ test "execute with play instruction calls playSound with correct parameters" {
             try testing.expectEqual(resources.ResourceID.cast(0xDEAD), resource_id);
             try testing.expectEqual(vm.ChannelID.cast(0), channel_id);
             try testing.expectEqual(20, volume);
-            try testing.expectEqual(0, frequency);
+            try testing.expectEqual(try audio.FrequencyID.parse(0), frequency);
         }
 
         pub fn stopChannel(_: vm.ChannelID) void {

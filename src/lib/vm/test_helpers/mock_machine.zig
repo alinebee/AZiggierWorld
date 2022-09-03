@@ -294,11 +294,11 @@ test "MockMachine calls playSound correctly on stub implementation" {
             try testing.expectEqual(resources.ResourceID.cast(0xBEEF), resource_id);
             try testing.expectEqual(vm.ChannelID.cast(2), channel_id);
             try testing.expectEqual(64, volume);
-            try testing.expectEqual(128, frequency_id);
+            try testing.expectEqual(try audio.FrequencyID.parse(39), frequency_id);
         }
     });
 
-    try mock.playSound(resources.ResourceID.cast(0xBEEF), vm.ChannelID.cast(2), 64, 128);
+    try mock.playSound(resources.ResourceID.cast(0xBEEF), vm.ChannelID.cast(2), 64, try audio.FrequencyID.parse(39));
     try testing.expectEqual(1, mock.call_counts.playSound);
 }
 
