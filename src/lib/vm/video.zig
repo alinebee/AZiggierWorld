@@ -198,9 +198,6 @@ pub const Video = struct {
         animations,
     };
 
-    /// A length of time in milliseconds to leave a frame on screen.
-    pub const Milliseconds = usize;
-
     /// The ID of one of the 4 buffers used by the rendering system.
     pub const ResolvedBufferID = vm.BufferID.Specific;
 

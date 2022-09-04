@@ -13,6 +13,8 @@ pub const GamePart = @import("vm/game_part.zig").GamePart;
 pub const PolygonSource = @import("vm/video.zig").Video.PolygonSource;
 pub const HostSurface = @import("vm/video.zig").Video.HostSurface;
 pub const ResolvedBufferID = @import("vm/video.zig").Video.ResolvedBufferID;
-pub const Milliseconds = @import("vm/video.zig").Video.Milliseconds;
+
+pub const FrameCount = Register.Unsigned;
+pub const Milliseconds = @import("anotherworld.zig").timing.Milliseconds;
 
 pub const mockMachine = @import("vm/test_helpers/mock_machine.zig").mockMachine;

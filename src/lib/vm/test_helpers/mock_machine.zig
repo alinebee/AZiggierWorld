@@ -69,9 +69,9 @@ pub fn MockMachine(comptime Implementation: type) type {
             Implementation.copyVideoBuffer(source, destination, vertical_offset);
         }
 
-        pub fn renderVideoBuffer(self: *Self, buffer_id: vm.BufferID, delay: vm.Milliseconds) void {
+        pub fn renderVideoBuffer(self: *Self, buffer_id: vm.BufferID, delay_in_frames: vm.FrameCount) void {
             self.call_counts.renderVideoBuffer += 1;
-            Implementation.renderVideoBuffer(buffer_id, delay);
+            Implementation.renderVideoBuffer(buffer_id, delay_in_frames);
         }
 
         pub fn scheduleGamePart(self: *Self, game_part: vm.GamePart) void {
@@ -212,9 +212,9 @@ test "MockMachine calls copyVideoBuffer correctly on stub implementation" {
 
 test "MockMachine calls renderVideoBuffer correctly on stub implementation" {
     var mock = mockMachine(struct {
-        fn renderVideoBuffer(buffer_id: vm.BufferID, delay: vm.Milliseconds) void {
+        fn renderVideoBuffer(buffer_id: vm.BufferID, delay_in_frames: vm.FrameCount) void {
             testing.expectEqual(.back_buffer, buffer_id) catch unreachable;
-            testing.expectEqual(5, delay) catch unreachable;
+            testing.expectEqual(5, delay_in_frames) catch unreachable;
         }
     });
 

@@ -3,7 +3,7 @@ const anotherworld = @import("anotherworld.zig");
 const audio = anotherworld.audio;
 const vm = anotherworld.vm;
 
-/// A delay in milliesconds.
+/// A delay in milliseconds.
 pub const Milliseconds = usize;
 
 /// A frequency in Hz.
@@ -16,7 +16,7 @@ pub const TimingMode = enum {
     ntsc,
 
     /// The game files of Another World's DOS port appear to use PAL timings.
-    const default = TimingMode.pal;
+    pub const default = TimingMode.pal;
 
     /// Returns the frame rate in Hz (Frames Per Second) at which the Amiga ran in this timing mode.
     pub fn frameRate(self: TimingMode) Hz {
@@ -45,7 +45,7 @@ pub const TimingMode = enum {
     }
 
     /// Converts a duration expressed as a number of video frames into milliseconds.
-    pub fn msFromFrameCount(self: TimingMode, frame_count: usize) Milliseconds {
+    pub fn msFromFrameCount(self: TimingMode, frame_count: vm.FrameCount) Milliseconds {
         return (frame_count * std.time.ms_per_s) / self.frameRate();
     }
 

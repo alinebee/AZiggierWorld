@@ -37,6 +37,7 @@ const bytecode = anotherworld.bytecode;
 const static_limits = anotherworld.static_limits;
 const log = anotherworld.log;
 const vm = anotherworld.vm;
+const timing = anotherworld.timing;
 
 const Thread = @import("thread.zig").Thread;
 const Stack = @import("stack.zig").Stack;
@@ -238,9 +239,10 @@ pub const Machine = struct {
     }
 
     /// Render the contents of the specified buffer to the host screen after the specified delay.
-    pub fn renderVideoBuffer(self: *Self, buffer_id: vm.BufferID, delay: vm.Milliseconds) void {
+    pub fn renderVideoBuffer(self: *Self, buffer_id: vm.BufferID, delay_in_frames: vm.FrameCount) void {
         const buffer_to_draw = self.video.markBufferAsReady(buffer_id);
-        self.host.bufferReady(self, buffer_to_draw, delay);
+        const delay_in_ms = timing.TimingMode.default.msFromFrameCount(delay_in_frames);
+        self.host.bufferReady(self, buffer_to_draw, delay_in_ms);
     }
 
     /// Called by the host to render the specified buffer into a 24-bit host surface.
@@ -799,7 +801,8 @@ test "runTic updates each thread with its scheduled state before running each th
 
 test "renderVideoBuffer notifies host of new frame with expected buffer ID and delay" {
     const expected_buffer_id = 3;
-    const expected_delay = 24;
+    const frame_count = 4;
+    const expected_delay = comptime timing.TimingMode.default.msFromFrameCount(frame_count);
 
     var host = mock_host.mockHost(struct {
         pub fn bufferReady(_: *const Machine, buffer_id: vm.ResolvedBufferID, delay: vm.Milliseconds) void {
@@ -814,6 +817,6 @@ test "renderVideoBuffer notifies host of new frame with expected buffer ID and d
     var machine = Machine.testInstance(.{ .host = host.host() });
     defer machine.deinit();
 
-    machine.renderVideoBuffer(.{ .specific = expected_buffer_id }, expected_delay);
+    machine.renderVideoBuffer(.{ .specific = expected_buffer_id }, frame_count);
     try testing.expectEqual(1, host.call_counts.bufferReady);
 }

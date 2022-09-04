@@ -4,16 +4,11 @@ const vm = anotherworld.vm;
 const Opcode = @import("../opcode.zig").Opcode;
 const Program = @import("../program.zig").Program;
 const Machine = vm.Machine;
-const Milliseconds = vm.Milliseconds;
 const BufferID = vm.BufferID;
 
-/// This instruction reads a variable from a specific register to decide how long to leave
-/// the previous frame on screen before displaying the next one.
-/// That register's value is a number of abstract frame units and needs to be multiplied
-/// by this constant to get the delay in milliseconds.
-const milliseconds_per_frame_unit: Milliseconds = 20;
-
-/// Renders the contents of a video buffer to the host screen.
+/// Renders the contents of a video buffer to the host screen,
+/// leaving the previous frame on-screen for a variable duration before
+/// replacing it with the new one.
 pub const RenderVideoBuffer = struct {
     /// The buffer to render.
     buffer_id: BufferID,
@@ -38,9 +33,11 @@ pub const RenderVideoBuffer = struct {
 
     // Private implementation is generic to allow tests to use mocks.
     fn _execute(self: Self, machine: anytype) void {
-        // In Another World's original bytecode, the delay is typically set to between 1-11 units (20-220 ms).
-        const delay_in_frame_units = machine.registers.unsigned(.frame_duration);
-        const delay_in_milliseconds = @as(Milliseconds, delay_in_frame_units) * milliseconds_per_frame_unit;
+        // The delay to leave the previous frame visible is expressed
+        // as a number of PAL frames,  where each frame is 20ms.
+        // In Another World's original bytecode, the delay is typically
+        // 1-11 frames (20-220 ms).
+        const delay_in_frames = machine.registers.unsigned(.frame_duration);
 
         // Copypasta from reference implementation.
         // From examining Another World's bytecode, nothing else ever writes to this register;
@@ -49,7 +46,7 @@ pub const RenderVideoBuffer = struct {
         // may have some effect.
         machine.registers.setUnsigned(.render_video_buffer_UNKNOWN, 0);
 
-        machine.renderVideoBuffer(self.buffer_id, delay_in_milliseconds);
+        machine.renderVideoBuffer(self.buffer_id, delay_in_frames);
     }
 
     // - Exported constants -
@@ -93,12 +90,11 @@ test "execute calls renderVideoBuffer with correct parameters" {
     };
 
     const raw_frame_duration = 5;
-    const expected_milliseconds = raw_frame_duration * milliseconds_per_frame_unit;
 
     var machine = mockMachine(struct {
-        pub fn renderVideoBuffer(buffer_id: BufferID, delay: Milliseconds) void {
+        pub fn renderVideoBuffer(buffer_id: BufferID, delay_in_frames: vm.FrameCount) void {
             testing.expectEqual(.back_buffer, buffer_id) catch unreachable;
-            testing.expectEqual(expected_milliseconds, delay) catch unreachable;
+            testing.expectEqual(5, delay_in_frames) catch unreachable;
         }
     });
     machine.registers.setUnsigned(.frame_duration, raw_frame_duration);
