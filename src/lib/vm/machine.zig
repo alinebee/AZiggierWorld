@@ -82,7 +82,10 @@ pub const Machine = struct {
 
     /// The game part that has been scheduled to start on the next game tic.
     /// Null if no game part is scheduled.
-    scheduled_game_part: ?vm.GamePart = null,
+    scheduled_game_part: ?vm.GamePart,
+
+    /// The timing mode to use for video and audio timing.
+    timing_mode: timing.TimingMode,
 
     const Self = @This();
 
@@ -111,8 +114,10 @@ pub const Machine = struct {
                 .palettes = undefined,
             },
             .audio = .{},
+            .timing_mode = options.timing_mode,
             .program = undefined,
             .current_game_part = undefined,
+            .scheduled_game_part = null,
         };
 
         const seed = options.seed orelse @truncate(vm.Register.Signed, std.time.milliTimestamp());
@@ -241,7 +246,7 @@ pub const Machine = struct {
     /// Render the contents of the specified buffer to the host screen after the specified delay.
     pub fn renderVideoBuffer(self: *Self, buffer_id: vm.BufferID, delay_in_frames: vm.FrameCount) void {
         const buffer_to_draw = self.video.markBufferAsReady(buffer_id);
-        const delay_in_ms = timing.TimingMode.default.msFromFrameCount(delay_in_frames);
+        const delay_in_ms = self.timing_mode.msFromFrameCount(delay_in_frames);
         self.host.bufferReady(self, buffer_to_draw, delay_in_ms);
     }
 
@@ -356,6 +361,10 @@ pub const Machine = struct {
         /// The seed to use for the game's random number generator.
         /// If null, a random seed will be chosen based on the system clock.
         seed: ?vm.Register.Signed = null,
+
+        /// The timing mode to use for video and audio.
+        /// Defaults to the timing of the PAL Amiga.
+        timing_mode: timing.TimingMode = timing.TimingMode.default,
     };
 
     /// Optional configuration settings for the test machine instance created by `testInstance`.
@@ -364,6 +373,8 @@ pub const Machine = struct {
         program_data: ?[]const u8 = null,
         // An optional host that the test instance should talk to.
         host: ?vm.Host = null,
+        // An optional timing mode to override the default.
+        timing_mode: timing.TimingMode = timing.TimingMode.default,
     };
 
     /// Returns a machine instance suitable for use in tests.
@@ -376,7 +387,11 @@ pub const Machine = struct {
     /// defer machine.deinit();
     /// try testing.expectEqual(result, do_something_that_requires_a_machine(machine));
     pub fn testInstance(config: TestInstanceConfig) Self {
-        const options = Options{ .initial_game_part = .intro_cinematic, .seed = 0 };
+        const options = Options{
+            .initial_game_part = .intro_cinematic,
+            .seed = 0,
+            .timing_mode = config.timing_mode,
+        };
         const host = config.host orelse mock_host.test_host;
 
         var machine = Self.init(testing.allocator, resources.MockRepository.test_reader, host, options) catch unreachable;
@@ -802,7 +817,7 @@ test "runTic updates each thread with its scheduled state before running each th
 test "renderVideoBuffer notifies host of new frame with expected buffer ID and delay" {
     const expected_buffer_id = 3;
     const frame_count = 4;
-    const expected_delay = comptime timing.TimingMode.default.msFromFrameCount(frame_count);
+    const expected_delay = comptime timing.TimingMode.pal.msFromFrameCount(frame_count);
 
     var host = mock_host.mockHost(struct {
         pub fn bufferReady(_: *const Machine, buffer_id: vm.ResolvedBufferID, delay: vm.Milliseconds) void {
@@ -815,6 +830,28 @@ test "renderVideoBuffer notifies host of new frame with expected buffer ID and d
     });
 
     var machine = Machine.testInstance(.{ .host = host.host() });
+    defer machine.deinit();
+
+    machine.renderVideoBuffer(.{ .specific = expected_buffer_id }, frame_count);
+    try testing.expectEqual(1, host.call_counts.bufferReady);
+}
+
+test "renderVideoBuffer uses NTSC frame delay when timing mode is NTSC" {
+    const expected_buffer_id = 3;
+    const frame_count = 4;
+    const expected_delay = comptime timing.TimingMode.ntsc.msFromFrameCount(frame_count);
+
+    var host = mock_host.mockHost(struct {
+        pub fn bufferReady(_: *const Machine, buffer_id: vm.ResolvedBufferID, delay: vm.Milliseconds) void {
+            testing.expectEqual(expected_buffer_id, buffer_id) catch unreachable;
+            testing.expectEqual(expected_delay, delay) catch unreachable;
+        }
+        pub fn bufferChanged(_: *const Machine, _: vm.ResolvedBufferID) void {
+            unreachable;
+        }
+    });
+
+    var machine = Machine.testInstance(.{ .host = host.host(), .timing_mode = .ntsc });
     defer machine.deinit();
 
     machine.renderVideoBuffer(.{ .specific = expected_buffer_id }, frame_count);

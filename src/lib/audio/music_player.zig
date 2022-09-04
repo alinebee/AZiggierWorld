@@ -5,29 +5,7 @@ const static_limits = anotherworld.static_limits;
 const timing = anotherworld.timing;
 const log = anotherworld.log;
 
-/// Use PAL timing for the tempo of music tracks and frequency of samples.
-/// This is presumably what they were composed in and originally intended for.
-/// TODO: the reference code seems to use NTSC values for frequency calculations
-/// (see: https://github.com/fabiensanglard/Another-World-Bytecode-Interpreter/blob/master/src/sfxplayer.cpp#L196)
-/// but seems to fudge the tempo calculations using a constant that's close to PAL
-/// (see: https://github.com/fabiensanglard/Another-World-Bytecode-Interpreter/blob/master/src/sfxplayer.cpp#L42)
-/// Determine what the original DOS implementation used.
-const timing_mode = timing.TimingMode.default;
-
 pub const MusicPlayer = struct {
-    const LoadedInstrument = struct {
-        resource: audio.SoundResource,
-        volume: audio.Volume,
-
-        fn init(instrument: audio.MusicResource.Instrument, repository: anytype) LoadError!LoadedInstrument {
-            const sound_data = repository.resourceLocation(instrument.resource_id) orelse return error.SoundNotLoaded;
-            return LoadedInstrument{
-                .resource = try SoundResource.parse(sound_data),
-                .volume = instrument.volume,
-            };
-        }
-    };
-
     /// The music track being played.
     music: audio.MusicResource,
 
@@ -47,11 +25,14 @@ pub const MusicPlayer = struct {
     /// Will be between 0 and ms_per_row.
     ms_remaining: timing.Milliseconds,
 
+    /// The timing mode to use to compute tempo and frequency.
+    timing_mode: timing.TimingMode,
+
     const Self = @This();
 
     /// Create a player that plays from the beginning to the end of the specified music track,
     /// loading instrument data from the specified repository.
-    fn init(music: audio.MusicResource, repository: anytype, offset: audio.Offset, custom_tempo: ?audio.Tempo) LoadError!Self {
+    pub fn init(music: audio.MusicResource, repository: anytype, timing_mode: timing.TimingMode, offset: audio.Offset, custom_tempo: ?audio.Tempo) LoadError!Self {
         const ms_per_row = timing_mode.msFromTempo(custom_tempo orelse music.tempo);
         if (ms_per_row == 0) {
             return error.InvalidTempo;
@@ -92,6 +73,18 @@ pub const MusicPlayer = struct {
             try self.advanceToNextRow();
         }
     }
+
+    /// Whether the music track has finished playing through.
+    pub fn isAtEnd() bool {
+        if (self.sequence.isAtEnd() == false) return false;
+        if (self.pattern_iterator) |pattern_iterator| {
+            return pattern_iterator.isAtEnd();
+        } else {
+            return true;
+        }
+    }
+
+    // -- Private methods --
 
     /// Process the next row of events for each channel in the music track.
     /// Returns a PlayError if the end of the track was reached or music data could not be read.
@@ -135,14 +128,7 @@ pub const MusicPlayer = struct {
         }
     }
 
-    fn isAtEnd() bool {
-        if (self.sequence.isAtEnd() == false) return false;
-        if (self.pattern_iterator) |pattern_iterator| {
-            return pattern_iterator.isAtEnd();
-        } else {
-            return true;
-        }
-    }
+    // -- Public constants --
 
     /// The possible errors that can occur from init().
     pub const LoadError = audio.MusicResource.Instrument.ParseError || audio.MusicResource.IterateSequenceError || error{
@@ -156,6 +142,21 @@ pub const MusicPlayer = struct {
     pub const PlayError = audio.MusicResource.IteratePatternError || audio.MusicResource.ChannelEvent.ParseError || error{
         /// Playback reached the end of the track.
         EndOfTrack,
+    };
+
+    // -- Private constants --
+
+    const LoadedInstrument = struct {
+        resource: audio.SoundResource,
+        volume: audio.Volume,
+
+        fn init(instrument: audio.MusicResource.Instrument, repository: anytype) LoadError!LoadedInstrument {
+            const sound_data = repository.resourceLocation(instrument.resource_id) orelse return error.SoundNotLoaded;
+            return LoadedInstrument{
+                .resource = try SoundResource.parse(sound_data),
+                .volume = instrument.volume,
+            };
+        }
     };
 };
 
