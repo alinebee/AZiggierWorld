@@ -12,14 +12,14 @@ pub const ControlSound = union(enum) {
         /// The ID of the sound to play.
         resource_id: resources.ResourceID,
         /// The channel on which to play the sound.
-        channel_id: vm.ChannelID,
+        channel_id: audio.ChannelID,
         /// The volume at which to play the sound.
         /// TODO: document default volume and observed range.
         volume: audio.Volume,
         /// The ID of the preset pitch at which to play the sound.
         frequency_id: audio.FrequencyID,
     },
-    stop: vm.ChannelID,
+    stop: audio.ChannelID,
 
     const Self = @This();
 
@@ -30,14 +30,14 @@ pub const ControlSound = union(enum) {
         const raw_resource_id = try program.read(resources.ResourceID.Raw);
         const raw_frequency_id = try program.read(audio.FrequencyID.Raw);
         const raw_volume = try program.read(audio.Volume);
-        const raw_channel_id = try program.read(vm.ChannelID.Raw);
+        const raw_channel_id = try program.read(audio.ChannelID.Raw);
 
         // Do failable parsing *after* loading all the bytes that this instruction would normally consume;
         // This way, tests that recover from failed parsing will parse the rest of the bytecode correctly.
         const resource_id = resources.ResourceID.cast(raw_resource_id);
         const volume = raw_volume;
         const frequency_id = try audio.FrequencyID.parse(raw_frequency_id);
-        const channel_id = try vm.ChannelID.parse(raw_channel_id);
+        const channel_id = try audio.ChannelID.parse(raw_channel_id);
 
         if (volume > 0) {
             return Self{
@@ -69,7 +69,7 @@ pub const ControlSound = union(enum) {
     // - Exported constants -
 
     pub const opcode = Opcode.ControlSound;
-    pub const ParseError = Program.ReadError || vm.ChannelID.Error || audio.FrequencyID.Error;
+    pub const ParseError = Program.ReadError || audio.ChannelID.Error || audio.FrequencyID.Error;
 
     // -- Bytecode examples --
 
@@ -98,7 +98,7 @@ test "parse parses play instruction and consumes 6 bytes" {
     const expected = ControlSound{
         .play = .{
             .resource_id = resources.ResourceID.cast(0xDEAD),
-            .channel_id = vm.ChannelID.cast(3),
+            .channel_id = audio.ChannelID.cast(3),
             .volume = 63,
             .frequency_id = try audio.FrequencyID.parse(39),
         },
@@ -108,7 +108,7 @@ test "parse parses play instruction and consumes 6 bytes" {
 
 test "parse parses stop instruction and consumes 6 bytes" {
     const instruction = try expectParse(ControlSound.parse, &ControlSound.Fixtures.stop, 6);
-    const expected = ControlSound{ .stop = vm.ChannelID.cast(1) };
+    const expected = ControlSound{ .stop = audio.ChannelID.cast(1) };
     try testing.expectEqual(expected, instruction);
 }
 
@@ -130,21 +130,21 @@ test "execute with play instruction calls playSound with correct parameters" {
     const instruction = ControlSound{
         .play = .{
             .resource_id = resources.ResourceID.cast(0xDEAD),
-            .channel_id = vm.ChannelID.cast(0),
+            .channel_id = audio.ChannelID.cast(0),
             .volume = 20,
             .frequency_id = try audio.FrequencyID.parse(0),
         },
     };
 
     var machine = mockMachine(struct {
-        pub fn playSound(resource_id: resources.ResourceID, channel_id: vm.ChannelID, volume: audio.Volume, frequency: audio.FrequencyID) !void {
+        pub fn playSound(resource_id: resources.ResourceID, channel_id: audio.ChannelID, volume: audio.Volume, frequency: audio.FrequencyID) !void {
             try testing.expectEqual(resources.ResourceID.cast(0xDEAD), resource_id);
-            try testing.expectEqual(vm.ChannelID.cast(0), channel_id);
+            try testing.expectEqual(audio.ChannelID.cast(0), channel_id);
             try testing.expectEqual(20, volume);
             try testing.expectEqual(try audio.FrequencyID.parse(0), frequency);
         }
 
-        pub fn stopChannel(_: vm.ChannelID) void {
+        pub fn stopChannel(_: audio.ChannelID) void {
             unreachable;
         }
     });
@@ -154,15 +154,15 @@ test "execute with play instruction calls playSound with correct parameters" {
 }
 
 test "execute with stop instruction runs on machine without errors" {
-    const instruction = ControlSound{ .stop = vm.ChannelID.cast(1) };
+    const instruction = ControlSound{ .stop = audio.ChannelID.cast(1) };
 
     var machine = mockMachine(struct {
-        pub fn playSound(_: resources.ResourceID, _: vm.ChannelID, _: audio.Volume, _: audio.FrequencyID) !void {
+        pub fn playSound(_: resources.ResourceID, _: audio.ChannelID, _: audio.Volume, _: audio.FrequencyID) !void {
             unreachable;
         }
 
-        pub fn stopChannel(channel_id: vm.ChannelID) void {
-            testing.expectEqual(vm.ChannelID.cast(1), channel_id) catch {
+        pub fn stopChannel(channel_id: audio.ChannelID) void {
+            testing.expectEqual(audio.ChannelID.cast(1), channel_id) catch {
                 unreachable;
             };
         }

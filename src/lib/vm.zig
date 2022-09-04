@@ -7,7 +7,6 @@ pub const Register = @import("vm/register.zig");
 pub const RegisterID = @import("vm/register_id.zig").RegisterID;
 pub const ThreadID = @import("vm/thread_id.zig").ThreadID;
 pub const BufferID = @import("vm/buffer_id.zig").BufferID;
-pub const ChannelID = @import("vm/channel_id.zig").ChannelID;
 pub const GamePart = @import("vm/game_part.zig").GamePart;
 
 pub const PolygonSource = @import("vm/video.zig").Video.PolygonSource;

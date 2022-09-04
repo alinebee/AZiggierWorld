@@ -1,6 +1,5 @@
 const anotherworld = @import("../anotherworld.zig");
 const audio = anotherworld.audio;
-const vm = anotherworld.vm;
 const static_limits = anotherworld.static_limits;
 const timing = anotherworld.timing;
 const log = anotherworld.log;
@@ -13,10 +12,10 @@ pub const MusicPlayer = struct {
     instruments: [static_limits.max_instruments]?LoadedInstrument,
 
     /// An iterator for the sequence of patterns in the music track.
-    sequence_iterator: MusicResource.SequenceIterator,
+    sequence_iterator: audio.MusicResource.SequenceIterator,
 
     /// An iterator for the current pattern.
-    pattern_iterator: MusicResource.PatternIterator,
+    pattern_iterator: audio.MusicResource.PatternIterator,
 
     /// The tempo at which to play the track: how many milliseconds to wait between each row of each pattern.
     ms_per_row: timing.Milliseconds,
@@ -41,6 +40,7 @@ pub const MusicPlayer = struct {
         var self = Self{
             .music = music,
             .ms_per_row = ms_per_row,
+            .timing_mode = timing_mode,
             .instruments = undefined,
             .sequence_iterator = undefined,
             .pattern_iterator = undefined,
@@ -75,13 +75,8 @@ pub const MusicPlayer = struct {
     }
 
     /// Whether the music track has finished playing through.
-    pub fn isAtEnd() bool {
-        if (self.sequence.isAtEnd() == false) return false;
-        if (self.pattern_iterator) |pattern_iterator| {
-            return pattern_iterator.isAtEnd();
-        } else {
-            return true;
-        }
+    pub fn isAtEnd(self: Self) bool {
+        return self.sequence_iterator.isAtEnd() and self.pattern_iterator.isAtEnd();
     }
 
     // -- Private methods --
@@ -90,9 +85,9 @@ pub const MusicPlayer = struct {
     /// Returns a PlayError if the end of the track was reached or music data could not be read.
     fn advanceToNextRow(self: *Self) PlayError!void {
         while (true) {
-            if (try pattern_iterator.next()) |events| {
+            if (try self.pattern_iterator.next()) |events| {
                 for (events) |event, index| {
-                    try self.processEvent(event, ChannelID.cast(index));
+                    self.processEvent(event, audio.ChannelID.cast(index));
                 }
             } else if (self.sequence_iterator.next()) |pattern_id| {
                 // If we've finished the current pattern, load the next pattern and try again
@@ -104,16 +99,16 @@ pub const MusicPlayer = struct {
     }
 
     /// Handle a music event on the specified channel.
-    fn processEvent(self: Self, event: audio.MusicResource.ChannelEvent, channel_id: vm.ChannelID) void {
+    fn processEvent(self: Self, event: audio.MusicResource.ChannelEvent, channel_id: audio.ChannelID) void {
         switch (event) {
             .play => |play| {
                 if (self.instruments[play.instrument_id]) |instrument| {
                     const adjusted_volume = @as(i16, instrument.volume) + play.volume_delta;
-                    const frequency_in_hz = timing_mode.hzFromPeriod(play.period);
+                    const frequency_in_hz = self.timing_mode.hzFromPeriod(play.period);
                     log.debug("Play channel #{}: Instrument #{}, frequency: {}, volume: {}", .{
                         channel_id,
                         play.instrument_id,
-                        play.period,
+                        frequency_in_hz,
                         adjusted_volume,
                     });
                 }
@@ -131,7 +126,7 @@ pub const MusicPlayer = struct {
     // -- Public constants --
 
     /// The possible errors that can occur from init().
-    pub const LoadError = audio.MusicResource.Instrument.ParseError || audio.MusicResource.IterateSequenceError || error{
+    pub const LoadError = audio.MusicResource.IterateSequenceError || error{
         /// One of the sound resources referenced in the music track was not yet loaded.
         SoundNotLoaded,
         /// An invalid custom tempo was specified.
@@ -153,7 +148,7 @@ pub const MusicPlayer = struct {
         fn init(instrument: audio.MusicResource.Instrument, repository: anytype) LoadError!LoadedInstrument {
             const sound_data = repository.resourceLocation(instrument.resource_id) orelse return error.SoundNotLoaded;
             return LoadedInstrument{
-                .resource = try SoundResource.parse(sound_data),
+                .resource = try audio.SoundResource.parse(sound_data),
                 .volume = instrument.volume,
             };
         }
