@@ -2,9 +2,9 @@
 //! whose meaning depends on the value of the first word.
 //! Word 1                  Word 2                  Meaning
 //! 0b0000_0000_0000_0000   0b0000_0000_0000_0000   No-op: do nothing on the channel.
-//! 0x1111_1111_1111_1110   0b0000_0000_0000_0000   Stop the current channel.
-//! 0x1111_1111_1111_1101   0brrrr_rrrr_rrrr_rrrr   Set music mark register to value of second word.
-//! 0xffff_ffff_ffff_ffff   0biiii_eeee_vvvv_vvvv   Play sound effect on channel:
+//! 0b1111_1111_1111_1110   0b0000_0000_0000_0000   Stop the current channel.
+//! 0b1111_1111_1111_1101   0brrrr_rrrr_rrrr_rrrr   Set music mark register to value of second word.
+//! 0bffff_ffff_ffff_ffff   0biiii_eeee_vvvv_vvvv   Play sound effect on channel:
 //!     - f: Treat all bits of first word as note frequency
 //!          (technically Amiga clock period: see timing.hzFromPeriod)
 //!     - i: Treat top 4 bits of second word as instrument ID - 1
@@ -118,6 +118,34 @@ pub const ChannelEvent = union(enum) {
         /// A no-op event contained unused junk data.
         MalformedNoopEvent,
     };
+
+    pub const Fixtures = struct {
+        // Raw frequency 4095, raw instrument 15, raw effect 5, raw volume 63
+        pub const play = [4]u8{ 0x0F, 0xFF, 0b1111_0101, 0x3F };
+
+        // Mark 0xCAFE
+        pub const set_mark = [4]u8{ 0xFF, 0xFD, 0xCA, 0xFE };
+
+        pub const stop = [4]u8{ 0xFF, 0xFE, 0x00, 0x00 };
+
+        pub const noop = [4]u8{ 0x00, 0x00, 0x00, 0x00 };
+
+        // Raw period 4095, raw instrument 0, raw effect 5, raw volume 63
+        pub const play_invalid_instrument_id = [4]u8{ 0x0F, 0xFF, 0b0000_0101, 0x3F };
+
+        // Raw period 4096, raw instrument 15, raw effect 5, raw volume 63
+        pub const play_period_too_high = [4]u8{ 0x10, 0x00, 0b1111_0101, 0x3F };
+
+        // Raw period 123, raw instrument 15, raw effect 5, raw volume 63
+        pub const play_period_too_low = [4]u8{ 0x00, 0x7B, 0b1111_0101, 0x3F };
+
+        // Raw period 4095, raw instrument 15, raw effect 4, raw volume 63
+        pub const play_invalid_effect = [4]u8{ 0x0F, 0xFF, 0b1111_0100, 0x3F };
+
+        pub const stop_with_junk = [4]u8{ 0xFF, 0xFE, 0x12, 0x34 };
+
+        pub const noop_with_junk = [4]u8{ 0x00, 0x00, 0x12, 0x34 };
+    };
 };
 
 /// The minimum period allowed.
@@ -127,33 +155,6 @@ const min_period = 124;
 /// The maximum period allowed. The Protracker MOD format could not specify a period higher than this,
 /// and all note periods in the Another World game data are well below this.
 const max_period = 4095;
-
-const Fixtures = struct {
-    // Raw frequency 4095, raw instrument 15, raw effect 5, raw volume 63
-    const play = [4]u8{ 0x0F, 0xFF, 0b1111_0101, 0x3F };
-
-    const stop = [4]u8{ 0xFF, 0xFE, 0x00, 0x00 };
-
-    const set_mark = [4]u8{ 0xFF, 0xFD, 0xCA, 0xFE };
-
-    const noop = [4]u8{ 0x00, 0x00, 0x00, 0x00 };
-
-    // Raw period 4095, raw instrument 0, raw effect 5, raw volume 63
-    const play_invalid_instrument_id = [4]u8{ 0x0F, 0xFF, 0b0000_0101, 0x3F };
-
-    // Raw period 4096, raw instrument 15, raw effect 5, raw volume 63
-    const play_period_too_high = [4]u8{ 0x10, 0x00, 0b1111_0101, 0x3F };
-
-    // Raw period 123, raw instrument 15, raw effect 5, raw volume 63
-    const play_period_too_low = [4]u8{ 0x00, 0x7B, 0b1111_0101, 0x3F };
-
-    // Raw period 4095, raw instrument 15, raw effect 4, raw volume 63
-    const play_invalid_effect = [4]u8{ 0x0F, 0xFF, 0b1111_0100, 0x3F };
-
-    const stop_with_junk = [4]u8{ 0xFF, 0xFE, 0x12, 0x34 };
-
-    const noop_with_junk = [4]u8{ 0x00, 0x00, 0x12, 0x34 };
-};
 
 // -- Tests --
 
@@ -171,39 +172,39 @@ test "parse parses play event" {
             .volume_delta = 63,
         },
     };
-    try testing.expectEqual(expected, try ChannelEvent.parse(Fixtures.play));
+    try testing.expectEqual(expected, try ChannelEvent.parse(ChannelEvent.Fixtures.play));
 }
 
 test "parse parses set_mark event" {
     const expected = ChannelEvent{ .set_mark = 0xCAFE };
-    try testing.expectEqual(expected, try ChannelEvent.parse(Fixtures.set_mark));
+    try testing.expectEqual(expected, try ChannelEvent.parse(ChannelEvent.Fixtures.set_mark));
 }
 
 test "parse parses stop event" {
-    try testing.expectEqual(.stop, try ChannelEvent.parse(Fixtures.stop));
+    try testing.expectEqual(.stop, try ChannelEvent.parse(ChannelEvent.Fixtures.stop));
 }
 
 test "parse parses noop event" {
-    try testing.expectEqual(.noop, try ChannelEvent.parse(Fixtures.noop));
+    try testing.expectEqual(.noop, try ChannelEvent.parse(ChannelEvent.Fixtures.noop));
 }
 
 test "parse returns error.InvalidInstrumentID when play event specifies instrument out of range" {
-    try testing.expectError(error.InvalidInstrumentID, ChannelEvent.parse(Fixtures.play_invalid_instrument_id));
+    try testing.expectError(error.InvalidInstrumentID, ChannelEvent.parse(ChannelEvent.Fixtures.play_invalid_instrument_id));
 }
 
 test "parse returns error.InvalidPeriod when play event specifies frequencies out of range" {
-    try testing.expectError(error.InvalidPeriod, ChannelEvent.parse(Fixtures.play_period_too_high));
-    try testing.expectError(error.InvalidPeriod, ChannelEvent.parse(Fixtures.play_period_too_low));
+    try testing.expectError(error.InvalidPeriod, ChannelEvent.parse(ChannelEvent.Fixtures.play_period_too_high));
+    try testing.expectError(error.InvalidPeriod, ChannelEvent.parse(ChannelEvent.Fixtures.play_period_too_low));
 }
 
 test "parse returns error.InvalidEffect when play event specifies unknown effect" {
-    try testing.expectError(error.InvalidEffect, ChannelEvent.parse(Fixtures.play_invalid_effect));
+    try testing.expectError(error.InvalidEffect, ChannelEvent.parse(ChannelEvent.Fixtures.play_invalid_effect));
 }
 
 test "parse returns error.MalformedStopEvent when stop event contains junk data" {
-    try testing.expectError(error.MalformedStopEvent, ChannelEvent.parse(Fixtures.stop_with_junk));
+    try testing.expectError(error.MalformedStopEvent, ChannelEvent.parse(ChannelEvent.Fixtures.stop_with_junk));
 }
 
 test "parse returns error.MalformedNoopEvent when noop event contains junk data" {
-    try testing.expectError(error.MalformedNoopEvent, ChannelEvent.parse(Fixtures.noop_with_junk));
+    try testing.expectError(error.MalformedNoopEvent, ChannelEvent.parse(ChannelEvent.Fixtures.noop_with_junk));
 }

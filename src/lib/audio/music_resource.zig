@@ -34,7 +34,9 @@ pub const MusicResource = struct {
     /// The sequence of patterns in the order they should be played.
     /// Will be at most 128 entries long: see static_limits.max_pattern_sequence_length.
     sequence: []const PatternID,
-    _raw_patterns: []const RawPattern,
+    /// The raw byte data of the patterns themselves.
+    /// Interpreted into patterns by `iteratePattern`; should not be accessed directly.
+    _raw_pattern_data: []const u8,
 
     const Self = @This();
 
@@ -52,11 +54,6 @@ pub const MusicResource = struct {
         const sequence_data = data[DataLayout.sequence..DataLayout.patterns];
         const raw_pattern_data = data[DataLayout.patterns..];
 
-        // The pattern section must accommodate whole patterns (1024 bytes each)
-        if (@rem(raw_pattern_data.len, @sizeOf(RawPattern)) != 0) {
-            return error.TruncatedData;
-        }
-
         const tempo = std.mem.readIntBig(u16, tempo_data);
         if (tempo == 0) {
             return error.InvalidTempo;
@@ -71,20 +68,30 @@ pub const MusicResource = struct {
         }
         const sequence = sequence_data[0..sequence_length];
 
-        const segmented_instrument_data = @ptrCast(*const [static_limits.max_instruments]Instrument.Raw, raw_instrument_data);
-
-        const segmented_pattern_data = @bitCast([]const RawPattern, raw_pattern_data);
-        const highest_pattern_id = std.mem.max(PatternID, sequence);
-        if (highest_pattern_id >= segmented_pattern_data.len) {
-            return error.TruncatedData;
+        // The pattern section must contain at least as many patterns as are listed in the sequence.
+        // (We allow additional padding after the end of the expected pattern data.)
+        const max_pattern_id: usize = std.mem.max(PatternID, sequence);
+        const required_pattern_data_len = (max_pattern_id + 1) * @sizeOf(RawPattern);
+        if (raw_pattern_data.len < required_pattern_data_len) {
+            if (@rem(raw_pattern_data.len, @sizeOf(RawPattern)) != 0) {
+                // If the pattern section doesn't fall on an even pattern boundary,
+                // it likely means the data was truncated.
+                return error.TruncatedData;
+            } else {
+                // If the pattern section does fall on an even pattern boundary,
+                // it likely means the sequence refers to a pattern ID that isn't present.
+                return error.InvalidPatternID;
+            }
         }
 
         var self = Self{
             .tempo = tempo,
             .instruments = undefined,
             .sequence = sequence,
-            ._raw_patterns = segmented_pattern_data,
+            ._raw_pattern_data = raw_pattern_data,
         };
+
+        const segmented_instrument_data = @ptrCast(*const [static_limits.max_instruments]Instrument.Raw, raw_instrument_data);
 
         for (self.instruments) |*instrument, index| {
             instrument.* = Instrument.parse(segmented_instrument_data[index]);
@@ -121,10 +128,14 @@ pub const MusicResource = struct {
     ///     playEventsOnMixerChannels(events);
     /// }
     pub fn iteratePattern(self: Self, index: PatternID) IteratePatternError!PatternIterator {
-        if (index > self._raw_patterns.len) {
+        const start = @as(usize, index) * @sizeOf(RawPattern);
+        const end = start + @sizeOf(RawPattern);
+        if (end > self._raw_pattern_data.len) {
             return error.InvalidPatternID;
         }
-        return PatternIterator{ .pattern = &self._raw_patterns[index] };
+
+        const raw_pattern = @ptrCast(*const RawPattern, self._raw_pattern_data[start..end]);
+        return PatternIterator{ .pattern = raw_pattern };
     }
 
     pub const Instrument = @import("instrument.zig").Instrument;
@@ -135,17 +146,19 @@ pub const MusicResource = struct {
 
     /// Errors that can be produced by iterateSequence().
     pub const IterateSequenceError = error{
+        /// The specified starting offset was beyond the end of the sequence.
         InvalidOffset,
     };
 
     /// Errors that can be produced by iteratePattern().
     pub const IteratePatternError = error{
+        /// The specified pattern ID was not present in the music track.
         InvalidPatternID,
     };
 
     /// Errors that can be produced by parse().
     pub const ParseError = error{
-        /// The data slice was too short to accommodate all expected pattern data.
+        /// The slice was too short to accommodate all expected music data.
         TruncatedData,
         /// The music track defined an empty pattern sequence.
         SequenceEmpty,
@@ -153,12 +166,18 @@ pub const MusicResource = struct {
         SequenceTooLong,
         /// The music track defined an invalid tempo.
         InvalidTempo,
+        /// The sequence referred to a pattern ID that was not present in the music data.
+        InvalidPatternID,
     };
 
+    /// An iterator that iterates through each pattern ID defined in the sequence.
+    /// Returned by MusicResource.iterateSequence().
     pub const SequenceIterator = struct {
         sequence: []const PatternID,
         counter: usize = 0,
 
+        /// Returns the next pattern ID in the sequence.
+        /// Returns null once it reaches the end of the sequence.
         pub fn next(self: *SequenceIterator) ?PatternID {
             if (self.isAtEnd()) return null;
 
@@ -167,12 +186,13 @@ pub const MusicResource = struct {
             return pattern_id;
         }
 
+        /// Returns whether the iterator has reached the end of the sequence.
         pub fn isAtEnd(self: SequenceIterator) bool {
             return self.counter >= self.sequence.len;
         }
     };
 
-    /// An iterator with a next() function that loops through blocks of 4 channel events in a pattern.
+    /// An iterator that iterates through each row of 4 channel events in a pattern.
     /// Returned by MusicResource.iteratePattern().
     pub const PatternIterator = struct {
         pattern: *const RawPattern,
@@ -195,6 +215,7 @@ pub const MusicResource = struct {
             return events;
         }
 
+        /// Returns whether the iterator has reached the end of the pattern.
         pub fn isAtEnd(self: PatternIterator) bool {
             return self.counter >= self.pattern.len;
         }
@@ -225,10 +246,189 @@ const DataLayout = struct {
     }
 };
 
+const Fixtures = struct {
+    const valid_instruments = @bitCast([60]u8, MusicResource.Instrument.Fixtures.instrument ** static_limits.max_instruments);
+
+    const valid_sequence = [_]u8{ 0, 1, 2, 3, 4, 5 };
+    const padded_valid_sequence = valid_sequence ++ ([_]u8{0} ** (static_limits.max_pattern_sequence_length - valid_sequence.len));
+
+    // zig fmt: off
+    const valid_header = [_]u8{}
+        ++ [_]u8{ 0xCA, 0xFE } // Tempo: 0xCAFE = 51966
+        ++ valid_instruments
+        ++ [_]u8{ 0x00, 0x06 } // Sequence length: 0x0003 = 6
+        ++ padded_valid_sequence
+    ;
+
+    const header_with_invalid_tempo = [_]u8{}
+        ++ [_]u8{0x00, 0x00 } // Tempo: 0x0000 = 0, too low
+        ++ valid_instruments
+        ++ [_]u8{ 0x00, 0x06 } // Sequence length: 0x0003 = 6
+        ++ padded_valid_sequence
+    ;
+
+    const header_with_empty_sequence = [_]u8{}
+        ++ [_]u8{ 0xCA, 0xFE } // Tempo: 0xCAFE = 51966
+        ++ valid_instruments
+        ++ [_]u8{ 0x00, 0x00 } // Sequence length: 0x0000 = 0, too short
+        ++ padded_valid_sequence
+    ;
+
+    const header_with_sequence_too_long = [_]u8{}
+        ++ [_]u8{ 0xCA, 0xFE } // Tempo: 0xCAFE = 51966
+        ++ valid_instruments
+        ++ [_]u8{ 0x00, 0x81 } // Sequence length: 129, too long
+        ++ padded_valid_sequence
+    ;
+    // zig fmt: on
+
+    const valid_pattern_row = MusicResource.RawChannelEvents{
+        MusicResource.ChannelEvent.Fixtures.play,
+        MusicResource.ChannelEvent.Fixtures.set_mark,
+        MusicResource.ChannelEvent.Fixtures.stop,
+        MusicResource.ChannelEvent.Fixtures.noop,
+    };
+
+    const valid_pattern = @bitCast([1024]u8, valid_pattern_row ** static_limits.rows_per_pattern);
+
+    const invalid_pattern_row = MusicResource.RawChannelEvents{
+        MusicResource.ChannelEvent.Fixtures.play_invalid_instrument_id,
+        MusicResource.ChannelEvent.Fixtures.play_invalid_effect,
+        MusicResource.ChannelEvent.Fixtures.stop_with_junk,
+        MusicResource.ChannelEvent.Fixtures.noop_with_junk,
+    };
+    const invalid_pattern = @bitCast([1024]u8, invalid_pattern_row ** static_limits.rows_per_pattern);
+
+    // The sequence contains IDs up to 5, therefore we must have at least 6 patterns
+    const valid_music = valid_header ++ (valid_pattern ** 6);
+
+    const music_with_invalid_tempo = header_with_invalid_tempo ++ (valid_pattern ** 6);
+    const music_with_empty_sequence = header_with_empty_sequence;
+    const music_with_sequence_too_long = header_with_sequence_too_long ++ (valid_pattern ** 6);
+
+    const music_with_too_few_patterns = valid_header ++ (valid_pattern ** 5);
+    const music_with_invalid_patterns = valid_header ++ (invalid_pattern ** 6);
+
+    comptime {
+        std.debug.assert(valid_header.len == 192);
+    }
+};
+
 // -- Tests --
 
 const testing = @import("utils").testing;
 
 test "Ensure everything compiles" {
     testing.refAllDecls(MusicResource);
+}
+
+// -- parse tests --
+test "parse returns expected music resource for valid music data" {
+    const music = try MusicResource.parse(&Fixtures.valid_music);
+
+    const expected_sequence = [_]MusicResource.PatternID{ 0, 1, 2, 3, 4, 5 };
+    const expected_instruments = [_]?MusicResource.Instrument{MusicResource.Instrument{
+        .resource_id = resources.ResourceID.cast(0x1234),
+        .volume = 63,
+    }} ** static_limits.max_instruments;
+
+    try testing.expectEqual(51966, music.tempo);
+    try testing.expectEqualSlices(?MusicResource.Instrument, &expected_instruments, &music.instruments);
+    try testing.expectEqualSlices(MusicResource.PatternID, &expected_sequence, music.sequence);
+
+    try testing.expectEqual(6 * @sizeOf(MusicResource.RawPattern), music._raw_pattern_data.len);
+}
+
+test "parse returns error.SequenceEmpty for data that defines a 0-length sequence" {
+    try testing.expectError(error.SequenceEmpty, MusicResource.parse(&Fixtures.music_with_empty_sequence));
+}
+
+test "parse returns error.SequenceEmpty for data that defines a sequence too long" {
+    try testing.expectError(error.SequenceTooLong, MusicResource.parse(&Fixtures.music_with_sequence_too_long));
+}
+
+test "parse returns error.TruncatedData for data too short for header" {
+    const truncated_header = Fixtures.valid_music[0..191];
+    try testing.expectError(error.TruncatedData, MusicResource.parse(truncated_header));
+}
+
+test "parse returns error.TruncatedData when pattern section is truncated" {
+    const truncated_patterns = Fixtures.valid_music[0..(Fixtures.valid_music.len - 1)];
+    try testing.expectError(error.TruncatedData, MusicResource.parse(truncated_patterns));
+}
+
+test "parse returns error.InvalidPatternID when data does not contain all patterns mentioned in sequence" {
+    try testing.expectError(error.InvalidPatternID, MusicResource.parse(&Fixtures.music_with_too_few_patterns));
+}
+
+test "parse returns error.InvalidTempo for tempo out of range" {
+    try testing.expectError(error.InvalidTempo, MusicResource.parse(&Fixtures.music_with_invalid_tempo));
+}
+
+// -- iterateSequence tests --
+test "iterateSequence iterates expected sequence from start" {
+    const music = try MusicResource.parse(&Fixtures.valid_music);
+    var iterator = try music.iterateSequence(0);
+    try testing.expectEqual(0, iterator.next());
+    try testing.expectEqual(1, iterator.next());
+    try testing.expectEqual(2, iterator.next());
+    try testing.expectEqual(3, iterator.next());
+    try testing.expectEqual(4, iterator.next());
+    try testing.expectEqual(5, iterator.next());
+    try testing.expectEqual(null, iterator.next());
+}
+
+test "iterateSequence iterates partial sequence from non-zero starting offset" {
+    const music = try MusicResource.parse(&Fixtures.valid_music);
+    var iterator = try music.iterateSequence(4);
+    try testing.expectEqual(4, iterator.next());
+    try testing.expectEqual(5, iterator.next());
+    try testing.expectEqual(null, iterator.next());
+}
+
+test "iterateSequence returns error.InvalidOffset when starting offset is out of range" {
+    const music = try MusicResource.parse(&Fixtures.valid_music);
+    try testing.expectError(error.InvalidOffset, music.iterateSequence(6));
+}
+
+// -- iteratePattern tests --
+test "iteratePattern iterates pattern with expected events" {
+    const music = try MusicResource.parse(&Fixtures.valid_music);
+    var iterator = try music.iteratePattern(0);
+
+    const expected_events = MusicResource.PatternIterator.ChannelEvents{
+        .{ .play = .{ .instrument_id = 14, .period = 4095, .volume_delta = 63 } },
+        .{ .set_mark = 0xCAFE },
+        .stop,
+        .noop,
+    };
+
+    var rows_iterated: usize = 0;
+    while (try iterator.next()) |events| : (rows_iterated += 1) {
+        try testing.expectEqualSlices(MusicResource.ChannelEvent, &expected_events, &events);
+    }
+    try testing.expectEqual(static_limits.rows_per_pattern, rows_iterated);
+}
+
+test "PatternIterator.next returns error when pattern data contains malformed event" {
+    const music = try MusicResource.parse(&Fixtures.music_with_invalid_patterns);
+    var iterator = try music.iteratePattern(0);
+
+    try testing.expectError(error.InvalidInstrumentID, iterator.next());
+}
+
+test "iteratePattern returns iterator for highest pattern listed in sequence" {
+    const music = try MusicResource.parse(&Fixtures.valid_music);
+    _ = try music.iteratePattern(5);
+}
+
+test "iteratePattern returns iterator for pattern beyond highest pattern listed in sequence" {
+    const extended_music = Fixtures.valid_music ++ Fixtures.valid_pattern;
+    const music = try MusicResource.parse(&extended_music);
+    _ = try music.iteratePattern(6);
+}
+
+test "iteratePattern returns error.InvalidPatternID when pattern ID is out of range" {
+    const music = try MusicResource.parse(&Fixtures.valid_music);
+    try testing.expectError(error.InvalidPatternID, music.iteratePattern(6));
 }

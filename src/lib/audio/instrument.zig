@@ -28,11 +28,11 @@ pub const Instrument = struct {
     }
 
     pub const Raw = [4]u8;
-};
 
-const Fixtures = struct {
-    const instrument = [4]u8{ 0x12, 0x34, 0x00, 0x3F };
-    const no_instrument = [4]u8{ 0x00, 0x00, 0x00, 0x00 };
+    pub const Fixtures = struct {
+        pub const instrument = [4]u8{ 0x12, 0x34, 0x00, 0x3F };
+        pub const no_instrument = [4]u8{ 0x00, 0x00, 0x00, 0x00 };
+    };
 };
 
 // -- Tests --
@@ -48,9 +48,9 @@ test "parse returns correct raw instrument definition" {
         .resource_id = resources.ResourceID.cast(0x1234),
         .volume = 63,
     };
-    try testing.expectEqual(expected, Instrument.parse(Fixtures.instrument));
+    try testing.expectEqual(expected, Instrument.parse(Instrument.Fixtures.instrument));
 }
 
 test "parse returns null for blank instrument definition" {
-    try testing.expectEqual(null, Instrument.parse(Fixtures.no_instrument));
+    try testing.expectEqual(null, Instrument.parse(Instrument.Fixtures.no_instrument));
 }
