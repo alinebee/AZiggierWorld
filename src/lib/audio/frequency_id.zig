@@ -1,12 +1,14 @@
 const anotherworld = @import("../anotherworld.zig");
 const timing = anotherworld.timing;
 
+const _Raw = u8;
+
 /// The ID of one of 40 preset frequencies. Used by instructions that play sound effects.
-pub const FrequencyID = enum(u8) {
+pub const FrequencyID = enum(_Raw) {
     _,
 
     /// The size of a frequency ID as represented in bytecode.
-    pub const Raw = u8;
+    pub const Raw = _Raw;
 
     pub fn parse(raw: Raw) Error!FrequencyID {
         if (raw >= frequencies.len) return error.InvalidFrequencyID;
@@ -72,6 +74,18 @@ pub const FrequencyID = enum(u8) {
 
 const testing = @import("utils").testing;
 
-test "Everything compiles" {
-    testing.refAllDecls(FrequencyID);
+test "parse returns FrequencyID for in-range values" {
+    try testing.expectEqual(@intToEnum(FrequencyID, 0), try FrequencyID.parse(0));
+    try testing.expectEqual(@intToEnum(FrequencyID, 39), try FrequencyID.parse(39));
+}
+
+test "parse returns InvalidFrequencyID for out of range values" {
+    try testing.expectError(error.InvalidFrequencyID, FrequencyID.parse(40));
+}
+
+test "frequency returns Hz value corresponding to frequency ID" {
+    for (FrequencyID.frequencies) |frequency, index| {
+        const id = try FrequencyID.parse(@intCast(FrequencyID.Raw, index));
+        try testing.expectEqual(frequency, id.frequency());
+    }
 }
