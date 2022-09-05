@@ -18,7 +18,7 @@ test "Parse all sound effects in original game files" {
     const reader = resource_directory.reader();
 
     // Uncomment to print out statistics
-    // @import("std").testing.log_level = .debug;
+    @import("std").testing.log_level = .debug;
 
     for (reader.resourceDescriptors()) |descriptor, id| {
         if (descriptor.type != .sound_or_empty) continue;
@@ -27,12 +27,10 @@ test "Parse all sound effects in original game files" {
         defer testing.allocator.free(data);
 
         if (audio.SoundResource.parse(data)) |sound| {
-            if (sound.intro == null) {
-                if (sound.loop == null) {
-                    log.debug("Empty sound effect at {}", .{id});
-                } else {
-                    log.debug("Sound effect with no intro at {}", .{id});
-                }
+            if (sound.loop_start) |loop_start| {
+                log.debug("Sound with length {}, looping at {}", .{ sound.data.len, loop_start });
+            } else {
+                log.debug("Sound with length {}, unlooped", .{sound.data.len});
             }
         } else |err| {
             if (err == error.TruncatedData and data.len == 0) {

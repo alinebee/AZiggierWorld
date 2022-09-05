@@ -35,13 +35,13 @@ pub const Audio = struct {
     pub fn playSound(_: *Self, sound_data: []const u8, channel_id: audio.ChannelID, volume: audio.Volume, frequency_id: audio.FrequencyID) !void {
         const sound = try audio.SoundResource.parse(sound_data);
 
-        log.debug("playSound: play {*} on channel {} at volume {}, frequency {} (has intro: {}, loops: {})", .{
+        log.debug("playSound: play {*} on channel {} at volume {}, frequency {} (length: {}, loops at: {})", .{
             sound_data,
             channel_id,
             volume,
             frequency_id.frequency(),
-            sound.intro != null,
-            sound.loop != null,
+            sound.data.len,
+            sound.loop_start,
         });
     }
 
