@@ -105,6 +105,6 @@ pub const TimingMode = enum {
         //
         // TODO: factor out frames_per_row from this and apply it in the music player?
         const frames_per_row = 6;
-        return (tempo * frames_per_row * std.time.ms_per_s) / self.cia_rate();
+        return (@as(Milliseconds, tempo) * frames_per_row * std.time.ms_per_s) / self.ciaRate();
     }
 };

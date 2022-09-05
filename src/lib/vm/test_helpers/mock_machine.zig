@@ -94,9 +94,9 @@ pub fn MockMachine(comptime Implementation: type) type {
             try Implementation.playMusic(resource_id, offset, tempo);
         }
 
-        pub fn setMusicTempo(self: *Self, tempo: audio.Tempo) void {
+        pub fn setMusicTempo(self: *Self, tempo: audio.Tempo) !void {
             self.call_counts.setMusicTempo += 1;
-            Implementation.setMusicTempo(tempo);
+            try Implementation.setMusicTempo(tempo);
         }
 
         pub fn stopMusic(self: *Self) void {
@@ -268,14 +268,14 @@ test "MockMachine calls playMusic correctly on stub implementation" {
 
 test "MockMachine calls setMusicTempo correctly on stub implementation" {
     var mock = mockMachine(struct {
-        fn setMusicTempo(tempo: audio.Tempo) void {
+        fn setMusicTempo(tempo: audio.Tempo) !void {
             testing.expectEqual(1234, tempo) catch {
                 unreachable;
             };
         }
     });
 
-    mock.setMusicTempo(1234);
+    try mock.setMusicTempo(1234);
     try testing.expectEqual(1, mock.call_counts.setMusicTempo);
 }
 

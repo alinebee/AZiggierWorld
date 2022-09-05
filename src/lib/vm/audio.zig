@@ -1,6 +1,7 @@
 const anotherworld = @import("../anotherworld.zig");
 const audio = anotherworld.audio;
 const vm = anotherworld.vm;
+const timing = anotherworld.timing;
 const log = anotherworld.log;
 
 /// The audio subsystem responsible for handling sound and music playback and sending audio data to the host's mixer.
@@ -11,8 +12,9 @@ pub const Audio = struct {
     const Self = @This();
 
     /// Start playing a music track from a specified resource.
-    pub fn playMusic(_: *Self, music_data: []const u8, offset: audio.Offset, tempo: ?audio.Tempo) !void {
-        _ = try audio.MusicResource.parse(music_data);
+    pub fn playMusic(self: *Self, music_data: []const u8, repository: anytype, timing_mode: timing.TimingMode, offset: audio.Offset, tempo: ?audio.Tempo) !void {
+        const music = try audio.MusicResource.parse(music_data);
+        self.music_player = try audio.MusicPlayer.init(music, repository, timing_mode, offset, tempo);
 
         log.debug("playMusic: play {*} at offset {} tempo {}", .{
             music_data,
@@ -22,12 +24,18 @@ pub const Audio = struct {
     }
 
     /// Override the tempo of the current music track. Has no effect if no music is playing.
-    pub fn setMusicTempo(_: *Self, tempo: audio.Tempo) void {
-        log.debug("setMusicTempo: set tempo to {}", .{tempo});
+    pub fn setMusicTempo(self: *Self, tempo: audio.Tempo) !void {
+        if (self.music_player) |*player| {
+            try player.setTempo(tempo);
+            log.debug("setMusicTempo: set tempo to {}", .{tempo});
+        } else {
+            log.debug("setMusicTempo: attempted to set tempo to {} while no music was playing", .{tempo});
+        }
     }
 
-    /// Stop playing any current music track.
-    pub fn stopMusic(_: *Self) void {
+    /// Stop playing any current music track. Any in-progress sounds will continue playing.
+    pub fn stopMusic(self: *Self) void {
+        self.music_player = null;
         log.debug("stopMusic: stop playing", .{});
     }
 

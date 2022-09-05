@@ -60,7 +60,7 @@ pub const ControlMusic = union(enum) {
     fn _execute(self: Self, machine: anytype) !void {
         switch (self) {
             .play => |operation| try machine.playMusic(operation.resource_id, operation.offset, operation.tempo),
-            .set_tempo => |tempo| machine.setMusicTempo(tempo),
+            .set_tempo => |tempo| try machine.setMusicTempo(tempo),
             .stop => machine.stopMusic(),
         }
     }
@@ -132,7 +132,7 @@ test "execute with play instruction calls playMusic with correct parameters" {
             try testing.expectEqual(0xF00D, tempo);
         }
 
-        pub fn setMusicTempo(_: audio.Tempo) void {
+        pub fn setMusicTempo(_: audio.Tempo) !void {
             unreachable;
         }
 
@@ -153,7 +153,7 @@ test "execute with set_tempo instruction calls setMusicTempo with correct parame
             unreachable;
         }
 
-        pub fn setMusicTempo(tempo: audio.Tempo) void {
+        pub fn setMusicTempo(tempo: audio.Tempo) !void {
             testing.expectEqual(0xF00D, tempo) catch {
                 unreachable;
             };
@@ -176,7 +176,7 @@ test "execute with stop instruction calls stopMusic with correct parameters" {
             unreachable;
         }
 
-        pub fn setMusicTempo(_: audio.Tempo) void {
+        pub fn setMusicTempo(_: audio.Tempo) !void {
             unreachable;
         }
 

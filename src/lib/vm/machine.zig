@@ -263,7 +263,7 @@ pub const Machine = struct {
     pub fn playMusic(self: *Self, resource_id: resources.ResourceID, offset: audio.Offset, tempo: ?audio.Tempo) !void {
         const possible_music_data = try self.memory.resourceLocation(resource_id, .music);
         if (possible_music_data) |music_data| {
-            try self.audio.playMusic(music_data, offset, tempo);
+            try self.audio.playMusic(music_data, &self.memory, self.timing_mode, offset, tempo);
         } else {
             // The original game may attempt to do this, so we should swallow it rather than treat it as an error.
             log.debug("Music resource played before it was loaded: {}", .{resource_id});
@@ -271,8 +271,8 @@ pub const Machine = struct {
     }
 
     /// Set the tempo of the current or subsequent music track.
-    pub fn setMusicTempo(self: *Self, tempo: audio.Tempo) void {
-        self.audio.setMusicTempo(tempo);
+    pub fn setMusicTempo(self: *Self, tempo: audio.Tempo) !void {
+        try self.audio.setMusicTempo(tempo);
     }
 
     /// Stop playing any current music track.

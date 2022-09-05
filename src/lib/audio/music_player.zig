@@ -1,3 +1,4 @@
+const std = @import("std");
 const anotherworld = @import("../anotherworld.zig");
 const audio = anotherworld.audio;
 const static_limits = anotherworld.static_limits;
@@ -22,7 +23,7 @@ pub const MusicPlayer = struct {
 
     /// The number of milliseconds left over after the last row was played.
     /// Will be between 0 and ms_per_row.
-    ms_remaining: timing.Milliseconds,
+    ms_remaining: timing.Milliseconds = 0,
 
     /// The timing mode to use to compute tempo and frequency.
     timing_mode: timing.TimingMode,
@@ -47,11 +48,11 @@ pub const MusicPlayer = struct {
         };
 
         for (self.instruments) |*loaded_instrument, index| {
-            loaded_instrument.* = if (music.instruments[index]) |instrument| {
-                try LoadedInstrument.init(instrument, repository);
+            if (music.instruments[index]) |instrument| {
+                loaded_instrument.* = try LoadedInstrument.init(instrument, repository);
             } else {
-                null;
-            };
+                loaded_instrument.* = null;
+            }
         }
 
         self.sequence_iterator = try music.iterateSequence(offset);
@@ -62,6 +63,16 @@ pub const MusicPlayer = struct {
         }
 
         return self;
+    }
+
+    /// Modifies the tempo at which the music track is played back.
+    /// Returns error.InvalidTempo if the tempo was out of range.
+    pub fn setTempo(self: *Self, tempo: audio.Tempo) SetTempoError!void {
+        const ms_per_row = self.timing_mode.msFromTempo(tempo);
+        if (ms_per_row == 0) {
+            return error.InvalidTempo;
+        }
+        self.ms_per_row = ms_per_row;
     }
 
     /// Process the next n milliseconds of the music track, where n is the elapsed time
@@ -126,14 +137,24 @@ pub const MusicPlayer = struct {
     // -- Public constants --
 
     /// The possible errors that can occur from init().
-    pub const LoadError = audio.MusicResource.IterateSequenceError || error{
+    pub const LoadError = audio.MusicResource.IterateSequenceError || audio.MusicResource.IteratePatternError || audio.SoundResource.ParseError || error{
         /// One of the sound resources referenced in the music track was not yet loaded.
         SoundNotLoaded,
         /// An invalid custom tempo was specified.
         InvalidTempo,
+        /// A music resource specified an instrument resource ID that was out of range.
+        InvalidResourceID,
+        /// A music resource specified an instrument resource ID that was not a sound effect.
+        UnexpectedResourceType,
     };
 
-    /// The possible errors that can occur from playForTime().
+    /// The possible errors that can occur from a call to setTempo().
+    pub const SetTempoError = error{
+        /// An invalid tempo was specified.
+        InvalidTempo,
+    };
+
+    /// The possible errors that can occur from a call to playForDuration().
     pub const PlayError = audio.MusicResource.IteratePatternError || audio.MusicResource.ChannelEvent.ParseError || error{
         /// Playback reached the end of the track.
         EndOfTrack,
@@ -146,7 +167,7 @@ pub const MusicPlayer = struct {
         volume: audio.Volume,
 
         fn init(instrument: audio.MusicResource.Instrument, repository: anytype) LoadError!LoadedInstrument {
-            const sound_data = repository.resourceLocation(instrument.resource_id) orelse return error.SoundNotLoaded;
+            const sound_data = (try repository.resourceLocation(instrument.resource_id, .sound_or_empty)) orelse return error.SoundNotLoaded;
             return LoadedInstrument{
                 .resource = try audio.SoundResource.parse(sound_data),
                 .volume = instrument.volume,
