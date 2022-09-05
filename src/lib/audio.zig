@@ -18,3 +18,4 @@ pub const FrequencyID = @import("audio/frequency_id.zig").FrequencyID;
 pub const SoundResource = @import("audio/sound_resource.zig").SoundResource;
 pub const MusicResource = @import("audio/music_resource.zig").MusicResource;
 pub const MusicPlayer = @import("audio/music_player.zig").MusicPlayer;
+pub const Mixer = @import("audio/mixer.zig").Mixer;

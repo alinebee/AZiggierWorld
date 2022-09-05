@@ -18,6 +18,11 @@ pub const ChannelID = enum(Trusted) {
         return @intToEnum(ChannelID, raw);
     }
 
+    /// Convert the channel ID into an array index.
+    pub fn index(self: ChannelID) usize {
+        return @enumToInt(self);
+    }
+
     /// A raw audio channel identifier as represented in Another World's bytecode.
     pub const Raw = u8;
 

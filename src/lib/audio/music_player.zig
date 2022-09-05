@@ -78,10 +78,12 @@ pub const MusicPlayer = struct {
     /// Process the next n milliseconds of the music track, where n is the elapsed time
     /// since the previous call to playForDuration.
     /// Returns a PlayError if the end of the track was reached or music data could not be read.
-    pub fn playForDuration(self: *Self, time: timing.Milliseconds) PlayError!void {
+    pub fn playForDuration(self: *Self, mixer: *audio.Mixer, time: timing.Milliseconds) PlayError!void {
+        std.debug.assert(self.ms_per_row > 0);
+
         self.ms_remaining += time;
         while (self.ms_remaining >= self.ms_per_row) : (self.ms_remaining -= self.ms_per_row) {
-            try self.advanceToNextRow();
+            try self.playNextRow(mixer);
         }
     }
 
@@ -94,11 +96,11 @@ pub const MusicPlayer = struct {
 
     /// Process the next row of events for each channel in the music track.
     /// Returns a PlayError if the end of the track was reached or music data could not be read.
-    fn advanceToNextRow(self: *Self) PlayError!void {
+    fn playNextRow(self: *Self, mixer: *audio.Mixer) PlayError!void {
         while (true) {
             if (try self.pattern_iterator.next()) |events| {
                 for (events) |event, index| {
-                    self.processEvent(event, audio.ChannelID.cast(index));
+                    self.processEvent(event, mixer, audio.ChannelID.cast(index));
                 }
             } else if (self.sequence_iterator.next()) |pattern_id| {
                 // If we've finished the current pattern, load the next pattern and try again
@@ -109,26 +111,24 @@ pub const MusicPlayer = struct {
         }
     }
 
-    /// Handle a music event on the specified channel.
-    fn processEvent(self: Self, event: audio.MusicResource.ChannelEvent, channel_id: audio.ChannelID) void {
+    /// Handle a music event on the specified channel of the mixer.
+    fn processEvent(self: Self, event: audio.MusicResource.ChannelEvent, mixer: *audio.Mixer, channel_id: audio.ChannelID) void {
         switch (event) {
             .play => |play| {
                 if (self.instruments[play.instrument_id]) |instrument| {
-                    const adjusted_volume = @as(i16, instrument.volume) + play.volume_delta;
                     const frequency_in_hz = self.timing_mode.hzFromPeriod(play.period);
-                    log.debug("Play channel #{}: Instrument #{}, frequency: {}, volume: {}", .{
-                        channel_id,
-                        play.instrument_id,
-                        frequency_in_hz,
-                        adjusted_volume,
-                    });
+                    const adjusted_volume = @intCast(u8, std.math.clamp(@as(i16, instrument.volume) + play.volume_delta, 0, 63));
+
+                    mixer.play(instrument.resource, channel_id, frequency_in_hz, adjusted_volume);
+                } else {
+                    log.debug("Attempted to play missing instrument: {}", .{play.instrument_id});
                 }
             },
             .set_mark => |mark_value| {
                 log.debug("Set mark: #{}", .{mark_value});
             },
             .stop => {
-                log.debug("Stop channel #{}", .{channel_id});
+                mixer.stop(channel_id);
             },
             .noop => {},
         }
