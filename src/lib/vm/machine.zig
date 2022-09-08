@@ -247,6 +247,12 @@ pub const Machine = struct {
     pub fn renderVideoBuffer(self: *Self, buffer_id: vm.BufferID, delay_in_frames: vm.FrameCount) void {
         const buffer_to_draw = self.video.markBufferAsReady(buffer_id);
         const delay_in_ms = self.timing_mode.msFromFrameCount(delay_in_frames);
+
+        // Pump the mixer for audio output for the specified duration at the same time.
+        // TODO: request a buffer from the host for this.
+        const audio_buffer = self.audio.produceAudio(self.memory.allocator, delay_in_ms, 22050) catch unreachable;
+        self.memory.allocator.free(audio_buffer);
+
         self.host.bufferReady(self, buffer_to_draw, delay_in_ms);
     }
 

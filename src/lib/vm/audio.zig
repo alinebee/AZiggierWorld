@@ -1,3 +1,4 @@
+const std = @import("std");
 const anotherworld = @import("../anotherworld.zig");
 const audio = anotherworld.audio;
 const vm = anotherworld.vm;
@@ -53,6 +54,45 @@ pub const Audio = struct {
     pub fn stopChannel(self: *Self, channel_id: audio.ChannelID) void {
         self.mixer.stop(channel_id);
     }
+
+    /// Initialize and fill an 8-bit audio buffer with data for the specified length of time.
+    /// Caller owns returned memory.
+    /// Returns an error if a suitable buffer could not be allocated or sound playback failed.
+    pub fn produceAudio(self: *Self, allocator: std.mem.Allocator, time: timing.Milliseconds, sample_rate: timing.Hz) ProduceAudioError![]const u8 {
+        const total_bytes = audio.Mixer.bufferSize(time, sample_rate);
+        var buffer = try allocator.alloc(u8, total_bytes);
+        errdefer allocator.free(buffer);
+
+        if (self.music_player) |*music_player| {
+            // If we're playing music, generate audio in increments of the music player's
+            // own update rate: this ensures that song changes take effect on the mixer
+            // at the right times in the audio playback.
+            const time_chunk = music_player.ms_per_row;
+            const bytes_per_chunk = audio.Mixer.bufferSize(time_chunk, sample_rate);
+
+            var bytes_consumed: usize = 0;
+            while (bytes_consumed < total_bytes) : (bytes_consumed += bytes_per_chunk) {
+                const chunk_start = bytes_consumed;
+                const chunk_end = @minimum(chunk_start + bytes_per_chunk, total_bytes);
+                var chunk_buffer = buffer[chunk_start..chunk_end];
+
+                self.mixer.mix(chunk_buffer, sample_rate);
+                music_player.playForDuration(&self.mixer, time_chunk) catch |err| {
+                    switch (err) {
+                        error.EndOfTrack => self.music_player = null,
+                        else => return err,
+                    }
+                };
+            }
+        } else {
+            // Otherwise, we can fill the whole buffer in a straight shot.
+            self.mixer.mix(buffer, sample_rate);
+        }
+
+        return buffer;
+    }
+
+    const ProduceAudioError = audio.MusicPlayer.PlayError || std.mem.Allocator.Error;
 };
 
 // -- Tests --

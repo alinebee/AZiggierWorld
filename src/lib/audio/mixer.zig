@@ -44,13 +44,20 @@ pub const Mixer = struct {
         }
     }
 
+    /// Calculate the appropriate size in bytes for an audio buffer that covers
+    /// the specified length of time, when sampled at the specified rate.
+    pub fn bufferSize(time: timing.Milliseconds, sample_rate: timing.Hz) usize {
+        return (time * sample_rate) / std.time.ms_per_s;
+    }
+
     /// Populate an audio output buffer with sound data, sampled at the specified sample rate.
+    /// This advances the currently-playing samples on each channel.
     pub fn mix(self: *Self, buffer: []u8, sample_rate: timing.Hz) void {
         each_channel: for (self.channels) |*channel| {
             if (channel.*) |*active_channel| {
                 for (buffer) |*output| {
                     if (active_channel.sample(sample_rate)) |sample| {
-                        // +| is Zig's saturating add operator
+                        // Use saturating add to clamp mixed samples at 0-255.
                         output.* +|= sample;
                     } else {
                         // If the channel reached the end, stop playing it immediately
@@ -96,12 +103,7 @@ const ChannelState = struct {
         // fixed-point math was done.
         // We do the same here to stay faithful to the original game's output.
         //
-        // TODO: use the FixedPrecision type to model this.
-
-        // The fractional distance to advance the audio cursor by for each sampled byte:
-        // a ratio of the sample rate and frequency.
-        // TODO: precompute this like the reference implementation?
-        const increment = (self.frequency << cursor_precision) / sample_rate;
+        // TODO: use the FixedPrecision type to model this?
 
         // Calculate how much to weight each byte of the interpolated result.
         const end_weight = self.cursor & cursor_fraction_mask;
@@ -110,14 +112,22 @@ const ChannelState = struct {
         // Calculate which two bytes of the audio data to interpolate between.
         const start_byte = self.cursor >> cursor_precision;
 
-        // FIXME: nothing in the reference algorithm seems to prove this precondition will be true;
-        // it could become false with a pathological sample rate value.
+        // FIXME: nothing in the reference algorithm proves this precondition will be true;
+        // it will become false with a pathological sample rate value. To be safe, looped sounds
+        // should modulo-wrap overflowing start and end byte offsets back around to the loop point.
+        // (To be fully correct we should also preserve the fractional part of the cursor
+        // when wrapping; though this would probably diverge from the original game's behaviour.)
         std.debug.assert(start_byte < self.sound.data.len);
 
         const end_byte = block: {
             const max_byte = self.sound.data.len - 1;
 
             if (start_byte < max_byte) {
+                // The fractional distance to advance the audio cursor by for each sampled byte:
+                // a ratio of the sample rate and frequency.
+                // TODO: precompute this like the reference implementation?
+                const increment = (self.frequency << cursor_precision) / sample_rate;
+
                 self.cursor += increment;
                 break :block start_byte + 1;
             } else if (self.sound.loop_start) |loop_start| {
@@ -130,7 +140,7 @@ const ChannelState = struct {
                 // This meant that sounds that looped midway would loop to a point
                 // too early.
                 //self.cursor = loop_start;
-                self.cursor = loop_start * increment;
+                self.cursor = loop_start << cursor_precision;
                 break :block loop_start;
             } else {
                 // If we've reached the end of a non-looping sample,
@@ -144,11 +154,11 @@ const ChannelState = struct {
         const end_value = @as(usize, self.sound.data[end_byte]);
         const interpolated_value = ((start_value * start_weight) + (end_value * end_weight)) >> cursor_precision;
 
-        // FIXME: Copypasta from reference implemnetation, but I'm not sure it's correct:
+        // FIXME: Copypasta from reference implementation, but I'm not sure it's correct:
         // It should be using 63 as the divisor and not 64, because volume ranges from 0-63.
         const amplified_value = (interpolated_value * self.volume) / (static_limits.max_volume + 1);
 
-        // Sure would be nice if Zig had a saturating equivalent to @truncate.
+        // Sure would be nice if Zig had a saturating equivalent of @truncate.
         return std.math.min(amplified_value, @as(u8, std.math.maxInt(u8)));
     }
 
