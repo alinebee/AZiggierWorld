@@ -1,5 +1,10 @@
-const testing = @import("std").testing;
-const Tag = @import("std").meta.Tag;
+const std = @import("std");
+const testing = std.testing;
+const Tag = std.meta.Tag;
+
+pub fn setLogLevel(log_level: std.log.Level) void {
+    std.testing.log_level = log_level;
+}
 
 /// Wrap to provide better type inference.
 /// With the default std.testing implementation, `actual` is constrained to the type of `expected`:

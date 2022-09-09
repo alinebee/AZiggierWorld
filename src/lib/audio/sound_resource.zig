@@ -26,7 +26,7 @@ pub const SoundResource = struct {
     /// The audio data of the sound effect.
     data: []const u8,
     /// The offset within the audio data which the sound will loop back to once it has played through.
-    /// If null, the sample will only be played through once.
+    /// If null, the sample will play through once and then stop.
     loop_start: ?usize,
 
     /// Parse a slice of resource data as a sound effect.
