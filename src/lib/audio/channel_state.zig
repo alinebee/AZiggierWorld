@@ -16,9 +16,12 @@ pub const ChannelState = struct {
     /// divide by 256 to arrive at the actual byte offset within the audio data.
     cursor: usize = 0,
 
-    /// Sample a single byte of audio data from the channel at the specified sample rate,
-    /// advancing the cursor by the appropriate distance to get the next sample.
-    /// Returns null if the channel has reached the end of non-looping sound data.
+    /// Sample a single byte of audio data from the channel at current cursor
+    /// and the specified sample rate, and advances the cursor by an appropriate
+    /// distance for the specified sample rate so that the next call to `sample`
+    /// will get the next sample for that rate.
+    /// Returns null and does not advance the cursor if the channel has reached
+    /// the end of non-looping sound data.
     pub fn sample(self: *ChannelState, sample_rate: timing.Hz) ?u8 {
         std.debug.assert(sample_rate > 0);
 
@@ -114,7 +117,7 @@ test "Everything compiles" {
 
 const raw_sound_data = [_]u8{ 0, 4, 8, 12, 16 };
 
-test "sample advances cursor and returns interpolated data" {
+test "sample returns interpolated data until end of unlooped sound is reached" {
     var state = ChannelState{
         .sound = .{
             .data = &raw_sound_data,
@@ -136,29 +139,7 @@ test "sample advances cursor and returns interpolated data" {
     try testing.expectEqualSlices(?u8, &expected_samples, &samples);
 }
 
-test "sample scales values by volume" {
-    var state = ChannelState{
-        .sound = .{
-            .data = &raw_sound_data,
-            .loop_start = null,
-        },
-        .frequency = 11025,
-        .volume = 32,
-    };
-    const sample_rate = 22050;
-
-    var samples: [10]?u8 = undefined;
-    // FIXME: the second-to-last sample should be 8. We still follow the reference implementation,
-    // which bails out as soon as it reaches the last byte even if no interpolation needs to be done.
-    const expected_samples = [10]?u8{ 0, 1, 2, 3, 4, 5, 6, 7, null, null };
-
-    for (samples) |*sample| {
-        sample.* = state.sample(sample_rate);
-    }
-    try testing.expectEqualSlices(?u8, &expected_samples, &samples);
-}
-
-test "sample returns uninterpolated data when output sample rate matches sound frequency" {
+test "sample returns uninterpolated bytes when output sample rate matches sound frequency" {
     var state = ChannelState{
         .sound = .{
             .data = &raw_sound_data,
@@ -173,6 +154,28 @@ test "sample returns uninterpolated data when output sample rate matches sound f
     // FIXME: the second-to-last sample should be 16. We still follow the reference implementation,
     // which bails out as soon as it reaches the last byte even if no interpolation needs to be done.
     const expected_samples = [6]?u8{ 0, 4, 8, 12, null, null };
+
+    for (samples) |*sample| {
+        sample.* = state.sample(sample_rate);
+    }
+    try testing.expectEqualSlices(?u8, &expected_samples, &samples);
+}
+
+test "sample skips over bytes when sound frequency is higher than output sample rate" {
+    var state = ChannelState{
+        .sound = .{
+            .data = &raw_sound_data,
+            .loop_start = null,
+        },
+        .frequency = 44100,
+        .volume = 63,
+    };
+    const sample_rate = 22050;
+
+    var samples: [4]?u8 = undefined;
+    // FIXME: the second-to-last sample should be 16. We still follow the reference implementation,
+    // which bails out as soon as it reaches the last byte even if no interpolation needs to be done.
+    const expected_samples = [4]?u8{ 0, 8, null, null };
 
     for (samples) |*sample| {
         sample.* = state.sample(sample_rate);
@@ -223,4 +226,26 @@ test "sample does not overflow when cursor goes beyond the end of looping sound 
     // for (samples) |*sample| {
     //     sample.* = state.sample(sample_rate);
     // }
+}
+
+test "sample scales values by volume" {
+    var state = ChannelState{
+        .sound = .{
+            .data = &raw_sound_data,
+            .loop_start = null,
+        },
+        .frequency = 11025,
+        .volume = 32,
+    };
+    const sample_rate = 22050;
+
+    var samples: [10]?u8 = undefined;
+    // FIXME: the second-to-last sample should be 8. We still follow the reference implementation,
+    // which bails out as soon as it reaches the last byte even if no interpolation needs to be done.
+    const expected_samples = [10]?u8{ 0, 1, 2, 3, 4, 5, 6, 7, null, null };
+
+    for (samples) |*sample| {
+        sample.* = state.sample(sample_rate);
+    }
+    try testing.expectEqualSlices(?u8, &expected_samples, &samples);
 }
