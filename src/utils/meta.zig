@@ -11,7 +11,6 @@ pub const intCast = std.math.cast;
 /// Given an integer type, returns the type used for legal left/right-shift operations.
 pub const ShiftType = std.math.Log2Int;
 
-
 /// -- VTable shenanigans --
 pub fn WrapperVTable(comptime Template: type) type {
     const fields = @typeInfo(Template).Struct.fields;
@@ -148,6 +147,16 @@ fn TypeErasedFnType(comptime PossibleFn: type) type {
 }
 
 // -- Everything else --
+
+/// Return `value` cast to the specified integer type,
+/// clamped to fit within the minimum and maximum bounds of that type.
+/// Intended as a saturating version of `@truncate`.
+pub fn saturatingCast(comptime Int: type, value: anytype) Int {
+    const min = comptime std.math.minInt(Int);
+    const max = comptime std.math.maxInt(Int);
+    const clamped_value = std.math.clamp(value, min, max);
+    return @intCast(Int, clamped_value);
+}
 
 /// The version of intToEnum in the Zig 0.9.1 Standard Library doesn't correctly handle
 /// non-exhaustive enums.
@@ -391,4 +400,42 @@ test "Standard Library intToEnum has buggy handling of non-exhaustive enums" {
     // at which point we can get rid of our overridden implementation.
     try testing.expectError(error.InvalidEnumTag, standardLibraryIntToEnum(NonExhaustiveEnum, 127));
     try testing.expectError(error.InvalidEnumTag, standardLibraryIntToEnum(NonExhaustiveEnum, -128));
+}
+
+// -- saturatingCast tests
+
+test "saturatingCast clamps unsigned integer to unsigned integer" {
+    const value: i32 = 12345678;
+    try testing.expectEqual(255, saturatingCast(u8, value));
+}
+
+test "saturatingCast clamps unsigned integer to signed integer" {
+    const value: u32 = 12345678;
+    try testing.expectEqual(127, saturatingCast(i8, value));
+}
+
+test "saturatingCast clamps signed integer to unsigned integer" {
+    const negative_value: i32 = -12345678;
+    const positive_value: i32 = 12345678;
+    try testing.expectEqual(0, saturatingCast(u8, negative_value));
+    try testing.expectEqual(255, saturatingCast(u8, positive_value));
+}
+
+test "saturatingCast clamps signed integer to signed integer" {
+    const negative_value: i32 = -12345678;
+    const positive_value: i32 = 12345678;
+    try testing.expectEqual(-128, saturatingCast(i8, negative_value));
+    try testing.expectEqual(127, saturatingCast(i8, positive_value));
+}
+
+test "saturatingCast does not saturate in-range unsigned values" {
+    const value: u32 = 254;
+    try testing.expectEqual(254, saturatingCast(u8, value));
+}
+
+test "saturatingCast does not saturate in-range signed values" {
+    const negative_value: i32 = -127;
+    const positive_value: i32 = 126;
+    try testing.expectEqual(-127, saturatingCast(i8, negative_value));
+    try testing.expectEqual(126, saturatingCast(i8, positive_value));
 }
