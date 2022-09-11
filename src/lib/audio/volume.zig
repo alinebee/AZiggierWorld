@@ -66,4 +66,5 @@ test "parse returns Volume for in-range values" {
 
 test "parse clamps out-of-range values" {
     try testing.expectEqual(@intToEnum(Volume, 63), Volume.cast(static_limits.max_volume + 1));
+    try testing.expectEqual(@intToEnum(Volume, 63), Volume.cast(65535));
 }

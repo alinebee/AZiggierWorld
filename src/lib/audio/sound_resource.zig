@@ -64,6 +64,23 @@ pub const SoundResource = struct {
         return self;
     }
 
+    /// Given a byte offset that may be beyond the end of the sample,
+    /// returns the sample at that offset, looping the sound if necessary.
+    /// Returns `null` if the specified offset is beyond the end of
+    /// the sound data and the sound is not looped.
+    pub fn sampleAt(self: SoundResource, offset: usize) ?audio.Sample {
+        if (offset < self.data.len) {
+            return self.data[offset];
+        } else if (self.loop_start) |loop_start| {
+            const loop_length = self.data.len - loop_start;
+            const offset_within_loop = (offset - loop_start) % loop_length;
+            const looped_offset = loop_start + offset_within_loop;
+            return self.data[looped_offset];
+        } else {
+            return null;
+        }
+    }
+
     pub const ParseError = error{
         /// The audio data defined a 0-length sound.
         SoundEmpty,
@@ -72,8 +89,6 @@ pub const SoundResource = struct {
         TruncatedData,
     };
 };
-
-const testing = @import("utils").testing;
 
 const Fixtures = struct {
     const intro_data = [_]u8{ 0x00, 0x01, 0x02, 0x03, 0x04, 0x05 };
@@ -110,6 +125,12 @@ const Fixtures = struct {
         0x00, 0x00,
     };
 };
+
+// -- Tests --
+
+const testing = @import("utils").testing;
+
+// - parse tests -
 
 test "parse correctly parses sound data with no loop" {
     const fixture = &Fixtures.intro_only;
@@ -161,4 +182,37 @@ test "parse returns error.TruncatedData for data too short to fit loop length fo
 test "parse returns error.TruncatedData for data too short to fit loop length for sound effect with intro and loop" {
     const truncated_fixture = Fixtures.intro_with_loop[0 .. Fixtures.intro_with_loop.len - 1];
     try testing.expectError(error.TruncatedData, SoundResource.parse(truncated_fixture));
+}
+
+// - sampleAt tests -
+
+test "sampleAt returns data for in-range offsets and null for out-of-range offsets when sound is unlooped" {
+    const sound = SoundResource{
+        .data = &[_]u8{ 0, 2, 4, 6, 8 },
+        .loop_start = null,
+    };
+
+    try testing.expectEqual(0, sound.sampleAt(0));
+    try testing.expectEqual(2, sound.sampleAt(1));
+    try testing.expectEqual(4, sound.sampleAt(2));
+    try testing.expectEqual(6, sound.sampleAt(3));
+    try testing.expectEqual(8, sound.sampleAt(4));
+    try testing.expectEqual(null, sound.sampleAt(5));
+}
+
+test "sampleAt returns data for all offsets when sound is looped" {
+    const sound = SoundResource{
+        .data = &[_]u8{ 0, 2, 4, 6, 8 },
+        .loop_start = 3,
+    };
+
+    try testing.expectEqual(0, sound.sampleAt(0));
+    try testing.expectEqual(2, sound.sampleAt(1));
+    try testing.expectEqual(4, sound.sampleAt(2));
+    try testing.expectEqual(6, sound.sampleAt(3));
+    try testing.expectEqual(8, sound.sampleAt(4));
+    try testing.expectEqual(6, sound.sampleAt(5));
+    try testing.expectEqual(8, sound.sampleAt(6));
+    try testing.expectEqual(6, sound.sampleAt(7));
+    try testing.expectEqual(8, sound.sampleAt(8));
 }
