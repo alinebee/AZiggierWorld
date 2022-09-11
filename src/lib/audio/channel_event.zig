@@ -20,13 +20,15 @@ const audio = anotherworld.audio;
 const vm = anotherworld.vm;
 const log = anotherworld.log;
 
+const intCast = @import("utils").meta.intCast;
+
 pub const ChannelEvent = union(enum) {
     /// Start playing an instrument on the channel.
     play: struct {
         /// The index of the instrument to play, from the song's bank of 15 instruments.
         instrument_id: InstrumentID,
         /// The amount by which to adjust the instrument's base volume up or down.
-        volume_delta: i16,
+        volume_delta: audio.Volume.Delta,
         /// The frequency to play the instrument at.
         period: audio.Period,
     },
@@ -79,10 +81,11 @@ pub const ChannelEvent = union(enum) {
 
                 const effect = @truncate(u4, control_value_2 >> 8);
                 const raw_volume_delta = @truncate(u8, control_value_2);
+                const clamped_volume_delta = try intCast(audio.Volume.Delta, raw_volume_delta) catch error.InvalidVolumeDelta;
                 const volume_delta = switch (effect) {
                     0 => 0,
-                    5 => @as(i16, raw_volume_delta),
-                    6 => -@as(i16, raw_volume_delta),
+                    5 => clamped_volume_delta,
+                    6 => -clamped_volume_delta,
                     else => {
                         return error.InvalidEffect;
                     },
@@ -113,6 +116,8 @@ pub const ChannelEvent = union(enum) {
         InvalidPeriod,
         /// A play event defined an unrecognized effect.
         InvalidEffect,
+        /// A play event defined a volume delta that was out of range.
+        InvalidVolumeDelta,
         /// A stop event contained unused junk data.
         MalformedStopEvent,
         /// A no-op event contained unused junk data.
@@ -141,6 +146,9 @@ pub const ChannelEvent = union(enum) {
 
         // Raw period 4095, raw instrument 15, raw effect 4, raw volume 63
         pub const play_invalid_effect = [4]u8{ 0x0F, 0xFF, 0b1111_0100, 0x3F };
+
+        // Raw period 4095, raw instrument 15, raw effect 5, raw volume 255
+        pub const play_invalid_volume_delta = [4]u8{ 0x0F, 0xFF, 0b1111_0101, 0xFF };
 
         pub const stop_with_junk = [4]u8{ 0xFF, 0xFE, 0x12, 0x34 };
 
@@ -199,6 +207,10 @@ test "parse returns error.InvalidPeriod when play event specifies frequencies ou
 
 test "parse returns error.InvalidEffect when play event specifies unknown effect" {
     try testing.expectError(error.InvalidEffect, ChannelEvent.parse(ChannelEvent.Fixtures.play_invalid_effect));
+}
+
+test "parse returns error.InvalidVolumeDelta when play event specifies volume delta out of range" {
+    try testing.expectError(error.InvalidVolumeDelta, ChannelEvent.parse(ChannelEvent.Fixtures.play_invalid_volume_delta));
 }
 
 test "parse returns error.MalformedStopEvent when stop event contains junk data" {

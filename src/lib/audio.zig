@@ -9,10 +9,10 @@ pub const Period = u16;
 // TODO: restrict to 0-max_pattern_sequence_length-1?
 pub const Offset = u8;
 
-/// The volume at which to play a sound effect or note in a music track.
-// TODO: restrict to 0-max_volume?
-pub const Volume = u8;
+/// The raw format of audio sample values: Another World stores and produces 8-bit unsigned audio data.
+pub const Sample = u8;
 
+pub const Volume = @import("audio/volume.zig").Volume;
 pub const ChannelID = @import("audio/channel_id.zig").ChannelID;
 pub const FrequencyID = @import("audio/frequency_id.zig").FrequencyID;
 pub const SoundResource = @import("audio/sound_resource.zig").SoundResource;

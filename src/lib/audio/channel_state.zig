@@ -22,7 +22,7 @@ pub const ChannelState = struct {
     /// will get the next sample for that rate.
     /// Returns null and does not advance the cursor if the channel has reached
     /// the end of non-looping sound data.
-    pub fn sample(self: *ChannelState, sample_rate: timing.Hz) ?u8 {
+    pub fn sample(self: *ChannelState, sample_rate: timing.Hz) ?audio.Sample {
         std.debug.assert(sample_rate > 0);
 
         // Implementation note:
@@ -91,14 +91,9 @@ pub const ChannelState = struct {
         const end_value = @as(usize, self.sound.data[end_byte]);
         // The reference implementation divided by 256, but weights are between 0-255;
         // this caused interpolated values to be erroneously rounded down.
-        const interpolated_value = ((start_value * start_weight) + (end_value * end_weight)) / cursor_fraction_mask;
+        const interpolated_value = @truncate(audio.Sample, ((start_value * start_weight) + (end_value * end_weight)) / cursor_fraction_mask);
 
-        // Reference implementation divider by 64 but that resulted in never playing a sound
-        // at full volume. Volume ranges from 0-63; dividing by 63 gives the full range.
-        const amplified_value = (interpolated_value * self.volume) / static_limits.max_volume;
-
-        // Sure would be nice if Zig had a saturating equivalent of @truncate.
-        return std.math.min(amplified_value, @as(u8, std.math.maxInt(u8)));
+        return self.volume.applyTo(interpolated_value);
     }
 
     // The number of bits of fractional precision in the cursor.
@@ -115,7 +110,7 @@ test "Everything compiles" {
     testing.refAllDecls(ChannelState);
 }
 
-const raw_sound_data = [_]u8{ 0, 4, 8, 12, 16 };
+const raw_sound_data = [_]audio.Sample{ 0, 4, 8, 12, 16 };
 
 test "sample returns interpolated data until end of unlooped sound is reached" {
     var state = ChannelState{
@@ -124,19 +119,19 @@ test "sample returns interpolated data until end of unlooped sound is reached" {
             .loop_start = null,
         },
         .frequency = 11025,
-        .volume = 63,
+        .volume = audio.Volume.cast(63),
     };
     const sample_rate = 22050;
 
-    var samples: [10]?u8 = undefined;
+    var samples: [10]?audio.Sample = undefined;
     // FIXME: the second-to-last sample should be 16. We still follow the reference implementation,
     // which bails out as soon as it reaches the last byte even if no interpolation needs to be done.
-    const expected_samples = [10]?u8{ 0, 2, 4, 6, 8, 10, 12, 14, null, null };
+    const expected_samples = [10]?audio.Sample{ 0, 2, 4, 6, 8, 10, 12, 14, null, null };
 
     for (samples) |*sample| {
         sample.* = state.sample(sample_rate);
     }
-    try testing.expectEqualSlices(?u8, &expected_samples, &samples);
+    try testing.expectEqualSlices(?audio.Sample, &expected_samples, &samples);
 }
 
 test "sample returns uninterpolated bytes when output sample rate matches sound frequency" {
@@ -146,19 +141,19 @@ test "sample returns uninterpolated bytes when output sample rate matches sound 
             .loop_start = null,
         },
         .frequency = 22050,
-        .volume = 63,
+        .volume = audio.Volume.cast(63),
     };
     const sample_rate = 22050;
 
-    var samples: [6]?u8 = undefined;
+    var samples: [6]?audio.Sample = undefined;
     // FIXME: the second-to-last sample should be 16. We still follow the reference implementation,
     // which bails out as soon as it reaches the last byte even if no interpolation needs to be done.
-    const expected_samples = [6]?u8{ 0, 4, 8, 12, null, null };
+    const expected_samples = [6]?audio.Sample{ 0, 4, 8, 12, null, null };
 
     for (samples) |*sample| {
         sample.* = state.sample(sample_rate);
     }
-    try testing.expectEqualSlices(?u8, &expected_samples, &samples);
+    try testing.expectEqualSlices(?audio.Sample, &expected_samples, &samples);
 }
 
 test "sample skips over bytes when sound frequency is higher than output sample rate" {
@@ -168,19 +163,19 @@ test "sample skips over bytes when sound frequency is higher than output sample 
             .loop_start = null,
         },
         .frequency = 44100,
-        .volume = 63,
+        .volume = audio.Volume.cast(63),
     };
     const sample_rate = 22050;
 
-    var samples: [4]?u8 = undefined;
+    var samples: [4]?audio.Sample = undefined;
     // FIXME: the second-to-last sample should be 16. We still follow the reference implementation,
     // which bails out as soon as it reaches the last byte even if no interpolation needs to be done.
-    const expected_samples = [4]?u8{ 0, 8, null, null };
+    const expected_samples = [4]?audio.Sample{ 0, 8, null, null };
 
     for (samples) |*sample| {
         sample.* = state.sample(sample_rate);
     }
-    try testing.expectEqualSlices(?u8, &expected_samples, &samples);
+    try testing.expectEqualSlices(?audio.Sample, &expected_samples, &samples);
 }
 
 test "sample interpolates between last data and loop point for looped sample" {
@@ -190,20 +185,20 @@ test "sample interpolates between last data and loop point for looped sample" {
             .loop_start = 2,
         },
         .frequency = 11025,
-        .volume = 63,
+        .volume = audio.Volume.cast(63),
     };
     const sample_rate = 22050;
 
-    var samples: [10]?u8 = undefined;
+    var samples: [10]?audio.Sample = undefined;
     // FIXME: the final value should be 12: 16 interpolated with 8.
     // We still follow the reference implementation, which resets the cursor to the start
     // of the byte when looping instead of allowing it to fall midway.
-    const expected_samples = [10]?u8{ 0, 2, 4, 6, 8, 10, 12, 14, 16, 8 };
+    const expected_samples = [10]?audio.Sample{ 0, 2, 4, 6, 8, 10, 12, 14, 16, 8 };
 
     for (samples) |*sample| {
         sample.* = state.sample(sample_rate);
     }
-    try testing.expectEqualSlices(?u8, &expected_samples, &samples);
+    try testing.expectEqualSlices(?audio.Sample, &expected_samples, &samples);
 }
 
 test "sample does not overflow when cursor goes beyond the end of looping sound data" {
@@ -218,11 +213,11 @@ test "sample does not overflow when cursor goes beyond the end of looping sound 
     //         .loop_start = 2,
     //     },
     //     .frequency = 22050,
-    //     .volume = 63,
+    //     .volume = audio.Volume.cast(63),
     // };
     // const sample_rate = 8000;
 
-    // var samples: [10]?u8 = undefined;
+    // var samples: [10]?audio.Sample = undefined;
     // for (samples) |*sample| {
     //     sample.* = state.sample(sample_rate);
     // }
@@ -235,17 +230,17 @@ test "sample scales values by volume" {
             .loop_start = null,
         },
         .frequency = 11025,
-        .volume = 32,
+        .volume = audio.Volume.cast(32),
     };
     const sample_rate = 22050;
 
-    var samples: [10]?u8 = undefined;
+    var samples: [10]?audio.Sample = undefined;
     // FIXME: the second-to-last sample should be 8. We still follow the reference implementation,
     // which bails out as soon as it reaches the last byte even if no interpolation needs to be done.
-    const expected_samples = [10]?u8{ 0, 1, 2, 3, 4, 5, 6, 7, null, null };
+    const expected_samples = [10]?audio.Sample{ 0, 1, 2, 3, 4, 5, 6, 7, null, null };
 
     for (samples) |*sample| {
         sample.* = state.sample(sample_rate);
     }
-    try testing.expectEqualSlices(?u8, &expected_samples, &samples);
+    try testing.expectEqualSlices(?audio.Sample, &expected_samples, &samples);
 }

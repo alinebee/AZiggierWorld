@@ -100,7 +100,7 @@ pub const MusicPlayer = struct {
         while (true) {
             if (try self.pattern_iterator.next()) |events| {
                 for (events) |event, index| {
-                    self.processEvent(event, mixer, audio.ChannelID.cast(index));
+                    try self.processEvent(event, mixer, audio.ChannelID.cast(index));
                 }
             } else if (self.sequence_iterator.next()) |pattern_id| {
                 // If we've finished the current pattern, load the next pattern and try again
@@ -112,16 +112,16 @@ pub const MusicPlayer = struct {
     }
 
     /// Handle a music event on the specified channel of the mixer.
-    fn processEvent(self: Self, event: audio.MusicResource.ChannelEvent, mixer: *audio.Mixer, channel_id: audio.ChannelID) void {
+    fn processEvent(self: Self, event: audio.MusicResource.ChannelEvent, mixer: *audio.Mixer, channel_id: audio.ChannelID) PlayError!void {
         switch (event) {
             .play => |play| {
                 if (self.instruments[play.instrument_id]) |instrument| {
                     const frequency_in_hz = self.timing_mode.hzFromPeriod(play.period);
-                    const adjusted_volume = @intCast(u8, std.math.clamp(@as(i16, instrument.volume) + play.volume_delta, 0, 63));
+                    const adjusted_volume = instrument.volume.rampedBy(play.volume_delta);
 
                     mixer.play(instrument.resource, channel_id, frequency_in_hz, adjusted_volume);
                 } else {
-                    log.debug("Attempted to play missing instrument: {}", .{play.instrument_id});
+                    return error.MissingInstrument;
                 }
             },
             .set_mark => |mark_value| {
@@ -156,8 +156,10 @@ pub const MusicPlayer = struct {
 
     /// The possible errors that can occur from a call to playForDuration().
     pub const PlayError = audio.MusicResource.IteratePatternError || audio.MusicResource.ChannelEvent.ParseError || error{
-        /// Playback reached the end of the track.
+        /// Playback reached the end of the track. This is the normal exit condition for the track.
         EndOfTrack,
+        /// Attempted to play an instrument ID that didn't have an instrument assigned.
+        MissingInstrument,
     };
 
     // -- Private constants --
@@ -167,11 +169,14 @@ pub const MusicPlayer = struct {
         volume: audio.Volume,
 
         fn init(instrument: audio.MusicResource.Instrument, repository: anytype) LoadError!LoadedInstrument {
-            const sound_data = (try repository.resourceLocation(instrument.resource_id, .sound_or_empty)) orelse return error.SoundNotLoaded;
-            return LoadedInstrument{
-                .resource = try audio.SoundResource.parse(sound_data),
-                .volume = instrument.volume,
-            };
+            if (try repository.resourceLocation(instrument.resource_id, .sound_or_empty)) |sound_data| {
+                return LoadedInstrument{
+                    .resource = try audio.SoundResource.parse(sound_data),
+                    .volume = instrument.volume,
+                };
+            } else {
+                return error.SoundNotLoaded;
+            }
         }
     };
 };

@@ -17,8 +17,8 @@ pub const PolygonScale = enum(_Raw) {
     _,
 
     /// Convert a raw integer value from bytecode into a PolygonScale value.
-    pub fn cast(raw_id: Raw) PolygonScale {
-        return @intToEnum(PolygonScale, raw_id);
+    pub fn cast(raw: Raw) PolygonScale {
+        return @intToEnum(PolygonScale, raw);
     }
 
     /// Scale a signed or unsigned integer value by the specified factor.

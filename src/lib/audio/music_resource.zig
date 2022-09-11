@@ -329,7 +329,7 @@ test "parse returns expected music resource for valid music data" {
     const expected_sequence = [_]MusicResource.PatternID{ 0, 1, 2, 3, 4, 5 };
     const expected_instruments = [_]?MusicResource.Instrument{MusicResource.Instrument{
         .resource_id = resources.ResourceID.cast(0x1234),
-        .volume = 63,
+        .volume = audio.Volume.cast(63),
     }} ** static_limits.max_instruments;
 
     try testing.expectEqual(51966, music.tempo);

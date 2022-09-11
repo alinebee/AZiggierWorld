@@ -11,6 +11,7 @@
 
 const std = @import("std");
 const anotherworld = @import("../anotherworld.zig");
+const audio = anotherworld.audio;
 const log = anotherworld.log;
 
 /// Data offsets within a sound effect resource.
@@ -24,7 +25,7 @@ const DataLayout = struct {
 /// Parses an Another World sound effect resource into a structure that can be played back on a mixer.
 pub const SoundResource = struct {
     /// The audio data of the sound effect.
-    data: []const u8,
+    data: []const audio.Sample,
     /// The offset within the audio data which the sound will loop back to once it has played through.
     /// If null, the sample will play through once and then stop.
     loop_start: ?usize,

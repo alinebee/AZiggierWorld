@@ -54,7 +54,7 @@ pub const Mixer = struct {
 
     /// Populate an audio output buffer with sound data, sampled at the specified sample rate.
     /// This advances the currently-playing samples on each channel.
-    pub fn mix(self: *Self, buffer: []u8, sample_rate: timing.Hz) void {
+    pub fn mix(self: *Self, buffer: []audio.Sample, sample_rate: timing.Hz) void {
         each_channel: for (self.channels) |*channel| {
             if (channel.*) |*active_channel| {
                 for (buffer) |*output| {

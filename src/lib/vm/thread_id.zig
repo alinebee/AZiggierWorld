@@ -11,7 +11,7 @@ pub const ThreadID = enum(Trusted) {
     _,
 
     /// Given a raw bytecode value, return a trusted thread ID.
-    /// Returns InvalidThreadID error if the value is out of range.
+    /// Returns error.InvalidThreadID if the value is out of range.
     pub fn parse(raw_id: Raw) Error!ThreadID {
         return intToEnum(ThreadID, raw_id) catch error.InvalidThreadID;
     }
