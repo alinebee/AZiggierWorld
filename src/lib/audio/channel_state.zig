@@ -43,8 +43,7 @@ pub const ChannelState = struct {
         // TODO: use the FixedPrecision type to model this?
 
         // Calculate how much to weight each byte of the interpolated result.
-        const end_weight = self.cursor & cursor_fraction_mask;
-        const start_weight = cursor_fraction_mask - end_weight;
+        const ratio = @truncate(Ratio, self.cursor);
 
         // Calculate which two bytes of the audio data to interpolate between.
         const start_byte = self.cursor >> cursor_precision;
@@ -86,21 +85,36 @@ pub const ChannelState = struct {
             }
         };
 
-        // Linearly interpolate between the values at the two offsets
-        const start_value = @as(usize, self.sound.data[start_byte]);
-        const end_value = @as(usize, self.sound.data[end_byte]);
-        // The reference implementation divided by 256, but weights are between 0-255;
-        // this caused interpolated values to be erroneously rounded down.
-        const interpolated_value = @truncate(audio.Sample, ((start_value * start_weight) + (end_value * end_weight)) / cursor_fraction_mask);
+        const start_sample = self.sound.data[start_byte];
+        const end_sample = self.sound.data[end_byte];
+        const interpolated_sample = interpolate(audio.Sample, start_sample, end_sample, ratio);
 
-        return self.volume.applyTo(interpolated_value);
+        return self.volume.applyTo(interpolated_sample);
     }
 
     // The number of bits of fractional precision in the cursor.
     const cursor_precision = 8;
-    // The bits of the cursor that represent the fractional component.
-    const cursor_fraction_mask = (1 << cursor_precision) - 1;
 };
+
+const Ratio = u8;
+/// Linearly interpolate between a start and end value using fixed precision integer math.
+/// Ratio is the progress "through" the interpolation, from 0-255:
+/// 0 returns the start value, and 255 returns the end value.
+fn interpolate(comptime Int: type, start: Int, end: Int, ratio: Ratio) Int {
+    const max_ratio = comptime std.math.maxInt(Ratio);
+
+    const start_weight = max_ratio - ratio;
+    const end_weight = ratio;
+
+    const weighted_start = @as(usize, start) * start_weight;
+    const weighted_end = @as(usize, end) * end_weight;
+
+    // The reference implementation divided by 256, but weights are between 0-255;
+    // this caused interpolated values to be erroneously rounded down.
+    const interpolated_value = (weighted_start + weighted_end) / max_ratio;
+
+    return @intCast(Int, interpolated_value);
+}
 
 // -- Tests --
 
@@ -111,6 +125,25 @@ test "Everything compiles" {
 }
 
 const raw_sound_data = [_]audio.Sample{ 0, 4, 8, 12, 16 };
+
+// - fixedPrecisionLerp tests -
+
+test "interpolate returns start value when ratio is 0" {
+    const interpolated_value = interpolate(u8, 100, 255, 0);
+    try testing.expectEqual(100, interpolated_value);
+}
+
+test "interpolate returns end value when ratio is 255" {
+    const interpolated_value = interpolate(u8, 100, 255, 255);
+    try testing.expectEqual(255, interpolated_value);
+}
+
+test "interpolate returns interpolated value rounding down when ratio is midway" {
+    const interpolated_value = interpolate(u16, 100, 255, 127);
+    try testing.expectEqual(177, interpolated_value);
+}
+
+// - Sample tests -
 
 test "sample returns interpolated data until end of unlooped sound is reached" {
     var state = ChannelState{
