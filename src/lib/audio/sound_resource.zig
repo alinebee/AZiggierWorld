@@ -8,6 +8,16 @@
 //! ------DATA------
 //! 8..loop_section_start       u8[]    intro data  played through once, then switches to loop
 //! loop_section_start..end     u8[]    loop data   played continuously, restarting from start of loop data
+//!
+
+// TODO: The reference implementation modified sound data in place to zero out the first 4 bytes
+// of all audio samples that were loaded as music track instruments. This may mean those samples
+// contained junk data; or it may have been cargo-culted from music tracker implementations,
+// which apparently would silence a given channel by playing an empty sample that looped indefinitely
+// over its starting bytes. Either way, we should reimplement this behaviour if it makes any difference
+// to how the music actually sounds.
+// Reference:
+// https://github.com/fabiensanglard/Another-World-Bytecode-Interpreter/blob/master/src/sfxplayer.cpp#L88
 
 const std = @import("std");
 const anotherworld = @import("../anotherworld.zig");
