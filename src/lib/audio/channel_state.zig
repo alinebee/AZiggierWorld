@@ -4,6 +4,8 @@ const audio = anotherworld.audio;
 const timing = anotherworld.timing;
 const static_limits = anotherworld.static_limits;
 
+const meta = @import("utils").meta;
+
 pub const ChannelState = struct {
     /// The sound data being played on this channel.
     sound: audio.SoundResource,
@@ -25,23 +27,20 @@ pub const ChannelState = struct {
     pub fn sample(self: *ChannelState, sample_rate: timing.Hz) ?audio.Sample {
         std.debug.assert(sample_rate > 0);
 
-        // Determine the two points in the audio data to interpolate between.
-        const start_offset = self.cursor >> cursor_precision;
+        // Convert the cursor to a whole byte offset within the sound data and
+        // a fractional offset to interpolate adjacent samples by.
+        const whole_offset = @as(audio.SoundResource.Offset, self.cursor >> cursor_precision);
+        const fractional_offset = @truncate(audio.SoundResource.FractionalOffset, self.cursor);
 
-        // Calculate how much to weight the start and end values when interpolating.
-        const ratio = @truncate(Ratio, self.cursor);
+        // If the sample cursor is completely beyond the end of an unlooped sound,
+        // play nothing and do not advance the cursor.
+        const interpolated_sample = self.sound.interpolatedSampleAt(whole_offset, fractional_offset) orelse return null;
 
-        // If the start offset falls beyond the end of the sound, stop playing immediately.
-        const start_sample = self.sound.sampleAt(start_offset) orelse return null;
-        // If the end offset falls beyond the end of the sound, interpolate with 0 instead.
-        const end_sample = self.sound.sampleAt(start_offset + 1) orelse 0;
-
-        // Mix the two samples together according to the current cursor position.
-        const interpolated_sample = interpolate(audio.Sample, start_sample, end_sample, ratio);
         // Scale the sample according to the volume.
         const scaled_sample = self.volume.applyTo(interpolated_sample);
 
         // Advance the cursor by the appropriate distance for the current frequency and sample rate.
+        // TODO: prevent this from trapping when extremely large cursor values overflow.
         const increment = (self.frequency << cursor_precision) / sample_rate;
         self.cursor += increment;
 
@@ -49,28 +48,8 @@ pub const ChannelState = struct {
     }
 
     // The number of bits of fractional precision in the cursor.
-    const cursor_precision = 8;
+    const cursor_precision = meta.bitCount(audio.SoundResource.FractionalOffset);
 };
-
-const Ratio = u8;
-/// Linearly interpolate between a start and end value using fixed precision integer math.
-/// Ratio is the progress "through" the interpolation, from 0-255:
-/// 0 returns the start value, and 255 returns the end value.
-fn interpolate(comptime Int: type, start: Int, end: Int, ratio: Ratio) Int {
-    const max_ratio = comptime std.math.maxInt(Ratio);
-
-    const start_weight = max_ratio - ratio;
-    const end_weight = ratio;
-
-    const weighted_start = @as(usize, start) * start_weight;
-    const weighted_end = @as(usize, end) * end_weight;
-
-    // The reference implementation divided by 256, but weights are between 0-255;
-    // this caused interpolated values to be erroneously rounded down.
-    const interpolated_value = (weighted_start + weighted_end) / max_ratio;
-
-    return @intCast(Int, interpolated_value);
-}
 
 // -- Tests --
 
@@ -88,23 +67,6 @@ fn expectSamples(comptime expected: []const ?audio.Sample, state: *ChannelState,
 
 test "Everything compiles" {
     testing.refAllDecls(ChannelState);
-}
-
-// - fixedPrecisionLerp tests -
-
-test "interpolate returns start value when ratio is 0" {
-    const interpolated_value = interpolate(u8, 100, 255, 0);
-    try testing.expectEqual(100, interpolated_value);
-}
-
-test "interpolate returns end value when ratio is 255" {
-    const interpolated_value = interpolate(u8, 100, 255, 255);
-    try testing.expectEqual(255, interpolated_value);
-}
-
-test "interpolate returns interpolated value rounding down when ratio is midway" {
-    const interpolated_value = interpolate(u16, 100, 255, 127);
-    try testing.expectEqual(177, interpolated_value);
 }
 
 // - Unlooped sample tests -
@@ -201,7 +163,7 @@ test "sample loops jumps over bytes when output sample rate matches sound freque
     try expectSamples(&expected_samples, &state, sample_rate);
 }
 
-// - Misc tests -
+// - Volume tests -
 
 test "sample scales values by volume" {
     var state = ChannelState{
@@ -217,6 +179,23 @@ test "sample scales values by volume" {
 
     try expectSamples(&expected_samples, &state, sample_rate);
 }
+
+test "samples played at 0 volume are silent" {
+    var state = ChannelState{
+        .sound = .{
+            .data = &[_]audio.Sample{ 0, 4, 8, 12, 16 },
+            .loop_start = null,
+        },
+        .frequency = 11025,
+        .volume = audio.Volume.cast(0),
+    };
+    const sample_rate = 22050;
+    const expected_samples = [11]?audio.Sample{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, null };
+
+    try expectSamples(&expected_samples, &state, sample_rate);
+}
+
+// - Misc tests -
 
 test "sample does not overflow when cursor goes beyond the end of looping sound data" {
     var state = ChannelState{

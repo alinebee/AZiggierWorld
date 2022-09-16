@@ -24,6 +24,8 @@ const anotherworld = @import("../anotherworld.zig");
 const audio = anotherworld.audio;
 const log = anotherworld.log;
 
+const interpolation = @import("interpolation.zig");
+
 /// Data offsets within a sound effect resource.
 const DataLayout = struct {
     const intro_length = 0x00;
@@ -74,14 +76,17 @@ pub const SoundResource = struct {
         return self;
     }
 
-    /// Given a byte offset that may be beyond the end of the sample,
-    /// returns the sample at that offset, looping the sound if necessary.
-    /// Returns `null` if the specified offset is beyond the end of
-    /// the sound data and the sound is not looped.
-    pub fn sampleAt(self: SoundResource, offset: usize) ?audio.Sample {
+    /// Given a byte offset, returns the sample at that offset in the sound data.
+    /// If the sound is looped, offsets beyond the sound data will loop across
+    /// the loop boundary.
+    /// If the sound is not looped, offsets beyond the end of sound data will
+    /// return `null`.
+    pub fn sampleAt(self: SoundResource, offset: Offset) ?audio.Sample {
         if (offset < self.data.len) {
             return self.data[offset];
         } else if (self.loop_start) |loop_start| {
+            std.debug.assert(loop_start < self.data.len);
+
             const loop_length = self.data.len - loop_start;
             const offset_within_loop = (offset - loop_start) % loop_length;
             const looped_offset = loop_start + offset_within_loop;
@@ -90,6 +95,27 @@ pub const SoundResource = struct {
             return null;
         }
     }
+
+    /// Given a byte offset and a sub-byte fractional offset, returns the sample
+    /// at that offset linearly interpolated with the following sample according
+    /// to the fractional ratio.
+    /// If the sound is looped, offsets beyond the sound data will interpolate
+    /// smoothly across the loop boundary.
+    /// If the sound is not looped, offsets at the end of the sound data will
+    /// be interpolated with silence. Offsets beyond the end of the sound data
+    /// will return `null`.
+    pub fn interpolatedSampleAt(self: SoundResource, offset: Offset, fraction: FractionalOffset) ?audio.Sample {
+        // If the sample falls beyond the end of the sound, stop playing immediately.
+        const start_sample = self.sampleAt(offset) orelse return null;
+        // If the following sample falls beyond the end of the sound, interpolate with silence instead.
+        const end_sample = self.sampleAt(offset + 1) orelse return 0;
+
+        // Mix the two samples together according to the fractional ratio.
+        return interpolation.interpolate(audio.Sample, start_sample, end_sample, fraction);
+    }
+
+    pub const Offset = usize;
+    pub const FractionalOffset = interpolation.Ratio;
 
     pub const ParseError = error{
         /// The audio data defined a 0-length sound.
@@ -225,4 +251,53 @@ test "sampleAt returns data for all offsets when sound is looped" {
     try testing.expectEqual(8, sound.sampleAt(6));
     try testing.expectEqual(6, sound.sampleAt(7));
     try testing.expectEqual(8, sound.sampleAt(8));
+}
+
+// - interpolatedSampleAt tests -
+
+test "interpolatedSampleAt interpolates between two adjacent samples" {
+    const sound = SoundResource{
+        .data = &[_]u8{ 0, 127 },
+        .loop_start = null,
+    };
+
+    try testing.expectEqual(0, sound.interpolatedSampleAt(0, 0));
+    try testing.expectEqual(31, sound.interpolatedSampleAt(0, 64));
+    try testing.expectEqual(63, sound.interpolatedSampleAt(0, 128));
+    try testing.expectEqual(95, sound.interpolatedSampleAt(0, 192));
+    try testing.expectEqual(126, sound.interpolatedSampleAt(0, 254));
+    try testing.expectEqual(127, sound.interpolatedSampleAt(0, 255));
+    try testing.expectEqual(127, sound.interpolatedSampleAt(1, 0));
+}
+
+test "interpolatedSampleAt interpolates with silence beyond end of unlooped sample" {
+    const sound = SoundResource{
+        .data = &[_]u8{127},
+        .loop_start = null,
+    };
+
+    try testing.expectEqual(127, sound.interpolatedSampleAt(0, 0));
+    try testing.expectEqual(95, sound.interpolatedSampleAt(0, 64));
+    try testing.expectEqual(63, sound.interpolatedSampleAt(0, 128));
+    try testing.expectEqual(31, sound.interpolatedSampleAt(0, 192));
+    try testing.expectEqual(0, sound.interpolatedSampleAt(0, 255));
+    try testing.expectEqual(null, sound.interpolatedSampleAt(1, 0));
+}
+
+test "interpolatedSampleAt interpolates across loop boundaries" {
+    const sound = SoundResource{
+        .data = &[_]u8{ 64, 255, 127 },
+        .loop_start = 1,
+    };
+
+    try testing.expectEqual(127, sound.interpolatedSampleAt(2, 0));
+    try testing.expectEqual(159, sound.interpolatedSampleAt(2, 64));
+    try testing.expectEqual(191, sound.interpolatedSampleAt(2, 128));
+    try testing.expectEqual(223, sound.interpolatedSampleAt(2, 192));
+    try testing.expectEqual(255, sound.interpolatedSampleAt(2, 255));
+    try testing.expectEqual(255, sound.interpolatedSampleAt(3, 0));
+    try testing.expectEqual(222, sound.interpolatedSampleAt(3, 64));
+    try testing.expectEqual(190, sound.interpolatedSampleAt(3, 128));
+    try testing.expectEqual(158, sound.interpolatedSampleAt(3, 192));
+    try testing.expectEqual(127, sound.interpolatedSampleAt(3, 255));
 }
