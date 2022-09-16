@@ -69,7 +69,7 @@ test "Everything compiles" {
     testing.refAllDecls(ChannelState);
 }
 
-// - Unlooped sample tests -
+// - Unlooped sound tests -
 
 test "sample returns interpolated data until end of unlooped sound is reached" {
     var state = ChannelState{
@@ -81,7 +81,7 @@ test "sample returns interpolated data until end of unlooped sound is reached" {
         .volume = audio.Volume.cast(63),
     };
     const sample_rate = 22050;
-    const expected_samples = [11]?audio.Sample{ 0, 2, 4, 6, 8, 10, 12, 14, 16, 7, null };
+    const expected_samples = [11]?audio.Sample{ 0, 2, 4, 6, 8, 10, 12, 14, 16, 16, null };
 
     try expectSamples(&expected_samples, &state, sample_rate);
 }
@@ -116,9 +116,9 @@ test "sample jumps over bytes until end of unlooped sound is reached when sound 
     try expectSamples(&expected_samples, &state, sample_rate);
 }
 
-// - Looped sample tests -
+// - Looped sound tests -
 
-test "sample interpolates between last data and loop point for looped sample" {
+test "sample interpolates between last data and loop point for looped sound" {
     var state = ChannelState{
         .sound = .{
             .data = &[_]audio.Sample{ 0, 4, 8, 12, 16 },
@@ -133,7 +133,7 @@ test "sample interpolates between last data and loop point for looped sample" {
     try expectSamples(&expected_samples, &state, sample_rate);
 }
 
-test "sample loops with uninterpolated bytes when output sample rate matches sound frequency on looped sample" {
+test "sample loops with uninterpolated bytes when output sample rate matches sound frequency on looped sound" {
     var state = ChannelState{
         .sound = .{
             .data = &[_]audio.Sample{ 0, 4, 8, 12, 16 },
@@ -148,7 +148,7 @@ test "sample loops with uninterpolated bytes when output sample rate matches sou
     try expectSamples(&expected_samples, &state, sample_rate);
 }
 
-test "sample loops jumps over bytes when output sample rate matches sound frequency on looped sample" {
+test "sample loops jumps over bytes when output sample rate matches sound frequency on looped sound" {
     var state = ChannelState{
         .sound = .{
             .data = &[_]audio.Sample{ 0, 4, 8, 12, 16 },
@@ -175,7 +175,7 @@ test "sample scales values by volume" {
         .volume = audio.Volume.cast(32),
     };
     const sample_rate = 22050;
-    const expected_samples = [11]?audio.Sample{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 3, null };
+    const expected_samples = [11]?audio.Sample{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 8, null };
 
     try expectSamples(&expected_samples, &state, sample_rate);
 }

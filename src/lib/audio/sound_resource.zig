@@ -107,8 +107,8 @@ pub const SoundResource = struct {
     pub fn interpolatedSampleAt(self: SoundResource, offset: Offset, fraction: FractionalOffset) ?audio.Sample {
         // If the sample falls beyond the end of the sound, stop playing immediately.
         const start_sample = self.sampleAt(offset) orelse return null;
-        // If the following sample falls beyond the end of the sound, interpolate with silence instead.
-        const end_sample = self.sampleAt(offset + 1) orelse return 0;
+        // If the following sample falls beyond the end of the sound, return the original sample as-is.
+        const end_sample = self.sampleAt(offset + 1) orelse return start_sample;
 
         // Mix the two samples together according to the fractional ratio.
         return interpolation.interpolate(audio.Sample, start_sample, end_sample, fraction);
@@ -270,17 +270,17 @@ test "interpolatedSampleAt interpolates between two adjacent samples" {
     try testing.expectEqual(127, sound.interpolatedSampleAt(1, 0));
 }
 
-test "interpolatedSampleAt interpolates with silence beyond end of unlooped sample" {
+test "interpolatedSampleAt returns final sample at end of unlooped sound" {
     const sound = SoundResource{
         .data = &[_]u8{127},
         .loop_start = null,
     };
 
     try testing.expectEqual(127, sound.interpolatedSampleAt(0, 0));
-    try testing.expectEqual(95, sound.interpolatedSampleAt(0, 64));
-    try testing.expectEqual(63, sound.interpolatedSampleAt(0, 128));
-    try testing.expectEqual(31, sound.interpolatedSampleAt(0, 192));
-    try testing.expectEqual(0, sound.interpolatedSampleAt(0, 255));
+    try testing.expectEqual(127, sound.interpolatedSampleAt(0, 64));
+    try testing.expectEqual(127, sound.interpolatedSampleAt(0, 128));
+    try testing.expectEqual(127, sound.interpolatedSampleAt(0, 192));
+    try testing.expectEqual(127, sound.interpolatedSampleAt(0, 255));
     try testing.expectEqual(null, sound.interpolatedSampleAt(1, 0));
 }
 
