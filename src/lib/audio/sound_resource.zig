@@ -6,8 +6,8 @@
 //!                                 0 if sound does not loop.
 //! 4..8  unused
 //! ------DATA------
-//! 8..loop_section_start       u8[]    intro data  played through once, then switches to loop
-//! loop_section_start..end     u8[]    loop data   played continuously, restarting from start of loop data
+//! 8..loop_section_start       i8[]    intro data  played through once, then switches to loop
+//! loop_section_start..end     i8[]    loop data   played continuously, restarting from start of loop data
 //!
 
 // TODO: The reference implementation modified sound data in place to zero out the first 4 bytes
@@ -69,7 +69,7 @@ pub const SoundResource = struct {
         }
 
         const self = SoundResource{
-            .data = data[audio_start..audio_end],
+            .data = @bitCast([]const audio.Sample, data[audio_start..audio_end]),
             .loop_start = if (loop_length_in_bytes > 0) intro_length_in_bytes else null,
         };
 
@@ -171,14 +171,14 @@ const testing = @import("utils").testing;
 test "parse correctly parses sound data with no loop" {
     const fixture = &Fixtures.intro_only;
     const sound = try SoundResource.parse(fixture);
-    try testing.expectEqual(fixture[8..14], sound.data);
+    try testing.expectEqual(fixture[8..14], @bitCast([]const u8, sound.data));
     try testing.expectEqual(null, sound.loop_start);
 }
 
 test "parse correctly parses sound data with only loop" {
     const fixture = &Fixtures.loop_only;
     const sound = try SoundResource.parse(fixture);
-    try testing.expectEqual(fixture[8..12], sound.data);
+    try testing.expectEqual(fixture[8..12], @bitCast([]const u8, sound.data));
     try testing.expectEqual(0, sound.loop_start);
 }
 
@@ -186,14 +186,14 @@ test "parse correctly parses sound data with intro and loop" {
     const fixture = &Fixtures.intro_with_loop;
     const sound = try SoundResource.parse(fixture);
 
-    try testing.expectEqual(fixture[8..18], sound.data);
+    try testing.expectEqual(fixture[8..18], @bitCast([]const u8, sound.data));
     try testing.expectEqual(6, sound.loop_start);
 }
 
 test "parse correctly parses data that is longer than necessary" {
     const padded_fixture = &(Fixtures.intro_with_loop ++ [_]u8{ 0x00, 0x01, 0x02, 0x03, 0x04 });
     const sound = try SoundResource.parse(padded_fixture);
-    try testing.expectEqual(padded_fixture[8..18], sound.data);
+    try testing.expectEqual(padded_fixture[8..18], @bitCast([]const u8, sound.data));
 }
 
 test "parse returns error.TruncatedData for data too short to fit header" {
@@ -224,32 +224,32 @@ test "parse returns error.TruncatedData for data too short to fit loop length fo
 
 test "sampleAt returns data for in-range offsets and null for out-of-range offsets when sound is unlooped" {
     const sound = SoundResource{
-        .data = &[_]u8{ 0, 2, 4, 6, 8 },
+        .data = &[_]audio.Sample{ 0, -2, 4, -6, 8 },
         .loop_start = null,
     };
 
     try testing.expectEqual(0, sound.sampleAt(0));
-    try testing.expectEqual(2, sound.sampleAt(1));
+    try testing.expectEqual(-2, sound.sampleAt(1));
     try testing.expectEqual(4, sound.sampleAt(2));
-    try testing.expectEqual(6, sound.sampleAt(3));
+    try testing.expectEqual(-6, sound.sampleAt(3));
     try testing.expectEqual(8, sound.sampleAt(4));
     try testing.expectEqual(null, sound.sampleAt(5));
 }
 
 test "sampleAt returns data for all offsets when sound is looped" {
     const sound = SoundResource{
-        .data = &[_]u8{ 0, 2, 4, 6, 8 },
+        .data = &[_]audio.Sample{ 0, -2, 4, -6, 8 },
         .loop_start = 3,
     };
 
     try testing.expectEqual(0, sound.sampleAt(0));
-    try testing.expectEqual(2, sound.sampleAt(1));
+    try testing.expectEqual(-2, sound.sampleAt(1));
     try testing.expectEqual(4, sound.sampleAt(2));
-    try testing.expectEqual(6, sound.sampleAt(3));
+    try testing.expectEqual(-6, sound.sampleAt(3));
     try testing.expectEqual(8, sound.sampleAt(4));
-    try testing.expectEqual(6, sound.sampleAt(5));
+    try testing.expectEqual(-6, sound.sampleAt(5));
     try testing.expectEqual(8, sound.sampleAt(6));
-    try testing.expectEqual(6, sound.sampleAt(7));
+    try testing.expectEqual(-6, sound.sampleAt(7));
     try testing.expectEqual(8, sound.sampleAt(8));
 }
 
@@ -257,14 +257,14 @@ test "sampleAt returns data for all offsets when sound is looped" {
 
 test "interpolatedSampleAt interpolates between two adjacent samples" {
     const sound = SoundResource{
-        .data = &[_]u8{ 0, 127 },
+        .data = &[_]audio.Sample{ -128, 127 },
         .loop_start = null,
     };
 
-    try testing.expectEqual(0, sound.interpolatedSampleAt(0, 0));
-    try testing.expectEqual(31, sound.interpolatedSampleAt(0, 64));
-    try testing.expectEqual(63, sound.interpolatedSampleAt(0, 128));
-    try testing.expectEqual(95, sound.interpolatedSampleAt(0, 192));
+    try testing.expectEqual(-128, sound.interpolatedSampleAt(0, 0));
+    try testing.expectEqual(-64, sound.interpolatedSampleAt(0, 64));
+    try testing.expectEqual(0, sound.interpolatedSampleAt(0, 128));
+    try testing.expectEqual(64, sound.interpolatedSampleAt(0, 192));
     try testing.expectEqual(126, sound.interpolatedSampleAt(0, 254));
     try testing.expectEqual(127, sound.interpolatedSampleAt(0, 255));
     try testing.expectEqual(127, sound.interpolatedSampleAt(1, 0));
@@ -272,7 +272,7 @@ test "interpolatedSampleAt interpolates between two adjacent samples" {
 
 test "interpolatedSampleAt returns final sample at end of unlooped sound" {
     const sound = SoundResource{
-        .data = &[_]u8{127},
+        .data = &[_]audio.Sample{127},
         .loop_start = null,
     };
 
@@ -286,18 +286,18 @@ test "interpolatedSampleAt returns final sample at end of unlooped sound" {
 
 test "interpolatedSampleAt interpolates across loop boundaries" {
     const sound = SoundResource{
-        .data = &[_]u8{ 64, 255, 127 },
+        .data = &[_]audio.Sample{ 64, -128, 127 },
         .loop_start = 1,
     };
 
     try testing.expectEqual(127, sound.interpolatedSampleAt(2, 0));
-    try testing.expectEqual(159, sound.interpolatedSampleAt(2, 64));
-    try testing.expectEqual(191, sound.interpolatedSampleAt(2, 128));
-    try testing.expectEqual(223, sound.interpolatedSampleAt(2, 192));
-    try testing.expectEqual(255, sound.interpolatedSampleAt(2, 255));
-    try testing.expectEqual(255, sound.interpolatedSampleAt(3, 0));
-    try testing.expectEqual(222, sound.interpolatedSampleAt(3, 64));
-    try testing.expectEqual(190, sound.interpolatedSampleAt(3, 128));
-    try testing.expectEqual(158, sound.interpolatedSampleAt(3, 192));
+    try testing.expectEqual(63, sound.interpolatedSampleAt(2, 64));
+    try testing.expectEqual(-1, sound.interpolatedSampleAt(2, 128));
+    try testing.expectEqual(-65, sound.interpolatedSampleAt(2, 192));
+    try testing.expectEqual(-128, sound.interpolatedSampleAt(2, 255));
+    try testing.expectEqual(-128, sound.interpolatedSampleAt(3, 0));
+    try testing.expectEqual(-64, sound.interpolatedSampleAt(3, 64));
+    try testing.expectEqual(0, sound.interpolatedSampleAt(3, 128));
+    try testing.expectEqual(64, sound.interpolatedSampleAt(3, 192));
     try testing.expectEqual(127, sound.interpolatedSampleAt(3, 255));
 }

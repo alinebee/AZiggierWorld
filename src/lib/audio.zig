@@ -9,8 +9,8 @@ pub const Period = u16;
 // TODO: restrict to 0-max_pattern_sequence_length-1?
 pub const Offset = u8;
 
-/// The raw format of audio sample values: Another World stores and produces 8-bit unsigned audio data.
-pub const Sample = u8;
+/// The raw format of audio sample values: Another World stores and produces 8-bit signed audio data.
+pub const Sample = i8;
 
 pub const Volume = @import("audio/volume.zig").Volume;
 pub const ChannelID = @import("audio/channel_id.zig").ChannelID;

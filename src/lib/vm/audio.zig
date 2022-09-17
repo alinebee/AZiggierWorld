@@ -58,9 +58,9 @@ pub const Audio = struct {
     /// Initialize and fill an 8-bit audio buffer with data for the specified length of time.
     /// Caller owns returned memory.
     /// Returns an error if a suitable buffer could not be allocated or sound playback failed.
-    pub fn produceAudio(self: *Self, allocator: std.mem.Allocator, time: timing.Milliseconds, sample_rate: timing.Hz) ProduceAudioError![]const u8 {
+    pub fn produceAudio(self: *Self, allocator: std.mem.Allocator, time: timing.Milliseconds, sample_rate: timing.Hz) ProduceAudioError![]const audio.Sample {
         const total_bytes = audio.Mixer.bufferSize(time, sample_rate);
-        var buffer = try allocator.alloc(u8, total_bytes);
+        var buffer = try allocator.alloc(audio.Sample, total_bytes);
         errdefer allocator.free(buffer);
 
         if (self.music_player) |*music_player| {

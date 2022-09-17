@@ -41,11 +41,11 @@ pub const Volume = enum(Clamped) {
 
     /// Scale the specified audio sample value by this volume.
     pub fn applyTo(self: Self, sample: audio.Sample) audio.Sample {
-        const fullwidth_sample = @as(usize, sample);
+        const fullwidth_sample = @as(isize, sample);
 
         // Reference implementation divider by 64 but that resulted in never playing a sound
         // at full volume. Volume ranges from 0-63; dividing by 63 gives the full range.
-        const amplified_sample = (fullwidth_sample * @enumToInt(self)) / static_limits.max_volume;
+        const amplified_sample = @divTrunc(fullwidth_sample * @enumToInt(self), static_limits.max_volume);
 
         return saturatingCast(audio.Sample, amplified_sample);
     }
