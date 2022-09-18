@@ -41,7 +41,10 @@ pub const Timing = enum {
         // - ProTracker MOD format discussion: https://www.exotica.org.uk/wiki/Protracker
         // - Amiga hardware manual: http://amiga.nvg.org/amiga/reference/Hardware_Manual_guide/node00DE.html
 
+        // TODO 0.11+: replace with a ranged integer type once they're available:
+        // https://github.com/ziglang/zig/issues/3806
         std.debug.assert(period > 0);
+
         return self.clockConstant() / period;
     }
 

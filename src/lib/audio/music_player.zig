@@ -81,6 +81,8 @@ pub const MusicPlayer = struct {
     /// since the previous call to playForDuration.
     /// Returns a PlayError if the end of the track was reached or music data could not be read.
     pub fn playForDuration(self: *Self, mixer: *audio.Mixer, time: timing.Milliseconds) PlayError!void {
+        // TODO 0.11+: replace with a ranged integer type once they're available:
+        // https://github.com/ziglang/zig/issues/3806
         std.debug.assert(self.ms_per_row > 0);
 
         self.ms_remaining += time;

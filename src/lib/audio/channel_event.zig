@@ -93,6 +93,8 @@ pub const ChannelEvent = union(enum) {
                     },
                 };
 
+                // TODO 0.11+: replace with a ranged integer type once they're available:
+                // https://github.com/ziglang/zig/issues/380;
                 const period = control_value_1;
                 if (period < min_period or period > max_period) {
                     return error.InvalidPeriod;

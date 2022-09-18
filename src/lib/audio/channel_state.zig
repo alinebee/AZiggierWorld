@@ -26,6 +26,8 @@ pub const ChannelState = struct {
     /// Returns `null` and does not advance the cursor if the channel has reached
     /// the end of non-looping sound data.
     pub fn sample(self: *ChannelState, sample_rate: timing.Hz) ?audio.Sample {
+        // TODO 0.11+: replace with a ranged integer type once they're available:
+        // https://github.com/ziglang/zig/issues/3806
         std.debug.assert(sample_rate > 0);
 
         // Convert the cursor to a whole byte offset within the sound data and

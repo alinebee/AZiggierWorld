@@ -1,6 +1,8 @@
 const anotherworld = @import("../anotherworld.zig");
 const timing = anotherworld.timing;
 
+// TODO 0.11+: replace _Raw with a ranged integer type once they're available:
+// https://github.com/ziglang/zig/issues/3806
 const _Raw = u8;
 
 /// The ID of one of 40 preset frequencies. Used by bytecode instructions that play sound effects.
