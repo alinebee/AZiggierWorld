@@ -111,10 +111,10 @@ fn normalizedCharacterRegisterValue(char: u8) vm.Register.Unsigned {
     return switch (char) {
         'A'...'Z' => |uppercase_char| uppercase_char,
         'a'...'z' => |lowercase_char| {
-            // In ASCII, a-z are the same bit pattern as A-Z just with bit 6 set;
+            // In ASCII, a-z are the same bit pattern as A-Z but with bit 6 set;
             // the reference implementation normalizes them to uppercase by unsetting that bit.
-            const lowercase_bitmask: u8 = 0b0010_0000;
-            const uppercase_char = lowercase_char & ~lowercase_bitmask;
+            const lowercase_bit: u8 = 0b0010_0000;
+            const uppercase_char = lowercase_char & ~lowercase_bit;
             return uppercase_char;
         },
         // The SDL reference implementation permitted 8 (backspace, SDL's SDLK_BACKSPACE keycode).
