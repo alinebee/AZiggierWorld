@@ -28,13 +28,13 @@ pub const MusicPlayer = struct {
     ms_remaining: timing.Milliseconds = 0,
 
     /// The timing mode to use to compute tempo and frequency.
-    timing_mode: timing.TimingMode,
+    timing_mode: timing.Timing,
 
     const Self = @This();
 
     /// Create a player that plays from the beginning to the end of the specified music track,
     /// loading instrument data from the specified repository.
-    pub fn init(music: audio.MusicResource, repository: anytype, timing_mode: timing.TimingMode, offset: audio.Offset, custom_tempo: ?audio.Tempo) LoadError!Self {
+    pub fn init(music: audio.MusicResource, repository: anytype, timing_mode: timing.Timing, offset: audio.Offset, custom_tempo: ?audio.Tempo) LoadError!Self {
         const ms_per_row = timing_mode.msFromTempo(custom_tempo orelse music.tempo);
         if (ms_per_row == 0) {
             return error.InvalidTempo;

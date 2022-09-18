@@ -85,7 +85,7 @@ pub const Machine = struct {
     scheduled_game_part: ?vm.GamePart,
 
     /// The timing mode to use for video and audio timing.
-    timing_mode: timing.TimingMode,
+    timing_mode: timing.Timing,
 
     const Self = @This();
 
@@ -370,7 +370,7 @@ pub const Machine = struct {
 
         /// The timing mode to use for video and audio.
         /// Defaults to the timing of the PAL Amiga.
-        timing_mode: timing.TimingMode = timing.TimingMode.default,
+        timing_mode: timing.Timing = timing.Timing.default,
     };
 
     /// Optional configuration settings for the test machine instance created by `testInstance`.
@@ -380,7 +380,7 @@ pub const Machine = struct {
         // An optional host that the test instance should talk to.
         host: ?vm.Host = null,
         // An optional timing mode to override the default.
-        timing_mode: timing.TimingMode = timing.TimingMode.default,
+        timing_mode: timing.Timing = timing.Timing.default,
     };
 
     /// Returns a machine instance suitable for use in tests.
@@ -823,7 +823,7 @@ test "runTic updates each thread with its scheduled state before running each th
 test "renderVideoBuffer notifies host of new frame with expected buffer ID and delay" {
     const expected_buffer_id = 3;
     const frame_count = 4;
-    const expected_delay = comptime timing.TimingMode.pal.msFromFrameCount(frame_count);
+    const expected_delay = comptime timing.Timing.pal.msFromFrameCount(frame_count);
 
     var host = mock_host.mockHost(struct {
         pub fn bufferReady(_: *const Machine, buffer_id: vm.ResolvedBufferID, delay: vm.Milliseconds) void {
@@ -845,7 +845,7 @@ test "renderVideoBuffer notifies host of new frame with expected buffer ID and d
 test "renderVideoBuffer uses NTSC frame delay when timing mode is NTSC" {
     const expected_buffer_id = 3;
     const frame_count = 4;
-    const expected_delay = comptime timing.TimingMode.ntsc.msFromFrameCount(frame_count);
+    const expected_delay = comptime timing.Timing.ntsc.msFromFrameCount(frame_count);
 
     var host = mock_host.mockHost(struct {
         pub fn bufferReady(_: *const Machine, buffer_id: vm.ResolvedBufferID, delay: vm.Milliseconds) void {

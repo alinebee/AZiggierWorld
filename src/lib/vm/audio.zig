@@ -16,7 +16,7 @@ pub const Audio = struct {
     const Self = @This();
 
     /// Start playing a music track from a specified resource.
-    pub fn playMusic(self: *Self, music_data: []const u8, repository: anytype, timing_mode: timing.TimingMode, offset: audio.Offset, tempo: ?audio.Tempo) !void {
+    pub fn playMusic(self: *Self, music_data: []const u8, repository: anytype, timing_mode: timing.Timing, offset: audio.Offset, tempo: ?audio.Tempo) !void {
         const music = try audio.MusicResource.parse(music_data);
         self.music_player = try audio.MusicPlayer.init(music, repository, timing_mode, offset, tempo);
 
