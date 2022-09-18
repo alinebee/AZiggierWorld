@@ -74,10 +74,7 @@ test "Everything compiles" {
 
 test "sample returns interpolated data until end of unlooped sound is reached" {
     var state = ChannelState{
-        .sound = .{
-            .data = &[_]audio.Sample{ 0, -4, 8, -12, 16 },
-            .loop_start = null,
-        },
+        .sound = audio.SoundResource.init(&[_]audio.Sample{ 0, -4, 8, -12, 16 }, null),
         .frequency = 11025,
         .volume = audio.Volume.cast(63),
     };
@@ -89,10 +86,7 @@ test "sample returns interpolated data until end of unlooped sound is reached" {
 
 test "sample returns uninterpolated bytes until end of unlooped sound is reached when output sample rate matches sound frequency" {
     var state = ChannelState{
-        .sound = .{
-            .data = &[_]audio.Sample{ 0, -4, 8, -12, 16 },
-            .loop_start = null,
-        },
+        .sound = audio.SoundResource.init(&[_]audio.Sample{ 0, -4, 8, -12, 16 }, null),
         .frequency = 22050,
         .volume = audio.Volume.cast(63),
     };
@@ -104,10 +98,7 @@ test "sample returns uninterpolated bytes until end of unlooped sound is reached
 
 test "sample jumps over bytes until end of unlooped sound is reached when sound frequency is higher than output sample rate" {
     var state = ChannelState{
-        .sound = .{
-            .data = &[_]audio.Sample{ 0, -4, 8, -12, 16 },
-            .loop_start = null,
-        },
+        .sound = audio.SoundResource.init(&[_]audio.Sample{ 0, -4, 8, -12, 16 }, null),
         .frequency = 44100,
         .volume = audio.Volume.cast(63),
     };
@@ -121,10 +112,7 @@ test "sample jumps over bytes until end of unlooped sound is reached when sound 
 
 test "sample interpolates between last data and loop point for looped sound" {
     var state = ChannelState{
-        .sound = .{
-            .data = &[_]audio.Sample{ 0, -4, 8, -12, 16 },
-            .loop_start = 2,
-        },
+        .sound = audio.SoundResource.init(&[_]audio.Sample{ 0, -4, 8, -12, 16 }, 2),
         .frequency = 11025,
         .volume = audio.Volume.cast(63),
     };
@@ -136,10 +124,7 @@ test "sample interpolates between last data and loop point for looped sound" {
 
 test "sample loops with uninterpolated bytes when output sample rate matches sound frequency on looped sound" {
     var state = ChannelState{
-        .sound = .{
-            .data = &[_]audio.Sample{ 0, -4, 8, -12, 16 },
-            .loop_start = 2,
-        },
+        .sound = audio.SoundResource.init(&[_]audio.Sample{ 0, -4, 8, -12, 16 }, 2),
         .frequency = 22050,
         .volume = audio.Volume.cast(63),
     };
@@ -151,10 +136,7 @@ test "sample loops with uninterpolated bytes when output sample rate matches sou
 
 test "sample loops jumps over bytes when output sample rate matches sound frequency on looped sound" {
     var state = ChannelState{
-        .sound = .{
-            .data = &[_]audio.Sample{ 0, -4, 8, -12, 16 },
-            .loop_start = 2,
-        },
+        .sound = audio.SoundResource.init(&[_]audio.Sample{ 0, -4, 8, -12, 16 }, 2),
         .frequency = 44100,
         .volume = audio.Volume.cast(63),
     };
@@ -168,10 +150,7 @@ test "sample loops jumps over bytes when output sample rate matches sound freque
 
 test "sample scales values by volume" {
     var state = ChannelState{
-        .sound = .{
-            .data = &[_]audio.Sample{ 0, -4, 8, -12, 16 },
-            .loop_start = null,
-        },
+        .sound = audio.SoundResource.init(&[_]audio.Sample{ 0, -4, 8, -12, 16 }, null),
         .frequency = 11025,
         .volume = audio.Volume.cast(32),
     };
@@ -183,10 +162,7 @@ test "sample scales values by volume" {
 
 test "samples played at 0 volume are scaled to 0" {
     var state = ChannelState{
-        .sound = .{
-            .data = &[_]audio.Sample{ 0, -4, 8, -12, 16 },
-            .loop_start = null,
-        },
+        .sound = audio.SoundResource.init(&[_]audio.Sample{ 0, -4, 8, -12, 16 }, null),
         .frequency = 11025,
         .volume = audio.Volume.cast(0),
     };
@@ -200,10 +176,7 @@ test "samples played at 0 volume are scaled to 0" {
 
 test "sample does not overflow when cursor goes beyond the end of looping sound data" {
     var state = ChannelState{
-        .sound = .{
-            .data = &[_]audio.Sample{ 0, -4, 8, -12, 16 },
-            .loop_start = 2,
-        },
+        .sound = audio.SoundResource.init(&[_]audio.Sample{ 0, -4, 8, -12, 16 }, 2),
         .frequency = 22050,
         .volume = audio.Volume.cast(63),
     };

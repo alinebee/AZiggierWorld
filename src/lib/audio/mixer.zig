@@ -23,10 +23,10 @@ pub const Mixer = struct {
             .volume = volume,
         };
 
-        anotherworld.log.debug("Play channel #{}: sound #{*} (repeats: {}), frequency: {}, volume: {}", .{
+        anotherworld.log.debug("Play channel #{}: sound #{*} (loops: #{*}), frequency: {}, volume: {}", .{
             channel_id,
-            sound.data,
-            sound.loop_start != null,
+            sound.intro,
+            sound.loop,
             frequency,
             volume,
         });

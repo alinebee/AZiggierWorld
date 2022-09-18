@@ -27,10 +27,10 @@ test "Parse all sound effects in original game files" {
         defer testing.allocator.free(data);
 
         if (audio.SoundResource.parse(data)) |sound| {
-            if (sound.loop_start) |loop_start| {
-                log.debug("Sound with length {}, looping at {}", .{ sound.data.len, loop_start });
+            if (sound.loop.len > 0) {
+                log.debug("Sound with length {}, looping at {}", .{ sound.intro.len + sound.loop.len, sound.intro.len });
             } else {
-                log.debug("Sound with length {}, unlooped", .{sound.data.len});
+                log.debug("Sound with length {}, unlooped", .{sound.intro.len});
             }
         } else |err| {
             if (err == error.TruncatedData and data.len == 0) {
