@@ -26,15 +26,7 @@ const log = anotherworld.log;
 
 const interpolation = @import("interpolation.zig");
 
-/// Data offsets within a sound effect resource.
-const DataLayout = struct {
-    const intro_length = 0x00;
-    const loop_length = 0x02;
-    const unused = 0x04;
-    const intro = 0x08;
-};
-
-/// Parses an Another World sound effect resource into a structure that can be played back on a mixer.
+/// Parses an Another World sound effect data into a resource that can be played back on a mixer.
 pub const SoundResource = struct {
     /// The audio data of the sound effect.
     data: []const audio.Sample,
@@ -124,6 +116,14 @@ pub const SoundResource = struct {
         /// or too short to hold the intro and loop section described in the header.
         TruncatedData,
     };
+};
+
+/// Data offsets within a sound effect resource.
+const DataLayout = struct {
+    const intro_length = 0x00;
+    const loop_length = 0x02;
+    const unused = 0x04;
+    const intro = 0x08;
 };
 
 const Fixtures = struct {

@@ -59,6 +59,8 @@ pub const virtual_screen_width = 320;
 pub const virtual_screen_height = 200;
 
 /// The maximum size in bytes of an Another World game program.
+/// Program instructions store addresses as an unsigned 16-bit integers,
+/// so this value must fit within a u16.
 pub const max_program_size = 65_536;
 
 /// The maximum number of subroutines that can be on the stack.
@@ -69,7 +71,9 @@ pub const max_stack_depth = 64;
 
 /// The maximum number of instructions that a program can execute before
 /// it must yield or deactivate the current thread.
-/// If a program exceeds this, it likely indicates an infinite loop.
+/// Can be safely modified without changing types.
+///
+/// This value is arbitrary; but if a program exceeds this, it likely indicates an infinite loop.
 pub const max_instructions_per_tic = 10_000;
 
 /// The maximum number of resource descriptors that will be parsed from the MEMLIST.BIN file
@@ -112,18 +116,27 @@ pub const precomputed_slope_count = 1024;
 pub const channel_count = 4;
 
 /// The maximum length of the pattern sequence in a music track.
+/// Sequence offsets are addressed in bytecode instructions using an unsigned 8-bit integer,
+/// so this value must fit within a u8.
 /// See music_resource.zig.
 pub const max_pattern_sequence_length = 128;
 
 /// The maximum number of instruments that can be used by a single music track.
-/// See music_resource.zig.
+/// Instruments are addressed in music data using 4 bits of an unsigned 8-bit integer,
+/// so this value must fit within a u4.
+/// See music_resource.zig and channel_event.zig.
 pub const max_instruments = 15;
 
 /// The number of event rows (regular intervals on which channel events happen)
-/// within a single pattern of a music track. See channel_event.zig.
+/// within a single pattern of a music track. Changing this will alter which pattern an offset
+/// points to, resulting in incorrect music playback.
+/// See music_resource.zig.
 pub const rows_per_pattern = 64;
 
 /// The maximum volume allowed for a sound effect or music sample.
+/// Sound effect volumes are expressed in bytecode using an 8-bit unsigned integer,
+/// while instrument volumes are expressed in music data using a 16-bit unsigned integer.
+/// Raising/lowering this value will cause all sound data to be played softer/louder respectively.
 pub const max_volume = 63;
 
 // -- Helper functions --

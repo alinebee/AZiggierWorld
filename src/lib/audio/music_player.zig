@@ -5,6 +5,8 @@ const static_limits = anotherworld.static_limits;
 const timing = anotherworld.timing;
 const log = anotherworld.log;
 
+/// Plays back an Another World music resource, advancing it from pattern to pattern and row to row
+/// in response to elapsed time and playing its channel events on a mixer.
 pub const MusicPlayer = struct {
     /// The music track being played.
     music: audio.MusicResource,

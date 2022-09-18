@@ -24,7 +24,7 @@ const audio = anotherworld.audio;
 const vm = anotherworld.vm;
 const static_limits = anotherworld.static_limits;
 
-/// Parses an Another World music resource into a structure that can be played back on a mixer.
+/// Parses an Another World music data into a music resource that can be played back on a mixer.
 pub const MusicResource = struct {
     /// The default tempo to play this track, if no custom tempo was specified.
     tempo: audio.Tempo,

@@ -9,8 +9,8 @@ pub const Milliseconds = usize;
 /// A frequency in Hz.
 pub const Hz = usize;
 
-/// Computes video and audio timing relative to a PAL or NTSC Amiga 1000/2000/500:
-/// the machine for which Another World's data files were originally created.
+/// Computes video and audio timings relative to a PAL or NTSC Amiga 1000/2000/500:
+/// the machine for which Another World's data files and timings were originally defined.
 pub const TimingMode = enum {
     pal,
     ntsc,
@@ -26,7 +26,7 @@ pub const TimingMode = enum {
         };
     }
 
-    /// Returns the rate in Hz of the Amiga 1000/2000/500's CPU in this timing mode.
+    /// Returns the rate in Hz of the Amiga's CPU in this timing mode.
     pub fn cpuSpeed(self: TimingMode) Hz {
         return switch (self) {
             .pal => 7_093_790, // 7.09mHz
@@ -50,7 +50,7 @@ pub const TimingMode = enum {
     }
 
     /// Converts an audio frequency expressed as a period of the Amiga clock constant into Hz.
-    /// Traps if period is 0.
+    /// Precondition: period must be >0.
     pub fn hzFromPeriod(self: TimingMode, period: audio.Period) Hz {
         // The Amiga's clock constant defines how many clcok ticks there are in a second,
         // which varied between PAL and NTSC Amigas. The Amiga's audio hardware expected

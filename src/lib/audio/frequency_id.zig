@@ -3,7 +3,7 @@ const timing = anotherworld.timing;
 
 const _Raw = u8;
 
-/// The ID of one of 40 preset frequencies. Used by instructions that play sound effects.
+/// The ID of one of 40 preset frequencies. Used by bytecode instructions that play sound effects.
 pub const FrequencyID = enum(_Raw) {
     _,
 

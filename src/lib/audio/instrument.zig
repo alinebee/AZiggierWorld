@@ -3,11 +3,16 @@ const anotherworld = @import("../anotherworld.zig");
 const resources = anotherworld.resources;
 const audio = anotherworld.audio;
 
-// Instruments with this resource ID will not be played
+// Instruments with this resource ID will not be played.
 const no_instrument_marker = 0;
 
+/// An instrument in a music track. Instruments map instruments IDs in a music track
+/// to sound resources in Another World's game data.
 pub const Instrument = struct {
+    /// The ID of the resource to load for this instrument.
     resource_id: resources.ResourceID,
+    /// The default volume at which to play this instrument.
+    /// This can be adjusted up or down by channel events.
     volume: audio.Volume,
 
     /// Parse a raw 4-byte code from a music resource header into an instrument definition.

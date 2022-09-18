@@ -28,6 +28,7 @@ const Polygon = @import("polygon.zig").Polygon;
 
 const fixedBufferStream = @import("std").io.fixedBufferStream;
 
+/// A parser that extracts polygons from Another World's polygon resource data.
 pub const PolygonResource = struct {
     /// Raw polygon data read from Another World's resource files.
     /// The instance does not own this data; the parent context must ensure

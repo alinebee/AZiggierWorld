@@ -6,7 +6,7 @@ const static_limits = anotherworld.static_limits;
 
 const ChannelState = @import("channel_state.zig").ChannelState;
 
-/// A mixer that mixes the output of 4 channels into a single stream of 8-bit mono audio.
+/// A mixer that mixes the output of 4 channels into a single stream of 8-bit signed mono audio.
 pub const Mixer = struct {
     /// The current state of each of the 4 channels.
     /// If null, nothing is playing on that channel.
@@ -48,26 +48,28 @@ pub const Mixer = struct {
 
     /// Calculate the appropriate size in bytes for an audio buffer that covers
     /// the specified length of time, when sampled at the specified rate.
-    pub fn bufferSize(time: timing.Milliseconds, sample_rate: timing.Hz) usize {
-        return (time * sample_rate) / std.time.ms_per_s;
+    pub fn bufferSize(duration: timing.Milliseconds, sample_rate: timing.Hz) usize {
+        return (sample_rate * duration) / std.time.ms_per_s;
     }
 
     /// Populate an audio output buffer with sound data, sampled at the specified sample rate.
     /// This advances the currently-playing samples on each channel.
     pub fn mix(self: *Self, buffer: []audio.Sample, sample_rate: timing.Hz) void {
-        // Zero out the buffer in case we don't have enough channel data to fill it
+        // Fill the buffer with silence initially, in case we run out of channel data to touch every byte.
         for (buffer) |*byte| {
             byte.* = 0;
         }
 
+        // Mix each active channel's sound data into the buffer, continuing until the end of the buffer
+        // is reached or the channel reaches the end of its sound and deactivates, whichever comes first.
         each_channel: for (self.channels) |*channel| {
             if (channel.*) |*active_channel| {
                 for (buffer) |*output| {
                     if (active_channel.sample(sample_rate)) |sample| {
-                        // Use saturating add to clamp mixed samples to 0-255.
+                        // Use saturating add to clamp mixed samples to between -128 and +127.
                         output.* +|= sample;
                     } else {
-                        // If the channel reached the end, stop playing it immediately
+                        // If the channel reached the end, stop playing it immediately.
                         channel.* = null;
                         break :each_channel;
                     }

@@ -22,6 +22,8 @@ const log = anotherworld.log;
 
 const intCast = @import("utils").meta.intCast;
 
+/// An instruction in a music pattern that triggers an event (e.g. playing a sound)
+/// on a specific channel.
 pub const ChannelEvent = union(enum) {
     /// Start playing an instrument on the channel.
     play: struct {

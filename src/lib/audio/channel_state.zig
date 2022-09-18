@@ -6,6 +6,7 @@ const static_limits = anotherworld.static_limits;
 
 const meta = @import("utils").meta;
 
+/// The current sound playback state of a channel in a mixer.
 pub const ChannelState = struct {
     /// The sound data being played on this channel.
     sound: audio.SoundResource,
@@ -18,11 +19,11 @@ pub const ChannelState = struct {
     /// divide by 256 to arrive at the actual byte offset within the audio data.
     cursor: usize = 0,
 
-    /// Sample a single byte of audio data from the channel at current cursor
+    /// Samples a single byte of audio data from the channel at current cursor
     /// and the specified sample rate, and advances the cursor by an appropriate
     /// distance for the specified sample rate so that the next call to `sample`
     /// will get the next sample for that rate.
-    /// Returns null and does not advance the cursor if the channel has reached
+    /// Returns `null` and does not advance the cursor if the channel has reached
     /// the end of non-looping sound data.
     pub fn sample(self: *ChannelState, sample_rate: timing.Hz) ?audio.Sample {
         std.debug.assert(sample_rate > 0);
