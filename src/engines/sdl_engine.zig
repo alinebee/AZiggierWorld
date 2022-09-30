@@ -152,7 +152,9 @@ pub const SDLEngine = struct {
     }
 
     fn host(self: *Self) vm.Host {
-        return vm.Host.init(self, .{ .bufferReady = bufferReady });
+        return vm.Host.init(self, .{
+            .videoFrameReady = videoFrameReady,
+        });
     }
 
     // - VM execution
@@ -187,7 +189,7 @@ pub const SDLEngine = struct {
         }
     }
 
-    fn bufferReady(self: *Self, machine: *const vm.Machine, buffer_id: vm.ResolvedBufferID, requested_delay: vm.Milliseconds) void {
+    fn videoFrameReady(self: *Self, machine: *const vm.Machine, buffer_id: vm.ResolvedBufferID, requested_delay: vm.Milliseconds) void {
         const requested_delay_in_ns = requested_delay * std.time.ns_per_ms;
         const current_time_in_ns = currentFrameTime();
         const delay_in_ns = resolvedFrameDelay(

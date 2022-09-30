@@ -20,10 +20,10 @@ const RenderHost = struct {
     const Self = @This();
 
     fn host(self: *Self) vm.Host {
-        return vm.Host.init(self, .{ .bufferReady = bufferReady });
+        return vm.Host.init(self, .{ .videoFrameReady = videoFrameReady });
     }
 
-    fn bufferReady(self: *Self, machine: *const vm.Machine, buffer_id: vm.ResolvedBufferID, _: vm.Milliseconds) void {
+    fn videoFrameReady(self: *Self, machine: *const vm.Machine, buffer_id: vm.ResolvedBufferID, _: vm.Milliseconds) void {
         machine.renderBufferToSurface(buffer_id, &self.surface) catch |err| {
             switch (err) {
                 // The Another World intro attempts to render at least 4 times before any palette is selected.
@@ -32,6 +32,8 @@ const RenderHost = struct {
             }
         };
     }
+
+    fn audioReady(_: *Self, _: *const vm.Machine, _: vm.AudioBuffer) void {}
 };
 
 /// Creates a new VM and executes the Another World intro until it switches

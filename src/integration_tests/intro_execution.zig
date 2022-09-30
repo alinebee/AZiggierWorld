@@ -22,10 +22,13 @@ const CountingHost = struct {
     const Self = @This();
 
     fn host(self: *Self) vm.Host {
-        return vm.Host.init(self, .{ .bufferReady = bufferReady, .bufferChanged = bufferChanged });
+        return vm.Host.init(self, .{
+            .videoFrameReady = videoFrameReady,
+            .videoBufferChanged = videoBufferChanged,
+        });
     }
 
-    fn bufferReady(self: *Self, _: *const vm.Machine, _: vm.ResolvedBufferID, delay: vm.Milliseconds) void {
+    fn videoFrameReady(self: *Self, _: *const vm.Machine, _: vm.ResolvedBufferID, delay: vm.Milliseconds) void {
         self.render_count += 1;
         self.total_delay += delay;
 
@@ -42,7 +45,7 @@ const CountingHost = struct {
         }
     }
 
-    fn bufferChanged(self: *Self, _: *const vm.Machine, _: vm.ResolvedBufferID) void {
+    fn videoBufferChanged(self: *Self, _: *const vm.Machine, _: vm.ResolvedBufferID) void {
         self.draw_count += 1;
     }
 };

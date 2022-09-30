@@ -8,8 +8,9 @@ const vm = anotherworld.vm;
 // - Exported constants -
 
 const DefaultImplementation = struct {
-    pub fn bufferReady(_: *const vm.Machine, _: vm.ResolvedBufferID, _: vm.Milliseconds) void {}
-    pub fn bufferChanged(_: *const vm.Machine, _: vm.ResolvedBufferID) void {}
+    pub fn videoFrameReady(_: *const vm.Machine, _: vm.ResolvedBufferID, _: vm.Milliseconds) void {}
+    pub fn videoBufferChanged(_: *const vm.Machine, _: vm.ResolvedBufferID) void {}
+    pub fn audioReady(_: *const vm.Machine, _: vm.AudioBuffer) void {}
 };
 
 var test_host_implementation = MockHost(DefaultImplementation){};
@@ -25,24 +26,34 @@ pub fn mockHost(comptime Implementation: type) MockHost(Implementation) {
 pub fn MockHost(comptime Implementation: type) type {
     return struct {
         call_counts: struct {
-            bufferReady: usize = 0,
-            bufferChanged: usize = 0,
+            videoFrameReady: usize = 0,
+            videoBufferChanged: usize = 0,
+            audioReady: usize = 0,
         } = .{},
 
         const Self = @This();
 
         pub fn host(self: *Self) vm.Host {
-            return vm.Host.init(self, .{ .bufferReady = bufferReady, .bufferChanged = bufferChanged });
+            return vm.Host.init(self, .{
+                .videoFrameReady = videoFrameReady,
+                .videoBufferChanged = videoBufferChanged,
+                .audioReady = audioReady,
+            });
         }
 
-        fn bufferReady(self: *Self, machine: *const vm.Machine, buffer_id: vm.ResolvedBufferID, delay: vm.Milliseconds) void {
-            self.call_counts.bufferReady += 1;
-            Implementation.bufferReady(machine, buffer_id, delay);
+        fn videoFrameReady(self: *Self, machine: *const vm.Machine, buffer_id: vm.ResolvedBufferID, delay: vm.Milliseconds) void {
+            self.call_counts.videoFrameReady += 1;
+            Implementation.videoFrameReady(machine, buffer_id, delay);
         }
 
-        fn bufferChanged(self: *Self, machine: *const vm.Machine, buffer_id: vm.ResolvedBufferID) void {
-            self.call_counts.bufferChanged += 1;
-            Implementation.bufferChanged(machine, buffer_id);
+        fn videoBufferChanged(self: *Self, machine: *const vm.Machine, buffer_id: vm.ResolvedBufferID) void {
+            self.call_counts.videoBufferChanged += 1;
+            Implementation.videoBufferChanged(machine, buffer_id);
+        }
+
+        fn audioReady(self: *Self, machine: *const vm.Machine, buffer: vm.AudioBuffer) void {
+            self.call_counts.audioReady += 1;
+            Implementation.audioReady(machine, buffer);
         }
     };
 }

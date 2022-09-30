@@ -195,7 +195,7 @@ pub const Machine = struct {
             // Bitmap resources must be loaded immediately from their temporary location into the video buffer.
             .temporary_bitmap => |address| {
                 const modified_buffer = try self.video.loadBitmapResource(address);
-                self.host.bufferChanged(self, modified_buffer);
+                self.host.videoBufferChanged(self, modified_buffer);
             },
             // Audio resources will remain in memory for a later instruction to play them.
             .audio => {},
@@ -215,14 +215,14 @@ pub const Machine = struct {
     /// Returns an error if the specified polygon address was invalid.
     pub fn drawPolygon(self: *Self, source: vm.PolygonSource, address: rendering.PolygonResource.Address, point: rendering.Point, scale: rendering.PolygonScale) !void {
         const modified_buffer = try self.video.drawPolygon(source, address, point, scale);
-        self.host.bufferChanged(self, modified_buffer);
+        self.host.videoBufferChanged(self, modified_buffer);
     }
 
     /// Render a string from the current string table at the specified screen position in the specified color.
     /// Returns an error if the string could not be found.
     pub fn drawString(self: *Self, string_id: text.StringID, color_id: rendering.ColorID, point: rendering.Point) !void {
         const modified_buffer = try self.video.drawString(string_id, color_id, point);
-        self.host.bufferChanged(self, modified_buffer);
+        self.host.videoBufferChanged(self, modified_buffer);
     }
 
     /// Select the active palette to render the video buffer in.
@@ -238,31 +238,31 @@ pub const Machine = struct {
     /// Fill a specified video buffer with a single color.
     pub fn fillVideoBuffer(self: *Self, buffer_id: vm.BufferID, color_id: rendering.ColorID) void {
         const modified_buffer = self.video.fillBuffer(buffer_id, color_id);
-        self.host.bufferChanged(self, modified_buffer);
+        self.host.videoBufferChanged(self, modified_buffer);
     }
 
     /// Copy the contents of one video buffer into another at the specified vertical offset.
     pub fn copyVideoBuffer(self: *Self, source: vm.BufferID, destination: vm.BufferID, vertical_offset: rendering.Point.Coordinate) void {
         const modified_buffer = self.video.copyBuffer(source, destination, vertical_offset);
-        self.host.bufferChanged(self, modified_buffer);
+        self.host.videoBufferChanged(self, modified_buffer);
     }
 
     /// Render the contents of the specified buffer to the host screen after the specified delay,
     /// and mix sufficient audio output to cover the duration of the delay.
-    pub fn renderVideoBuffer(self: *Self, buffer_id: vm.BufferID, delay_in_frames: vm.FrameCount) void {
+    pub fn renderVideoBuffer(self: *Self, buffer_id: vm.BufferID, delay_in_frames: vm.FrameCount) !void {
         const buffer_to_draw = self.video.markBufferAsReady(buffer_id);
         const delay_in_ms = self.timing_mode.msFromFrameCount(delay_in_frames);
 
         var possible_mark: ?audio.Mark = null;
         // Mix audio output for the specified duration at the same time.
-        // TODO: request a buffer from the host for this?
-        _ = self.audio.produceAudio(delay_in_ms, &possible_mark) catch unreachable;
+        const audio_buffer = try self.audio.produceAudio(delay_in_ms, &possible_mark);
+        self.host.audioReady(self, audio_buffer);
 
         if (possible_mark) |mark| {
             self.registers.setUnsigned(.music_mark, mark);
         }
 
-        self.host.bufferReady(self, buffer_to_draw, delay_in_ms);
+        self.host.videoFrameReady(self, buffer_to_draw, delay_in_ms);
     }
 
     /// Called by the host to render the specified buffer into a 24-bit host surface.
@@ -574,10 +574,13 @@ test "scheduleGamePart schedules a new game part without loading it" {
 
 test "loadResource loads audio resource into main memory and does not notify host of changed buffer" {
     var host = mock_host.mockHost(struct {
-        pub fn bufferReady(_: *const Machine, _: vm.ResolvedBufferID, _: vm.Milliseconds) void {
+        pub fn videoFrameReady(_: *const Machine, _: vm.ResolvedBufferID, _: vm.Milliseconds) void {
             unreachable;
         }
-        pub fn bufferChanged(_: *const Machine, _: vm.ResolvedBufferID) void {
+        pub fn videoBufferChanged(_: *const Machine, _: vm.ResolvedBufferID) void {
+            unreachable;
+        }
+        pub fn audioReady(_: *const Machine, _: vm.AudioBuffer) void {
             unreachable;
         }
     });
@@ -591,16 +594,19 @@ test "loadResource loads audio resource into main memory and does not notify hos
     try machine.loadResource(audio_resource_id);
     try testing.expect((try machine.memory.resourceLocation(audio_resource_id, .sound_or_empty)) != null);
 
-    try testing.expectEqual(0, host.call_counts.bufferChanged);
+    try testing.expectEqual(0, host.call_counts.videoBufferChanged);
 }
 
 test "loadResource copies bitmap resource directly into video buffer without persisting in main memory and notifies host of changed buffer" {
     var host = mock_host.mockHost(struct {
-        pub fn bufferReady(_: *const Machine, _: vm.ResolvedBufferID, _: vm.Milliseconds) void {
+        pub fn videoFrameReady(_: *const Machine, _: vm.ResolvedBufferID, _: vm.Milliseconds) void {
             unreachable;
         }
-        pub fn bufferChanged(_: *const Machine, buffer_id: vm.ResolvedBufferID) void {
+        pub fn videoBufferChanged(_: *const Machine, buffer_id: vm.ResolvedBufferID) void {
             testing.expectEqual(Video.bitmap_buffer_id, buffer_id) catch unreachable;
+        }
+        pub fn audioReady(_: *const Machine, _: vm.AudioBuffer) void {
+            unreachable;
         }
     });
 
@@ -622,15 +628,18 @@ test "loadResource copies bitmap resource directly into video buffer without per
     // which should never be equal to the flat black color filled into the buffer.
     try testing.expect(meta.eql(original_buffer_contents, new_buffer_contents) == false);
 
-    try testing.expectEqual(1, host.call_counts.bufferChanged);
+    try testing.expectEqual(1, host.call_counts.videoBufferChanged);
 }
 
 test "loadResource returns error on invalid resource ID and does not notify host of changed buffer" {
     var host = mock_host.mockHost(struct {
-        pub fn bufferReady(_: *const Machine, _: vm.ResolvedBufferID, _: vm.Milliseconds) void {
+        pub fn videoFrameReady(_: *const Machine, _: vm.ResolvedBufferID, _: vm.Milliseconds) void {
             unreachable;
         }
-        pub fn bufferChanged(_: *const Machine, _: vm.ResolvedBufferID) void {
+        pub fn videoBufferChanged(_: *const Machine, _: vm.ResolvedBufferID) void {
+            unreachable;
+        }
+        pub fn audioReady(_: *const Machine, _: vm.AudioBuffer) void {
             unreachable;
         }
     });
@@ -832,26 +841,31 @@ test "runTic updates each thread with its scheduled state before running each th
 
 // - renderVideoBuffer tests -
 
-test "renderVideoBuffer notifies host of new frame with expected buffer ID and delay" {
+test "renderVideoBuffer notifies host of new frame with expected buffer ID and delay, and notifies host of sound data with expected buffer size" {
     const expected_buffer_id = 3;
     const frame_count = 4;
     const expected_delay = comptime timing.Timing.pal.msFromFrameCount(frame_count);
 
     var host = mock_host.mockHost(struct {
-        pub fn bufferReady(_: *const Machine, buffer_id: vm.ResolvedBufferID, delay: vm.Milliseconds) void {
+        pub fn videoFrameReady(_: *const Machine, buffer_id: vm.ResolvedBufferID, delay: vm.Milliseconds) void {
             testing.expectEqual(expected_buffer_id, buffer_id) catch unreachable;
             testing.expectEqual(expected_delay, delay) catch unreachable;
         }
-        pub fn bufferChanged(_: *const Machine, _: vm.ResolvedBufferID) void {
+        pub fn videoBufferChanged(_: *const Machine, _: vm.ResolvedBufferID) void {
             unreachable;
+        }
+        pub fn audioReady(machine: *const Machine, buffer: vm.AudioBuffer) void {
+            const expected_audio_size = machine.audio.mixer.bufferSize(expected_delay);
+            testing.expectEqual(expected_audio_size, buffer.len) catch unreachable;
         }
     });
 
     var machine = Machine.testInstance(.{ .host = host.host() });
     defer machine.deinit();
 
-    machine.renderVideoBuffer(.{ .specific = expected_buffer_id }, frame_count);
-    try testing.expectEqual(1, host.call_counts.bufferReady);
+    try machine.renderVideoBuffer(.{ .specific = expected_buffer_id }, frame_count);
+    try testing.expectEqual(1, host.call_counts.videoFrameReady);
+    try testing.expectEqual(1, host.call_counts.audioReady);
 }
 
 test "renderVideoBuffer uses NTSC frame delay when timing mode is NTSC" {
@@ -860,18 +874,23 @@ test "renderVideoBuffer uses NTSC frame delay when timing mode is NTSC" {
     const expected_delay = comptime timing.Timing.ntsc.msFromFrameCount(frame_count);
 
     var host = mock_host.mockHost(struct {
-        pub fn bufferReady(_: *const Machine, buffer_id: vm.ResolvedBufferID, delay: vm.Milliseconds) void {
+        pub fn videoFrameReady(_: *const Machine, buffer_id: vm.ResolvedBufferID, delay: vm.Milliseconds) void {
             testing.expectEqual(expected_buffer_id, buffer_id) catch unreachable;
             testing.expectEqual(expected_delay, delay) catch unreachable;
         }
-        pub fn bufferChanged(_: *const Machine, _: vm.ResolvedBufferID) void {
+        pub fn videoBufferChanged(_: *const Machine, _: vm.ResolvedBufferID) void {
             unreachable;
+        }
+        pub fn audioReady(machine: *const Machine, buffer: vm.AudioBuffer) void {
+            const expected_audio_size = machine.audio.mixer.bufferSize(expected_delay);
+            testing.expectEqual(expected_audio_size, buffer.len) catch unreachable;
         }
     });
 
     var machine = Machine.testInstance(.{ .host = host.host(), .timing_mode = .ntsc });
     defer machine.deinit();
 
-    machine.renderVideoBuffer(.{ .specific = expected_buffer_id }, frame_count);
-    try testing.expectEqual(1, host.call_counts.bufferReady);
+    try machine.renderVideoBuffer(.{ .specific = expected_buffer_id }, frame_count);
+    try testing.expectEqual(1, host.call_counts.videoFrameReady);
+    try testing.expectEqual(1, host.call_counts.audioReady);
 }

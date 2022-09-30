@@ -27,12 +27,12 @@ pub const RenderVideoBuffer = struct {
     }
 
     // Public implementation is constrained to concrete type so that instruction.zig can infer errors.
-    pub fn execute(self: Self, machine: *Machine) void {
+    pub fn execute(self: Self, machine: *Machine) !void {
         return self._execute(machine);
     }
 
     // Private implementation is generic to allow tests to use mocks.
-    fn _execute(self: Self, machine: anytype) void {
+    fn _execute(self: Self, machine: anytype) !void {
         // The delay to leave the previous frame visible is expressed
         // as a number of PAL frames,  where each frame is 20ms.
         // In Another World's original bytecode, the delay is typically
@@ -46,7 +46,7 @@ pub const RenderVideoBuffer = struct {
         // may have some effect.
         machine.registers.setUnsigned(.render_video_buffer_UNKNOWN, 0);
 
-        machine.renderVideoBuffer(self.buffer_id, delay_in_frames);
+        try machine.renderVideoBuffer(self.buffer_id, delay_in_frames);
     }
 
     // - Exported constants -
@@ -92,7 +92,7 @@ test "execute calls renderVideoBuffer with correct parameters" {
     const raw_frame_duration = 5;
 
     var machine = mockMachine(struct {
-        pub fn renderVideoBuffer(buffer_id: BufferID, delay_in_frames: vm.FrameCount) void {
+        pub fn renderVideoBuffer(buffer_id: BufferID, delay_in_frames: vm.FrameCount) !void {
             testing.expectEqual(.back_buffer, buffer_id) catch unreachable;
             testing.expectEqual(5, delay_in_frames) catch unreachable;
         }
@@ -100,7 +100,7 @@ test "execute calls renderVideoBuffer with correct parameters" {
     machine.registers.setUnsigned(.frame_duration, raw_frame_duration);
     machine.registers.setUnsigned(.render_video_buffer_UNKNOWN, 1234);
 
-    instruction._execute(&machine);
+    try instruction._execute(&machine);
     try testing.expectEqual(1, machine.call_counts.renderVideoBuffer);
 
     try testing.expectEqual(0, machine.registers.unsigned(.render_video_buffer_UNKNOWN));

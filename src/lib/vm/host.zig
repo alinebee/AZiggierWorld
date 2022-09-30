@@ -7,14 +7,18 @@
 //! const MyHost = struct {
 //!   fn host(self: *MyHost) Host {
 //!     // All callbacks are optional: only include the ones you care about receiving.
-//!     return Host.init(self, .{ .bufferReady = bufferReady, .bufferChanged = bufferChanged });
+//!     return Host.init(self, .{
+//!         .videoFrameReady = videoFrameReady,
+//!         .videoBufferChanged = videoBufferChanged,
+//!         .audioReady = audioReady,
+//!     });
 //!   }
 //!
-//!   fn bufferReady(self: *MyHost, machine: *const vm.Machine, buffer_id: vm.ResolvedBufferID, delay: vm.Milliseconds) void {
+//!   fn videoFrameReady(self: *MyHost, machine: *const vm.Machine, buffer_id: vm.ResolvedBufferID, delay: vm.Milliseconds) void {
 //!     machine.renderBufferToSurface(buffer_id, &self.surface);
 //!   }
 //!
-//!   fn bufferChanged(self: *MyHost, machine: *const Machine, buffer_id: ResolvedBufferID) {
+//!   fn videoBufferChanged(self: *MyHost, machine: *const Machine, buffer_id: ResolvedBufferID) {
 //!     self.debugLogDrawCall(buffer_id);
 //!   }
 //! }
@@ -25,14 +29,17 @@ const meta = @import("utils").meta;
 const std = @import("std");
 
 const vm = anotherworld.vm;
+const audio = anotherworld.audio;
 
 fn Functions(comptime State: type) type {
-    const BufferReadyFn = fn (state: State, machine: *const vm.Machine, buffer_id: vm.ResolvedBufferID, delay: vm.Milliseconds) void;
-    const BufferChangedFn = fn (state: State, machine: *const vm.Machine, buffer_id: vm.ResolvedBufferID) void;
+    const VideoFrameReadyFn = fn (state: State, machine: *const vm.Machine, buffer_id: vm.ResolvedBufferID, delay: vm.Milliseconds) void;
+    const VideoBufferChangedFn = fn (state: State, machine: *const vm.Machine, buffer_id: vm.ResolvedBufferID) void;
+    const AudioReadyFn = fn (state: State, machine: *const vm.Machine, buffer: vm.AudioBuffer) void;
 
     return struct {
-        bufferReady: ?BufferReadyFn = null,
-        bufferChanged: ?BufferChangedFn = null,
+        videoBufferChanged: ?VideoBufferChangedFn = null,
+        videoFrameReady: ?VideoFrameReadyFn = null,
+        audioReady: ?AudioReadyFn = null,
     };
 }
 
@@ -55,22 +62,26 @@ pub const Host = struct {
     }
 
     /// Called when the specified machine has finished filling the specified video buffer
-    /// with frame data and is ready to display it. The host can request the contents
-    /// of the buffer to be rendered into a 24-bit surface using
+    /// with frame data and is ready to display a new frame. The host can request the contents
+    /// of the video buffer to be rendered into a 24-bit surface using
     /// `machine.renderBufferToSurface(buffer_id, &surface).`
     ///
     /// `delay` is the number of milliseconds that the host should continue displaying
     /// the *previous* frame before replacing it with this one.
     /// (The host may modify this delay to speed up or slow down gameplay.)
-    pub fn bufferReady(self: Self, machine: *const vm.Machine, buffer_id: vm.ResolvedBufferID, delay: vm.Milliseconds) void {
-        self.vtable.bufferReady(.{ self.state, machine, buffer_id, delay });
+    pub fn videoFrameReady(self: Self, machine: *const vm.Machine, buffer_id: vm.ResolvedBufferID, delay: vm.Milliseconds) void {
+        self.vtable.videoFrameReady(.{ self.state, machine, buffer_id, delay });
     }
 
     /// Called each time the specified machine draws pixel data into a video buffer.
     /// The host can request the contents of the buffer to be rendered into a 24-bit surface
     /// using `machine.renderBufferToSurface(buffer_id, &surface).`
-    pub fn bufferChanged(self: Self, machine: *const vm.Machine, buffer_id: vm.ResolvedBufferID) void {
-        self.vtable.bufferChanged(.{ self.state, machine, buffer_id });
+    pub fn videoBufferChanged(self: Self, machine: *const vm.Machine, buffer_id: vm.ResolvedBufferID) void {
+        self.vtable.videoBufferChanged(.{ self.state, machine, buffer_id });
+    }
+
+    pub fn audioReady(self: Self, machine: *const vm.Machine, buffer: vm.AudioBuffer) void {
+        self.vtable.audioReady(.{ self.state, machine, buffer });
     }
 };
 
@@ -83,32 +94,41 @@ test "Ensure everything compiles" {
 }
 
 test "Host calls callback implementations" {
-    const expected_buffer_id: vm.ResolvedBufferID = 0;
+    const expected_video_buffer_id: vm.ResolvedBufferID = 0;
     const expected_delay: vm.Milliseconds = 0;
+
+    const expected_audio_buffer = &[_]audio.Sample{ 1, 2, 3, 4 };
 
     const Implementation = struct {
         call_counts: struct {
-            bufferReady: usize = 0,
-            bufferChanged: usize = 0,
+            videoFrameReady: usize = 0,
+            videoBufferChanged: usize = 0,
+            audioReady: usize = 0,
         } = .{},
 
         const Self = @This();
 
-        fn bufferReady(self: *Self, _: *const vm.Machine, buffer_id: vm.ResolvedBufferID, delay: vm.Milliseconds) void {
-            self.call_counts.bufferReady += 1;
-            testing.expectEqual(expected_buffer_id, buffer_id) catch unreachable;
+        fn videoFrameReady(self: *Self, _: *const vm.Machine, buffer_id: vm.ResolvedBufferID, delay: vm.Milliseconds) void {
+            self.call_counts.videoFrameReady += 1;
+            testing.expectEqual(expected_video_buffer_id, buffer_id) catch unreachable;
             testing.expectEqual(expected_delay, delay) catch unreachable;
         }
 
-        fn bufferChanged(self: *Self, _: *const vm.Machine, buffer_id: vm.ResolvedBufferID) void {
-            self.call_counts.bufferChanged += 1;
-            testing.expectEqual(expected_buffer_id, buffer_id) catch unreachable;
+        fn videoBufferChanged(self: *Self, _: *const vm.Machine, buffer_id: vm.ResolvedBufferID) void {
+            self.call_counts.videoBufferChanged += 1;
+            testing.expectEqual(expected_video_buffer_id, buffer_id) catch unreachable;
+        }
+
+        fn audioReady(self: *Self, _: *const vm.Machine, buffer: vm.AudioBuffer) void {
+            self.call_counts.audioReady += 1;
+            testing.expectEqual(expected_audio_buffer, buffer) catch unreachable;
         }
 
         fn host(self: *Self) Host {
             return Host.init(self, .{
-                .bufferReady = bufferReady,
-                .bufferChanged = bufferChanged,
+                .videoFrameReady = videoFrameReady,
+                .videoBufferChanged = videoBufferChanged,
+                .audioReady = audioReady,
             });
         }
     };
@@ -119,9 +139,12 @@ test "Host calls callback implementations" {
     var machine = vm.Machine.testInstance(.{});
     defer machine.deinit();
 
-    host.bufferReady(&machine, expected_buffer_id, expected_delay);
-    try testing.expectEqual(1, implementation.call_counts.bufferReady);
+    host.videoFrameReady(&machine, expected_video_buffer_id, expected_delay);
+    try testing.expectEqual(1, implementation.call_counts.videoFrameReady);
 
-    host.bufferChanged(&machine, expected_buffer_id);
-    try testing.expectEqual(1, implementation.call_counts.bufferChanged);
+    host.videoBufferChanged(&machine, expected_video_buffer_id);
+    try testing.expectEqual(1, implementation.call_counts.videoBufferChanged);
+
+    host.audioReady(&machine, expected_audio_buffer);
+    try testing.expectEqual(1, implementation.call_counts.audioReady);
 }
