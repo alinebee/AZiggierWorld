@@ -1,10 +1,10 @@
-//! This test dumps data about the sizes of each game part's data.
-//! It does not test functionality, and so is kept out of the main suite of integration tests.
+//! This test dumps data about the sizes of each game part's data
+//! in the fixture directory.
 
 const anotherworld = @import("anotherworld");
-const log = anotherworld.log;
 const resources = anotherworld.resources;
 const vm = anotherworld.vm;
+const log = anotherworld.log;
 
 const ensureValidFixtureDir = @import("helpers.zig").ensureValidFixtureDir;
 const testing = @import("utils").testing;
@@ -12,21 +12,19 @@ const testing = @import("utils").testing;
 const std = @import("std");
 
 test "Report sizes for each game part" {
-    std.testing.log_level = .info;
-
     var game_dir = try ensureValidFixtureDir();
     defer game_dir.close();
 
-    var resource_directory = try vm.ResourceDirectory.init(&game_dir);
+    // Uncomment to print out statistics
+    // testing.setLogLevel(.info);
+
+    var resource_directory = try resources.ResourceDirectory.init(&game_dir);
     const reader = resource_directory.reader();
 
     var max_bytecode_size: usize = 0;
     var max_palettes_size: usize = 0;
     var max_polygons_size: usize = 0;
     var max_animations_size: usize = 0;
-
-    // Uncomment to print out statistics
-    // std.testing.log_level = .info;
 
     for (vm.GamePart.all) |part| {
         const resource_ids = part.resourceIDs();

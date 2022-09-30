@@ -103,7 +103,7 @@ test "Introduction runs successfully" {
     }
 
     // Uncomment to print out statistics
-    std.testing.log_level = .debug;
+    // testing.setLogLevel(.info);
 
     log.info("\nIntro statistics\n----", .{});
     log.info("Total tics: {}", .{tic_count});

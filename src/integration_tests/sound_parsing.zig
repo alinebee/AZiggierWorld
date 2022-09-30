@@ -18,7 +18,7 @@ test "Parse all sound effects in original game files" {
     const reader = resource_directory.reader();
 
     // Uncomment to print out statistics
-    @import("std").testing.log_level = .debug;
+    // testing.setLogLevel(.debug);
 
     for (reader.resourceDescriptors()) |descriptor, id| {
         if (descriptor.type != .sound_or_empty) continue;
@@ -50,7 +50,7 @@ test "Parse all music in original game files" {
     const reader = resource_directory.reader();
 
     // Uncomment to print out statistics
-    // @import("std").testing.log_level = .debug;
+    // testing.setLogLevel(.debug);
 
     for (reader.resourceDescriptors()) |descriptor, id| {
         if (descriptor.type != .music) continue;

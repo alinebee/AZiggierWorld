@@ -4,6 +4,7 @@
 const anotherworld = @import("anotherworld");
 const bytecode = anotherworld.bytecode;
 const resources = anotherworld.resources;
+const vm = anotherworld.vm;
 const log = anotherworld.log;
 
 const testing = @import("utils").testing;
@@ -54,6 +55,9 @@ const ParseFailure = struct {
 };
 
 test "Instruction.parse parses all programs in fixture bytecode" {
+    // Uncomment to print out statistics
+    // testing.setLogLevel(.debug);
+
     var game_dir = try ensureValidFixtureDir();
     defer game_dir.close();
 
@@ -63,6 +67,9 @@ test "Instruction.parse parses all programs in fixture bytecode" {
     var failures = std.ArrayList(ParseFailure).init(testing.allocator);
     defer failures.deinit();
 
+    var min_frame_count: vm.FrameCount = std.math.maxInt(vm.FrameCount);
+    var max_frame_count: vm.FrameCount = std.math.minInt(vm.FrameCount);
+
     for (reader.resourceDescriptors()) |descriptor, index| {
         if (descriptor.type != .bytecode) continue;
 
@@ -71,16 +78,24 @@ test "Instruction.parse parses all programs in fixture bytecode" {
 
         var program = try bytecode.Program.init(data);
 
+        log.debug("Parsing program at resource #{}", .{index});
+
         while (program.isAtEnd() == false) {
             const last_valid_address = program.counter;
-            if (bytecode.Instruction.parse(&program)) |instruction| {
-                switch (instruction) {
-                    // .ControlResources => |control_resources| {
-                    //     switch (control_resources) {
-                    //         .start_game_part => |game_part| log.debug("\nGame part: {X}\n", .{game_part}),
-                    //         else => {},
-                    //     }
-                    // },
+            if (bytecode.Instruction.parse(&program)) |any_instruction| {
+                switch (any_instruction) {
+                    .RegisterSet => |instruction| {
+                        if (instruction.destination == .frame_duration) {
+                            log.debug("RegisterSet frame duration: {}", .{instruction.value});
+                            min_frame_count = @minimum(min_frame_count, @bitCast(vm.FrameCount, instruction.value));
+                            max_frame_count = @maximum(max_frame_count, @bitCast(vm.FrameCount, instruction.value));
+                        }
+                    },
+                    .RegisterAddConstant => |instruction| {
+                        if (instruction.destination == .frame_duration) {
+                            log.debug("RegisterAddConstant frame duration: {}", .{instruction.value});
+                        }
+                    },
                     else => {},
                 }
             } else |err| {
@@ -94,6 +109,8 @@ test "Instruction.parse parses all programs in fixture bytecode" {
             }
         }
     }
+
+    log.debug("Frame count min: {} max: {}", .{ min_frame_count, max_frame_count });
 
     if (failures.items.len > 0) {
         log.err("\n{} instruction(s) failed to parse:\n", .{failures.items.len});
