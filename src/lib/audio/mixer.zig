@@ -12,16 +12,15 @@ pub const Mixer = struct {
     /// If null, nothing is playing on that channel.
     channels: [static_limits.channel_count]?ChannelState = .{null} ** static_limits.channel_count,
 
+    /// The rate at which to sample and mix audio data.
+    sample_rate: timing.Hz,
+
     const Self = @This();
 
     /// Play the specified sound on the specified channel,
     /// replacing any existing sound playing on that channel.
     pub fn play(self: *Self, sound: audio.SoundResource, channel_id: audio.ChannelID, frequency: timing.Hz, volume: audio.Volume) void {
-        self.channels[channel_id.index()] = ChannelState{
-            .sound = sound,
-            .frequency = frequency,
-            .volume = volume,
-        };
+        self.channels[channel_id.index()] = ChannelState.init(sound, frequency, self.sample_rate, volume);
 
         anotherworld.log.debug("Play channel #{}: sound #{*} (loops: #{*}), frequency: {}, volume: {}", .{
             channel_id,
@@ -48,13 +47,13 @@ pub const Mixer = struct {
 
     /// Calculate the appropriate size in bytes for an audio buffer that covers
     /// the specified length of time, when sampled at the specified rate.
-    pub fn bufferSize(duration: timing.Milliseconds, sample_rate: timing.Hz) usize {
-        return (sample_rate * duration) / std.time.ms_per_s;
+    pub fn bufferSize(self: Self, duration: timing.Milliseconds) usize {
+        return (self.sample_rate * duration) / std.time.ms_per_s;
     }
 
     /// Populate an audio output buffer with sound data, sampled at the specified sample rate.
     /// This advances the currently-playing samples on each channel.
-    pub fn mix(self: *Self, buffer: []audio.Sample, sample_rate: timing.Hz) void {
+    pub fn mix(self: *Self, buffer: []audio.Sample) void {
         // Fill the buffer with silence initially, in case we run out of channel data to touch every byte.
         for (buffer) |*byte| {
             byte.* = 0;
@@ -65,7 +64,7 @@ pub const Mixer = struct {
         each_channel: for (self.channels) |*channel| {
             if (channel.*) |*active_channel| {
                 for (buffer) |*output| {
-                    if (active_channel.sample(sample_rate)) |sample| {
+                    if (active_channel.sample()) |sample| {
                         // Use saturating add to clamp mixed samples to between -128 and +127.
                         output.* +|= sample;
                     } else {
