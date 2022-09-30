@@ -82,7 +82,7 @@ pub const Audio = struct {
     /// Initialize and fill an 8-bit audio buffer with data for the specified length of time.
     /// Caller owns returned memory.
     /// Returns an error if a suitable buffer could not be allocated or sound playback failed.
-    pub fn produceAudio(self: *Self, time: timing.Milliseconds) ProduceAudioError![]const audio.Sample {
+    pub fn produceAudio(self: *Self, time: timing.Milliseconds, mark: *?audio.Mark) ProduceAudioError![]const audio.Sample {
         const bytes_needed = audio.Mixer.bufferSize(time, self.sample_rate);
         var filled_bytes = self.buffer[0..bytes_needed];
 
@@ -100,7 +100,7 @@ pub const Audio = struct {
                 var chunk_buffer = filled_bytes[chunk_start..chunk_end];
 
                 self.mixer.mix(chunk_buffer, self.sample_rate);
-                music_player.playForDuration(&self.mixer, time_chunk) catch |err| {
+                music_player.playForDuration(&self.mixer, time_chunk, mark) catch |err| {
                     switch (err) {
                         error.EndOfTrack => self.music_player = null,
                         else => return err,

@@ -253,9 +253,14 @@ pub const Machine = struct {
         const buffer_to_draw = self.video.markBufferAsReady(buffer_id);
         const delay_in_ms = self.timing_mode.msFromFrameCount(delay_in_frames);
 
+        var possible_mark: ?audio.Mark = null;
         // Mix audio output for the specified duration at the same time.
         // TODO: request a buffer from the host for this?
         _ = self.audio.produceAudio(delay_in_ms, &possible_mark) catch unreachable;
+
+        if (possible_mark) |mark| {
+            self.registers.setUnsigned(.music_mark, mark);
+        }
 
         self.host.bufferReady(self, buffer_to_draw, delay_in_ms);
     }

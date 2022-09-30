@@ -17,7 +17,6 @@
 const std = @import("std");
 const anotherworld = @import("../anotherworld.zig");
 const audio = anotherworld.audio;
-const vm = anotherworld.vm;
 const log = anotherworld.log;
 
 const intCast = @import("utils").meta.intCast;
@@ -35,7 +34,7 @@ pub const ChannelEvent = union(enum) {
         period: audio.Period,
     },
     /// Set RegisterID.music_mark to the specified value.
-    set_mark: vm.Register.Unsigned,
+    set_mark: audio.Mark,
     /// Stop the channel.
     stop,
     /// Don't do anything to the channel.

@@ -80,14 +80,15 @@ pub const MusicPlayer = struct {
     /// Process the next n milliseconds of the music track, where n is the elapsed time
     /// since the previous call to playForDuration.
     /// Returns a PlayError if the end of the track was reached or music data could not be read.
-    pub fn playForDuration(self: *Self, mixer: *audio.Mixer, time: timing.Milliseconds) PlayError!void {
+    pub fn playForDuration(self: *Self, mixer: *audio.Mixer, duration: timing.Milliseconds, mark: *?audio.Mark) PlayError!void {
         // TODO 0.11+: replace with a ranged integer type once they're available:
         // https://github.com/ziglang/zig/issues/3806
         std.debug.assert(self.ms_per_row > 0);
 
-        self.ms_remaining += time;
+        self.ms_remaining += duration;
+
         while (self.ms_remaining >= self.ms_per_row) : (self.ms_remaining -= self.ms_per_row) {
-            try self.playNextRow(mixer);
+            try self.playNextRow(mixer, mark);
         }
     }
 
@@ -99,40 +100,40 @@ pub const MusicPlayer = struct {
     // -- Private methods --
 
     /// Process the next row of events for each channel in the music track.
+    /// Returns the most recent music mark, if any mark was set during this row.
     /// Returns a PlayError if the end of the track was reached or music data could not be read.
-    fn playNextRow(self: *Self, mixer: *audio.Mixer) PlayError!void {
+    fn playNextRow(self: *Self, mixer: *audio.Mixer, mark: *?audio.Mark) PlayError!void {
         while (true) {
             if (try self.pattern_iterator.next()) |events| {
                 for (events) |event, index| {
-                    try self.processEvent(event, mixer, audio.ChannelID.cast(index));
+                    try self.processEvent(event, mixer, audio.ChannelID.cast(index), mark);
                 }
+                return;
             } else if (self.sequence_iterator.next()) |pattern_id| {
                 // If we've finished the current pattern, load the next pattern and try again
                 self.pattern_iterator = try self.music.iteratePattern(pattern_id);
             } else {
+                // We've reached the end of the pattern sequence: stop playing
                 return error.EndOfTrack;
             }
         }
     }
 
     /// Handle a music event on the specified channel of the mixer.
-    fn processEvent(self: Self, event: audio.MusicResource.ChannelEvent, mixer: *audio.Mixer, channel_id: audio.ChannelID) PlayError!void {
+    fn processEvent(self: Self, event: audio.MusicResource.ChannelEvent, mixer: *audio.Mixer, channel_id: audio.ChannelID, mark: *?audio.Mark) PlayError!void {
         switch (event) {
             .play => |play| {
-                if (self.instruments[play.instrument_id]) |instrument| {
-                    const frequency_in_hz = self.timing_mode.hzFromPeriod(play.period);
-                    const adjusted_volume = instrument.volume.rampedBy(play.volume_delta);
+                const instrument = self.instruments[play.instrument_id] orelse return error.MissingInstrument;
+                const frequency_in_hz = self.timing_mode.hzFromPeriod(play.period);
+                const adjusted_volume = instrument.volume.rampedBy(play.volume_delta);
 
-                    mixer.play(instrument.resource, channel_id, frequency_in_hz, adjusted_volume);
-                } else {
-                    return error.MissingInstrument;
-                }
-            },
-            .set_mark => |mark_value| {
-                log.debug("Set mark: #{}", .{mark_value});
+                mixer.play(instrument.resource, channel_id, frequency_in_hz, adjusted_volume);
             },
             .stop => {
                 mixer.stop(channel_id);
+            },
+            .set_mark => |mark_value| {
+                mark.* = mark_value;
             },
             .noop => {},
         }

@@ -12,6 +12,10 @@ pub const Offset = u8;
 /// The raw format of audio sample values: Another World stores and produces 8-bit signed audio data.
 pub const Sample = i8;
 
+/// A mark value set by a music track.
+/// Used to trigger program behaviour when a certain point in the track is reached.
+pub const Mark = u16;
+
 pub const Volume = @import("audio/volume.zig").Volume;
 pub const ChannelID = @import("audio/channel_id.zig").ChannelID;
 pub const FrequencyID = @import("audio/frequency_id.zig").FrequencyID;
