@@ -139,6 +139,10 @@ pub const rows_per_pattern = 64;
 /// Raising/lowering this value will cause all sound data to be played softer/louder respectively.
 pub const max_volume = 63;
 
+/// The maximum expected duration in milliseconds of a single frame in the original DOS Another World
+/// game code. Determines the maximum size needed for a buffer that stores a frame's worth of audio.
+pub const max_frame_duration = 220;
+
 // -- Helper functions --
 
 const math = @import("std").math;

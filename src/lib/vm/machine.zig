@@ -97,15 +97,19 @@ pub const Machine = struct {
     /// At startup, the virtual machine will attempt to load the resources for the initial game part.
     /// On success, returns a machine instance that is ready to begin simulating.
     pub fn init(allocator: mem.Allocator, reader: resources.ResourceReader, host: vm.Host, options: Options) !Self {
-        var memory = try Memory.init(allocator, reader);
-        errdefer memory.deinit();
+        var memory_subsystem = try Memory.init(allocator, reader);
+        errdefer memory_subsystem.deinit();
+
+        var audio_subsystem = try Audio.init(allocator, options.sample_rate);
+        errdefer audio_subsystem.deinit();
 
         var self = Self{
             .threads = .{.{}} ** thread_count,
             .registers = .{},
             .stack = .{},
-            .memory = memory,
             .host = host,
+            .memory = memory_subsystem,
+            .audio = audio_subsystem,
             // The video and program will be populated once the first game part is loaded at the end of this function.
             // FIXME: the machine shouldn't know which fields of the Video instance need to be marked undefined.
             .video = .{
@@ -113,7 +117,6 @@ pub const Machine = struct {
                 .animations = undefined,
                 .palettes = undefined,
             },
-            .audio = .{},
             .timing_mode = options.timing_mode,
             .program = undefined,
             .current_game_part = undefined,
@@ -142,6 +145,7 @@ pub const Machine = struct {
 
     pub fn deinit(self: *Self) void {
         self.memory.deinit();
+        self.audio.deinit();
         self.* = undefined;
     }
 
@@ -243,15 +247,15 @@ pub const Machine = struct {
         self.host.bufferChanged(self, modified_buffer);
     }
 
-    /// Render the contents of the specified buffer to the host screen after the specified delay.
+    /// Render the contents of the specified buffer to the host screen after the specified delay,
+    /// and mix sufficient audio output to cover the duration of the delay.
     pub fn renderVideoBuffer(self: *Self, buffer_id: vm.BufferID, delay_in_frames: vm.FrameCount) void {
         const buffer_to_draw = self.video.markBufferAsReady(buffer_id);
         const delay_in_ms = self.timing_mode.msFromFrameCount(delay_in_frames);
 
-        // Pump the mixer for audio output for the specified duration at the same time.
-        // TODO: request a buffer from the host for this.
-        const audio_buffer = self.audio.produceAudio(self.memory.allocator, delay_in_ms, 22050) catch unreachable;
-        self.memory.allocator.free(audio_buffer);
+        // Mix audio output for the specified duration at the same time.
+        // TODO: request a buffer from the host for this?
+        _ = self.audio.produceAudio(delay_in_ms, &possible_mark) catch unreachable;
 
         self.host.bufferReady(self, buffer_to_draw, delay_in_ms);
     }
@@ -371,6 +375,9 @@ pub const Machine = struct {
         /// The timing mode to use for video and audio.
         /// Defaults to the timing of the PAL Amiga.
         timing_mode: timing.Timing = timing.Timing.default,
+
+        /// The sample rate at which to mix game audio.
+        sample_rate: timing.Hz = vm.DefaultSampleRate,
     };
 
     /// Optional configuration settings for the test machine instance created by `testInstance`.

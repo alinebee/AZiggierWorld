@@ -16,4 +16,7 @@ pub const ResolvedBufferID = @import("vm/video.zig").Video.ResolvedBufferID;
 pub const FrameCount = Register.Unsigned;
 pub const Milliseconds = @import("anotherworld.zig").timing.Milliseconds;
 
+/// The default sample rate at which the virtual machine will mix game audio.
+pub const DefaultSampleRate = 22050;
+
 pub const mockMachine = @import("vm/test_helpers/mock_machine.zig").mockMachine;
