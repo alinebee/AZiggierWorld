@@ -76,6 +76,7 @@ pub const SDLEngine = struct {
     window: SDL.Window,
     renderer: SDL.Renderer,
     texture: SDL.Texture,
+    audio_device: SDL.AudioDevice,
 
     /// The moment at which the previous frame was rendered.
     /// Used for adjusting frame delays to account for processing time.
@@ -111,6 +112,7 @@ pub const SDLEngine = struct {
         try SDL.init(.{
             .video = true,
             .events = true,
+            .audio = true,
         });
         errdefer SDL.quit();
 
@@ -137,6 +139,16 @@ pub const SDLEngine = struct {
         self.texture = try SDL.createTexture(self.renderer, .abgr8888, .streaming, 320, 200);
         errdefer self.texture.destroy();
 
+        const audio_result = try SDL.openAudioDevice(.{ .desired_spec = .{
+            .sample_rate = vm.DefaultSampleRate,
+            .buffer_format = SDL.AudioFormat.s8,
+            .channel_count = 1,
+            .callback = null,
+            .userdata = null,
+        } });
+        errdefer self.audio_device.close();
+        self.audio_device = audio_result.device;
+
         return self;
     }
 
@@ -144,6 +156,7 @@ pub const SDLEngine = struct {
         self.texture.destroy();
         self.renderer.destroy();
         self.window.destroy();
+        self.audio_device.close();
         SDL.quit();
 
         self.game_dir.close();
@@ -154,6 +167,7 @@ pub const SDLEngine = struct {
     fn host(self: *Self) vm.Host {
         return vm.Host.init(self, .{
             .videoFrameReady = videoFrameReady,
+            .audioReady = audioReady,
         });
     }
 
@@ -171,6 +185,8 @@ pub const SDLEngine = struct {
         );
         defer machine.deinit();
 
+        self.audio_device.pause(false);
+
         while (true) {
             while (SDL.pollEvent()) |event| {
                 self.input.updateFromSDLEvent(event);
@@ -187,6 +203,9 @@ pub const SDLEngine = struct {
 
             self.input.clearPressedInputs();
         }
+
+        self.audio_device.pause(true);
+        clearQueuedAudio(self.audio_device);
     }
 
     fn videoFrameReady(self: *Self, machine: *const vm.Machine, buffer_id: vm.ResolvedBufferID, requested_delay: vm.Milliseconds) void {
@@ -220,7 +239,22 @@ pub const SDLEngine = struct {
 
         self.last_frame_time = currentFrameTime();
     }
+
+    fn audioReady(self: *Self, _: *const vm.Machine, buffer: vm.AudioBuffer) void {
+        queueAudio(self.audio_device, buffer) catch unreachable;
+    }
 };
+
+fn queueAudio(audio_device: SDL.AudioDevice, buffer: vm.AudioBuffer) !void {
+    log.debug("Queued audio size: {}", .{SDL.c.SDL_GetQueuedAudioSize(audio_device.id)});
+
+    const result = SDL.c.SDL_QueueAudio(audio_device.id, buffer.ptr, @intCast(u32, buffer.len));
+    if (result != 0) return SDL.makeError();
+}
+
+fn clearQueuedAudio(audio_device: SDL.AudioDevice) void {
+    SDL.c.SDL_ClearQueuedAudio(audio_device.id);
+}
 
 /// Returns the current time in nanoseconds, intended for calculating frame delays.
 /// This strips the top 64 bits of nanosecond time, giving it a maximum range of
