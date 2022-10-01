@@ -90,21 +90,26 @@ pub const Audio = struct {
             // own update rate: this ensures that song changes take effect on the mixer
             // at the right times in the audio playback.
             const time_chunk = music_player.ms_per_row;
-            const bytes_per_chunk = self.mixer.bufferSize(time_chunk);
 
-            var bytes_consumed: usize = 0;
-            while (bytes_consumed < filled_bytes.len) : (bytes_consumed += bytes_per_chunk) {
-                const chunk_start = bytes_consumed;
-                const chunk_end = @minimum(chunk_start + bytes_per_chunk, bytes_needed);
+            var time_consumed: vm.Milliseconds = 0;
+            var chunk_start: usize = 0;
+            while (time_consumed < time) : (time_consumed += time_chunk) {
+                const time_remaining = @minimum(time_chunk, time - time_consumed);
+                const chunk_length = self.mixer.bufferSize(time_remaining);
+                const chunk_end = @minimum(chunk_start + chunk_length, bytes_needed);
                 var chunk_buffer = filled_bytes[chunk_start..chunk_end];
 
                 self.mixer.mix(chunk_buffer);
-                music_player.playForDuration(&self.mixer, time_chunk, mark) catch |err| {
+                music_player.playForDuration(&self.mixer, time_remaining, mark) catch |err| {
                     switch (err) {
-                        error.EndOfTrack => self.music_player = null,
+                        error.EndOfTrack => {
+                            self.music_player = null;
+                            break;
+                        },
                         else => return err,
                     }
                 };
+                chunk_start = chunk_end;
             }
         } else {
             // Otherwise, we can fill the whole buffer in a straight shot.
