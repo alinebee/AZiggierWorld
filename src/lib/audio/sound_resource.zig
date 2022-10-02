@@ -47,6 +47,21 @@ pub const SoundResource = struct {
         const intro_length_in_words = @as(usize, std.mem.readIntBig(u16, intro_length_data));
         const loop_length_in_words = @as(usize, std.mem.readIntBig(u16, loop_length_data));
 
+        // Uncomment to emulate a bug from reference implementation which looped a sound effect
+        // to a point too early in the sample:
+        // ----
+        //   var intro_length_in_bytes = intro_length_in_words * 2;
+        //   var loop_length_in_bytes = loop_length_in_words * 2;
+        //   if (loop_length_in_bytes > 0) {
+        //       const buggy_intro_length_in_bytes = intro_length_in_bytes >> 8;
+        //       const bug_difference = intro_length_in_bytes - buggy_intro_length_in_bytes;
+        //       intro_length_in_bytes -= bug_difference;
+        //       loop_length_in_bytes += bug_difference;
+        //   }
+        // ----
+        // See: https://github.com/fabiensanglard/Another-World-Bytecode-Interpreter/blob/master/src/mixer.cpp#L119
+        // (It failed to account for chunkPos being left-shifted by 8 bits when setting chunkPos to loopPos to rewind.)
+
         const intro_length_in_bytes = intro_length_in_words * 2;
         const loop_length_in_bytes = loop_length_in_words * 2;
 

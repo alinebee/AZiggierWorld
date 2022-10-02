@@ -51,7 +51,11 @@ pub const Timing = enum {
     /// Converts a tempo expressed in ticks of the Amiga CIA clock
     /// into milliseconds per row of a music track.
     pub fn msFromTempo(self: Timing, tempo: audio.Tempo) Milliseconds {
-        // The reference implementation used the following formula: ms/row = tempo * 60 / 7050
+        // Uncomment to use the reference implementation's original formula:
+        // ----
+        //   _ = self;
+        //   return (@as(Milliseconds, tempo) * 60) / 7050;
+        // ----
         // See: https://github.com/fabiensanglard/Another-World-Bytecode-Interpreter/blob/master/src/sfxplayer.cpp#L42
         // That formula seems like a ballpark approximation of the Amiga's hardware timing:
         // 7050 is suspiciously close to the PAL CIA clock / 1000 (7093.79).
