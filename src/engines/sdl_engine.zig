@@ -241,6 +241,7 @@ pub const SDLEngine = struct {
     }
 
     fn audioReady(self: *Self, _: *const vm.Machine, buffer: vm.AudioBuffer) void {
+        if (self.input.turbo) return;
         queueAudio(self.audio_device, buffer) catch unreachable;
     }
 };
@@ -257,7 +258,6 @@ fn clearQueuedAudio(audio_device: SDL.AudioDevice) void {
 }
 
 /// Returns the current time in nanoseconds, intended for calculating frame delays.
-/// This strips the top 64 bits of nanosecond time, giving it a maximum range of
 fn currentFrameTime() i64 {
     return @truncate(i64, std.time.nanoTimestamp());
 }
