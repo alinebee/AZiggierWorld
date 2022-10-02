@@ -205,8 +205,9 @@ pub const Machine = struct {
     /// Unload all audio resources and stop any currently-playing sound.
     pub fn unloadAllResources(self: *Self) void {
         self.memory.unloadAllIndividualResources();
-        // TODO: the reference implementation mentioned that this will also stop any playing sound,
-        // this function may need to tell the audio subsystem (once we have one) to do that manually.
+        // The audio subsystem contains pointers to sound and music resource data;
+        // once resources have been unloaded, it is no longer safe to use those pointers.
+        self.audio.stopAll();
     }
 
     // -- Video subsystem interface --
@@ -346,6 +347,10 @@ pub const Machine = struct {
     /// which will let the current game tic finish executing all threads before beginning
     /// the new game part on the next run loop.
     fn startGamePart(self: *Self, game_part: vm.GamePart) !void {
+        // The audio subsystem contains pointers to sound and music resource data;
+        // once resources have been unloaded, it is no longer safe to use those pointers.
+        self.audio.stopAll();
+
         const resource_locations = try self.memory.loadGamePart(game_part);
         self.program = try bytecode.Program.init(resource_locations.bytecode);
 

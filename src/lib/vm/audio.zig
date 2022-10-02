@@ -66,6 +66,12 @@ pub const Audio = struct {
         log.debug("stopMusic: stop playing", .{});
     }
 
+    /// Stop playing the current music track and all currently-playing sounds on every channel.
+    pub fn stopAll(self: *Self) void {
+        self.music_player = null;
+        self.mixer.stopAll();
+    }
+
     /// Play a sound effect from the specified resource on the specified channel.
     pub fn playSound(self: *Self, sound_data: []const u8, channel_id: audio.ChannelID, volume: audio.Volume, frequency_id: audio.FrequencyID) !void {
         const sound = try audio.SoundResource.parse(sound_data);
@@ -104,6 +110,13 @@ pub const Audio = struct {
                     switch (err) {
                         error.EndOfTrack => {
                             self.music_player = null;
+                            // The reference implementation immediately stops audio playback on all channels
+                            // when a music track finishes:
+                            // https://github.com/fabiensanglard/Another-World-Bytecode-Interpreter/blob/master/src/sfxplayer.cpp#L130
+                            // CHECKME: This doesn't seem necessary and is inconsistent with the stop-music opcode,
+                            // which stops the player but leaves any in-flight sounds playing.
+                            // It's unclear if this matches the original game's behaviour.
+                            self.stopAll();
                             break;
                         },
                         else => return err,
