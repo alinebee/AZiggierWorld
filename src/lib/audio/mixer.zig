@@ -68,9 +68,10 @@ pub const Mixer = struct {
                         // Use saturating add to clamp mixed samples to between -128 and +127.
                         output.* +|= sample;
                     } else {
-                        // If the channel reached the end, stop playing it immediately.
+                        // If the channel reached the end of its sound, stop playing it immediately
+                        // and move on to the next channel.
                         channel.* = null;
-                        break :each_channel;
+                        continue :each_channel;
                     }
                 }
             }
