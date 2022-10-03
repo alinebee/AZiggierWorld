@@ -219,6 +219,14 @@ pub const SDLEngine = struct {
         );
         std.time.sleep(delay_in_ns);
 
+        // log.debug("Requested delay: {} actual delay: {}, elapsed time {}", .{
+        //     requested_delay_in_ns,
+        //     delay_in_ns,
+        //     requested_delay_in_ns - delay_in_ns,
+        // });
+
+        self.last_frame_time = currentFrameTime();
+
         var locked_texture = self.texture.lock(null) catch @panic("self.texture.lock failed");
         const raw_pixels = @ptrCast(*vm.HostSurface, locked_texture.pixels);
 
@@ -236,8 +244,6 @@ pub const SDLEngine = struct {
 
         self.renderer.copy(self.texture, null, null) catch @panic("self.renderer.copy failed");
         self.renderer.present();
-
-        self.last_frame_time = currentFrameTime();
     }
 
     fn audioReady(self: *Self, _: *const vm.Machine, buffer: vm.AudioBuffer) void {
