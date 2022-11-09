@@ -200,10 +200,10 @@ test "ensure everything compiles" {
 
 test "readAndDecompress reads uncompressed data into buffer" {
     const source = [_]u8{ 0xDE, 0xAD, 0xBE, 0xEF };
-    const reader = io.fixedBufferStream(&source).reader();
+    var stream = io.fixedBufferStream(&source);
 
     var destination: [4]u8 = undefined;
-    try readAndDecompress(reader, &destination, source.len);
+    try readAndDecompress(stream.reader(), &destination, source.len);
 
     try testing.expectEqualSlices(u8, &source, &destination);
 }
@@ -214,37 +214,37 @@ test "readAndDecompress reads compressed data into buffer" {
 
 test "readAndDecompress returns error.InvalidCompressedData if data could not be decompressed" {
     const source = [_]u8{ 0xDE, 0xAD, 0xBE };
-    const reader = io.fixedBufferStream(&source).reader();
+    var stream = io.fixedBufferStream(&source);
 
     var destination: [4]u8 = undefined;
 
     try testing.expectError(
         error.InvalidCompressedData,
-        readAndDecompress(reader, &destination, source.len),
+        readAndDecompress(stream.reader(), &destination, source.len),
     );
 }
 
 test "readAndDecompress returns error.InvalidResourceSize on mismatched compressed size" {
     const source = [_]u8{ 0xDE, 0xAD, 0xBE, 0xEF };
-    const reader = io.fixedBufferStream(&source).reader();
+    var stream = io.fixedBufferStream(&source);
 
     var destination: [3]u8 = undefined;
 
     try testing.expectError(
         error.InvalidResourceSize,
-        readAndDecompress(reader, &destination, source.len),
+        readAndDecompress(stream.reader(), &destination, source.len),
     );
 }
 
 test "readAndDecompress returns error.TruncatedData when source data is truncated" {
     const source = [_]u8{ 0xDE, 0xAD, 0xBE };
-    const reader = io.fixedBufferStream(&source).reader();
+    var stream = io.fixedBufferStream(&source);
 
     var destination: [4]u8 = undefined;
 
     try testing.expectError(
         error.TruncatedData,
-        readAndDecompress(reader, &destination, destination.len),
+        readAndDecompress(stream.reader(), &destination, destination.len),
     );
 }
 
@@ -253,19 +253,19 @@ test "readAndDecompress returns error.RepositorySpecificFailure when reader prod
 }
 
 test "readResourceList parses all descriptors from a stream" {
-    const reader = io.fixedBufferStream(&ResourceListExamples.valid).reader();
+    var stream = io.fixedBufferStream(&ResourceListExamples.valid);
 
     var buffer: [max_resource_descriptors]ResourceDescriptor = undefined;
-    const count = try readResourceList(&buffer, reader);
+    const count = try readResourceList(&buffer, stream.reader());
 
     try testing.expectEqual(3, count);
 }
 
 test "readResourceList returns error.BufferTooSmall when stream contains too many descriptors for the buffer" {
-    const reader = io.fixedBufferStream(&ResourceListExamples.too_many_descriptors).reader();
+    var stream = io.fixedBufferStream(&ResourceListExamples.too_many_descriptors);
 
     var buffer: [max_resource_descriptors]ResourceDescriptor = undefined;
-    try testing.expectError(error.BufferTooSmall, readResourceList(&buffer, reader));
+    try testing.expectError(error.BufferTooSmall, readResourceList(&buffer, stream.reader()));
 }
 
 // See integration_tests/resource_loading.zig for tests of Instance itself,

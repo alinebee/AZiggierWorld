@@ -73,7 +73,8 @@ pub const PolygonResource = struct {
             return error.PolygonRecursionDepthExceeded;
         }
 
-        const reader = fixedBufferStream(self.data[address..]).reader();
+        var stream = fixedBufferStream(self.data[address..]);
+        const reader = stream.reader();
 
         const header = try EntryHeader.parse(reader);
 
@@ -426,43 +427,47 @@ const countingReader = @import("std").io.countingReader;
 test "EntryHeader.parse parses single polygon entry header correctly and consumes 1 byte" {
     const data = &PolygonResource.Fixtures.polygon_entry_header;
 
-    var stream = countingReader(fixedBufferStream(data).reader());
+    var stream = fixedBufferStream(data);
+    var counting_stream = countingReader(stream.reader());
 
-    const actual = try EntryHeader.parse(stream.reader());
+    const actual = try EntryHeader.parse(counting_stream.reader());
     const expected: EntryHeader = .{ .single_polygon = .{ .solid_color = ColorID.cast(0xA) } };
 
     try testing.expectEqual(expected, actual);
-    try testing.expectEqual(1, stream.bytes_read);
+    try testing.expectEqual(1, counting_stream.bytes_read);
 }
 
 test "EntryHeader.parse parses polygon group entry header correctly and consumes 1 byte" {
     const data = &PolygonResource.Fixtures.group_entry_header;
 
-    var stream = countingReader(fixedBufferStream(data).reader());
+    var stream = fixedBufferStream(data);
+    var counting_stream = countingReader(stream.reader());
 
-    const actual = try EntryHeader.parse(stream.reader());
+    const actual = try EntryHeader.parse(counting_stream.reader());
     const expected: EntryHeader = .group;
 
     try testing.expectEqual(expected, actual);
-    try testing.expectEqual(1, stream.bytes_read);
+    try testing.expectEqual(1, counting_stream.bytes_read);
 }
 
 test "EntryHeader.parse fails with error.UnknownPolygonEntryType and consumes 1 byte when header is invalid" {
     const data = &PolygonResource.Fixtures.invalid_entry_header;
 
-    var stream = countingReader(fixedBufferStream(data).reader());
+    var stream = fixedBufferStream(data);
+    var counting_stream = countingReader(stream.reader());
 
-    try testing.expectError(error.UnknownPolygonEntryType, EntryHeader.parse(stream.reader()));
-    try testing.expectEqual(1, stream.bytes_read);
+    try testing.expectError(error.UnknownPolygonEntryType, EntryHeader.parse(counting_stream.reader()));
+    try testing.expectEqual(1, counting_stream.bytes_read);
 }
 
 test "EntryHeader.parse fails with error.EndOfStream and consumes 0 bytes on truncated header" {
     const data = [_]u8{};
 
-    var stream = countingReader(fixedBufferStream(&data).reader());
+    var stream = fixedBufferStream(data);
+    var counting_stream = countingReader(stream.reader());
 
-    try testing.expectError(error.EndOfStream, EntryHeader.parse(stream.reader()));
-    try testing.expectEqual(0, stream.bytes_read);
+    try testing.expectError(error.EndOfStream, EntryHeader.parse(counting_stream.reader()));
+    try testing.expectEqual(0, counting_stream.bytes_read);
 }
 
 // - GroupHeader tests -
@@ -470,9 +475,10 @@ test "EntryHeader.parse fails with error.EndOfStream and consumes 0 bytes on tru
 test "GroupHeader.parse correctly parses group header with scaled offset and consumes 3 bytes" {
     const data = &PolygonResource.Fixtures.group_header;
 
-    var stream = countingReader(fixedBufferStream(data).reader());
+    var stream = fixedBufferStream(data);
+    var counting_stream = countingReader(stream.reader());
 
-    const actual = try GroupHeader.parse(stream.reader(), .double);
+    const actual = try GroupHeader.parse(counting_stream.reader(), .double);
     const expected = GroupHeader{
         .offset = .{
             .x = 50,
@@ -482,16 +488,17 @@ test "GroupHeader.parse correctly parses group header with scaled offset and con
     };
 
     try testing.expectEqual(expected, actual);
-    try testing.expectEqual(3, stream.bytes_read);
+    try testing.expectEqual(3, counting_stream.bytes_read);
 }
 
 test "GroupHeader.parse fails with error.EndOfStream and consumes all remaining bytes on truncated header" {
     const data = PolygonResource.Fixtures.group_header[0..2];
 
-    var stream = countingReader(fixedBufferStream(data).reader());
+    var stream = fixedBufferStream(data);
+    var counting_stream = countingReader(stream.reader());
 
-    try testing.expectError(error.EndOfStream, GroupHeader.parse(stream.reader(), .double));
-    try testing.expectEqual(2, stream.bytes_read);
+    try testing.expectError(error.EndOfStream, GroupHeader.parse(counting_stream.reader(), .double));
+    try testing.expectEqual(2, counting_stream.bytes_read);
 }
 
 // - EntryPointer tests -
@@ -499,9 +506,10 @@ test "GroupHeader.parse fails with error.EndOfStream and consumes all remaining 
 test "EntryPointer.parse correctly parses pointer without custom draw mode and consumes 4 bytes" {
     const data = &PolygonResource.Fixtures.entry_pointer_without_draw_mode;
 
-    var stream = countingReader(fixedBufferStream(data).reader());
+    var stream = fixedBufferStream(data);
+    var counting_stream = countingReader(stream.reader());
 
-    const actual = try EntryPointer.parse(stream.reader(), .double);
+    const actual = try EntryPointer.parse(counting_stream.reader(), .double);
     const expected = EntryPointer{
         .address = 12,
         .offset = .{
@@ -512,15 +520,16 @@ test "EntryPointer.parse correctly parses pointer without custom draw mode and c
     };
 
     try testing.expectEqual(expected, actual);
-    try testing.expectEqual(4, stream.bytes_read);
+    try testing.expectEqual(4, counting_stream.bytes_read);
 }
 
 test "EntryPointer.parse correctly parses pointer with custom draw mode and consumes 6 bytes" {
     const data = &PolygonResource.Fixtures.entry_pointer_with_draw_mode;
 
-    var stream = countingReader(fixedBufferStream(data).reader());
+    var stream = fixedBufferStream(data);
+    var counting_stream = countingReader(stream.reader());
 
-    const actual = try EntryPointer.parse(stream.reader(), .double);
+    const actual = try EntryPointer.parse(counting_stream.reader(), .double);
     const expected = EntryPointer{
         .address = 0,
         .offset = .{
@@ -531,25 +540,27 @@ test "EntryPointer.parse correctly parses pointer with custom draw mode and cons
     };
 
     try testing.expectEqual(expected, actual);
-    try testing.expectEqual(6, stream.bytes_read);
+    try testing.expectEqual(6, counting_stream.bytes_read);
 }
 
 test "EntryPointer.parse fails with error.EndOfStream and consumes all remaining bytes on truncated header without custom draw mode" {
     const data = PolygonResource.Fixtures.entry_pointer_without_draw_mode[0..3];
 
-    var stream = countingReader(fixedBufferStream(data).reader());
+    var stream = fixedBufferStream(data);
+    var counting_stream = countingReader(stream.reader());
 
-    try testing.expectError(error.EndOfStream, EntryPointer.parse(stream.reader(), .double));
-    try testing.expectEqual(3, stream.bytes_read);
+    try testing.expectError(error.EndOfStream, EntryPointer.parse(counting_stream.reader(), .double));
+    try testing.expectEqual(3, counting_stream.bytes_read);
 }
 
 test "EntryPointer.parse fails with error.EndOfStream and consumes all remaining bytes on truncated header with custom draw mode" {
     const data = PolygonResource.Fixtures.entry_pointer_with_draw_mode[0..4];
 
-    var stream = countingReader(fixedBufferStream(data).reader());
+    var stream = fixedBufferStream(data);
+    var counting_stream = countingReader(stream.reader());
 
-    try testing.expectError(error.EndOfStream, EntryPointer.parse(stream.reader(), .double));
-    try testing.expectEqual(4, stream.bytes_read);
+    try testing.expectError(error.EndOfStream, EntryPointer.parse(counting_stream.reader(), .double));
+    try testing.expectEqual(4, counting_stream.bytes_read);
 }
 
 // - iteratePolygons tests -

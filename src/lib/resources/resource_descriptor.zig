@@ -187,42 +187,43 @@ const testing = @import("utils").testing;
 const fixedBufferStream = @import("std").io.fixedBufferStream;
 
 test "iterator.next() correctly parses file descriptor" {
-    const reader = fixedBufferStream(&DescriptorExamples.valid_data).reader();
-    var descriptors = ResourceDescriptor.iterator(reader);
+    var stream = fixedBufferStream(&DescriptorExamples.valid_data);
+    var descriptors = ResourceDescriptor.iterator(stream.reader());
 
     try testing.expectEqual(DescriptorExamples.valid_descriptor, descriptors.next());
 }
 
 test "iterator.next() stops parsing at end-of-file marker" {
-    const reader = fixedBufferStream(&DescriptorExamples.valid_end_of_file).reader();
-    var descriptors = ResourceDescriptor.iterator(reader);
+    var stream = fixedBufferStream(&DescriptorExamples.valid_end_of_file);
+    var descriptors = ResourceDescriptor.iterator(stream.reader());
 
     try testing.expectEqual(null, descriptors.next());
 }
 
 test "iterator.next() returns error.InvalidResourceType when resource type byte is not recognized" {
-    const reader = fixedBufferStream(&DescriptorExamples.invalid_resource_type).reader();
-    var descriptors = ResourceDescriptor.iterator(reader);
+    var stream = fixedBufferStream(&DescriptorExamples.invalid_resource_type);
+    var descriptors = ResourceDescriptor.iterator(stream.reader());
 
     try testing.expectError(error.InvalidResourceType, descriptors.next());
 }
 
 test "iterator.next() returns error.InvalidResourceSize when compressed size is larger than uncompressed size" {
-    const reader = fixedBufferStream(&DescriptorExamples.invalid_resource_size).reader();
-    var descriptors = ResourceDescriptor.iterator(reader);
+    var stream = fixedBufferStream(&DescriptorExamples.invalid_resource_size);
+    var descriptors = ResourceDescriptor.iterator(stream.reader());
 
     try testing.expectError(error.InvalidResourceSize, descriptors.next());
 }
 
 test "iterator.next() returns error.EndOfStream on incomplete data" {
-    const reader = fixedBufferStream(DescriptorExamples.valid_data[0..4]).reader();
-    var descriptors = ResourceDescriptor.iterator(reader);
+    var stream = fixedBufferStream(DescriptorExamples.valid_data[0..4]);
+    var descriptors = ResourceDescriptor.iterator(stream.reader());
 
     try testing.expectError(error.EndOfStream, descriptors.next());
 }
 
 test "iterator parses all expected descriptors until it reaches end-of-file marker" {
-    const reader = fixedBufferStream(&FileExamples.valid).reader();
+    var stream = fixedBufferStream(&FileExamples.valid);
+    const reader = stream.reader();
     var descriptors = ResourceDescriptor.iterator(reader);
 
     while (try descriptors.next()) |descriptor| {
@@ -234,8 +235,8 @@ test "iterator parses all expected descriptors until it reaches end-of-file mark
 }
 
 test "iterator returns error.EndOfStream when it runs out of data before encountering end-of-file marker" {
-    const reader = fixedBufferStream(&FileExamples.truncated).reader();
-    var descriptors = ResourceDescriptor.iterator(reader);
+    var stream = fixedBufferStream(&FileExamples.truncated);
+    var descriptors = ResourceDescriptor.iterator(stream.reader());
 
     try testing.expectEqual(DescriptorExamples.valid_descriptor, descriptors.next());
     try testing.expectEqual(DescriptorExamples.valid_descriptor, descriptors.next());
@@ -243,8 +244,8 @@ test "iterator returns error.EndOfStream when it runs out of data before encount
 }
 
 test "iterator returns error when it reaches invalid data in the middle of stream" {
-    const reader = fixedBufferStream(&FileExamples.invalid_resource_type).reader();
-    var descriptors = ResourceDescriptor.iterator(reader);
+    var stream = fixedBufferStream(&FileExamples.invalid_resource_type);
+    var descriptors = ResourceDescriptor.iterator(stream.reader());
 
     try testing.expectEqual(DescriptorExamples.valid_descriptor, descriptors.next());
     try testing.expectError(error.InvalidResourceType, descriptors.next());

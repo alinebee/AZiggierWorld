@@ -212,8 +212,8 @@ test "readBit() reads chunks bit by bit in reverse order" {
     var reader = try Reader.init(&source);
 
     var destination: [8]u8 = undefined;
-    const destination_stream = io.fixedBufferStream(&destination).writer();
-    var writer = io.bitWriter(.Big, destination_stream);
+    var destination_stream = io.fixedBufferStream(&destination);
+    var writer = io.bitWriter(.Big, destination_stream.writer());
 
     var bits_remaining = destination.len * 8;
     while (bits_remaining > 0) : (bits_remaining -= 1) {

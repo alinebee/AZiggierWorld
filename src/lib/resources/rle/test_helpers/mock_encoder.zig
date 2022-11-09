@@ -218,7 +218,8 @@ test "finalize produces valid decodable data" {
     defer testing.allocator.free(destination);
 
     try decode(compressed_data, destination);
-    const destination_reader = io.fixedBufferStream(destination).reader();
+    var destination_stream = io.fixedBufferStream(destination);
+    const destination_reader = destination_stream.reader();
 
     try testing.expectEqual(0x8BADF00D, destination_reader.readIntBig(u32));
     try testing.expectEqual(0x8BADF00D, destination_reader.readIntBig(u32));

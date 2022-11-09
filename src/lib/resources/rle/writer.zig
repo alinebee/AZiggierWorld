@@ -107,12 +107,12 @@ const max_usize = @import("std").math.maxInt(usize);
 
 test "writeFromSource writes bytes in reverse order starting at the end of the destination" {
     const source = [_]u8{ 0xDE, 0xAD, 0xBE, 0xEF };
-    const reader = fixedBufferStream(&source).reader();
+    var stream = fixedBufferStream(&source);
 
     var destination: [4]u8 = undefined;
     var writer = Writer.init(&destination);
 
-    try writer.writeFromSource(&reader, 4);
+    try writer.writeFromSource(stream.reader(), 4);
     try testing.expect(writer.isAtEnd());
 
     const expected = [_]u8{ 0xEF, 0xBE, 0xAD, 0xDE };
@@ -121,22 +121,22 @@ test "writeFromSource writes bytes in reverse order starting at the end of the d
 
 test "writeFromSource returns error.DestinationExhausted if destination does not have space" {
     const source = [_]u8{ 0xDE, 0xAD, 0xBE, 0xEF };
-    const reader = fixedBufferStream(&source).reader();
+    var stream = fixedBufferStream(&source);
 
     var destination: [2]u8 = undefined;
     var writer = Writer.init(&destination);
 
-    try testing.expectError(error.DestinationExhausted, writer.writeFromSource(&reader, 4));
+    try testing.expectError(error.DestinationExhausted, writer.writeFromSource(stream.reader(), 4));
 }
 
 test "writeFromSource does not trap on egregiously large count" {
     const source = [_]u8{ 0xDE, 0xAD, 0xBE, 0xEF };
-    const reader = fixedBufferStream(&source).reader();
+    var stream = fixedBufferStream(&source);
 
     var destination: [2]u8 = undefined;
     var writer = Writer.init(&destination);
 
-    try testing.expectError(error.DestinationExhausted, writer.writeFromSource(&reader, max_usize));
+    try testing.expectError(error.DestinationExhausted, writer.writeFromSource(stream.reader(), max_usize));
 }
 
 test "copyFromDestination copies bytes from location in destination relative to current cursor" {

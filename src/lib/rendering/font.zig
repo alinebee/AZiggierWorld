@@ -5,9 +5,9 @@
 const anotherworld = @import("../anotherworld.zig");
 
 /// The width in pixels of each glyph.
-pub const glyph_width: usize = @bitSizeOf(u8);
+pub const glyph_width = @bitSizeOf(u8);
 /// The height in pixels of each glyph.
-pub const glyph_height: usize = 8;
+pub const glyph_height = 8;
 
 /// An 8x8 pixel bitmap representing a single character in the font.
 /// Glyphs are stored as arrays of 8 bytes, where each byte is a row along the Y axis
