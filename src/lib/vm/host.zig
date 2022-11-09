@@ -32,9 +32,9 @@ const vm = anotherworld.vm;
 const audio = anotherworld.audio;
 
 fn Functions(comptime State: type) type {
-    const VideoFrameReadyFn = *const fn (state: State, machine: *const vm.Machine, buffer_id: vm.ResolvedBufferID, delay: vm.Milliseconds) void;
-    const VideoBufferChangedFn = *const fn (state: State, machine: *const vm.Machine, buffer_id: vm.ResolvedBufferID) void;
-    const AudioReadyFn = *const fn (state: State, machine: *const vm.Machine, buffer: vm.AudioBuffer) void;
+    const VideoFrameReadyFn = fn (state: State, machine: *const vm.Machine, buffer_id: vm.ResolvedBufferID, delay: vm.Milliseconds) void;
+    const VideoBufferChangedFn = fn (state: State, machine: *const vm.Machine, buffer_id: vm.ResolvedBufferID) void;
+    const AudioReadyFn = fn (state: State, machine: *const vm.Machine, buffer: vm.AudioBuffer) void;
 
     return struct {
         videoBufferChanged: ?VideoBufferChangedFn = null,
@@ -43,13 +43,13 @@ fn Functions(comptime State: type) type {
     };
 }
 
-const TypeErasedVTable = meta.WrapperVTable(Functions(*anyopaque));
+const VTable = meta.TypeErasedVTable(Functions(*anyopaque));
 
 /// An interface that the virtual machine uses to communicate with the host.
 /// The host handles video and audio output from the virtual machine.
 pub const Host = struct {
     state: *anyopaque,
-    vtable: *const TypeErasedVTable,
+    vtable: *const VTable,
 
     const Self = @This();
 
@@ -57,7 +57,7 @@ pub const Host = struct {
     /// a state pointer provided by the host.
     /// Intended to be called by implementations to create a host interface pointing to their own functions.
     pub fn init(state: anytype, comptime functions: Functions(@TypeOf(state))) Self {
-        const vtable = comptime meta.initVTable(TypeErasedVTable, functions);
+        const vtable = comptime meta.initVTable(VTable, functions);
         return .{ .state = state, .vtable = &vtable };
     }
 
@@ -70,18 +70,18 @@ pub const Host = struct {
     /// the *previous* frame before replacing it with this one.
     /// (The host may modify this delay to speed up or slow down gameplay.)
     pub fn videoFrameReady(self: Self, machine: *const vm.Machine, buffer_id: vm.ResolvedBufferID, delay: vm.Milliseconds) void {
-        self.vtable.videoFrameReady(.{ self.state, machine, buffer_id, delay });
+        self.vtable.videoFrameReady.*(.{ self.state, machine, buffer_id, delay });
     }
 
     /// Called each time the specified machine draws pixel data into a video buffer.
     /// The host can request the contents of the buffer to be rendered into a 24-bit surface
     /// using `machine.renderBufferToSurface(buffer_id, &surface).`
     pub fn videoBufferChanged(self: Self, machine: *const vm.Machine, buffer_id: vm.ResolvedBufferID) void {
-        self.vtable.videoBufferChanged(.{ self.state, machine, buffer_id });
+        self.vtable.videoBufferChanged.*(.{ self.state, machine, buffer_id });
     }
 
     pub fn audioReady(self: Self, machine: *const vm.Machine, buffer: vm.AudioBuffer) void {
-        self.vtable.audioReady(.{ self.state, machine, buffer });
+        self.vtable.audioReady.*(.{ self.state, machine, buffer });
     }
 };
 

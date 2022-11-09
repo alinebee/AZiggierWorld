@@ -66,7 +66,7 @@ pub fn AlignedBuffer(comptime width: usize, comptime height: usize) type {
             pub fn solidColor(color: ColorID) DrawOperation {
                 return .{
                     .context = .{ .solid_color = color },
-                    .draw_fn = drawSolidColorRange,
+                    .draw_fn = &drawSolidColorRange,
                 };
             }
 
@@ -74,7 +74,7 @@ pub fn AlignedBuffer(comptime width: usize, comptime height: usize) type {
             pub fn highlight() DrawOperation {
                 return .{
                     .context = .{ .highlight = {} },
-                    .draw_fn = drawHighlightRange,
+                    .draw_fn = &drawHighlightRange,
                 };
             }
 
@@ -83,7 +83,7 @@ pub fn AlignedBuffer(comptime width: usize, comptime height: usize) type {
             pub fn mask(source: *const Self) DrawOperation {
                 return .{
                     .context = .{ .mask = source },
-                    .draw_fn = drawMaskRange,
+                    .draw_fn = &drawMaskRange,
                 };
             }
 
@@ -92,7 +92,7 @@ pub fn AlignedBuffer(comptime width: usize, comptime height: usize) type {
             /// `range` is not bounds-checked: specifying a range outside the buffer, or with a negative length,
             /// results in undefined behaviour.
             fn drawRange(self: DrawOperation, buffer: *Self, row: usize, start_column: usize, end_column: usize) void {
-                self.draw_fn(self, buffer, row, start_column, end_column);
+                self.draw_fn.*(self, buffer, row, start_column, end_column);
             }
 
             // -- Private methods --

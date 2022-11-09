@@ -11,20 +11,23 @@ pub const intCast = std.math.cast;
 /// Given an integer type, returns the type used for legal left/right-shift operations.
 pub const ShiftType = std.math.Log2Int;
 
-/// -- VTable shenanigans --
-pub fn WrapperVTable(comptime Template: type) type {
+// -- VTable shenanigans --
+
+/// Given a struct whose fields are comptime-known functions, returns a vtable struct type
+/// whose fields are pointers to type-erased versions of those functions.
+pub fn TypeErasedVTable(comptime Template: type) type {
     const fields = @typeInfo(Template).Struct.fields;
 
     var erased_fields: [fields.len]std.builtin.Type.StructField = undefined;
 
     inline for (fields) |field, idx| {
-        const ErasedFn = TypeErasedFnType(field.field_type);
+        const TypeErasedFnPtr = *const (TypeErasedFnType(field.field_type));
         erased_fields[idx] = .{
             .name = field.name,
-            .field_type = ErasedFn,
-            .default_value = @as(?ErasedFn, null),
+            .field_type = TypeErasedFnPtr,
+            .default_value = null,
             .is_comptime = false,
-            .alignment = @alignOf(ErasedFn),
+            .alignment = @alignOf(TypeErasedFnPtr),
         };
     }
 
@@ -38,19 +41,26 @@ pub fn WrapperVTable(comptime Template: type) type {
     });
 }
 
+// Given a type-erased vtable struct type created by `TypeErasedVTable`,
+// and a struct whose fields are type-aware functions, returns a vtable instance
+// whose fields are populated with wrapper functions that call those type-aware functions.
+// TODO: attach this method as a declaration on the type returned by TypeErasedVTable?
 pub fn initVTable(comptime Table: type, comptime type_aware_functions: anytype) Table {
     var table: Table = undefined;
     const fields = @typeInfo(Table).Struct.fields;
     inline for (fields) |field| {
         const function = @field(type_aware_functions, field.name);
-        const ErasedFn = @TypeOf(@field(table, field.name));
-        const wrapped_function = typeErasedWrap(ErasedFn, function);
+        const TypeErasedFnPtr = @TypeOf(@field(table, field.name));
+        const wrapped_function_ptr = typeErasedWrap(TypeErasedFnPtr, function);
 
-        @field(table, field.name) = wrapped_function;
+        @field(table, field.name) = wrapped_function_ptr;
     }
     return table;
 }
 
+/// Given a function, returns a tuple of the arguments to that function with
+/// the type of the first parameter erased to `*anyopaque`.
+/// Otherwise identical to the type returned by std.meta.ArgsTuple.
 fn TypeErasedArgsTuple(comptime Fn: type) type {
     const function_info = @typeInfo(Fn).Fn;
 
@@ -64,7 +74,7 @@ fn TypeErasedArgsTuple(comptime Fn: type) type {
         arg_fields[idx] = .{
             .name = std.fmt.bufPrint(&num_buf, "{d}", .{idx}) catch unreachable,
             .field_type = ResolvedT,
-            .default_value = @as(?ResolvedT, null),
+            .default_value = null,
             .is_comptime = false,
             .alignment = if (@sizeOf(T) > 0) @alignOf(T) else 0,
         };
@@ -80,19 +90,25 @@ fn TypeErasedArgsTuple(comptime Fn: type) type {
     });
 }
 
-fn typeErasedWrap(comptime ErasedFn: type, comptime function: anytype) ErasedFn {
-    const erased_info = @typeInfo(ErasedFn).Fn;
-    const ErasedParams = erased_info.args[0].arg_type.?;
-    const Return = erased_info.return_type.?;
-
+/// Given a type-erased function pointer type and a type-aware function or optional function
+/// whose signature matches that type-erased function pointer, returns a pointer to a
+/// a type-erased wrapper function that is suitable to store in a vtable.
+/// If a `null` optional function was provided, the typed-erased wrapper will be a no-op
+/// that either returns `void` or `null`.
+fn typeErasedWrap(comptime TypeErasedFnPtr: type, comptime function: anytype) TypeErasedFnPtr {
     const PossibleFn = @TypeOf(function);
+
+    const TypeErasedFn = @typeInfo(TypeErasedFnPtr).Pointer.child;
+    const erased_fn_info = @typeInfo(TypeErasedFn).Fn;
+    const ErasedParams = erased_fn_info.args[0].arg_type.?;
+    const Return = erased_fn_info.return_type.?;
 
     switch (@typeInfo(PossibleFn)) {
         .Optional => |optional_info| {
             const Fn = optional_info.child;
             const UnerasedParams = std.meta.ArgsTuple(Fn);
 
-            return struct {
+            const Prototype = struct {
                 fn wrapped(params: ErasedParams) Return {
                     if (function) |unwrapped_function| {
                         const unerased_params = @bitCast(UnerasedParams, params);
@@ -106,42 +122,46 @@ fn typeErasedWrap(comptime ErasedFn: type, comptime function: anytype) ErasedFn 
                                 return;
                             },
                             else => {
-                                @compileError("Optional vtable function must return optional or void");
+                                @compileError("Optional function must return optional or void");
                             },
                         }
                     }
                 }
-            }.wrapped;
+            };
+
+            return &Prototype.wrapped;
         },
         .Fn => {
             const UnerasedParams = std.meta.ArgsTuple(PossibleFn);
-            return struct {
+
+            const Prototype = struct {
                 fn wrapped(params: ErasedParams) Return {
                     const unerased_params = @bitCast(UnerasedParams, params);
                     return @call(.{ .modifier = .always_inline }, function, unerased_params);
                 }
-            }.wrapped;
+            };
+            return &Prototype.wrapped;
         },
         else => {
-            @compileError("Must be function or optional function");
+            @compileError("`function` must be a function or optional function");
         },
     }
 }
 
+/// Given a function type or an optional function type, returns a version of that type
+/// with the first parameter type-erased to `*anyopaque`.
 fn TypeErasedFnType(comptime PossibleFn: type) type {
     switch (@typeInfo(PossibleFn)) {
         .Optional => |optional_info| {
-            const Fn = optional_info.child;
-            const function_info = @typeInfo(Fn).Fn;
+            return TypeErasedFnType(optional_info.child);
+        },
+        .Fn => |function_info| {
+            const Fn = PossibleFn;
             const Return = function_info.return_type.?;
             return fn (args: TypeErasedArgsTuple(Fn)) Return;
         },
-        .Fn => |function_info| {
-            const Return = function_info.return_type.?;
-            return fn (args: TypeErasedArgsTuple(PossibleFn)) Return;
-        },
         else => {
-            @compileError("Wrapped template must only have function and optional function fields");
+            @compileError("PossibleFn must be a function or optional function");
         },
     }
 }

@@ -68,8 +68,8 @@ pub fn PackedBuffer(comptime width: usize, comptime height: usize) type {
             pub fn solidColor(color: ColorID) DrawOperation {
                 return .{
                     .context = .{ .solid_color = filledColor(color) },
-                    .draw_index_fn = drawSolidColorPixel,
-                    .draw_range_fn = drawSolidColorRange,
+                    .draw_index_fn = &drawSolidColorPixel,
+                    .draw_range_fn = &drawSolidColorRange,
                 };
             }
 
@@ -77,8 +77,8 @@ pub fn PackedBuffer(comptime width: usize, comptime height: usize) type {
             pub fn highlight() DrawOperation {
                 return .{
                     .context = .{ .highlight = {} },
-                    .draw_index_fn = drawHighlightPixel,
-                    .draw_range_fn = drawHighlightRange,
+                    .draw_index_fn = &drawHighlightPixel,
+                    .draw_range_fn = &drawHighlightRange,
                 };
             }
 
@@ -87,15 +87,15 @@ pub fn PackedBuffer(comptime width: usize, comptime height: usize) type {
             pub fn mask(source: *const Self) DrawOperation {
                 return .{
                     .context = .{ .mask = source },
-                    .draw_index_fn = drawMaskPixel,
-                    .draw_range_fn = drawMaskRange,
+                    .draw_index_fn = &drawMaskPixel,
+                    .draw_range_fn = &drawMaskRange,
                 };
             }
 
             /// Fills a single pixel at the specified index using this draw operation.
             /// `index` is not bounds-checked: specifying an index outside the buffer results in undefined behaviour.
             fn drawPixel(self: DrawOperation, buffer: *Self, index: Index) void {
-                self.draw_index_fn(self, buffer, index);
+                self.draw_index_fn.*(self, buffer, index);
             }
 
             /// Given a byte-aligned range of bytes within the buffer, fills all pixels within those bytes
@@ -103,7 +103,7 @@ pub fn PackedBuffer(comptime width: usize, comptime height: usize) type {
             /// `range` is not bounds-checked: specifying a range outside the buffer, or with a negative length,
             /// results in undefined behaviour.
             fn drawRange(self: DrawOperation, buffer: *Self, range: Range(usize)) void {
-                self.draw_range_fn(self, buffer, range);
+                self.draw_range_fn.*(self, buffer, range);
             }
 
             // -- Private methods --
