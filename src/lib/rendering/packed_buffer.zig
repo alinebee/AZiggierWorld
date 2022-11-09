@@ -45,8 +45,8 @@ pub fn PackedBuffer(comptime width: usize, comptime height: usize) type {
         /// Renders a single pixel or a horizontal span of pixels into a packed buffer
         /// using one of three draw operations: solid color, highlight or mask.
         pub const DrawOperation = struct {
-            draw_index_fn: fn (self: DrawOperation, buffer: *Self, index: Index) void,
-            draw_range_fn: fn (self: DrawOperation, buffer: *Self, range: Range(usize)) void,
+            draw_index_fn: *const fn (self: DrawOperation, buffer: *Self, index: Index) void,
+            draw_range_fn: *const fn (self: DrawOperation, buffer: *Self, range: Range(usize)) void,
             context: union {
                 solid_color: NativeColor,
                 highlight: void,

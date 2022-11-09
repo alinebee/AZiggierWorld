@@ -13,8 +13,8 @@ const mem = std.mem;
 /// The functions that will be mapped to the implementation of the ResourceReader interface.
 fn Functions(comptime State: type) type {
     return struct {
-        bufReadResource: fn (state: State, buffer: []u8, descriptor: ResourceDescriptor) ResourceReader.BufReadResourceError![]const u8,
-        resourceDescriptors: fn (state: State) []const ResourceDescriptor,
+        bufReadResource: *const fn (state: State, buffer: []u8, descriptor: ResourceDescriptor) ResourceReader.BufReadResourceError![]const u8,
+        resourceDescriptors: *const fn (state: State) []const ResourceDescriptor,
     };
 }
 
