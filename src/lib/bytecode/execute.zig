@@ -80,9 +80,9 @@ pub fn executeNextInstruction(program: *Program, machine: *vm.Machine) !?Executi
 fn execute(comptime SpecificInstruction: type, raw_opcode: Opcode.Raw, program: *Program, machine: *vm.Machine) !?ExecutionResult {
     const instruction = try SpecificInstruction.parse(raw_opcode, program);
 
-    // Zig 0.9.0 does not have a way to express "try this function if it returns an error set,
+    // Zig 0.10.0 does not have a way to express "try this function if it returns an error set,
     // otherwise call it normally", hence we must check the return type at compile time and branch.
-    const ReturnType = meta.ReturnType(instruction.execute);
+    const ReturnType = meta.ReturnType(SpecificInstruction.execute);
     const returns_error = @typeInfo(ReturnType) == .ErrorUnion;
     const result = if (returns_error)
         try instruction.execute(machine)
