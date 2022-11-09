@@ -43,7 +43,7 @@ pub const Audio = struct {
         const music = try audio.MusicResource.parse(music_data);
         self.music_player = try audio.MusicPlayer.init(music, repository, timing_mode, offset, tempo);
 
-        log.debug("playMusic: play {*} at offset {} tempo {}", .{
+        log.debug("playMusic: play {*} at offset {} tempo {?}", .{
             music_data,
             offset,
             tempo,

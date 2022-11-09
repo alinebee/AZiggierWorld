@@ -15,7 +15,7 @@ pub const ShiftType = std.math.Log2Int;
 pub fn WrapperVTable(comptime Template: type) type {
     const fields = @typeInfo(Template).Struct.fields;
 
-    var erased_fields: [fields.len]std.builtin.TypeInfo.StructField = undefined;
+    var erased_fields: [fields.len]std.builtin.Type.StructField = undefined;
 
     inline for (fields) |field, idx| {
         const ErasedFn = TypeErasedFnType(field.field_type);
@@ -54,7 +54,7 @@ pub fn initVTable(comptime Table: type, comptime type_aware_functions: anytype) 
 fn TypeErasedArgsTuple(comptime Fn: type) type {
     const function_info = @typeInfo(Fn).Fn;
 
-    var arg_fields: [function_info.args.len]std.builtin.TypeInfo.StructField = undefined;
+    var arg_fields: [function_info.args.len]std.builtin.Type.StructField = undefined;
     inline for (function_info.args) |arg, idx| {
         const T = arg.arg_type.?;
         const ResolvedT = if (idx == 0) *anyopaque else T;

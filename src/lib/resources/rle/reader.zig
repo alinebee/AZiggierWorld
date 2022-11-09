@@ -224,7 +224,7 @@ test "readBit() reads chunks bit by bit in reverse order" {
 
     // readBit() returns source bits in reverse order, starting from the end of the last chunk of real data.
     const source_bits = mem.readIntBig(u64, source[0..destination.len]);
-    const expected_bits = @bitReverse(u64, source_bits);
+    const expected_bits = @bitReverse(source_bits);
     const actual_bits = mem.readIntBig(u64, &destination);
 
     try testing.expectEqual(expected_bits, actual_bits);
