@@ -20,6 +20,7 @@ const Palette = @import("palette.zig").Palette;
 const PaletteID = @import("palette_id.zig").PaletteID;
 
 const mem = @import("std").mem;
+const io = @import("std").io;
 
 /// The number of palettes inside a palette resource.
 const palette_count = static_limits.palette_count;
@@ -49,15 +50,14 @@ pub const PaletteResource = struct {
         const end = start + raw_palette_size;
 
         if (end > self.data.len) return error.EndOfStream;
-        // Palette colors are stored as 16-bit big-endian integers:
-        // Reinterpret the slice of bytes for this palette as pairs of big and little bytes.
-        // TODO: This could would probably be more readable if I used an I/O reader instead,
-        // but I second-guessed the efficiency of the standard library's implementation of them.
-        const raw_palette = @bitCast([]const [2]u8, self.data[start..end]);
+        const raw_palette = self.data[start..end];
+
+        var stream = io.fixedBufferStream(raw_palette);
+        const reader = stream.reader();
 
         var pal: Palette = undefined;
-        for (pal) |*color, index| {
-            const raw_color = mem.readIntBig(Color.Raw, &raw_palette[index]);
+        for (pal) |*color| {
+            const raw_color = try reader.readIntBig(Color.Raw);
             color.* = Color.parse(raw_color);
         }
         return pal;
