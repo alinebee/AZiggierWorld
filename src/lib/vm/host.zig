@@ -32,9 +32,9 @@ const vm = anotherworld.vm;
 const audio = anotherworld.audio;
 
 fn Functions(comptime State: type) type {
-    const VideoFrameReadyFn = fn (state: State, machine: *const vm.Machine, buffer_id: vm.ResolvedBufferID, delay: vm.Milliseconds) void;
-    const VideoBufferChangedFn = fn (state: State, machine: *const vm.Machine, buffer_id: vm.ResolvedBufferID) void;
-    const AudioReadyFn = fn (state: State, machine: *const vm.Machine, buffer: vm.AudioBuffer) void;
+    const VideoFrameReadyFn = *const fn (state: State, machine: *const vm.Machine, buffer_id: vm.ResolvedBufferID, delay: vm.Milliseconds) void;
+    const VideoBufferChangedFn = *const fn (state: State, machine: *const vm.Machine, buffer_id: vm.ResolvedBufferID) void;
+    const AudioReadyFn = *const fn (state: State, machine: *const vm.Machine, buffer: vm.AudioBuffer) void;
 
     return struct {
         videoBufferChanged: ?VideoBufferChangedFn = null,
