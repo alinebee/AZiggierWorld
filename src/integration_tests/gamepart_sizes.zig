@@ -35,23 +35,23 @@ test "Report sizes for each game part" {
         const bytecode = try reader.resourceDescriptor(resource_ids.bytecode);
         log.info("bytecode: #{}, {} bytes\n", .{ resource_ids.bytecode, bytecode.uncompressed_size });
         total_size += bytecode.uncompressed_size;
-        max_bytecode_size = @maximum(max_bytecode_size, bytecode.uncompressed_size);
+        max_bytecode_size = @max(max_bytecode_size, bytecode.uncompressed_size);
 
         const palettes = try reader.resourceDescriptor(resource_ids.palettes);
         log.info("palette: #{}, {} bytes", .{ resource_ids.palettes, palettes.uncompressed_size });
         total_size += palettes.uncompressed_size;
-        max_palettes_size = @maximum(max_palettes_size, palettes.uncompressed_size);
+        max_palettes_size = @max(max_palettes_size, palettes.uncompressed_size);
 
         const polygons = try reader.resourceDescriptor(resource_ids.polygons);
         log.info("polygons: #{}, {} bytes", .{ resource_ids.polygons, polygons.uncompressed_size });
         total_size += polygons.uncompressed_size;
-        max_polygons_size = @maximum(max_polygons_size, polygons.uncompressed_size);
+        max_polygons_size = @max(max_polygons_size, polygons.uncompressed_size);
 
         if (resource_ids.animations) |animation_id| {
             const animations = try reader.resourceDescriptor(animation_id);
             log.info("animations: #{}, {} bytes", .{ animation_id, animations.uncompressed_size });
             total_size += animations.uncompressed_size;
-            max_animations_size = @maximum(max_animations_size, animations.uncompressed_size);
+            max_animations_size = @max(max_animations_size, animations.uncompressed_size);
         } else {
             log.info("animations: UNUSED", .{});
         }

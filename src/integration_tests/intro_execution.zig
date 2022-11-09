@@ -33,13 +33,13 @@ const CountingHost = struct {
         self.total_delay += delay;
 
         if (self.max_delay) |*max_delay| {
-            max_delay.* = @maximum(max_delay.*, delay);
+            max_delay.* = @max(max_delay.*, delay);
         } else {
             self.max_delay = delay;
         }
 
         if (self.min_delay) |*min_delay| {
-            min_delay.* = @minimum(min_delay.*, delay);
+            min_delay.* = @min(min_delay.*, delay);
         } else {
             self.min_delay = delay;
         }
@@ -90,7 +90,7 @@ test "Introduction runs successfully" {
         }
 
         if (max_renders_during_tic) |*max| {
-            max.* = @maximum(max.*, renders_during_tic);
+            max.* = @max(max.*, renders_during_tic);
         } else {
             max_renders_during_tic = renders_during_tic;
         }

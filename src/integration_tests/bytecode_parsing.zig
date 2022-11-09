@@ -87,8 +87,8 @@ test "Instruction.parse parses all programs in fixture bytecode" {
                     .RegisterSet => |instruction| {
                         if (instruction.destination == .frame_duration) {
                             log.debug("RegisterSet frame duration: {}", .{instruction.value});
-                            min_frame_count = @minimum(min_frame_count, @bitCast(vm.FrameCount, instruction.value));
-                            max_frame_count = @maximum(max_frame_count, @bitCast(vm.FrameCount, instruction.value));
+                            min_frame_count = @min(min_frame_count, @bitCast(vm.FrameCount, instruction.value));
+                            max_frame_count = @max(max_frame_count, @bitCast(vm.FrameCount, instruction.value));
                         }
                     },
                     .RegisterAddConstant => |instruction| {

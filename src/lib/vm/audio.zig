@@ -100,9 +100,9 @@ pub const Audio = struct {
             var time_consumed: vm.Milliseconds = 0;
             var chunk_start: usize = 0;
             while (time_consumed < time) : (time_consumed += time_chunk) {
-                const time_remaining = @minimum(time_chunk, time - time_consumed);
+                const time_remaining = @min(time_chunk, time - time_consumed);
                 const chunk_length = self.mixer.bufferSize(time_remaining);
-                const chunk_end = @minimum(chunk_start + chunk_length, bytes_needed);
+                const chunk_end = @min(chunk_start + chunk_length, bytes_needed);
                 var chunk_buffer = filled_bytes[chunk_start..chunk_end];
 
                 self.mixer.mix(chunk_buffer);
