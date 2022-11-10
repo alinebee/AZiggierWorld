@@ -21,7 +21,7 @@ pub fn TypeErasedVTable(comptime Template: type) type {
     var erased_fields: [fields.len]std.builtin.Type.StructField = undefined;
 
     inline for (fields) |field, idx| {
-        const TypeErasedFnPtr = *const (TypeErasedFnType(field.field_type));
+        const TypeErasedFnPtr = *const TypeErasedFnType(field.field_type);
         erased_fields[idx] = .{
             .name = field.name,
             .field_type = TypeErasedFnPtr,
@@ -99,6 +99,7 @@ fn typeErasedWrap(comptime TypeErasedFnPtr: type, comptime function: anytype) Ty
     const PossibleFn = @TypeOf(function);
 
     const TypeErasedFn = @typeInfo(TypeErasedFnPtr).Pointer.child;
+
     const erased_fn_info = @typeInfo(TypeErasedFn).Fn;
     const ErasedParams = erased_fn_info.args[0].arg_type.?;
     const Return = erased_fn_info.return_type.?;

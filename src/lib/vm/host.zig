@@ -70,18 +70,18 @@ pub const Host = struct {
     /// the *previous* frame before replacing it with this one.
     /// (The host may modify this delay to speed up or slow down gameplay.)
     pub fn videoFrameReady(self: Self, machine: *const vm.Machine, buffer_id: vm.ResolvedBufferID, delay: vm.Milliseconds) void {
-        self.vtable.videoFrameReady.*(.{ self.state, machine, buffer_id, delay });
+        self.vtable.videoFrameReady(.{ self.state, machine, buffer_id, delay });
     }
 
     /// Called each time the specified machine draws pixel data into a video buffer.
     /// The host can request the contents of the buffer to be rendered into a 24-bit surface
     /// using `machine.renderBufferToSurface(buffer_id, &surface).`
     pub fn videoBufferChanged(self: Self, machine: *const vm.Machine, buffer_id: vm.ResolvedBufferID) void {
-        self.vtable.videoBufferChanged.*(.{ self.state, machine, buffer_id });
+        self.vtable.videoBufferChanged(.{ self.state, machine, buffer_id });
     }
 
     pub fn audioReady(self: Self, machine: *const vm.Machine, buffer: vm.AudioBuffer) void {
-        self.vtable.audioReady.*(.{ self.state, machine, buffer });
+        self.vtable.audioReady(.{ self.state, machine, buffer });
     }
 };
 

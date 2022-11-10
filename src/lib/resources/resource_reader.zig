@@ -41,7 +41,7 @@ pub const ResourceReader = struct {
     /// could not be read or decompressed.
     /// In the event of an error, `buffer` may contain partially-loaded game data.
     pub fn bufReadResource(self: Self, buffer: []u8, descriptor: ResourceDescriptor) BufReadResourceError![]const u8 {
-        return self.vtable.bufReadResource.*(.{ self.state, buffer, descriptor });
+        return self.vtable.bufReadResource(.{ self.state, buffer, descriptor });
     }
 
     /// Allocate a buffer and read the specified resource from the appropriate
@@ -71,7 +71,7 @@ pub const ResourceReader = struct {
     /// Returns a list of all valid resource descriptors,
     /// loaded from the MEMLIST.BIN file in the game directory.
     pub fn resourceDescriptors(self: Self) []const ResourceDescriptor {
-        return self.vtable.resourceDescriptors.*(.{self.state});
+        return self.vtable.resourceDescriptors(.{self.state});
     }
 
     /// Returns the descriptor matching the specified ID.

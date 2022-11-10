@@ -92,7 +92,7 @@ pub fn AlignedBuffer(comptime width: usize, comptime height: usize) type {
             /// `range` is not bounds-checked: specifying a range outside the buffer, or with a negative length,
             /// results in undefined behaviour.
             fn drawRange(self: DrawOperation, buffer: *Self, row: usize, start_column: usize, end_column: usize) void {
-                self.draw_fn.*(self, buffer, row, start_column, end_column);
+                self.draw_fn(self, buffer, row, start_column, end_column);
             }
 
             // -- Private methods --
