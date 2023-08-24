@@ -35,6 +35,7 @@ pub fn build(b: *Builder) !void {
     {
         exe.setBuildMode(mode);
         exe.setTarget(target);
+        exe.use_stage1 = true;
 
         sdl_sdk.link(exe, .dynamic);
         exe.addPackage(sdl_package);
@@ -88,6 +89,7 @@ pub fn build(b: *Builder) !void {
     const benchmark_step = b.step("benchmark", "Run benchmarks");
     {
         var benchmark = b.addExecutable("benchmark", "src/benchmark.zig");
+        benchmark.use_stage1 = true;
         benchmark.setBuildMode(.ReleaseSafe);
         benchmark.setTarget(target);
         benchmark.addPackage(utils_package);
