@@ -43,7 +43,7 @@ fn Functions(comptime State: type) type {
     };
 }
 
-const VTable = meta.TypeErasedVTable(Functions(*anyopaque));
+const VTable = meta.VTable(Functions(*anyopaque));
 
 /// An interface that the virtual machine uses to communicate with the host.
 /// The host handles video and audio output from the virtual machine.

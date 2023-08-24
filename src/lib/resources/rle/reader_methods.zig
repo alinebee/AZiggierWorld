@@ -8,22 +8,28 @@ const std = @import("std");
 const assert = std.debug.assert;
 const trait = std.meta.trait;
 
-/// Returns a struct of methods that can be mixed into the specified type.
-/// Intended usage:
-///   const ReaderMethods = @import("reader_methods.zig").ReaderMethods;
-///
-///   const ReaderType = struct {
-///       usingnamespace ReaderMethods(@This());
-///   }
-///
-pub fn ReaderMethods(comptime Self: type) type {
-    const ReadError = meta.ErrorType(Self.readBit);
+/// Wraps an underlying run-length-encoded reader in a standard interface.
+pub fn reader(reader: anytype) ReaderInterface(@typeOf(reader)) {
+    return ReaderInterface(@typeOf(reader)){ .reader = reader };
+}
 
+pub fn ReaderInterface(comptime Reader: type) type {
     return struct {
-        /// Returns a raw byte constructed by consuming 8 bits from the underlying reader.
-        /// Returns an error if the required bits could not be read.
-        pub fn readByte(self: *Self) ReadError!u8 {
-            return self.readInt(u8);
+        /// The underlying reader for this interface.
+        reader: Reader,
+
+        const Self = @This();
+
+        /// The type of error that can be returned from a call to any method in this interface.
+        const ReadError = meta.ErrorType(Reader.readBit);
+
+        /// Reads a single bit from the underlying reader.
+        pub fn readBit(self: *Self) ReadError!u1 {
+            return try self.reader.readBit();
+        }
+
+        pub fn isAtEnd(self: Self) bool {
+            return self.reader.isAtEnd();
         }
 
         /// Returns an unsigned integer constructed by consuming bits from the underlying reader
@@ -37,9 +43,15 @@ pub fn ReaderMethods(comptime Self: type) type {
             var bits_remaining: usize = meta.bitCount(Integer);
             while (bits_remaining > 0) : (bits_remaining -= 1) {
                 value = @shlExact(value, 1);
-                value |= try self.readBit();
+                value |= try self.reader.readBit();
             }
             return value;
+        }
+
+        /// Returns a raw byte constructed by consuming 8 bits from the underlying reader.
+        /// Returns an error if the required bits could not be read.
+        pub fn readByte(self: *Self) ReadError!u8 {
+            return self.readInt(u8);
         }
     };
 }
@@ -50,19 +62,18 @@ const testing = @import("utils").testing;
 const mockReader = @import("test_helpers/mock_reader.zig").mockReader;
 
 test "readInt reads integers of the specified width" {
-    // mockReader returns a bitwise reader that already includes `ReaderMethods`.
-    var parser = mockReader(u64, 0xDEAD_BEEF_8BAD_F00D);
+    var interface = reader(mockReader(u64, 0xDEAD_BEEF_8BAD_F00D));
 
-    try testing.expectEqual(0xDE, parser.readInt(u8));
-    try testing.expectEqual(0xAD, parser.readInt(u8));
-    try testing.expectEqual(0xBEEF, parser.readInt(u16));
-    try testing.expectEqual(0x8BADF00D, parser.readInt(u32));
-    try testing.expectEqual(true, parser.isAtEnd());
+    try testing.expectEqual(0xDE, interface.readInt(u8));
+    try testing.expectEqual(0xAD, interface.readInt(u8));
+    try testing.expectEqual(0xBEEF, interface.readInt(u16));
+    try testing.expectEqual(0x8BADF00D, interface.readInt(u32));
+    try testing.expectEqual(true, interface.isAtEnd());
 }
 
 test "readInt returns error.SourceExhausted when source buffer is too short" {
-    var parser = mockReader(u8, 0xDE);
+    var interface = reader(mockReader(u8, 0xDE));
 
-    try testing.expectError(error.SourceExhausted, parser.readInt(u16));
-    try testing.expectEqual(true, parser.isAtEnd());
+    try testing.expectError(error.SourceExhausted, interface.readInt(u16));
+    try testing.expectEqual(true, interface.isAtEnd());
 }

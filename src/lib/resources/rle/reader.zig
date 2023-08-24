@@ -11,8 +11,6 @@
 const std = @import("std");
 const mem = std.mem;
 
-const ReaderMethods = @import("reader_methods.zig").ReaderMethods;
-
 pub const Reader = struct {
     /// The source slice to read from.
     source: []const u8,
@@ -138,9 +136,6 @@ pub const Reader = struct {
 
         // If we got this far, the reader consumed all its bytes and had a valid checksum.
     }
-
-    // Add methods for reading bytes and whole integers
-    usingnamespace ReaderMethods(Self);
 
     /// The possible errors from a reader instance.
     pub const Error = error{

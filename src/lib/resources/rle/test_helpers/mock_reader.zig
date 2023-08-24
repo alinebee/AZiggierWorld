@@ -4,8 +4,6 @@ const std = @import("std");
 const assert = std.debug.assert;
 const trait = std.meta.trait;
 
-const ReaderMethods = @import("../reader_methods.zig").ReaderMethods;
-
 /// Returns a mock reader that reads every bit from a specified integer value
 /// in order from left to right (highest to lowest).
 ///
@@ -54,9 +52,6 @@ fn MockReader(comptime Integer: type) type {
                 return error.ChecksumNotReady;
             }
         }
-
-        // Add methods for reading bytes and whole integers
-        usingnamespace ReaderMethods(Self);
 
         /// All possible errors produced by the mock bitwise reader.
         pub const Error = error{

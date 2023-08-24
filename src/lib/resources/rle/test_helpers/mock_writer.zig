@@ -40,7 +40,7 @@ pub const MockWriter = struct {
 const testing = @import("utils").testing;
 
 const FakeReader = struct {
-    fn readByte() void {
+    fn readBit() void {
         unreachable;
     }
 };

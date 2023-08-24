@@ -18,7 +18,7 @@ fn Functions(comptime State: type) type {
     };
 }
 
-const VTable = meta.TypeErasedVTable(Functions(*anyopaque));
+const VTable = meta.VTable(Functions(*anyopaque));
 
 /// A generic interface for enumerating available resources and loading resource data into buffers.
 /// This is passed around as a 'fat pointer', following zig 0.9.0's polymorphic allocator pattern.

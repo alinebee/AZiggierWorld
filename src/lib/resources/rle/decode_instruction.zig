@@ -11,10 +11,15 @@
 //! duplicate [count + 1] bytes from uncompressed data at offset.
 //! 111|cccc_cccc: next 8 bits are count: write the [count + 9] bytes following this instruction to the write cursor.
 
+const meta = @import("utils").meta;
+const std = @import("std");
+const assert = std.debug.assert;
+const trait = std.meta.trait;
+
 /// Reads the next RLE instruction from the specified reader, and executes the instruction on the specified writer.
 /// Returns an error if the reader could not read or the writer could not write.
 ///
-/// `reader` must respond to `readBit() !u1`, `readByte() !u8` and `readInt(T) !T`.
+/// `reader` must respond to `readBit() !u1`.
 /// `writer` must respond to `writeFromSource(reader, count) !void` and `copyFromDestination(count, offset) !void`.
 pub fn decodeInstruction(reader: anytype, writer: anytype) !void {
     switch (try reader.readBit()) {
@@ -35,7 +40,7 @@ pub fn decodeInstruction(reader: anytype, writer: anytype) !void {
             }
         },
         0b1 => {
-            switch (try reader.readInt(u2)) {
+            switch (try readInt(reader, u2)) {
                 0b00 => {
                     // 100|oooo_oooo_o
                     // next 9 bits are relative offset: copy 3 bytes from uncompressed data at offset
@@ -73,6 +78,8 @@ pub fn decodeInstruction(reader: anytype, writer: anytype) !void {
 const testing = @import("utils").testing;
 const mockReader = @import("test_helpers/mock_reader.zig").mockReader;
 const MockWriter = @import("test_helpers/mock_writer.zig").MockWriter;
+
+// - decodeNextInstruction tests -
 
 test "decodeNextInstruction parses 111 instruction" {
     // 111|cccc_cccc: 11 bits total
